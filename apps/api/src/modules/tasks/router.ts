@@ -1,0 +1,201 @@
+import type { FastifyPluginAsync } from "fastify";
+import { parseWithSchema } from "../../lib/validate.js";
+import { TaskService } from "./service.js";
+import { taskSchemas } from "./schema.js";
+
+export const tasksRouter: FastifyPluginAsync = async (app) => {
+  const service = new TaskService(app);
+
+  app.get(
+    "/",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_LEER"
+      }
+    },
+    async (request) => {
+      const projectId = (request.query as { projectId?: string } | undefined)?.projectId;
+      return service.listTasks(request.authUser!.id, projectId);
+    }
+  );
+
+  app.get(
+    "/project-members",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const query = parseWithSchema(taskSchemas.projectMembersQuerySchema, request.query ?? {});
+        const members = await service.listProjectMembers(request.authUser!.id, query.projectId);
+        return reply.send(members);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(taskSchemas.createTaskInputSchema, request.body);
+        const task = await service.createTask({
+          ...payload,
+          createdById: request.authUser!.id,
+          confirmOutOfSchedule: payload.confirmOutOfSchedule ?? false
+        });
+
+        request.auditEvent = {
+          entityType: "TAREA",
+          entityId: task.id,
+          action: "CREAR",
+          newData: {
+            title: task.title,
+            projectId: task.projectId,
+            assigneeId: task.assigneeId
+          }
+        };
+
+        return reply.code(201).send(task);
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/:taskId",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_LEER"
+      }
+    },
+    async (request, reply) => {
+      const params = parseWithSchema(taskSchemas.taskIdParamsSchema, request.params);
+      const task = await service.getTask(params.taskId);
+      if (!task) {
+        return reply.code(404).send({ message: "Tarea no encontrada" });
+      }
+      return reply.send(task);
+    }
+  );
+
+  app.post(
+    "/status",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_CAMBIAR_ESTADO"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(taskSchemas.taskStatusTransitionInputSchema, request.body);
+        const task = await service.changeStatus({
+          ...payload,
+          changedById: request.authUser!.id
+        });
+
+        request.auditEvent = {
+          entityType: "TAREA",
+          entityId: payload.taskId,
+          action: "CAMBIO_ESTADO_TAREA",
+          reason: payload.reason,
+          newData: {
+            status: payload.status,
+            blockingTaskId: payload.blockingTaskId,
+            blockedReason: payload.blockedReason
+          }
+        };
+
+        return reply.send(task);
+      } catch (error) {
+        const status = (error as Error).name === "ValidationError" ? 400 : 409;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/reassign",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_REASIGNAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(taskSchemas.taskReassignmentInputSchema, request.body);
+        const task = await service.reassign({
+          ...payload,
+          requestedById: request.authUser!.id,
+          activeRole: request.accessContext!.activeRole,
+          projectContextId: request.accessContext?.projectId
+        });
+
+        request.auditEvent = {
+          entityType: "TAREA",
+          entityId: payload.taskId,
+          action: "REASIGNAR_TAREA",
+          reason: payload.reason,
+          newData: {
+            newAssigneeId: payload.newAssigneeId,
+            reopenIfCompleted: payload.reopenIfCompleted
+          }
+        };
+
+        return reply.send(task);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/dependencies",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(taskSchemas.taskDependencyInputSchema, request.body);
+        const dependency = await service.addDependency(payload);
+        return reply.code(201).send(dependency);
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/:taskId/can-start",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_LEER"
+      }
+    },
+    async (request) => {
+      const params = parseWithSchema(taskSchemas.taskIdParamsSchema, request.params);
+      return service.canStart(params.taskId);
+    }
+  );
+};

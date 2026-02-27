@@ -1,0 +1,57 @@
+services:
+  api:
+    environment:
+      NODE_ENV: production
+      ACCESS_TOKEN_TTL_MINUTES: 15
+      REFRESH_TOKEN_TTL_DAYS: 14
+      OTEL_ENABLED: true
+      OTEL_SERVICE_NAME: corelia-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  web:
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SOCKET_PATH: /ws/socket.io
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  workers:
+    environment:
+      NODE_ENV: production
+      OTEL_ENABLED: true
+      OTEL_SERVICE_NAME: corelia-workers
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+
+  tempo:
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G

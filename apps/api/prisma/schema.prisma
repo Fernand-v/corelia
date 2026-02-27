@@ -1,0 +1,1073 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SystemRole {
+  ADMINISTRADOR
+  LIDER_PROYECTO
+  COORDINADOR_EQUIPO
+  COLABORADOR
+  OBSERVADOR
+  INVITADO_EXTERNO
+}
+
+enum TaskStatus {
+  BACKLOG
+  PENDIENTE
+  EN_PROGRESO
+  EN_REVISION
+  BLOQUEADA
+  COMPLETADA
+  CANCELADA
+}
+
+enum ProjectTemplate {
+  SOFTWARE
+  CONTENIDO
+  OPERACIONES
+}
+
+enum AvailabilityType {
+  VACACIONES
+  PERMISO
+  AUSENCIA
+  NO_DISPONIBLE
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+}
+
+enum NotificationFrequency {
+  INMEDIATA
+  RESUMEN_DIARIO
+}
+
+enum NotificationEvent {
+  TAREA_ASIGNADA
+  TAREA_REASIGNADA
+  TAREA_ESTADO_CAMBIADO
+  MENSAJE_NUEVO_CANAL
+  MENCION_MENSAJE
+  REUNION_PROGRAMADA
+  ACUERDO_ASIGNADO_TAREA
+  TAREA_PROXIMA_VENCER
+  TAREA_BLOQUEADA
+  SOLICITUD_RESUELTA
+}
+
+enum RequestType {
+  VACACIONES
+  PERMISO
+  ACCESO_RECURSO
+}
+
+enum RequestStatus {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+enum ChannelScope {
+  EQUIPO
+  PROYECTO
+}
+
+enum FolderScope {
+  EQUIPO
+  PROYECTO
+}
+
+enum EntityType {
+  USUARIO
+  PROYECTO
+  TAREA
+  REUNION
+  ACUERDO_REUNION
+  MENSAJE
+  ARCHIVO
+  SOLICITUD
+  ANUNCIO
+  OBJETIVO
+  DECISION
+  AUTOMATIZACION
+}
+
+enum ActionType {
+  LOGIN
+  LOGOUT
+  CREAR
+  ACTUALIZAR
+  ELIMINAR
+  PROGRAMAR_REUNION
+  REGISTRAR_ACUERDO
+  CAMBIO_ROL
+  CAMBIO_ESTADO_TAREA
+  REASIGNAR_TAREA
+  APROBAR_SOLICITUD
+  CAMBIO_PERMISO
+}
+
+enum MeetingStatus {
+  PROGRAMADA
+  EN_CURSO
+  FINALIZADA
+  CANCELADA
+}
+
+enum MeetingAgreementStatus {
+  PENDIENTE_ACCION
+  VINCULADO_TAREA
+  COMPLETADO
+}
+
+enum ExternalCalendarProvider {
+  GOOGLE
+  MICROSOFT
+}
+
+enum AutomationEvent {
+  TAREA_COMPLETADA
+  TAREA_SIN_MOVIMIENTO
+  TAREA_REASIGNADA
+  TAREA_VENCIDA
+  SOLICITUD_RESUELTA
+}
+
+enum AutomationAction {
+  ENVIAR_NOTIFICACION
+  CREAR_AUDITORIA
+  CAMBIAR_ESTADO_TAREA
+}
+
+enum ObjectiveScope {
+  EQUIPO
+  PROYECTO
+}
+
+enum WebhookEvent {
+  TAREA_COMPLETADA
+  SOLICITUD_APROBADA
+  SOLICITUD_RECHAZADA
+  TAREA_REASIGNADA
+  TAREA_VENCIDA
+}
+
+enum ImportSource {
+  CSV
+  TRELLO_JSON
+  NOTION_CSV
+}
+
+enum GuestResourceType {
+  PROYECTO
+  ARCHIVO
+  DOCUMENTO
+}
+
+enum StorageQuotaScope {
+  USUARIO
+  EQUIPO
+}
+
+model User {
+  id             String   @id @default(uuid()) @db.Uuid
+  email          String   @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  baseRole       SystemRole @default(COLABORADOR)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deactivatedAt  DateTime?
+
+  teamMemberships      TeamMember[]
+  projectMemberships   ProjectMember[]
+  createdProjects      Project[] @relation("ProjectOwner")
+  assignedTasks        Task[] @relation("TaskAssignee")
+  createdTasks         Task[] @relation("TaskCreator")
+  statusChangedTasks   TaskStatusHistory[] @relation("TaskStatusChangedBy")
+  taskReassignments    TaskReassignment[] @relation("TaskReassignedBy")
+  onboardingRuns       OnboardingRun[] @relation("OnboardedUser")
+  offboardingRecords   OffboardingRecord[] @relation("OffboardedUser")
+  offboardingTransfers OffboardingRecord[] @relation("OffboardingTransferUser")
+  guestInvitesCreated  GuestInvite[] @relation("GuestInviteCreator")
+  internalInvitesCreated InternalInvite[] @relation("InternalInviteCreator")
+  personProfile        PersonProfile?
+  availabilityBlocks   AvailabilityBlock[]
+  workSchedule         WorkSchedule?
+  timeEntries          TimeEntry[]
+  channelMemberships   ChannelMember[]
+  messages             Message[]
+  createdMeetings      Meeting[] @relation("MeetingCreator")
+  meetingParticipants  MeetingParticipant[]
+  meetingNotes         MeetingNote[] @relation("MeetingNoteAuthor")
+  meetingAgreements    MeetingAgreement[] @relation("MeetingAgreementAuthor")
+  externalCalendarConnections ExternalCalendarConnection[]
+  notificationPreferences NotificationPreference[]
+  notifications        Notification[]
+  announcementsCreated Announcement[] @relation("AnnouncementCreator")
+  formRequests         FormRequest[] @relation("FormRequester")
+  formApprovals        FormRequest[] @relation("FormApprover")
+  foldersCreated       Folder[] @relation("FolderCreator")
+  filesCreated         FileObject[] @relation("FileOwner")
+  decisionNotes        DecisionNote[] @relation("DecisionAuthor")
+  automationRulesCreated AutomationRule[] @relation("AutomationCreator")
+  objectivesOwned      Objective[] @relation("ObjectiveOwner")
+  refreshTokens        RefreshToken[]
+  auditLogs            AuditLog[]
+  webhookEndpointsCreated WebhookEndpoint[] @relation("WebhookCreator")
+  importJobsCreated    ImportJob[] @relation("ImportCreator")
+
+  @@index([baseRole])
+  @@index([isActive])
+}
+
+model Team {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members      TeamMember[]
+  channels     Channel[]
+  folders      Folder[]
+  meetings     Meeting[]
+  externalCalendarEvents ExternalCalendarEvent[]
+  announcements AnnouncementTeam[]
+  objectives   Objective[]
+  internalInvites InternalInvite[]
+
+  @@index([name])
+}
+
+model TeamMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model Project {
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  template    ProjectTemplate
+  ownerId     String          @db.Uuid
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  tasks       Task[]
+  meetings    Meeting[]
+  externalCalendarEvents ExternalCalendarEvent[]
+  channels    Channel[]
+  folders     Folder[]
+  automationRules AutomationRule[]
+  objectives  Objective[]
+
+  @@index([ownerId])
+  @@index([template])
+}
+
+model ProjectMember {
+  id        String     @id @default(uuid()) @db.Uuid
+  projectId String     @db.Uuid
+  userId    String     @db.Uuid
+  role      SystemRole
+  joinedAt  DateTime   @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([role])
+}
+
+model Task {
+  id             String      @id @default(uuid()) @db.Uuid
+  projectId      String      @db.Uuid
+  title          String
+  description    String?
+  assigneeId     String?     @db.Uuid
+  createdById    String      @db.Uuid
+  status         TaskStatus  @default(BACKLOG)
+  dueDate        DateTime?
+  blockingTaskId String?     @db.Uuid
+  blockedReason  String?
+  completedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee      User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy     User      @relation("TaskCreator", fields: [createdById], references: [id])
+  blockingTask  Task?     @relation("TaskBlockingSelf", fields: [blockingTaskId], references: [id])
+  blockedTasks  Task[]    @relation("TaskBlockingSelf")
+  dependencies  TaskDependency[] @relation("TaskDependencies")
+  dependents    TaskDependency[] @relation("TaskDependents")
+  statusHistory TaskStatusHistory[]
+  reassignments TaskReassignment[]
+  timeEntries   TimeEntry[]
+  meetingAgreements MeetingAgreement[]
+  objectiveLinks ObjectiveTask[]
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([createdById])
+  @@index([status])
+  @@index([dueDate])
+  @@index([blockingTaskId])
+}
+
+model TaskDependency {
+  id            String   @id @default(uuid()) @db.Uuid
+  taskId        String   @db.Uuid
+  dependsOnTaskId String @db.Uuid
+  createdAt     DateTime @default(now())
+
+  task         Task @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask Task @relation("TaskDependents", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+  @@index([taskId])
+  @@index([dependsOnTaskId])
+}
+
+model TaskStatusHistory {
+  id          String     @id @default(uuid()) @db.Uuid
+  taskId      String     @db.Uuid
+  fromStatus  TaskStatus?
+  toStatus    TaskStatus
+  reason      String
+  changedById String     @db.Uuid
+  changedAt   DateTime   @default(now())
+
+  task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  changedBy User @relation("TaskStatusChangedBy", fields: [changedById], references: [id])
+
+  @@index([taskId])
+  @@index([changedById])
+  @@index([changedAt])
+}
+
+model TaskReassignment {
+  id               String   @id @default(uuid()) @db.Uuid
+  taskId            String   @db.Uuid
+  previousAssigneeId String? @db.Uuid
+  newAssigneeId     String   @db.Uuid
+  reason            String
+  reassignedById    String   @db.Uuid
+  reassignedAt      DateTime @default(now())
+
+  task         Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reassignedBy User @relation("TaskReassignedBy", fields: [reassignedById], references: [id])
+
+  @@index([taskId])
+  @@index([newAssigneeId])
+  @@index([reassignedById])
+}
+
+model OnboardingChecklist {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  items OnboardingChecklistItem[]
+  runs  OnboardingRun[]
+}
+
+model OnboardingChecklistItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  checklistId String   @db.Uuid
+  stepKey     String
+  label       String
+  required    Boolean  @default(true)
+  order       Int
+
+  checklist OnboardingChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@unique([checklistId, stepKey])
+  @@index([checklistId])
+  @@index([order])
+}
+
+model OnboardingRun {
+  id          String   @id @default(uuid()) @db.Uuid
+  checklistId String   @db.Uuid
+  userId      String   @db.Uuid
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  checklist OnboardingChecklist @relation(fields: [checklistId], references: [id])
+  user      User                @relation("OnboardedUser", fields: [userId], references: [id])
+  steps     OnboardingRunStep[]
+
+  @@index([checklistId])
+  @@index([userId])
+}
+
+model OnboardingRunStep {
+  id        String   @id @default(uuid()) @db.Uuid
+  runId      String   @db.Uuid
+  stepKey    String
+  completed  Boolean  @default(false)
+  completedAt DateTime?
+
+  run OnboardingRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, stepKey])
+  @@index([runId])
+}
+
+model OffboardingRecord {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  transferToUserId String   @db.Uuid
+  reason           String
+  revokedAt        DateTime @default(now())
+  archivedAt       DateTime?
+
+  user           User @relation("OffboardedUser", fields: [userId], references: [id])
+  transferToUser User @relation("OffboardingTransferUser", fields: [transferToUserId], references: [id])
+
+  @@index([userId])
+  @@index([transferToUserId])
+}
+
+model GuestInvite {
+  id            String            @id @default(uuid()) @db.Uuid
+  email         String
+  tokenHash     String
+  resourceType  GuestResourceType
+  resourceId    String            @db.Uuid
+  expiresAt     DateTime
+  createdById   String            @db.Uuid
+  acceptedAt    DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime          @default(now())
+
+  createdBy User @relation("GuestInviteCreator", fields: [createdById], references: [id])
+
+  @@index([resourceType, resourceId])
+  @@index([email])
+  @@index([expiresAt])
+  @@index([createdById])
+}
+
+model InternalInvite {
+  id          String     @id @default(uuid()) @db.Uuid
+  email       String
+  tokenHash   String     @unique
+  baseRole    SystemRole
+  teamId      String?    @db.Uuid
+  expiresAt   DateTime
+  createdById String     @db.Uuid
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  resentAt    DateTime?
+
+  createdBy User @relation("InternalInviteCreator", fields: [createdById], references: [id])
+  team      Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([expiresAt])
+  @@index([createdById])
+  @@index([teamId])
+}
+
+model PersonProfile {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @db.Uuid
+  internalContactEmail String
+  internalPhone String?
+  skills       String[]
+  timezone     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AvailabilityBlock {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      AvailabilityType
+  startAt   DateTime
+  endAt     DateTime
+  note      String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([startAt, endAt])
+}
+
+model WorkSchedule {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @unique @db.Uuid
+  timezone            String
+  weekDays            Int[]
+  startHour           String
+  endHour             String
+  maxActiveTasks      Int      @default(5)
+  periodHoursCapacity Float    @default(40)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model TimeEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  taskId    String   @db.Uuid
+  minutes   Int
+  note      String?
+  loggedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([loggedAt])
+}
+
+model Channel {
+  id        String      @id @default(uuid()) @db.Uuid
+  name      String
+  scope     ChannelScope
+  teamId    String?     @db.Uuid
+  projectId String?     @db.Uuid
+  createdAt DateTime    @default(now())
+
+  team    Team?    @relation(fields: [teamId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+  members ChannelMember[]
+  messages Message[]
+
+  @@index([teamId])
+  @@index([projectId])
+  @@index([scope])
+}
+
+model ChannelMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  channelId String   @db.Uuid
+  userId    String   @db.Uuid
+  joinedAt  DateTime @default(now())
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@index([channelId])
+  @@index([userId])
+}
+
+model Message {
+  id        String   @id @default(uuid()) @db.Uuid
+  channelId String   @db.Uuid
+  authorId  String   @db.Uuid
+  content   String
+  mentions  String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model Meeting {
+  id          String        @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  projectId   String?       @db.Uuid
+  teamId      String?       @db.Uuid
+  startsAt    DateTime
+  endsAt      DateTime
+  createdById String        @db.Uuid
+  status      MeetingStatus @default(PROGRAMADA)
+  mediaRoomId String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  project      Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  team         Team?                @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  createdBy    User                 @relation("MeetingCreator", fields: [createdById], references: [id])
+  participants MeetingParticipant[]
+  agendaItems  MeetingAgendaItem[]
+  notes        MeetingNote[]
+  agreements   MeetingAgreement[]
+
+  @@index([projectId])
+  @@index([teamId])
+  @@index([createdById])
+  @@index([startsAt, endsAt])
+  @@index([status])
+}
+
+model MeetingParticipant {
+  id            String   @id @default(uuid()) @db.Uuid
+  meetingId     String   @db.Uuid
+  userId        String   @db.Uuid
+  role          SystemRole?
+  muted         Boolean  @default(false)
+  cameraOn      Boolean  @default(true)
+  screenSharing Boolean  @default(false)
+  speaking      Boolean  @default(false)
+  joinedAt      DateTime?
+  leftAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+  @@index([meetingId])
+  @@index([userId])
+}
+
+model MeetingAgendaItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  meetingId String   @db.Uuid
+  text      String
+  order     Int
+  createdAt DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, order])
+  @@index([meetingId])
+}
+
+model MeetingNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  meetingId String   @db.Uuid
+  authorId  String   @db.Uuid
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  author  User    @relation("MeetingNoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@index([authorId])
+}
+
+model MeetingAgreement {
+  id          String                 @id @default(uuid()) @db.Uuid
+  meetingId   String                 @db.Uuid
+  title       String
+  description String?
+  status      MeetingAgreementStatus @default(PENDIENTE_ACCION)
+  authorId    String                 @db.Uuid
+  taskId      String?                @db.Uuid
+  createdTask Boolean                @default(false)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  author  User    @relation("MeetingAgreementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  task    Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([meetingId])
+  @@index([authorId])
+  @@index([taskId])
+  @@index([status])
+}
+
+model ExternalCalendarConnection {
+  id                    String                   @id @default(uuid()) @db.Uuid
+  userId                String                   @db.Uuid
+  provider              ExternalCalendarProvider
+  externalAccountId     String
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  expiresAt             DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  user   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events ExternalCalendarEvent[]
+
+  @@unique([provider, externalAccountId])
+  @@index([userId])
+  @@index([provider])
+}
+
+model ExternalCalendarEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  connectionId String   @db.Uuid
+  externalId   String
+  title        String
+  startsAt     DateTime
+  endsAt       DateTime
+  readOnly     Boolean  @default(true)
+  projectId    String?  @db.Uuid
+  teamId       String?  @db.Uuid
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  connection ExternalCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  project    Project?                   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  team       Team?                      @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([connectionId, externalId])
+  @@index([connectionId])
+  @@index([projectId])
+  @@index([teamId])
+  @@index([startsAt, endsAt])
+}
+
+model NotificationPreference {
+  id        String                @id @default(uuid()) @db.Uuid
+  userId    String                @db.Uuid
+  event     NotificationEvent
+  channel   NotificationChannel
+  frequency NotificationFrequency
+  enabled   Boolean               @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, event, channel])
+  @@index([userId])
+}
+
+model Notification {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String               @db.Uuid
+  event     NotificationEvent
+  channel   NotificationChannel
+  title     String
+  body      String
+  sentAt    DateTime?
+  deliveredAt DateTime?
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([event])
+  @@index([readAt])
+  @@index([deliveredAt])
+  @@index([createdAt])
+}
+
+model Announcement {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  body        String
+  allCompany  Boolean  @default(false)
+  expiresAt   DateTime
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  createdBy User @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  teams     AnnouncementTeam[]
+
+  @@index([expiresAt])
+  @@index([createdById])
+}
+
+model AnnouncementTeam {
+  id             String @id @default(uuid()) @db.Uuid
+  announcementId String @db.Uuid
+  teamId         String @db.Uuid
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  team         Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, teamId])
+  @@index([announcementId])
+  @@index([teamId])
+}
+
+model FormRequest {
+  id          String        @id @default(uuid()) @db.Uuid
+  requesterId String        @db.Uuid
+  type        RequestType
+  payload     Json
+  status      RequestStatus @default(PENDIENTE)
+  approverId  String?       @db.Uuid
+  comment     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  requester User  @relation("FormRequester", fields: [requesterId], references: [id])
+  approver  User? @relation("FormApprover", fields: [approverId], references: [id])
+
+  @@index([requesterId])
+  @@index([approverId])
+  @@index([status])
+}
+
+model Folder {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String
+  scope       FolderScope
+  teamId      String?     @db.Uuid
+  projectId   String?     @db.Uuid
+  parentId    String?     @db.Uuid
+  createdById String      @db.Uuid
+  createdAt   DateTime    @default(now())
+
+  team      Team?     @relation(fields: [teamId], references: [id])
+  project   Project?  @relation(fields: [projectId], references: [id])
+  parent    Folder?   @relation("FolderTree", fields: [parentId], references: [id])
+  children  Folder[]  @relation("FolderTree")
+  createdBy User      @relation("FolderCreator", fields: [createdById], references: [id])
+  files     FileObject[]
+
+  @@index([teamId])
+  @@index([projectId])
+  @@index([parentId])
+  @@index([createdById])
+}
+
+model FileObject {
+  id           String   @id @default(uuid()) @db.Uuid
+  folderId     String   @db.Uuid
+  ownerId      String   @db.Uuid
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  minioPath    String
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  folder Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  owner  User   @relation("FileOwner", fields: [ownerId], references: [id])
+  trashRecord FileTrash?
+
+  @@index([folderId])
+  @@index([ownerId])
+  @@index([deletedAt])
+}
+
+model FileTrash {
+  id          String   @id @default(uuid()) @db.Uuid
+  fileId       String   @unique @db.Uuid
+  scheduledPurgeAt DateTime
+  createdAt    DateTime @default(now())
+
+  file FileObject @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledPurgeAt])
+}
+
+model StorageQuota {
+  id                String           @id @default(uuid()) @db.Uuid
+  scopeType         StorageQuotaScope
+  scopeId           String           @db.Uuid
+  bytesLimit        BigInt
+  alertThresholdPct Float            @default(0.8)
+  createdAt         DateTime         @default(now())
+
+  @@unique([scopeType, scopeId])
+  @@index([scopeType, scopeId])
+}
+
+model DecisionNote {
+  id               String    @id @default(uuid()) @db.Uuid
+  title            String
+  description      String
+  authorId         String    @db.Uuid
+  linkedEntityType EntityType
+  linkedEntityId   String    @db.Uuid
+  createdAt        DateTime  @default(now())
+
+  author User @relation("DecisionAuthor", fields: [authorId], references: [id])
+
+  @@index([authorId])
+  @@index([linkedEntityType, linkedEntityId])
+}
+
+model AutomationRule {
+  id          String           @id @default(uuid()) @db.Uuid
+  projectId   String           @db.Uuid
+  name        String
+  event       AutomationEvent
+  action      AutomationAction
+  config      Json
+  enabled     Boolean          @default(true)
+  createdById String           @db.Uuid
+  createdAt   DateTime         @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("AutomationCreator", fields: [createdById], references: [id])
+
+  @@index([projectId])
+  @@index([createdById])
+  @@index([enabled])
+}
+
+model Objective {
+  id          String         @id @default(uuid()) @db.Uuid
+  scope       ObjectiveScope
+  teamId      String?        @db.Uuid
+  projectId   String?        @db.Uuid
+  title       String
+  description String?
+  ownerId     String         @db.Uuid
+  targetDate  DateTime
+  progressPct Float          @default(0)
+  createdAt   DateTime       @default(now())
+
+  team    Team?    @relation(fields: [teamId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+  owner   User     @relation("ObjectiveOwner", fields: [ownerId], references: [id])
+  tasks   ObjectiveTask[]
+
+  @@index([teamId])
+  @@index([projectId])
+  @@index([ownerId])
+}
+
+model ObjectiveTask {
+  id          String @id @default(uuid()) @db.Uuid
+  objectiveId String @db.Uuid
+  taskId      String @db.Uuid
+
+  objective Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([objectiveId, taskId])
+  @@index([objectiveId])
+  @@index([taskId])
+}
+
+model WebhookEndpoint {
+  id          String       @id @default(uuid()) @db.Uuid
+  url         String
+  event       WebhookEvent
+  secret      String
+  enabled     Boolean      @default(true)
+  createdById String       @db.Uuid
+  createdAt   DateTime     @default(now())
+
+  createdBy User @relation("WebhookCreator", fields: [createdById], references: [id])
+  deliveries WebhookDelivery[]
+
+  @@index([createdById])
+  @@index([event])
+}
+
+model WebhookDelivery {
+  id          String   @id @default(uuid()) @db.Uuid
+  endpointId  String   @db.Uuid
+  payload     Json
+  statusCode  Int?
+  success     Boolean  @default(false)
+  attemptedAt DateTime @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId])
+  @@index([attemptedAt])
+}
+
+model ImportJob {
+  id          String      @id @default(uuid()) @db.Uuid
+  source      ImportSource
+  filename    String
+  startedAt   DateTime    @default(now())
+  finishedAt  DateTime?
+  success     Boolean     @default(false)
+  createdById String      @db.Uuid
+
+  createdBy User @relation("ImportCreator", fields: [createdById], references: [id])
+  errors    ImportError[]
+
+  @@index([createdById])
+  @@index([source])
+}
+
+model ImportError {
+  id          String   @id @default(uuid()) @db.Uuid
+  jobId       String   @db.Uuid
+  rowNumber   Int
+  field       String
+  message     String
+  createdAt   DateTime @default(now())
+
+  job ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  tokenHash   String
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  rotatedFromId String? @db.Uuid
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+model AuditLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  entityType   EntityType
+  entityId     String    @db.Uuid
+  action       ActionType
+  userId       String?   @db.Uuid
+  previousData Json?
+  newData      Json?
+  reason       String?
+  createdAt    DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model MaintenanceMode {
+  id        Int      @id @default(1)
+  enabled   Boolean  @default(false)
+  message   String?
+  updatedAt DateTime @updatedAt
+}

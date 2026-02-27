@@ -1,0 +1,38 @@
+{
+  "name": "@corelia/workers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "format": "prettier --check src"
+  },
+  "dependencies": {
+    "@corelia/types": "workspace:*",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+    "@opentelemetry/sdk-node": "^0.57.0",
+    "@prisma/client": "^6.1.0",
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.2",
+    "nodemailer": "^7.0.11",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@corelia/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "@types/nodemailer": "^6.4.17",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
