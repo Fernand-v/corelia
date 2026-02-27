@@ -14,8 +14,17 @@ export class AnnouncementService {
     createdById: string;
     createdAt: Date;
     teams: Array<{ teamId: string }>;
+    users: Array<{ userId: string }>;
   }) {
     const parsedBody = parseAnnouncementBody(input.body);
+    const audienceUserIds = [
+      ...new Set(
+        (input.users.length > 0
+          ? input.users.map((audienceUser) => audienceUser.userId)
+          : parsedBody.audienceUserIds
+        ).filter(Boolean)
+      )
+    ];
     return {
       id: input.id,
       title: input.title,
@@ -24,7 +33,7 @@ export class AnnouncementService {
       audience: {
         allCompany: input.allCompany,
         teamIds: input.teams.map((team) => team.teamId),
-        userIds: parsedBody.audienceUserIds
+        userIds: audienceUserIds
       },
       expiresAt: input.expiresAt.toISOString(),
       createdById: input.createdById,
@@ -60,12 +69,20 @@ export class AnnouncementService {
         createdById: input.createdById,
         teams: {
           create: teamIds.map((teamId) => ({ teamId }))
+        },
+        users: {
+          create: userIds.map((userId) => ({ userId }))
         }
       },
       include: {
         teams: {
           select: {
             teamId: true
+          }
+        },
+        users: {
+          select: {
+            userId: true
           }
         }
       }
@@ -92,6 +109,11 @@ export class AnnouncementService {
           select: {
             teamId: true
           }
+        },
+        users: {
+          select: {
+            userId: true
+          }
         }
       },
       orderBy: { createdAt: "desc" }
@@ -101,7 +123,9 @@ export class AnnouncementService {
       .map((announcement) => {
         const parsedBody = parseAnnouncementBody(announcement.body);
         const inTeams = announcement.teams.some((team) => teamIds.includes(team.teamId));
-        const inUsers = parsedBody.audienceUserIds.includes(userId);
+        const relationUserIds = announcement.users.map((user) => user.userId);
+        const inUsers =
+          relationUserIds.includes(userId) || parsedBody.audienceUserIds.includes(userId);
         const isCreator = announcement.createdById === userId;
 
         if (!announcement.allCompany && !inTeams && !inUsers && !isCreator) {

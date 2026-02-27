@@ -215,6 +215,7 @@ model User {
   notificationPreferences NotificationPreference[]
   notifications        Notification[]
   announcementsCreated Announcement[] @relation("AnnouncementCreator")
+  announcementsAudience AnnouncementUser[]
   formRequests         FormRequest[] @relation("FormRequester")
   formApprovals        FormRequest[] @relation("FormApprover")
   foldersCreated       Folder[] @relation("FolderCreator")
@@ -799,6 +800,7 @@ model Announcement {
 
   createdBy User @relation("AnnouncementCreator", fields: [createdById], references: [id])
   teams     AnnouncementTeam[]
+  users     AnnouncementUser[]
 
   @@index([expiresAt])
   @@index([createdById])
@@ -815,6 +817,19 @@ model AnnouncementTeam {
   @@unique([announcementId, teamId])
   @@index([announcementId])
   @@index([teamId])
+}
+
+model AnnouncementUser {
+  id             String @id @default(uuid()) @db.Uuid
+  announcementId String @db.Uuid
+  userId         String @db.Uuid
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([announcementId])
+  @@index([userId])
 }
 
 model FormRequest {

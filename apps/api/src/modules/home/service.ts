@@ -179,6 +179,11 @@ export class HomeService {
           select: {
             teamId: true
           }
+        },
+        users: {
+          select: {
+            userId: true
+          }
         }
       },
       orderBy: { createdAt: "desc" },
@@ -189,7 +194,9 @@ export class HomeService {
       .map((announcement) => {
         const parsedBody = parseAnnouncementBody(announcement.body);
         const inTeams = announcement.teams.some((team) => teamIds.includes(team.teamId));
-        const inUsers = parsedBody.audienceUserIds.includes(userId);
+        const relationUserIds = announcement.users.map((user) => user.userId);
+        const inUsers =
+          relationUserIds.includes(userId) || parsedBody.audienceUserIds.includes(userId);
         const isCreator = announcement.createdById === userId;
 
         if (!announcement.allCompany && !inTeams && !inUsers && !isCreator) {
