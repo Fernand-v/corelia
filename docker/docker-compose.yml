@@ -95,6 +95,8 @@ services:
         condition: service_completed_successfully
       tempo:
         condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
@@ -124,7 +126,7 @@ services:
       MEDIA_SERVER_ENABLED: ${MEDIA_SERVER_ENABLED:-true}
       MEDIA_MAX_PARTICIPANTS: ${MEDIA_MAX_PARTICIPANTS:-20}
       MEDIA_LISTEN_IP: ${MEDIA_LISTEN_IP:-0.0.0.0}
-      MEDIA_ANNOUNCED_IP: ${MEDIA_ANNOUNCED_IP:-127.0.0.1}
+      MEDIA_ANNOUNCED_IP: ${MEDIA_ANNOUNCED_IP:-host.docker.internal}
       MEDIA_MIN_PORT: ${MEDIA_MIN_PORT:-40000}
       MEDIA_MAX_PORT: ${MEDIA_MAX_PORT:-40100}
       GOOGLE_CALENDAR_CLIENT_ID: ${GOOGLE_CALENDAR_CLIENT_ID:-}
@@ -151,8 +153,8 @@ services:
       - api
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: https://localhost/api/v1
-      NEXT_PUBLIC_WS_URL: https://localhost
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_DOCKER:-/api/v1}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL_DOCKER:-}
       NEXT_PUBLIC_SOCKET_PATH: /ws/socket.io
     ports:
       - "3000:3000"

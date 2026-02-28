@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { HomeDashboard } from "@corelia/types";
 import type { Route } from "next";
-import { Button, Card } from "@corelia/ui";
+import { Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
 import { AnnouncementContent } from "@/components/announcement-content";
 
@@ -105,7 +104,6 @@ export const HomeDashboardView = () => {
   const params = useSearchParams();
   const projectId = params.get("projectId");
   const teamId = params.get("teamId");
-  const [entryAnnouncementId, setEntryAnnouncementId] = useState<string | null>(null);
 
   const query = useQuery<HomeDashboard, Error>({
     queryKey: ["home-dashboard", projectId, teamId],
@@ -122,37 +120,6 @@ export const HomeDashboardView = () => {
       return apiRequest<HomeDashboard>(`/home${suffix ? `?${suffix}` : ""}`);
     }
   });
-
-  const announcementSource = query.data?.blocks.announcements;
-  const announcements = useMemo(() => announcementSource ?? [], [announcementSource]);
-  const entryAnnouncement = useMemo(
-    () => announcements.find((announcement) => announcement.id === entryAnnouncementId) ?? null,
-    [announcements, entryAnnouncementId]
-  );
-
-  useEffect(() => {
-    if (announcements.length === 0 || typeof window === "undefined") {
-      setEntryAnnouncementId(null);
-      return;
-    }
-
-    const raw = window.localStorage.getItem("corelia_seen_announcements_v1");
-    const seenIds = new Set(
-      raw
-        ? raw
-            .split(",")
-            .map((value) => value.trim())
-            .filter(Boolean)
-        : []
-    );
-
-    const candidate =
-      announcements.find((announcement) => announcement.isNew && !seenIds.has(announcement.id)) ??
-      announcements.find((announcement) => !seenIds.has(announcement.id)) ??
-      null;
-
-    setEntryAnnouncementId(candidate?.id ?? null);
-  }, [announcements]);
 
   if (query.isLoading) {
     return (
@@ -181,63 +148,8 @@ export const HomeDashboardView = () => {
   const dashboard = query.data;
   const blocks = dashboard.blocks;
 
-  const dismissEntryAnnouncement = () => {
-    if (!entryAnnouncement || typeof window === "undefined") {
-      setEntryAnnouncementId(null);
-      return;
-    }
-
-    const raw = window.localStorage.getItem("corelia_seen_announcements_v1");
-    const seenIds = new Set(
-      raw
-        ? raw
-            .split(",")
-            .map((value) => value.trim())
-            .filter(Boolean)
-        : []
-    );
-    seenIds.add(entryAnnouncement.id);
-    window.localStorage.setItem("corelia_seen_announcements_v1", [...seenIds].join(","));
-    setEntryAnnouncementId(null);
-  };
-
   return (
     <div className="space-y-6">
-      {entryAnnouncement ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <article className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">Anuncio al ingresar</p>
-                <h2 className="text-xl font-semibold text-slate-900">{entryAnnouncement.title}</h2>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
-                onClick={dismissEntryAnnouncement}
-              >
-                Cerrar
-              </button>
-            </div>
-            <AnnouncementContent
-              blocks={entryAnnouncement.content?.blocks}
-              fallbackBody={entryAnnouncement.body}
-            />
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <Link
-                href={"/announcements" as Route}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Ver todos los anuncios
-              </Link>
-              <Button type="button" className="h-9 px-3 text-xs" onClick={dismissEntryAnnouncement}>
-                Entendido
-              </Button>
-            </div>
-          </article>
-        </div>
-      ) : null}
-
       <Card className="space-y-2">
         <p className="text-xs uppercase tracking-wide text-slate-500">Home</p>
         <h1 className="text-2xl font-semibold text-slate-900">{roleLabel[dashboard.role]}</h1>

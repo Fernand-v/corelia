@@ -473,6 +473,30 @@ export const socketPlugin = fp(async (app) => {
               return;
             }
 
+            if (parsed.data.screenSharing === true) {
+              const activeSharer = await app.prisma.meetingParticipant.findFirst({
+                where: {
+                  meetingId: parsed.data.meetingId,
+                  userId: {
+                    not: socket.data.user.id
+                  },
+                  leftAt: null,
+                  screenSharing: true
+                },
+                select: {
+                  userId: true
+                }
+              });
+
+              if (activeSharer) {
+                ack?.({
+                  ok: false,
+                  message: "Ya hay una pantalla compartida activa"
+                });
+                return;
+              }
+            }
+
             const updated = await app.prisma.meetingParticipant.upsert({
               where: {
                 meetingId_userId: {

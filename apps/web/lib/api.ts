@@ -1,6 +1,25 @@
 import { create } from "zustand";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const resolveApiBaseUrl = () => {
+  const configured = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+
+  if (typeof window === "undefined") {
+    return configured;
+  }
+
+  if (!configured.startsWith("/")) {
+    return configured;
+  }
+
+  // If frontend is accessed directly on :3000 (without nginx), route API calls to :4000.
+  if (window.location.port === "3000") {
+    return `${window.location.protocol}//${window.location.hostname}:4000${configured}`;
+  }
+
+  return configured;
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 const AUTH_STORAGE_KEY = "corelia_access_token";
 
 interface AuthState {

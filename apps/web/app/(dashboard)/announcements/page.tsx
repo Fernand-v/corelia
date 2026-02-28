@@ -149,11 +149,13 @@ export default function AnnouncementsPage() {
   const session = useSession();
   const canPublish = session.data?.activeRole === "ADMINISTRADOR";
 
+  const [audienceMode, setAudienceMode] = useState<"GLOBAL" | "SEGMENTADA">("GLOBAL");
   const [title, setTitle] = useState("");
   const [expiresAt, setExpiresAt] = useState(futureDefault);
-  const [allCompany, setAllCompany] = useState(true);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [teamFilter, setTeamFilter] = useState("");
+  const [userFilter, setUserFilter] = useState("");
   const [blocks, setBlocks] = useState<EditorBlock[]>([
     createBlock("TITLE"),
     createBlock("TEXT")
@@ -188,7 +190,11 @@ export default function AnnouncementsPage() {
       const body = summaryFromBlocks(blockPayload, cleanTitle);
       const expiresAtIso = new Date(expiresAt).toISOString();
 
-      if (!allCompany && selectedTeamIds.length === 0 && selectedUserIds.length === 0) {
+      if (
+        audienceMode === "SEGMENTADA" &&
+        selectedTeamIds.length === 0 &&
+        selectedUserIds.length === 0
+      ) {
         throw new Error("Selecciona equipos, usuarios o marca audiencia global");
       }
 
@@ -201,7 +207,7 @@ export default function AnnouncementsPage() {
             blocks: blockPayload
           },
           audience: {
-            allCompany,
+            allCompany: audienceMode === "GLOBAL",
             teamIds: selectedTeamIds,
             userIds: selectedUserIds
           },
@@ -210,11 +216,13 @@ export default function AnnouncementsPage() {
       });
     },
     onSuccess: async () => {
+      setAudienceMode("GLOBAL");
       setTitle("");
       setExpiresAt(futureDefault());
-      setAllCompany(true);
       setSelectedTeamIds([]);
       setSelectedUserIds([]);
+      setTeamFilter("");
+      setUserFilter("");
       setBlocks([createBlock("TITLE"), createBlock("TEXT")]);
       setFormError(null);
       await queryClient.invalidateQueries({ queryKey: ["active-announcements"] });
@@ -229,6 +237,28 @@ export default function AnnouncementsPage() {
     () => normalizeBlocksForSubmit(blocks, title.trim() || "Nuevo anuncio"),
     [blocks, title]
   );
+
+  const filteredTeams = useMemo(() => {
+    const source = teamsQuery.data?.items ?? [];
+    const needle = teamFilter.trim().toLowerCase();
+    if (!needle) {
+      return source;
+    }
+    return source.filter((team) => team.name.toLowerCase().includes(needle));
+  }, [teamFilter, teamsQuery.data?.items]);
+
+  const filteredUsers = useMemo(() => {
+    const source = usersQuery.data ?? [];
+    const needle = userFilter.trim().toLowerCase();
+    if (!needle) {
+      return source;
+    }
+    return source.filter(
+      (user) =>
+        user.fullName.toLowerCase().includes(needle) ||
+        user.contact.email.toLowerCase().includes(needle)
+    );
+  }, [userFilter, usersQuery.data]);
 
   return (
     <main className="mx-auto w-full max-w-7xl space-y-4">
@@ -269,12 +299,12 @@ export default function AnnouncementsPage() {
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Audiencia</p>
                 <label className="flex items-center gap-2 text-sm text-slate-700">
                   <input
-                    type="checkbox"
-                    checked={allCompany}
+                    type="radio"
+                    name="announcement-audience-mode"
+                    checked={audienceMode === "GLOBAL"}
                     onChange={(event) => {
-                      const checked = event.target.checked;
-                      setAllCompany(checked);
-                      if (checked) {
+                      if (event.target.checked) {
+                        setAudienceMode("GLOBAL");
                         setSelectedTeamIds([]);
                         setSelectedUserIds([]);
                       }
@@ -282,13 +312,32 @@ export default function AnnouncementsPage() {
                   />
                   Global (todos los usuarios)
                 </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="announcement-audience-mode"
+                    checked={audienceMode === "SEGMENTADA"}
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        setAudienceMode("SEGMENTADA");
+                      }
+                    }}
+                  />
+                  Segmentada (equipos y/o usuarios específicos)
+                </label>
 
-                {!allCompany ? (
+                {audienceMode === "SEGMENTADA" ? (
                   <>
                     <div className="space-y-1">
                       <p className="text-xs text-slate-600">Equipos</p>
+                      <input
+                        className="h-8 w-full rounded-lg border border-slate-300 px-2 text-xs"
+                        placeholder="Filtrar equipos..."
+                        value={teamFilter}
+                        onChange={(event) => setTeamFilter(event.target.value)}
+                      />
                       <div className="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
-                        {teamsQuery.data?.items.map((team) => (
+                        {filteredTeams.map((team) => (
                           <label key={team.id} className="flex items-center gap-2 text-xs text-slate-700">
                             <input
                               type="checkbox"
@@ -309,8 +358,14 @@ export default function AnnouncementsPage() {
 
                     <div className="space-y-1">
                       <p className="text-xs text-slate-600">Usuarios específicos</p>
+                      <input
+                        className="h-8 w-full rounded-lg border border-slate-300 px-2 text-xs"
+                        placeholder="Filtrar por nombre o email..."
+                        value={userFilter}
+                        onChange={(event) => setUserFilter(event.target.value)}
+                      />
                       <div className="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
-                        {usersQuery.data?.map((user) => (
+                        {filteredUsers.map((user) => (
                           <label key={user.userId} className="flex items-center gap-2 text-xs text-slate-700">
                             <input
                               type="checkbox"
@@ -327,6 +382,11 @@ export default function AnnouncementsPage() {
                           </label>
                         ))}
                       </div>
+                      {selectedUserIds.length > 0 ? (
+                        <p className="text-[11px] text-slate-500">
+                          Usuarios seleccionados: {selectedUserIds.length}
+                        </p>
+                      ) : null}
                     </div>
                   </>
                 ) : null}

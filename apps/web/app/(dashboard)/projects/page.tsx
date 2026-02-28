@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card } from "@corelia/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Card } from "@corelia/ui";
 import type { Route } from "next";
 import { NotificationsBadge } from "@/components/notifications-badge";
 import { apiRequest } from "@/lib/api";
 import { withDashboardContext } from "@/lib/context";
+import { useSession } from "@/lib/session";
 
 type ProjectItem = {
   id: string;
@@ -18,6 +19,8 @@ type ProjectItem = {
   ownerId: string;
   createdAt: string;
 };
+
+type ProjectTemplate = "SOFTWARE" | "CONTENIDO" | "OPERACIONES";
 
 const resourceCards = [
   { label: "Tareas", href: "/tasks", description: "Backlog, estado y asignaciones" },
@@ -29,12 +32,53 @@ const resourceCards = [
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const session = useSession();
   const params = useSearchParams();
   const [selectedProjectId, setSelectedProjectId] = useState<string>(params.get("projectId") ?? "");
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [newProjectTemplate, setNewProjectTemplate] = useState<ProjectTemplate>("SOFTWARE");
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const projectsQuery = useQuery({
     queryKey: ["projects"],
     queryFn: () => apiRequest<ProjectItem[]>("/projects")
+  });
+
+  const canCreateProject =
+    session.data?.baseRole === "ADMINISTRADOR" ||
+    session.data?.activeRole === "ADMINISTRADOR" ||
+    session.data?.activeRole === "LIDER_PROYECTO";
+
+  const createProjectMutation = useMutation({
+    mutationFn: async () => {
+      const name = newProjectName.trim();
+      if (name.length < 3) {
+        throw new Error("El nombre del proyecto debe tener al menos 3 caracteres");
+      }
+
+      return apiRequest<ProjectItem>("/projects", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          description: newProjectDescription.trim() || undefined,
+          template: newProjectTemplate,
+          memberIds: []
+        })
+      });
+    },
+    onSuccess: async (project) => {
+      setCreateError(null);
+      setNewProjectName("");
+      setNewProjectDescription("");
+      setNewProjectTemplate("SOFTWARE");
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      selectProject(project.id);
+    },
+    onError: (error) => {
+      setCreateError(error.message);
+    }
   });
 
   useEffect(() => {
@@ -69,6 +113,69 @@ export default function ProjectsPage() {
         </div>
         <NotificationsBadge />
       </header>
+
+      {canCreateProject ? (
+        <Card className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-900">Crear nuevo proyecto</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block space-y-1 md:col-span-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Nombre</span>
+              <input
+                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                value={newProjectName}
+                onChange={(event) => setNewProjectName(event.target.value)}
+                placeholder="Ej. Plataforma de Soporte"
+              />
+            </label>
+
+            <label className="block space-y-1">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Plantilla</span>
+              <select
+                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                value={newProjectTemplate}
+                onChange={(event) => setNewProjectTemplate(event.target.value as ProjectTemplate)}
+              >
+                <option value="SOFTWARE">SOFTWARE</option>
+                <option value="CONTENIDO">CONTENIDO</option>
+                <option value="OPERACIONES">OPERACIONES</option>
+              </select>
+            </label>
+
+            <label className="block space-y-1 md:col-span-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Descripción (opcional)
+              </span>
+              <textarea
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                rows={3}
+                value={newProjectDescription}
+                onChange={(event) => setNewProjectDescription(event.target.value)}
+                placeholder="Objetivo y alcance del proyecto"
+              />
+            </label>
+          </div>
+
+          {createError ? (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {createError}
+            </p>
+          ) : null}
+
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              className="h-9 px-3 text-xs"
+              disabled={createProjectMutation.isPending}
+              onClick={() => {
+                setCreateError(null);
+                createProjectMutation.mutate();
+              }}
+            >
+              {createProjectMutation.isPending ? "Creando..." : "Crear proyecto"}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
       <Card className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-900">Lista de proyectos</h2>

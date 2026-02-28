@@ -129,6 +129,40 @@ describe("Socket realtime integration", () => {
             (participant) => participant.meetingId === where.meetingId
           );
         }),
+        findFirst: vi.fn().mockImplementation(async ({ where }: {
+          where: {
+            meetingId?: string;
+            screenSharing?: boolean;
+            leftAt?: Date | null;
+            userId?: string | { not?: string };
+          };
+        }) => {
+          return (
+            [...participants.values()].find((participant) => {
+              if (where.meetingId && participant.meetingId !== where.meetingId) {
+                return false;
+              }
+              if (where.screenSharing !== undefined && participant.screenSharing !== where.screenSharing) {
+                return false;
+              }
+              if (where.leftAt === null && participant.leftAt !== null) {
+                return false;
+              }
+              if (typeof where.userId === "string" && participant.userId !== where.userId) {
+                return false;
+              }
+              if (
+                typeof where.userId === "object" &&
+                where.userId !== null &&
+                where.userId.not &&
+                participant.userId === where.userId.not
+              ) {
+                return false;
+              }
+              return true;
+            }) ?? null
+          );
+        }),
         updateMany: vi.fn().mockImplementation(async ({ where, data }: {
           where: { meetingId: string; userId: string };
           data: Record<string, unknown>;
@@ -285,6 +319,27 @@ describe("Socket realtime integration", () => {
     const participantState = await participantStatePromise;
     expect(participantState.userId).toBe(USER_ONE_ID);
     expect(participantState.muted).toBe(true);
+
+    const shareAckA = await emitWithAck<{ ok: boolean; message?: string }>(
+      socketA,
+      "meeting:participant:update-state",
+      {
+        meetingId: MEETING_ID,
+        screenSharing: true
+      }
+    );
+    expect(shareAckA.ok).toBe(true);
+
+    const shareAckB = await emitWithAck<{ ok: boolean; message?: string }>(
+      socketB,
+      "meeting:participant:update-state",
+      {
+        meetingId: MEETING_ID,
+        screenSharing: true
+      }
+    );
+    expect(shareAckB.ok).toBe(false);
+    expect(shareAckB.message).toBe("Ya hay una pantalla compartida activa");
 
     const signalPromise = waitForEvent<{
       meetingId: string;

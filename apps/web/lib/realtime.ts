@@ -2,10 +2,21 @@
 
 import { io, type Socket } from "socket.io-client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
-const WS_BASE =
-  process.env.NEXT_PUBLIC_WS_URL ??
-  API_BASE.replace(/\/api\/v1\/?$/, "");
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+const resolveWsBase = () => {
+  const explicit = process.env.NEXT_PUBLIC_WS_URL?.trim();
+  if (explicit) {
+    return explicit;
+  }
+
+  if (typeof window !== "undefined" && API_BASE.startsWith("/") && window.location.port === "3000") {
+    return `${window.location.protocol}//${window.location.hostname}:4000`;
+  }
+
+  return API_BASE.replace(/\/api\/v1\/?$/, "");
+};
+
+const WS_BASE = resolveWsBase();
 
 const SOCKET_PATH = process.env.NEXT_PUBLIC_SOCKET_PATH ?? "/ws/socket.io";
 
@@ -16,7 +27,7 @@ export const getRealtimeSocket = (accessToken: string): Socket => {
     return socket;
   }
 
-  socket = io(WS_BASE, {
+  socket = io(WS_BASE || undefined, {
     path: SOCKET_PATH,
     transports: ["websocket", "polling"],
     auth: {

@@ -8,6 +8,7 @@ import type { SystemRole } from "@corelia/types";
 import type { Route } from "next";
 import { apiRequest, useAuthStore } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { EntryAnnouncementModal } from "@/components/entry-announcement-modal";
 import { getContextFromSearchParams, withDashboardContext } from "@/lib/context";
 
 type NavItem = {
@@ -182,6 +183,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
+      <EntryAnnouncementModal enabled={hydrated && Boolean(accessToken) && Boolean(session.data)} />
       <aside className="hidden border-r border-slate-200/80 bg-white/80 px-4 py-6 backdrop-blur lg:block">
         <div className="mb-6 space-y-1">
           <p className="text-xs uppercase tracking-wide text-slate-500">Organización</p>
