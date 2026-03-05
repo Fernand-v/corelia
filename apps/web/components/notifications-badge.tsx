@@ -214,7 +214,7 @@ export const NotificationsBadge = () => {
   return (
     <div className="relative">
       <button
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(0,0,0,0.09)] bg-white/80 text-slate-600 shadow-sm backdrop-blur-sm transition-colors duration-100 hover:bg-white/95"
         onClick={() => setOpen((current) => !current)}
         type="button"
         aria-label="Notificaciones"
@@ -224,7 +224,7 @@ export const NotificationsBadge = () => {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="h-4 w-4"
@@ -234,34 +234,36 @@ export const NotificationsBadge = () => {
           <path d="M9 17a3 3 0 0 0 6 0" />
         </svg>
         {unread > 0 ? (
-          <span className="absolute -right-1 -top-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-white">
             {unread}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-[360px] rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notificaciones</p>
+        <div className="absolute right-0 z-50 mt-2 w-[min(360px,calc(100vw-1rem))] rounded-2xl border border-[rgba(0,0,0,0.08)] bg-glass-heavy p-3 shadow-dropdown backdrop-blur-dropdown">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Notificaciones</p>
             <button
               type="button"
-              className="rounded-lg border border-slate-300 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white/60 px-2.5 py-1 text-[11px] text-slate-600 hover:bg-white/90 transition-colors duration-100"
               onClick={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending}
             >
-              {markAllReadMutation.isPending ? "Marcando..." : "Marcar leídas"}
+              {markAllReadMutation.isPending ? "Marcando…" : "Marcar leídas"}
             </button>
           </div>
 
-          {notificationsQuery.isLoading ? <p className="text-xs text-slate-500">Cargando...</p> : null}
+          {notificationsQuery.isLoading ? (
+            <p className="text-xs text-slate-400">Cargando…</p>
+          ) : null}
           {notificationsQuery.error ? (
-            <p className="text-xs text-red-600">{notificationsQuery.error.message}</p>
+            <p className="text-xs text-red-500">{notificationsQuery.error.message}</p>
           ) : null}
           {unreadNotifications.length === 0 ? (
-            <p className="text-xs text-slate-500">Sin notificaciones.</p>
+            <p className="py-2 text-center text-xs text-slate-400">Sin notificaciones pendientes.</p>
           ) : (
-            <ul className="max-h-72 space-y-2 overflow-y-auto">
+            <ul className="max-h-72 space-y-1.5 overflow-y-auto">
               {unreadNotifications.slice(0, 12).map((notification) => {
                 const display = parseNotificationDisplay(notification);
 
@@ -269,20 +271,20 @@ export const NotificationsBadge = () => {
                   <li key={notification.id}>
                     <Link
                       href={extractNotificationPath(notification.body) as Route}
-                      className="block rounded-lg border border-blue-200 bg-blue-50 px-2 py-2"
+                      className="block rounded-xl border border-accent/20 bg-accent-muted px-3 py-2.5 transition-colors duration-100 hover:bg-accent/15"
                       onClick={() => {
                         markSingleReadMutation.mutate(notification.id);
                         setOpen(false);
                       }}
                     >
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <p className="text-xs font-medium text-slate-900">{display.title}</p>
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                          No leído
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <p className="text-xs font-semibold text-slate-900 leading-snug">{display.title}</p>
+                        <span className="mt-0.5 shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
+                          Nuevo
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600">{display.subtitle}</p>
-                      <p className="mt-1 text-[10px] text-slate-500">
+                      <p className="text-[11px] leading-snug text-slate-500">{display.subtitle}</p>
+                      <p className="mt-1.5 text-[10px] text-slate-400">
                         {formatDateTime(notification.createdAt)}
                       </p>
                     </Link>
@@ -291,6 +293,15 @@ export const NotificationsBadge = () => {
               })}
             </ul>
           )}
+          <div className="mt-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
+            <Link
+              href="/notifications"
+              onClick={() => setOpen(false)}
+              className="block w-full rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/60 px-3 py-2 text-center text-xs text-slate-600 transition-colors hover:bg-white/90"
+            >
+              Ver todas las notificaciones
+            </Link>
+          </div>
         </div>
       ) : null}
     </div>

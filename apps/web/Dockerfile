@@ -1,5 +1,11 @@
 FROM node:20-alpine AS base
-RUN corepack enable
+ARG PNPM_VERSION=9.12.3
+RUN npm config set fetch-retries 8 \
+  && npm config set fetch-retry-factor 2 \
+  && npm config set fetch-retry-mintimeout 20000 \
+  && npm config set fetch-retry-maxtimeout 120000 \
+  && npm config set fetch-timeout 600000 \
+  && npm install -g pnpm@${PNPM_VERSION}
 WORKDIR /app
 
 FROM base AS deps
@@ -9,7 +15,7 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/types/package.json packages/types/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/config/package.json packages/config/package.json
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --filter @corelia/web...
 
 FROM deps AS builder
 ARG NEXT_PUBLIC_API_KEY=""
@@ -25,7 +31,6 @@ RUN pnpm --filter @corelia/ui build
 RUN pnpm --filter @corelia/web build
 
 FROM node:20-alpine AS runner
-RUN corepack enable
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
@@ -39,5 +44,6 @@ COPY --from=builder /app/packages/types/node_modules ./packages/types/node_modul
 COPY --from=builder /app/packages/ui/dist ./packages/ui/dist
 COPY --from=builder /app/packages/ui/package.json ./packages/ui/package.json
 COPY --from=builder /app/packages/ui/node_modules ./packages/ui/node_modules
+WORKDIR /app/apps/web
 EXPOSE 3000
-CMD ["pnpm", "--filter", "@corelia/web", "start"]
+CMD ["node", "node_modules/next/dist/bin/next", "start"]

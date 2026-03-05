@@ -41,7 +41,7 @@ services:
       resources:
         limits:
           cpus: "2"
-        memory: 2G
+          memory: 2G
 
   hocuspocus:
     deploy:

@@ -4,6 +4,30 @@
 
 :root {
   color-scheme: light;
+
+  /* Colores semánticos */
+  --color-bg:        #e8edf2;
+  --color-accent:    #0a84ff;
+  --color-accent-hover: #0071e3;
+  --color-accent-muted: rgba(10, 132, 255, 0.12);
+  --color-glass:     rgba(255, 255, 255, 0.72);
+  --color-glass-heavy: rgba(255, 255, 255, 0.88);
+  --color-border:    rgba(0, 0, 0, 0.07);
+  --color-border-strong: rgba(0, 0, 0, 0.11);
+
+  /* Radios */
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+
+  /* Sombras */
+  --shadow-card:    0 1px 4px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.05);
+  --shadow-panel:   0 2px 16px rgba(15, 23, 42, 0.07), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-dropdown: 0 8px 32px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08);
+
+  /* Tipografía */
+  --font-sans: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * {
@@ -12,14 +36,45 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(10, 132, 255, 0.08), transparent 38%),
-    radial-gradient(circle at bottom right, rgba(17, 24, 39, 0.08), transparent 40%),
-    #edf1f5;
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 15% 10%,  rgba(10, 132, 255, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 85% 90%,  rgba(100, 116, 139, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 50%,  rgba(248, 250, 252, 0.40) 0%, transparent 70%);
+  background-attachment: fixed;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar estilo macOS */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+  background-clip: padding-box;
+}
+
+/* Focus ring estilo macOS */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .docs-shell {
-  --docs-focus: #2563eb;
+  --docs-focus: var(--color-accent);
 }
 
 .docs-shell :focus-visible {
@@ -27,43 +82,6 @@ body {
   outline-offset: 2px;
 }
 
-.docs-shell[data-docs-theme="dark"] {
-  --docs-focus: #93c5fd;
-  color-scheme: dark;
-}
-
-.docs-shell[data-docs-theme="dark"] .bg-white {
-  background-color: #0f172a !important;
-}
-
-.docs-shell[data-docs-theme="dark"] .bg-\[\#f0f4f9\],
-.docs-shell[data-docs-theme="dark"] .bg-\[\#f8fafc\],
-.docs-shell[data-docs-theme="dark"] .bg-slate-50,
-.docs-shell[data-docs-theme="dark"] .bg-slate-100 {
-  background-color: #111827 !important;
-}
-
-.docs-shell[data-docs-theme="dark"] .border-slate-200,
-.docs-shell[data-docs-theme="dark"] .border-\[\#e2e8f2\] {
-  border-color: #334155 !important;
-}
-
-.docs-shell[data-docs-theme="dark"] .text-slate-900 {
-  color: #f8fafc !important;
-}
-
-.docs-shell[data-docs-theme="dark"] .text-slate-800 {
-  color: #e2e8f0 !important;
-}
-
-.docs-shell[data-docs-theme="dark"] .text-slate-700 {
-  color: #cbd5e1 !important;
-}
-
-.docs-shell[data-docs-theme="dark"] .text-slate-600,
-.docs-shell[data-docs-theme="dark"] .text-slate-500 {
-  color: #94a3b8 !important;
-}
 
 .dashboard-content h1,
 .dashboard-content h2,

@@ -337,8 +337,7 @@ export const AdminAnnouncementComposer = () => {
           if (blockType === "IMAGE" && item.type === "IMAGE") {
             return {
               ...item,
-              url: uploaded.url,
-              alt: item.alt || uploadFile.name
+              url: uploaded.url
             };
           }
 
@@ -626,28 +625,14 @@ export const AdminAnnouncementComposer = () => {
                       </label>
                       {uploadingBlockId === block.clientId ? (
                         <p className="text-xs text-slate-500">Subiendo imagen...</p>
+                      ) : block.url ? (
+                        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs text-emerald-700">
+                          Imagen cargada correctamente
+                        </p>
                       ) : null}
                       <input
                         className="h-9 w-full rounded-lg border border-slate-300 px-2 text-sm"
-                        placeholder="URL de la imagen (opcional)"
-                        value={block.url}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setBlocks((current) =>
-                            current.map((item) =>
-                              item.clientId === block.clientId && item.type === "IMAGE"
-                                ? {
-                                    ...item,
-                                    url: value
-                                  }
-                                : item
-                            )
-                          );
-                        }}
-                      />
-                      <input
-                        className="h-9 w-full rounded-lg border border-slate-300 px-2 text-sm"
-                        placeholder="Texto alternativo"
+                        placeholder="Texto alternativo (descripción de la imagen)"
                         value={block.alt}
                         onChange={(event) => {
                           const value = event.target.value;
@@ -686,6 +671,10 @@ export const AdminAnnouncementComposer = () => {
                       </label>
                       {uploadingBlockId === block.clientId ? (
                         <p className="text-xs text-slate-500">Subiendo archivo...</p>
+                      ) : block.url ? (
+                        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs text-emerald-700">
+                          Archivo cargado correctamente
+                        </p>
                       ) : null}
                       <input
                         className="h-9 w-full rounded-lg border border-slate-300 px-2 text-sm"
@@ -699,24 +688,6 @@ export const AdminAnnouncementComposer = () => {
                                 ? {
                                     ...item,
                                     label: value
-                                  }
-                                : item
-                            )
-                          );
-                        }}
-                      />
-                      <input
-                        className="h-9 w-full rounded-lg border border-slate-300 px-2 text-sm"
-                        placeholder="URL del archivo (opcional)"
-                        value={block.url}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setBlocks((current) =>
-                            current.map((item) =>
-                              item.clientId === block.clientId && item.type === "FILE"
-                                ? {
-                                    ...item,
-                                    url: value
                                   }
                                 : item
                             )

@@ -7,7 +7,13 @@ export interface CardProps extends PropsWithChildren {
 
 export const Card = ({ children, className }: CardProps) => {
   return (
-    <section className={cn("rounded-2xl border border-slate-200 bg-white p-4 shadow-sm", className)}>
+    <section
+      className={cn(
+        "rounded-2xl border bg-white/80 p-4 shadow-card backdrop-blur-sm",
+        "border-[rgba(0,0,0,0.07)]",
+        className
+      )}
+    >
       {children}
     </section>
   );

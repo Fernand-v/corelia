@@ -1,63 +1,68 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import type { AnnouncementContentBlock } from "@corelia/types";
 import { getApiBaseUrl } from "@/lib/api";
+import {
+  resolveAnnouncementImageCandidates,
+  resolveAnnouncementUrl
+} from "@/components/announcement-content-state";
 
-const isSafeHttpUrl = (value: string) => /^https?:\/\//i.test(value.trim());
-const isSafeAnnouncementAssetUrl = (value: string) =>
-  /^\/(?:api\/v1\/)?announcements\/assets\/content\?/i.test(value.trim());
+const AnnouncementImage = ({
+  candidates,
+  alt
+}: {
+  candidates: string[];
+  alt: string;
+}) => {
+  const candidatesKey = candidates.join("||");
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  const [showLinkFallback, setShowLinkFallback] = useState(false);
 
-const normalizeRelativeAnnouncementAssetUrl = (value: string) => {
-  const trimmed = value.trim();
-  if (/^\/announcements\/assets\/content\?/i.test(trimmed)) {
-    return `/api/v1${trimmed}`;
-  }
-  return trimmed;
-};
+  useEffect(() => {
+    setCandidateIndex(0);
+    setShowLinkFallback(false);
+  }, [candidatesKey]);
 
-const normalizeAbsoluteAnnouncementAssetUrl = (value: string): string | null => {
-  try {
-    const parsed = new URL(value.trim());
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+  const currentUrl = candidates[candidateIndex] ?? null;
+
+  if (!currentUrl || showLinkFallback) {
+    const link = currentUrl ?? candidates[0] ?? null;
+    if (!link) {
       return null;
     }
 
-    if (/^\/announcements\/assets\/content$/i.test(parsed.pathname)) {
-      parsed.pathname = `/api/v1${parsed.pathname}`;
-      return parsed.toString();
-    }
-
-    if (/^\/api\/v1\/announcements\/assets\/content$/i.test(parsed.pathname)) {
-      return parsed.toString();
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-const resolveAnnouncementUrl = (value: string): string | null => {
-  if (isSafeHttpUrl(value)) {
-    const normalizedAssetUrl = normalizeAbsoluteAnnouncementAssetUrl(value);
-    if (normalizedAssetUrl) {
-      return normalizedAssetUrl;
-    }
-    return value;
+    return (
+      <a
+        href={link}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+      >
+        Abrir imagen
+      </a>
+    );
   }
 
-  if (!isSafeAnnouncementAssetUrl(value)) {
-    return null;
-  }
-
-  const normalizedPath = normalizeRelativeAnnouncementAssetUrl(value);
-  const apiBase = getApiBaseUrl();
-  if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-    const apiOrigin = apiBase.replace(/\/api\/v1\/?$/i, "");
-    return `${apiOrigin}${normalizedPath}`;
-  }
-
-  return normalizedPath;
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={currentUrl}
+        alt={alt}
+        className="max-h-96 w-full rounded-xl border border-slate-200 object-contain"
+        onError={() => {
+          setCandidateIndex((current) => {
+            if (current + 1 < candidates.length) {
+              return current + 1;
+            }
+            setShowLinkFallback(true);
+            return current;
+          });
+        }}
+      />
+    </>
+  );
 };
 
 export const AnnouncementContent = ({
@@ -69,6 +74,8 @@ export const AnnouncementContent = ({
   fallbackBody?: string;
   compact?: boolean;
 }) => {
+  const apiBase = useMemo(() => getApiBaseUrl(), []);
+
   if (!blocks || blocks.length === 0) {
     if (!fallbackBody) {
       return null;
@@ -104,26 +111,28 @@ export const AnnouncementContent = ({
         }
 
         if (block.type === "IMAGE") {
-          const resolvedUrl = resolveAnnouncementUrl(block.url);
-          if (!resolvedUrl) {
+          const candidates = resolveAnnouncementImageCandidates({
+            value: block.url,
+            apiBase
+          });
+          if (candidates.length === 0) {
             return null;
           }
 
           return (
             <figure key={`block-${index}`} className="space-y-1">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={resolvedUrl}
-                alt={block.alt || "Imagen del anuncio"}
-                className="max-h-96 w-full rounded-xl border border-slate-200 object-contain"
-              />
+              <AnnouncementImage candidates={candidates} alt={block.alt || "Imagen del anuncio"} />
               {block.alt ? <figcaption className="text-xs text-slate-500">{block.alt}</figcaption> : null}
             </figure>
           );
         }
 
         if (block.type === "FILE") {
-          const resolvedUrl = resolveAnnouncementUrl(block.url);
+          const resolvedUrl = resolveAnnouncementUrl({
+            value: block.url,
+            apiBase,
+            kind: "FILE"
+          });
           if (!resolvedUrl) {
             return null;
           }

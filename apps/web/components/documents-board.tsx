@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HocuspocusProvider, HocuspocusProviderWebsocket } from "@hocuspocus/provider";
 import * as Y from "yjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -72,15 +72,18 @@ type DocumentAssetUploadResponse = {
 
 export const DocumentsBoard = ({
   projectId,
-  projectName
+  projectName,
+  initialDocumentId
 }: {
   projectId: string;
   projectName?: string | null;
+  initialDocumentId?: string | null;
 }) => {
   const queryClient = useQueryClient();
   const session = useSession();
 
   const [activeDocument, setActiveDocument] = useState<CollaborativeDocument | null>(null);
+  const initialOpenedRef = useRef(false);
   const [syncState, setSyncState] = useState<DocumentEditorSyncState>("synced");
   const [connectionState, setConnectionState] = useState<"connected" | "reconnecting" | "offline">("connected");
   const [providerOffline, setProviderOffline] = useState(false);
@@ -127,6 +130,19 @@ export const DocumentsBoard = ({
       ),
     enabled: initFoldersQuery.isSuccess
   });
+
+  useEffect(() => {
+    if (!initialDocumentId || initialOpenedRef.current || !documentsQuery.data) {
+      return;
+    }
+
+    const allDocs = Object.values(documentsQuery.data.documentsByType).flat();
+    const target = allDocs.find((doc) => doc.id === initialDocumentId);
+    if (target) {
+      initialOpenedRef.current = true;
+      setActiveDocument(target);
+    }
+  }, [initialDocumentId, documentsQuery.data]);
 
   const presenceQuery = useQuery({
     queryKey: ["documents", "presence", projectId],
@@ -206,11 +222,16 @@ export const DocumentsBoard = ({
       document: CollaborativeDocument;
       payload: DocumentSavePayload;
     }) => {
-      const file = new File([input.payload.content], `${input.document.id}.json`, {
-        type: "application/json"
+      const fileName = input.payload.fileName ?? `${input.document.id}.json`;
+      const mimeType = input.payload.mimeType ?? "application/json";
+      const file = new File([input.payload.content], fileName, {
+        type: mimeType
       });
       const formData = new FormData();
       formData.append("kind", input.payload.kind);
+      if (input.payload.format) {
+        formData.append("format", input.payload.format);
+      }
       formData.append("file", file);
 
       return apiRequest(`/documents/${encodeURIComponent(input.document.id)}/versions`, {
@@ -269,17 +290,18 @@ export const DocumentsBoard = ({
     }
   });
 
-  const heartbeatMutation = useMutation({
-    mutationFn: (documentId: string) =>
-      apiRequest(`/documents/${encodeURIComponent(documentId)}/presence`, {
+  const sendPresenceHeartbeat = useCallback(
+    async (documentId: string) => {
+      await apiRequest(`/documents/${encodeURIComponent(documentId)}/presence`, {
         method: "POST",
         body: JSON.stringify({
           color: currentUser.color,
           cursorLabel: currentUser.name || undefined
         })
-      }),
-    retry: false
-  });
+      });
+    },
+    [currentUser.color, currentUser.name]
+  );
 
   useEffect(() => {
     const clearOfflineTimer = () => {
@@ -427,7 +449,12 @@ export const DocumentsBoard = ({
   }, [activeDocument?.id, activeDocument?.yDocName]);
 
   useEffect(() => {
-    if (!activeDocument?.id || !currentUser.id) {
+    if (
+      !activeDocument?.id ||
+      !currentUser.id ||
+      providerOffline ||
+      connectionState !== "connected"
+    ) {
       return;
     }
 
@@ -438,7 +465,7 @@ export const DocumentsBoard = ({
 
       heartbeatInFlightRef.current = true;
       try {
-        await heartbeatMutation.mutateAsync(activeDocument.id);
+        await sendPresenceHeartbeat(activeDocument.id);
       } catch {
         // noop
       } finally {
@@ -455,7 +482,13 @@ export const DocumentsBoard = ({
     return () => {
       window.clearInterval(timer);
     };
-  }, [activeDocument?.id, currentUser.id, heartbeatMutation]);
+  }, [
+    activeDocument?.id,
+    connectionState,
+    currentUser.id,
+    providerOffline,
+    sendPresenceHeartbeat
+  ]);
 
   const activeCollaborators = presenceQuery.data?.items ?? documentsQuery.data?.activeCollaborators ?? [];
   const members = useMemo(() => {

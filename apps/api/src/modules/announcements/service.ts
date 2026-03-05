@@ -5,7 +5,7 @@ import { parseAnnouncementBody, serializeAnnouncementBody } from "./content.js";
 
 const DEFAULT_ASSET_MIME = "application/octet-stream";
 const ANNOUNCEMENT_ASSET_TOKEN_TYPE = "announcement_asset";
-const ANNOUNCEMENT_ASSET_PATH_PREFIX = "/api/v1/announcements/assets/content?";
+const ANNOUNCEMENT_ASSET_PATH_PATTERN = /^\/(?:api\/v1\/)?announcements\/assets\/content$/i;
 const ANNOUNCEMENT_CLEANUP_LOCK_KEY = "announcements:cleanup:expired-assets";
 const ANNOUNCEMENT_CLEANUP_LOCK_TTL_SECONDS = 5 * 60;
 
@@ -33,7 +33,12 @@ export class AnnouncementService {
   constructor(private readonly app: FastifyInstance) {}
 
   private static isAnnouncementAssetUrl(value: string): boolean {
-    return value.startsWith(ANNOUNCEMENT_ASSET_PATH_PREFIX);
+    try {
+      const parsed = new URL(value.trim(), "http://corelia.local");
+      return ANNOUNCEMENT_ASSET_PATH_PATTERN.test(parsed.pathname);
+    } catch {
+      return false;
+    }
   }
 
   private async parseAnnouncementAssetKey(url: string): Promise<string | null> {
@@ -302,6 +307,57 @@ export class AnnouncementService {
       );
 
     return announcementsForUser;
+  }
+
+  async deleteById(input: { announcementId: string }) {
+    const announcement = await this.app.prisma.announcement.findUnique({
+      where: { id: input.announcementId },
+      select: {
+        id: true,
+        title: true,
+        expiresAt: true,
+        body: true
+      }
+    });
+
+    if (!announcement) {
+      throw new Error("Anuncio no encontrado");
+    }
+
+    const parsedBody = parseAnnouncementBody(announcement.body);
+    const keysToDelete = this.app.storage
+      ? await this.collectAnnouncementAssetKeys(parsedBody.blocks)
+      : new Set<string>();
+
+    await this.app.prisma.announcement.delete({
+      where: { id: announcement.id }
+    });
+
+    if (this.app.storage && keysToDelete.size > 0) {
+      await Promise.allSettled(
+        [...keysToDelete].map(async (objectKey) => {
+          try {
+            await this.app.storage!.removeObject(objectKey);
+          } catch (error) {
+            this.app.log.warn(
+              {
+                err: error,
+                announcementId: announcement.id,
+                objectKey
+              },
+              "No se pudo eliminar asset de anuncio"
+            );
+          }
+        })
+      );
+    }
+
+    return {
+      id: announcement.id,
+      deleted: true as const,
+      title: announcement.title,
+      expiresAt: announcement.expiresAt.toISOString()
+    };
   }
 
   async uploadAsset(input: {

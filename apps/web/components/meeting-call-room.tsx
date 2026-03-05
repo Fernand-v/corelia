@@ -700,7 +700,7 @@ export const MeetingCallRoom = ({
                 />
               ))}
             </div>
-            <div className="min-h-[520px] rounded-2xl border border-slate-700 bg-black p-3">
+            <div className="rounded-2xl border border-slate-700 bg-black p-3">
               {activeStageParticipant ? (
                 <>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
@@ -711,10 +711,10 @@ export const MeetingCallRoom = ({
                       stream={activeStageParticipant.stream}
                       muted
                       mirror={activeStageParticipant.isLocal && !activeStageParticipant.screenSharing}
-                      className="h-[460px] w-full rounded-xl border border-slate-700 bg-slate-950 object-cover"
+                      className="h-[220px] w-full rounded-xl border border-slate-700 bg-slate-950 object-cover sm:h-[360px] lg:h-[460px]"
                     />
                   ) : (
-                    <div className="flex h-[460px] items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 px-4 text-center">
+                    <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 px-4 text-center sm:h-[360px] lg:h-[460px]">
                       <p className="text-sm text-slate-300">
                         {activeStageParticipant.videoOn
                           ? "Esperando stream de video..."
@@ -724,7 +724,7 @@ export const MeetingCallRoom = ({
                   )}
                 </>
               ) : (
-                <div className="flex h-[460px] items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 px-4 text-center">
+                <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 px-4 text-center sm:h-[360px] lg:h-[460px]">
                   <p className="text-sm text-slate-400">Conéctate para iniciar la videollamada.</p>
                 </div>
               )}
@@ -789,7 +789,7 @@ export const MeetingCallRoom = ({
 
         <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-3">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-200">Participantes</h2>
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-1">
             {allParticipants.map((participant) => {
               const fullName = memberNameById.get(participant.userId) ?? participant.userId;
               const status = projectStatusByUserId.get(participant.userId);

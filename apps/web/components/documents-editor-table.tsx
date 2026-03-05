@@ -170,6 +170,12 @@ export const DocumentsEditorTable = ({
   const [remoteSelections, setRemoteSelections] = useState<RemoteCellSelection[]>([]);
 
   const lastSerializedRef = useRef("");
+  const lastNotifiedRef = useRef("");
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const writeStateToY = useCallback(
     (state: TableState) => {
@@ -207,13 +213,16 @@ export const DocumentsEditorTable = ({
 
     lastSerializedRef.current = payload;
     setTableState(nextState);
-    onChange(payload);
+    if (lastNotifiedRef.current !== payload) {
+      lastNotifiedRef.current = payload;
+      onChangeRef.current(payload);
+    }
 
     if (yLegacyText.toString() !== payload) {
       yLegacyText.delete(0, yLegacyText.length);
       yLegacyText.insert(0, payload);
     }
-  }, [onChange, yLegacyText, yRoot]);
+  }, [yLegacyText, yRoot]);
 
   useEffect(() => {
     ensureInitialized();
@@ -329,23 +338,26 @@ export const DocumentsEditorTable = ({
     return map;
   }, [remoteSelections]);
 
-  const updateCellRawValue = (rowIndex: number, column: string, nextRaw: string) => {
-    if (readOnly) {
-      return;
-    }
+  const updateCellRawValue = useCallback(
+    (rowIndex: number, column: string, nextRaw: string) => {
+      if (readOnly) {
+        return;
+      }
 
-    const yRows = yRoot.get("rows");
-    if (!(yRows instanceof Y.Array)) {
-      return;
-    }
+      const yRows = yRoot.get("rows");
+      if (!(yRows instanceof Y.Array)) {
+        return;
+      }
 
-    const yRow = yRows.get(rowIndex);
-    if (!(yRow instanceof Y.Map)) {
-      return;
-    }
+      const yRow = yRows.get(rowIndex);
+      if (!(yRow instanceof Y.Map)) {
+        return;
+      }
 
-    yRow.set(column, nextRaw);
-  };
+      yRow.set(column, nextRaw);
+    },
+    [readOnly, yRoot]
+  );
 
   const columnDefs = useMemo<ColDef[]>(() => {
     return tableState.columns.map((column, columnIndex) => ({
@@ -375,7 +387,8 @@ export const DocumentsEditorTable = ({
         }
 
         updateCellRawValue(rowIndex, column, String(params.newValue ?? ""));
-        return true;
+        // The Y.js observer drives table re-renders; returning false prevents AG Grid double-mutation.
+        return false;
       },
       cellStyle: (params) => {
         const rowIndex = params.node?.rowIndex ?? -1;
@@ -403,7 +416,7 @@ export const DocumentsEditorTable = ({
         return remoteSelection ? `${remoteSelection.name} está editando esta celda` : undefined;
       }
     }));
-  }, [computedMatrix, readOnly, remoteCellMap, tableState.columns]);
+  }, [computedMatrix, readOnly, remoteCellMap, tableState.columns, updateCellRawValue]);
 
   const selectedCellValue = useMemo(() => {
     if (!selectedCell) {
@@ -413,14 +426,152 @@ export const DocumentsEditorTable = ({
     return tableState.rows[selectedCell.rowIndex]?.[selectedCell.column] ?? "";
   }, [selectedCell, tableState.rows]);
 
+  const addRow = useCallback(() => {
+    if (readOnly) return;
+    const yRows = yRoot.get("rows");
+    if (!(yRows instanceof Y.Array)) return;
+    const yRow = new Y.Map<string>();
+    for (const col of tableState.columns) {
+      yRow.set(col, "");
+    }
+    yRows.push([yRow]);
+  }, [readOnly, tableState.columns, yRoot]);
+
+  const removeLastRow = useCallback(() => {
+    if (readOnly) return;
+    const yRows = yRoot.get("rows");
+    if (!(yRows instanceof Y.Array) || yRows.length === 0) return;
+    yRows.delete(yRows.length - 1, 1);
+  }, [readOnly, yRoot]);
+
+  const addColumn = useCallback(() => {
+    if (readOnly) return;
+    const yColumns = yRoot.get("columns");
+    const yRows = yRoot.get("rows");
+    if (!(yColumns instanceof Y.Array) || !(yRows instanceof Y.Array)) return;
+    const existingCols = yColumns.toArray().map(String);
+    const nextLetter = String.fromCharCode(65 + existingCols.length);
+    const newCol = existingCols.includes(nextLetter)
+      ? `C${existingCols.length + 1}`
+      : nextLetter;
+    yDoc.transact(() => {
+      yColumns.push([newCol]);
+      yRows.toArray().forEach((row) => {
+        if (row instanceof Y.Map) {
+          row.set(newCol, "");
+        }
+      });
+    });
+  }, [readOnly, yDoc, yRoot]);
+
+  const removeLastColumn = useCallback(() => {
+    if (readOnly) return;
+    const yColumns = yRoot.get("columns");
+    const yRows = yRoot.get("rows");
+    if (!(yColumns instanceof Y.Array) || yColumns.length <= 1) return;
+    const lastCol = String(yColumns.get(yColumns.length - 1));
+    yDoc.transact(() => {
+      yColumns.delete(yColumns.length - 1, 1);
+      if (yRows instanceof Y.Array) {
+        yRows.toArray().forEach((row) => {
+          if (row instanceof Y.Map) {
+            row.delete(lastCol);
+          }
+        });
+      }
+    });
+  }, [readOnly, yDoc, yRoot]);
+
+  const exportCsv = useCallback(() => {
+    const header = tableState.columns.join(",");
+    const rows = tableState.rows.map((row) =>
+      tableState.columns
+        .map((col) => {
+          const val = row[col] ?? "";
+          return val.includes(",") || val.includes('"') ? `"${val.replace(/"/g, '""')}"` : val;
+        })
+        .join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${documentId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [documentId, tableState]);
+
+  const tbBtn = (disabled = false) =>
+    `inline-flex h-7 items-center gap-1 rounded-lg border px-2.5 text-xs font-semibold transition-colors active:scale-95 ${
+      disabled
+        ? "cursor-not-allowed border-[rgba(0,0,0,0.06)] bg-slate-50 text-slate-400"
+        : "border-[rgba(0,0,0,0.09)] bg-white text-slate-600 shadow-sm hover:bg-slate-50"
+    }`;
+
   return (
-    <div className="flex h-full min-h-[520px] flex-col gap-3">
-      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
-        Tabla colaborativa con fórmulas (AG Grid + HyperFormula + Y.js CRDT por celda)
+    <div className="flex h-full min-h-[520px] flex-col overflow-hidden rounded-2xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-[rgba(0,0,0,0.07)] bg-[#f8f9fa] px-3 py-2">
+        {!readOnly ? (
+          <>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={addRow} className={tbBtn(false)} title="Añadir fila">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="7" rx="1"/><path d="M12 14v7M8.5 17.5h7"/></svg>
+                + Fila
+              </button>
+              <button type="button" onClick={removeLastRow} disabled={tableState.rows.length <= 1} className={tbBtn(tableState.rows.length <= 1)} title="Eliminar última fila">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="7" rx="1"/><path d="M8 17.5h8"/></svg>
+                − Fila
+              </button>
+            </div>
+            <span className="h-5 w-px bg-[rgba(0,0,0,0.12)]" />
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={addColumn} className={tbBtn(false)} title="Añadir columna">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="18" rx="1"/><path d="M14 12h7M17.5 8.5v7"/></svg>
+                + Col
+              </button>
+              <button type="button" onClick={removeLastColumn} disabled={tableState.columns.length <= 1} className={tbBtn(tableState.columns.length <= 1)} title="Eliminar última columna">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="18" rx="1"/><path d="M17 12h4"/></svg>
+                − Col
+              </button>
+            </div>
+            <span className="h-5 w-px bg-[rgba(0,0,0,0.12)]" />
+          </>
+        ) : null}
+        <button type="button" onClick={exportCsv} className={tbBtn(false)} title="Exportar CSV">
+          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </button>
+        {remoteSelections.length > 0 ? (
+          <>
+            <span className="h-5 w-px bg-[rgba(0,0,0,0.12)]" />
+            <div className="flex flex-wrap items-center gap-1">
+              {remoteSelections.map((item) => (
+                <span
+                  key={`${item.userId}-${item.rowIndex}-${item.column}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-[rgba(0,0,0,0.07)] bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600 shadow-sm"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  {item.name}: {item.column}{item.rowIndex + 1}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : null}
+        <div className="ml-auto flex items-center gap-1 text-[11px] text-slate-400">
+          <span>{tableState.rows.length} filas</span>
+          <span>·</span>
+          <span>{tableState.columns.length} col</span>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-        <label className="mb-1 block text-xs font-semibold text-slate-600">Barra de fórmula</label>
+      {/* Formula bar */}
+      <div className="flex items-center gap-2 border-b border-[rgba(0,0,0,0.06)] bg-white px-3 py-1.5">
+        <span className="shrink-0 rounded bg-[#f0f4f9] px-2 py-1 text-[11px] font-semibold text-slate-500 min-w-[4rem] text-center">
+          {selectedCell ? `${selectedCell.column}${selectedCell.rowIndex + 1}` : "—"}
+        </span>
+        <svg className="h-3.5 w-3.5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7l4 4-4 4"/><path d="M12 19h8"/></svg>
         <input
           value={selectedCellValue}
           onChange={(event) => {
@@ -430,32 +581,12 @@ export const DocumentsEditorTable = ({
             updateCellRawValue(selectedCell.rowIndex, selectedCell.column, event.target.value);
           }}
           disabled={readOnly || !selectedCell}
-          placeholder={selectedCell ? `Celda ${selectedCell.column}${selectedCell.rowIndex + 1}` : "Selecciona una celda"}
-          className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-slate-50"
+          placeholder={selectedCell ? `Introduce un valor o una fórmula como =SUMA(A1:A10)` : "Selecciona una celda para editar"}
+          className="h-8 flex-1 rounded-lg border border-[rgba(0,0,0,0.08)] bg-[#f8f9fa] px-3 text-sm font-mono text-slate-700 outline-none transition-shadow focus:border-[#0a84ff] focus:bg-white focus:ring-2 focus:ring-[#0a84ff]/20 disabled:cursor-default disabled:bg-transparent disabled:border-transparent"
         />
-        <p className="mt-1 text-[11px] text-slate-500">
-          Ejemplos: <code>=SUM(A1:A10)</code>, <code>=AVERAGE(B1:B10)</code>, <code>=COUNT(C1:C10)</code>
-        </p>
       </div>
 
-      {remoteSelections.length > 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-          <div className="flex flex-wrap items-center gap-2">
-            {remoteSelections.map((item) => (
-              <span
-                key={`${item.userId}-${item.rowIndex}-${item.column}`}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
-              >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                {item.name}: {item.column}
-                {item.rowIndex + 1}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="ag-theme-quartz h-[500px] w-full overflow-hidden rounded-xl border border-slate-200">
+      <div className="ag-theme-quartz flex-1 overflow-hidden">
         <AgGridReact
           theme="legacy"
           rowData={tableState.rows}
@@ -473,19 +604,6 @@ export const DocumentsEditorTable = ({
               return;
             }
             setSelectedCell({ rowIndex, column });
-          }}
-          onCellValueChanged={(event) => {
-            if (readOnly) {
-              return;
-            }
-
-            const rowIndex = event.rowIndex ?? -1;
-            const column = event.colDef.field;
-            if (rowIndex < 0 || !column) {
-              return;
-            }
-
-            updateCellRawValue(rowIndex, column, String(event.newValue ?? ""));
           }}
         />
       </div>

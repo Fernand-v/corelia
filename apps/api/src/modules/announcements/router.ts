@@ -50,6 +50,41 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
     }
   );
 
+  app.delete(
+    "/:announcementId",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "ANUNCIO_PUBLICAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(announcementSchemas.announcementIdParamSchema, request.params);
+        const deleted = await service.deleteById({ announcementId: params.announcementId });
+
+        request.auditEvent = {
+          entityType: "ANUNCIO",
+          entityId: deleted.id,
+          action: "ELIMINAR",
+          previousData: {
+            title: deleted.title,
+            expiresAt: deleted.expiresAt
+          }
+        };
+
+        return reply.send({
+          id: deleted.id,
+          deleted: true
+        });
+      } catch (error) {
+        const message = (error as Error).message;
+        const statusCode = message.toLowerCase().includes("no encontrado") ? 404 : 400;
+        return reply.code(statusCode).send({ message });
+      }
+    }
+  );
+
   app.post(
     "/assets/upload",
     {

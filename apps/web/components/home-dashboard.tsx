@@ -82,7 +82,7 @@ const toneForAvailability = (status: string) => {
     return "text-amber-700 bg-amber-50 border-amber-200";
   }
   if (status === "OCUPADO") {
-    return "text-blue-700 bg-blue-50 border-blue-200";
+    return "text-accent bg-accent-muted border-accent/20";
   }
   return "text-emerald-700 bg-emerald-50 border-emerald-200";
 };
@@ -108,8 +108,11 @@ const contextLabel = (dashboard: HomeDashboard) => {
 const ProgressBar = ({ value }: { value: number }) => {
   const safe = Math.max(0, Math.min(100, value));
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-      <div className="h-full rounded-full bg-slate-900" style={{ width: `${safe}%` }} />
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+      <div
+        className="h-full rounded-full bg-accent transition-all duration-500 ease-macos"
+        style={{ width: `${safe}%` }}
+      />
     </div>
   );
 };
@@ -167,34 +170,35 @@ export const HomeDashboardView = () => {
     dashboard.role === "COORDINADOR_EQUIPO";
 
   return (
-    <div className="space-y-6">
-      <Card className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Home</p>
-        <h1 className="text-2xl font-semibold text-slate-900">{roleLabel[dashboard.role]}</h1>
-        <p className="text-sm text-slate-600">
+    <div className="space-y-5">
+      {/* Hero card */}
+      <Card className="space-y-1.5">
+        <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Home</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{roleLabel[dashboard.role]}</h1>
+        <p className="text-sm text-slate-500">
           {dashboard.organizationName} · {contextLabel(dashboard)}
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-[11px] text-slate-400">
           Actualizado: {formatDateTime(dashboard.generatedAt)} · Notificaciones sin leer:{" "}
-          {dashboard.unreadNotificationCount}
+          <span className="font-semibold text-accent">{dashboard.unreadNotificationCount}</span>
         </p>
       </Card>
 
       {blocks.externalBanner ? (
-        <Card className="border-amber-200 bg-amber-50">
-          <p className="text-sm font-medium text-amber-800">{blocks.externalBanner}</p>
+        <Card className="border-amber-200/70 bg-amber-50/80">
+          <p className="text-sm font-medium text-amber-700">{blocks.externalBanner}</p>
         </Card>
       ) : null}
 
       {dashboard.quickActions.length > 0 ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Accesos rápidos</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Accesos rápidos</h2>
           <div className="flex flex-wrap gap-2">
             {dashboard.quickActions.map((action) => (
               <Link
                 key={action.key}
                 href={action.path as Route}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/60 px-3 py-1.5 text-sm text-slate-700 shadow-sm transition-colors duration-100 hover:bg-white/90"
               >
                 {action.label}
               </Link>
@@ -205,7 +209,7 @@ export const HomeDashboardView = () => {
 
       {blocks.myDay ? (
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Mi día</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Mi día</h2>
 
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wide text-slate-500">Tareas de hoy o vencidas</p>
@@ -214,14 +218,14 @@ export const HomeDashboardView = () => {
             ) : (
               <ul className="space-y-2">
                 {blocks.myDay.dueOrOverdueTasks.slice(0, 8).map((task) => (
-                  <li key={task.id} className="rounded-xl border border-slate-200 p-3">
+                  <li key={task.id} className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                     <p className="text-sm font-medium text-slate-900">{task.title}</p>
                     <p className="text-xs text-slate-600">
                       {task.projectName} · {task.status} ·{" "}
                       {task.dueDate ? formatDateTime(task.dueDate) : "Sin fecha"}
                     </p>
                     {task.overdue ? (
-                      <p className="mt-1 inline-flex rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-700">
+                      <p className="mt-1 inline-flex rounded-full border border-red-100 bg-red-50/80 px-2 py-0.5 text-[10px] font-medium text-red-500">
                         Vencida
                       </p>
                     ) : null}
@@ -232,7 +236,7 @@ export const HomeDashboardView = () => {
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Próxima reunión</p>
               {blocks.myDay.nextMeeting ? (
                 <>
@@ -249,7 +253,7 @@ export const HomeDashboardView = () => {
                     href={blocks.myDay.nextMeeting.joinPath as Route}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs font-medium text-blue-700 hover:underline"
+                    className="mt-2 inline-block text-xs font-medium text-accent hover:underline"
                   >
                     Unirme
                   </Link>
@@ -259,7 +263,7 @@ export const HomeDashboardView = () => {
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">
                 Solicitudes internas pendientes
               </p>
@@ -273,13 +277,13 @@ export const HomeDashboardView = () => {
 
       {blocks.myProjects ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Mis proyectos activos</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Mis proyectos activos</h2>
           {blocks.myProjects.length === 0 ? (
             <p className="text-sm text-slate-600">No hay proyectos asociados.</p>
           ) : (
             <ul className="space-y-3">
               {blocks.myProjects.map((project) => (
-                <li key={project.projectId} className="space-y-1 rounded-xl border border-slate-200 p-3">
+                <li key={project.projectId} className="space-y-1 rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-sm font-medium text-slate-900">{project.name}</p>
                     <p className="text-xs text-slate-600">{project.completionPct}% completado</p>
@@ -290,12 +294,12 @@ export const HomeDashboardView = () => {
                   </p>
                   <Link
                     href={`/projects?projectId=${project.projectId}` as Route}
-                    className="inline-flex rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    className="inline-flex rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/60 px-2.5 py-1 text-xs text-slate-600 shadow-sm transition-colors duration-100 hover:bg-white/90"
                   >
                     Abrir recursos del proyecto
                   </Link>
                   {project.risk ? (
-                    <p className="inline-flex rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-700">
+                    <p className="inline-flex rounded-full border border-red-100 bg-red-50/80 px-2 py-0.5 text-[10px] font-medium text-red-500">
                       Riesgo alto
                     </p>
                   ) : null}
@@ -308,7 +312,7 @@ export const HomeDashboardView = () => {
 
       {blocks.recentActivity ? (
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Actividad reciente</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Actividad reciente</h2>
 
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wide text-slate-500">Notificaciones no leídas</p>
@@ -320,7 +324,7 @@ export const HomeDashboardView = () => {
                   <li key={notification.id}>
                     <Link
                       href={(notification.path.startsWith("/") ? notification.path : "/home") as Route}
-                      className="block rounded-xl border border-slate-200 p-3 hover:bg-slate-50"
+                      className="block rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3 transition-colors duration-100 hover:bg-white/80"
                     >
                       <p className="text-sm font-medium text-slate-900">{notification.title}</p>
                       <p className="text-xs text-slate-600">{summarizeNotification(notification.body)}</p>
@@ -339,7 +343,7 @@ export const HomeDashboardView = () => {
             ) : (
               <ul className="space-y-2">
                 {blocks.recentActivity.recentTaskChanges.slice(0, 6).map((change) => (
-                  <li key={`${change.taskId}-${change.changedAt}`} className="rounded-xl border border-slate-200 p-3">
+                  <li key={`${change.taskId}-${change.changedAt}`} className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                     <p className="text-sm font-medium text-slate-900">{change.taskTitle}</p>
                     <p className="text-xs text-slate-600">
                       {change.changeType === "REASIGNACION" ? "Reasignación" : "Cambio de estado"} ·{" "}
@@ -356,11 +360,11 @@ export const HomeDashboardView = () => {
       {blocks.announcements ? (
         <Card className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-slate-900">Anuncios activos</h2>
+            <h2 className="text-sm font-semibold text-slate-700">Anuncios activos</h2>
             <div className="flex items-center gap-2">
               <Link
                 href={"/announcements" as Route}
-                className="rounded-xl border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/60 px-3 py-1 text-xs text-slate-600 shadow-sm transition-colors duration-100 hover:bg-white/90"
               >
                 Ver todos
               </Link>
@@ -369,7 +373,7 @@ export const HomeDashboardView = () => {
                   href={"/announcements/new" as Route}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-xl border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-700"
+                  className="rounded-xl bg-accent px-3 py-1 text-xs font-semibold text-white shadow-sm transition-colors duration-100 hover:bg-accent-hover"
                 >
                   Nuevo anuncio
                 </Link>
@@ -381,11 +385,11 @@ export const HomeDashboardView = () => {
           ) : (
             <ul className="space-y-2">
               {blocks.announcements.map((announcement) => (
-                <li key={announcement.id} className="rounded-xl border border-slate-200 p-3">
+                <li key={announcement.id} className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-medium text-slate-900">{announcement.title}</p>
                     {announcement.isNew ? (
-                      <span className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                      <span className="rounded-full border border-accent/20 bg-accent-muted px-2 py-0.5 text-[10px] font-medium text-accent">
                         Nuevo
                       </span>
                     ) : null}
@@ -405,7 +409,7 @@ export const HomeDashboardView = () => {
 
       {blocks.teamToday ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Mi equipo hoy</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Mi equipo hoy</h2>
           {blocks.teamToday.length === 0 ? (
             <p className="text-sm text-slate-600">No hay equipos asignados.</p>
           ) : (
@@ -415,7 +419,7 @@ export const HomeDashboardView = () => {
                   <p className="text-sm font-semibold text-slate-900">{team.teamName}</p>
                   <ul className="space-y-2">
                     {team.members.map((member) => (
-                      <li key={member.userId} className="rounded-xl border border-slate-200 p-3">
+                      <li key={member.userId} className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-sm font-medium text-slate-900">{member.fullName}</p>
                           <span
@@ -430,7 +434,7 @@ export const HomeDashboardView = () => {
                           Vencidas: {member.overdueTasks} · Capacidad: {member.capacityPct}%
                         </p>
                         {member.overloaded ? (
-                          <p className="mt-1 inline-flex rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-700">
+                          <p className="mt-1 inline-flex rounded-full border border-red-100 bg-red-50/80 px-2 py-0.5 text-[10px] font-medium text-red-500">
                             Capacidad sobre 80%
                           </p>
                         ) : null}
@@ -446,20 +450,20 @@ export const HomeDashboardView = () => {
 
       {blocks.unassignedTasks ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Tareas sin responsable</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Tareas sin responsable</h2>
           {blocks.unassignedTasks.length === 0 ? (
             <p className="text-sm text-slate-600">No hay tareas sin responsable.</p>
           ) : (
             <ul className="space-y-2">
               {blocks.unassignedTasks.slice(0, 10).map((task) => (
-                <li key={task.id} className="rounded-xl border border-slate-200 p-3">
+                <li key={task.id} className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                   <p className="text-sm font-medium text-slate-900">{task.title}</p>
                   <p className="text-xs text-slate-600">
                     {task.projectName} · {task.status}
                   </p>
                   <Link
                     href={`/tasks?projectId=${task.projectId}` as Route}
-                    className="text-xs font-medium text-blue-700 hover:underline"
+                    className="text-xs font-medium text-accent hover:underline"
                   >
                     Asignación rápida
                   </Link>
@@ -472,17 +476,17 @@ export const HomeDashboardView = () => {
 
       {blocks.projectStatus ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Estado de mis proyectos</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Estado de mis proyectos</h2>
           {blocks.projectStatus.length === 0 ? (
             <p className="text-sm text-slate-600">No lideras proyectos activos.</p>
           ) : (
             <ul className="space-y-2">
               {blocks.projectStatus.map((project) => (
-                <li key={project.projectId} className="space-y-1 rounded-xl border border-slate-200 p-3">
+                <li key={project.projectId} className="space-y-1 rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-medium text-slate-900">{project.name}</p>
                     {project.risk ? (
-                      <span className="rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-700">
+                      <span className="rounded-full border border-red-100 bg-red-50/80 px-2 py-0.5 text-[10px] font-medium text-red-500">
                         Riesgo
                       </span>
                     ) : null}
@@ -498,7 +502,7 @@ export const HomeDashboardView = () => {
                   ) : null}
                   <Link
                     href={`/projects?projectId=${project.projectId}` as Route}
-                    className="inline-flex rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    className="inline-flex rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/60 px-2.5 py-1 text-xs text-slate-600 shadow-sm transition-colors duration-100 hover:bg-white/90"
                   >
                     Ver detalles del proyecto
                   </Link>
@@ -511,21 +515,21 @@ export const HomeDashboardView = () => {
 
       {blocks.pendingDecisions ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Decisiones pendientes</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Decisiones pendientes</h2>
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Reasignaciones</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.pendingDecisions.reassignmentApprovals}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Documentos</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.pendingDecisions.pendingProjectDocuments}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Solicitudes</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.pendingDecisions.pendingTeamRequests}
@@ -537,7 +541,7 @@ export const HomeDashboardView = () => {
 
       {blocks.systemState ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Estado del sistema</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Estado del sistema</h2>
           <p className="text-xs text-slate-500">Actualizado: {formatDateTime(blocks.systemState.now)}</p>
           <ul className="space-y-2">
             {blocks.systemState.services.map((service) => (
@@ -556,7 +560,7 @@ export const HomeDashboardView = () => {
             href={blocks.systemState.grafanaUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-sm font-medium text-blue-700 hover:underline"
+            className="text-sm font-medium text-accent hover:underline"
           >
             Ir a Grafana
           </a>
@@ -565,27 +569,27 @@ export const HomeDashboardView = () => {
 
       {blocks.organizationActivity ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Actividad organizacional</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Actividad organizacional</h2>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Nuevos usuarios</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.organizationActivity.newUsersLast7Days}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Onboarding</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.organizationActivity.onboardingInProgress}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Offboarding</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.organizationActivity.pendingOffboardings}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Invitados por expirar</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.organizationActivity.expiringGuestsNext7Days}
@@ -597,27 +601,27 @@ export const HomeDashboardView = () => {
 
       {blocks.operationalSummary ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Resumen operativo</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Resumen operativo</h2>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Proyectos activos</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.operationalSummary.activeProjects}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Tareas activas</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.operationalSummary.activeTasks}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Tareas vencidas</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.operationalSummary.overdueTasks}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Automatizaciones fallidas</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {blocks.operationalSummary.failedAutomationsLast24h}
@@ -632,7 +636,7 @@ export const HomeDashboardView = () => {
             ) : (
               <ul className="space-y-2">
                 {blocks.operationalSummary.teamsWithMoreBlockedTasks.map((team) => (
-                  <li key={team.teamId} className="rounded-xl border border-slate-200 p-3">
+                  <li key={team.teamId} className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                     <p className="text-sm font-medium text-slate-900">{team.teamName}</p>
                     <p className="text-xs text-slate-600">{team.blockedTasks} tareas bloqueadas</p>
                   </li>
@@ -645,13 +649,13 @@ export const HomeDashboardView = () => {
 
       {blocks.sharedResources ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Recursos compartidos</h2>
+          <h2 className="text-sm font-semibold text-slate-700">Recursos compartidos</h2>
           {blocks.sharedResources.length === 0 ? (
             <p className="text-sm text-slate-600">No tienes recursos compartidos activos.</p>
           ) : (
             <ul className="space-y-2">
               {blocks.sharedResources.map((resource) => (
-                <li key={resource.id} className="rounded-xl border border-slate-200 p-3">
+                <li key={resource.id} className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                   <p className="text-sm font-medium text-slate-900">
                     {resource.resourceType} · {resource.resourceId.slice(0, 8)}
                   </p>

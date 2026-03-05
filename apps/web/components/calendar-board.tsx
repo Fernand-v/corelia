@@ -395,6 +395,7 @@ const CalendarBoardView = ({
   loading,
   errorMessage
 }: CalendarBoardViewProps) => {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState<CalendarView>("semana");
   const [selectedDay, setSelectedDay] = useState<Date>(() => normalizeDate(currentWeek[0] ?? new Date()));
   const [showModal, setShowModal] = useState(false);
@@ -557,6 +558,7 @@ const CalendarBoardView = ({
     const normalized = normalizeDate(day);
     setSelectedDay(normalized);
     onSelectDay(normalized);
+    setMobileSidebarOpen(false);
   };
 
   const handleChangeView = (view: CalendarView) => {
@@ -751,10 +753,20 @@ const CalendarBoardView = ({
   );
 
   return (
-    <section className={`${dmSans.className} grid h-[calc(100vh-6rem)] w-full grid-cols-[300px_minmax(0,1fr)] gap-3 overflow-hidden bg-[#f0f4f9] p-2`}>
-      <aside className="flex h-full flex-col rounded-2xl border border-[#e2e8f2] bg-white p-3 shadow-[0_2px_12px_rgba(15,27,45,0.07)]">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className={`${sora.className} text-base font-semibold text-slate-900`}>Calendario</h2>
+    <section className={`${dmSans.className} h-[calc(100vh-6rem)] w-full overflow-hidden bg-[#f0f4f9] p-2 lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-3`}>
+      <aside className={`${mobileSidebarOpen ? "flex" : "hidden"} lg:flex h-full flex-col rounded-2xl border border-[#e2e8f2] bg-white p-3 shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(false)}
+              className="shrink-0 rounded-[10px] border border-[#d7dff0] px-2.5 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 lg:hidden"
+              aria-label="Cerrar panel"
+            >
+              ←
+            </button>
+            <h2 className={`${sora.className} text-base font-semibold text-slate-900`}>Calendario</h2>
+          </div>
           <button
             type="button"
             onClick={() => openModal("evento")}
@@ -943,7 +955,7 @@ const CalendarBoardView = ({
         ) : null}
       </aside>
 
-      <section className="flex min-w-0 flex-col rounded-2xl border border-[#e2e8f2] bg-white shadow-[0_2px_12px_rgba(15,27,45,0.07)]">
+      <section className={`${mobileSidebarOpen ? "hidden" : "flex"} lg:flex min-w-0 flex-col rounded-2xl border border-[#e2e8f2] bg-white shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
         {(errorMessage || localError) && (
           <div className="mx-3 mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {errorMessage ?? localError}
@@ -951,18 +963,28 @@ const CalendarBoardView = ({
         )}
 
         <div className="flex items-center justify-between gap-3 border-b border-[#e2e8f2] px-4 py-3">
-          <div>
-            <h2 className={`${sora.className} text-base font-semibold text-slate-900`}>
-              {activeView === "mes"
-                ? `Mes de ${currentMonth.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}`
-                : `${timelineDays[0]?.toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) ?? ""} - ${
-                    timelineDays[timelineDays.length - 1]?.toLocaleDateString("es-ES", {
-                      day: "2-digit",
-                      month: "short"
-                    }) ?? ""
-                  }`}
-            </h2>
-            <p className="text-xs text-slate-500">Vista colaborativa de agenda semanal</p>
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="shrink-0 rounded-[10px] border border-[#d7dff0] px-2.5 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 lg:hidden"
+              aria-label="Opciones de calendario"
+            >
+              ☰
+            </button>
+            <div className="min-w-0">
+              <h2 className={`${sora.className} truncate text-base font-semibold text-slate-900`}>
+                {activeView === "mes"
+                  ? `Mes de ${currentMonth.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}`
+                  : `${timelineDays[0]?.toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) ?? ""} - ${
+                      timelineDays[timelineDays.length - 1]?.toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "short"
+                      }) ?? ""
+                    }`}
+              </h2>
+              <p className="text-xs text-slate-500">Vista colaborativa de agenda semanal</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

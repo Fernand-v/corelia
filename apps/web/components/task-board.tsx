@@ -748,7 +748,7 @@ export const TaskBoard = ({
               <select
                 value={selectedProjectId}
                 onChange={(event) => setSelectedProjectId(event.target.value)}
-                className="h-10 min-w-[220px] rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm sm:w-auto sm:min-w-[220px]"
                 aria-label="Proyecto"
               >
                 <option value="">Selecciona proyecto</option>
@@ -863,7 +863,7 @@ export const TaskBoard = ({
         {!selectedProjectId ? (
           <p className="text-sm text-slate-600">Selecciona un proyecto para ver su tablero.</p>
         ) : viewMode === "cards" ? (
-          <div className="grid gap-3 xl:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {projectTasksByStatus.map((column) => (
               <div key={column.status} className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
                 <h3 className="text-sm font-semibold text-slate-900">

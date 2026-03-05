@@ -247,6 +247,7 @@ export const MessagingModule = ({
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [dropdownIndex, setDropdownIndex] = useState(0);
   const [dismissedTokenSignature, setDismissedTokenSignature] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "chat" | "team">("list");
 
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
@@ -532,8 +533,8 @@ export const MessagingModule = ({
       className={`${plusJakartaSans.className} h-full w-full overflow-hidden bg-[#f0f2f5] text-[#111b21]`}
       style={{ scrollbarWidth: "thin" }}
     >
-      <div className="grid h-full w-full grid-cols-[300px_minmax(0,1fr)_280px] overflow-hidden bg-white">
-        <aside className="flex h-full flex-col border-r border-[#e4e9f0] bg-white">
+      <div className="h-full w-full overflow-hidden bg-white md:grid md:grid-cols-[300px_minmax(0,1fr)_280px]">
+        <aside className={`${mobileView === "list" ? "flex" : "hidden"} md:flex h-full flex-col border-r border-[#e4e9f0] bg-white`}>
           <header className="flex items-center justify-between border-b border-[#e4e9f0] px-4 py-3">
             <h2 className="text-base font-semibold">Mensajes</h2>
             <button
@@ -561,7 +562,7 @@ export const MessagingModule = ({
                 <button
                   key={conversation.id}
                   type="button"
-                  onClick={() => onSelectConversation(conversation.id)}
+                  onClick={() => { onSelectConversation(conversation.id); setMobileView("chat"); }}
                   className={`w-full border-b border-[#f4f6f9] px-4 py-3 text-left ${
                     active ? "bg-[#e9f8ef]" : "hover:bg-[#f7f9fb]"
                   }`}
@@ -598,13 +599,22 @@ export const MessagingModule = ({
           </div>
         </aside>
 
-        <main className="relative flex h-full flex-col overflow-hidden bg-[#eae6df]">
+        <main className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex relative h-full flex-col overflow-hidden bg-[#eae6df]`}>
           <header className="z-10 flex items-center justify-between border-b border-[#e4e9f0] bg-white px-4 py-3 shadow-sm">
-            <div className="min-w-0">
-              <h3 className="truncate text-base font-semibold">
-                {activeConversation?.name ?? "Selecciona una conversación"}
-              </h3>
-              <p className="truncate text-xs text-[#667781]">Canal activo</p>
+            <div className="flex min-w-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setMobileView("list")}
+                className="mr-1 shrink-0 rounded-full p-1.5 text-[#667781] hover:bg-[#f0f2f5] md:hidden"
+              >
+                ←
+              </button>
+              <div className="min-w-0">
+                <h3 className="truncate text-base font-semibold">
+                  {activeConversation?.name ?? "Selecciona una conversación"}
+                </h3>
+                <p className="truncate text-xs text-[#667781]">Canal activo</p>
+              </div>
             </div>
             <div className="flex items-center gap-1">
               <button type="button" className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5]">
@@ -618,7 +628,14 @@ export const MessagingModule = ({
               >
                 🎥
               </button>
-              <button type="button" className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5]">
+              <button
+                type="button"
+                onClick={() => setMobileView("team")}
+                className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] md:hidden"
+              >
+                👥
+              </button>
+              <button type="button" className="hidden rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] md:block">
                 ⋯
               </button>
             </div>
@@ -870,8 +887,15 @@ export const MessagingModule = ({
           </footer>
         </main>
 
-        <aside className="flex h-full flex-col border-l border-[#e4e9f0] bg-white">
-          <header className="border-b border-[#e4e9f0] px-4 py-3">
+        <aside className={`${mobileView === "team" ? "flex" : "hidden"} md:flex h-full flex-col border-l border-[#e4e9f0] bg-white`}>
+          <header className="flex items-center gap-2 border-b border-[#e4e9f0] px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setMobileView("chat")}
+              className="shrink-0 rounded-full p-1.5 text-[#667781] hover:bg-[#f0f2f5] md:hidden"
+            >
+              ←
+            </button>
             <h4 className="text-sm font-semibold">Equipo</h4>
           </header>
           <div className="flex-1 overflow-y-auto px-3 py-3">

@@ -4,10 +4,14 @@ import { cn } from "./utils.js";
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const styles: Record<ButtonVariant, string> = {
-  primary: "bg-blue-600 text-white hover:bg-blue-700",
-  secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200",
-  ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
-  danger: "bg-red-600 text-white hover:bg-red-700"
+  primary:
+    "bg-accent text-white shadow-sm hover:bg-accent-hover active:scale-[0.97] transition-transform duration-100",
+  secondary:
+    "bg-white/70 text-slate-800 border border-[rgba(0,0,0,0.09)] shadow-sm backdrop-blur-sm hover:bg-white/90 active:scale-[0.97] transition-transform duration-100",
+  ghost:
+    "bg-transparent text-slate-700 hover:bg-black/5 active:scale-[0.97] transition-transform duration-100",
+  danger:
+    "bg-red-500 text-white shadow-sm hover:bg-red-600 active:scale-[0.97] transition-transform duration-100"
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

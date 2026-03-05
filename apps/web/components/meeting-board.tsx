@@ -117,7 +117,7 @@ export const MeetingBoard = () => {
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
       <Card className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-900">Programar reunión</h2>
         <form

@@ -74,6 +74,7 @@ const NAV_ITEMS: NavItem[] = [
     phase: "Fase 2B"
   },
   { label: "Solicitudes", href: "/requests", roles: WORK_ROLES },
+  { label: "Notificaciones", href: "/notifications", roles: ALL_ROLES },
   { label: "Buscar", href: "/search", roles: INTERNAL_ROLES }
 ];
 
@@ -265,7 +266,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   if (!hydrated || (accessToken && session.isLoading)) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-4 py-10">
-        <p className="text-sm text-slate-600">Cargando sesión...</p>
+        <p className="text-sm text-slate-500 tracking-wide">Cargando sesión…</p>
       </main>
     );
   }
@@ -292,16 +293,18 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
+    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
       <EntryAnnouncementModal enabled={hydrated && Boolean(accessToken) && Boolean(session.data)} />
-      <aside className="hidden border-r border-slate-200/80 bg-white/80 px-4 py-6 backdrop-blur lg:block">
-        <div className="mb-6 space-y-1">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Organización</p>
-          <h1 className="text-xl font-semibold text-slate-900">Corelia</h1>
-          <p className="text-xs text-slate-600">Rol activo: {roleLabel[activeRole]}</p>
+
+      {/* Sidebar desktop */}
+      <aside className="hidden lg:flex lg:flex-col border-r border-[rgba(0,0,0,0.07)] bg-sidebar px-3 py-5 backdrop-blur-sidebar">
+        <div className="mb-5 px-2 space-y-0.5">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Organización</p>
+          <h1 className="text-lg font-semibold text-slate-900 tracking-tight">Corelia</h1>
+          <p className="text-xs text-slate-500">{roleLabel[activeRole]}</p>
         </div>
 
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {visibleItems.map((item) => {
             const isActive = pathname === item.href;
 
@@ -309,10 +312,10 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
               return (
                 <div
                   key={item.href}
-                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500"
+                  className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-400 cursor-not-allowed"
                 >
                   <span>{item.label}</span>
-                  <span className="text-xs">{item.phase}</span>
+                  <span className="text-[10px] rounded-full bg-slate-100 px-2 py-0.5 text-slate-400">{item.phase}</span>
                 </div>
               );
             }
@@ -323,8 +326,10 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
               <Link
                 key={item.href}
                 href={href as Route}
-                className={`block rounded-xl px-3 py-2 text-sm ${
-                  isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+                className={`flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-100 ${
+                  isActive
+                    ? "bg-nav-active-bg text-nav-active-text"
+                    : "text-slate-600 hover:bg-black/5 hover:text-slate-900"
                 }`}
               >
                 {item.label}
@@ -334,23 +339,25 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         </nav>
 
         {!dashboardContext.projectId ? (
-          <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          <p className="mt-3 rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 px-3 py-2 text-xs text-slate-500 leading-relaxed">
             Selecciona un proyecto en Mis Proyectos para habilitar tareas, reuniones, calendario y archivos del proyecto.
           </p>
         ) : null}
 
         {adminItems.length > 0 ? (
-          <div className="mt-8">
-            <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Administración</p>
-            <nav className="space-y-1">
+          <div className="mt-6">
+            <p className="mb-1 px-2 text-[10px] font-medium uppercase tracking-widest text-slate-400">Administración</p>
+            <nav className="space-y-0.5">
               {adminItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.href}
                     href={item.href as Route}
-                    className={`block rounded-xl px-3 py-2 text-sm ${
-                      isActive ? "bg-red-700 text-white" : "text-slate-700 hover:bg-slate-100"
+                    className={`flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-100 ${
+                      isActive
+                        ? "bg-admin-active-bg text-admin-active-text"
+                        : "text-slate-600 hover:bg-red-50/60 hover:text-red-700"
                     }`}
                   >
                     {item.label}
@@ -362,12 +369,13 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         ) : null}
       </aside>
 
-      <div>
-        <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur md:px-6">
+      <div className="flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="sticky top-0 z-20 border-b border-[rgba(0,0,0,0.07)] bg-glass-heavy px-4 py-3 backdrop-blur-header shadow-header md:px-6">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs text-slate-500">Contexto activo</p>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-[11px] text-slate-400 font-medium tracking-wide">Contexto activo</p>
+              <p className="text-sm font-semibold text-slate-800 tracking-tight">
                 Corelia · {contextLabel} · {roleLabel[activeRole]}
               </p>
             </div>
@@ -381,9 +389,9 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
                   aria-expanded={userMenuOpen}
                   aria-haspopup="menu"
                   onClick={() => setUserMenuOpen((current) => !current)}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-slate-700 hover:bg-slate-50"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-[rgba(0,0,0,0.09)] bg-white/80 px-2.5 text-slate-700 shadow-sm backdrop-blur-sm hover:bg-white/95 transition-colors duration-100"
                 >
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                     <svg
                       viewBox="0 0 24 24"
                       fill="none"
@@ -405,54 +413,53 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className={`h-4 w-4 transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
+                    className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
                     aria-hidden="true"
                   >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </button>
 
+                {/* Dropdown usuario */}
                 <div
-                  className={`absolute right-0 z-30 mt-2 w-[min(20rem,calc(100vw-1rem))] origin-top-right rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl transition duration-150 ease-out sm:w-80 ${
+                  className={`absolute right-0 z-30 mt-2 w-[min(20rem,calc(100vw-1rem))] origin-top-right rounded-2xl border border-[rgba(0,0,0,0.08)] bg-glass-heavy p-3 shadow-dropdown backdrop-blur-dropdown transition duration-150 ease-macos sm:w-72 ${
                     userMenuOpen
                       ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
-                      : "pointer-events-none -translate-y-1 scale-95 opacity-0"
+                      : "pointer-events-none -translate-y-2 scale-95 opacity-0"
                   }`}
                   role="menu"
                 >
-                  <div className="space-y-0.5 border-b border-slate-200 pb-3">
+                  <div className="space-y-0.5 border-b border-[rgba(0,0,0,0.07)] pb-3">
                     <p className="truncate text-sm font-semibold text-slate-900">{fullName || "Usuario"}</p>
                     <p className="truncate text-xs text-slate-500">{session.data?.email}</p>
-                    <p className="text-[11px] text-slate-500">{roleLabel[activeRole]}</p>
+                    <p className="text-[11px] text-slate-400">{roleLabel[activeRole]}</p>
                   </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
-                      <p className="font-semibold text-slate-900">{projectCount}</p>
-                      <p className="text-slate-600">Proyectos</p>
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/60 px-2.5 py-2">
+                      <p className="text-base font-semibold text-slate-900">{projectCount}</p>
+                      <p className="text-slate-500">Proyectos</p>
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
-                      <p className="font-semibold text-slate-900">{teamCount}</p>
-                      <p className="text-slate-600">Equipos</p>
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/60 px-2.5 py-2">
+                      <p className="text-base font-semibold text-slate-900">{teamCount}</p>
+                      <p className="text-slate-500">Equipos</p>
                     </div>
                   </div>
 
-                  <div className="mt-2 text-xs text-slate-600">
+                  <div className="mt-2 text-xs text-slate-500">
                     <p className="sm:hidden">
                       {projectCount} proyectos · {teamCount} equipos
                     </p>
                     <div className="hidden space-y-1 sm:block">
-                      <p>
-                        Proyectos: {topProjects.length > 0 ? topProjects.join(", ") : "Sin proyectos asignados"}
-                      </p>
+                      <p>Proyectos: {topProjects.length > 0 ? topProjects.join(", ") : "Sin proyectos asignados"}</p>
                       <p>Equipos: {topTeams.length > 0 ? topTeams.join(", ") : "Sin equipos asignados"}</p>
                     </div>
                   </div>
 
-                  <nav className="mt-3 grid gap-1 sm:space-y-1" aria-label="Opciones de usuario">
+                  <nav className="mt-3 space-y-1" aria-label="Opciones de usuario">
                     <Link
                       href={"/profile" as Route}
-                      className="block rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      className="block rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 px-3 py-2 text-sm text-slate-700 hover:bg-white/80 transition-colors duration-100"
                       onClick={() => setUserMenuOpen(false)}
                     >
                       Perfil
@@ -460,7 +467,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
                     <button
                       type="button"
                       onClick={handleSignOut}
-                      className="block w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-700 hover:bg-red-100"
+                      className="block w-full rounded-xl border border-red-100 bg-red-50/80 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-100 transition-colors duration-100"
                     >
                       Cerrar sesión
                     </button>
@@ -470,7 +477,8 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
 
-          <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+          {/* Nav móvil */}
+          <nav className="mt-3 flex gap-1.5 overflow-x-auto pb-0.5 lg:hidden">
             {visibleItems.filter((item) => !item.disabled).map((item) => {
               const isActive = pathname === item.href;
               const href = item.contextual ? withDashboardContext(item.href, dashboardContext) : item.href;
@@ -479,8 +487,10 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
                 <Link
                   key={item.href}
                   href={href as Route}
-                  className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs ${
-                    isActive ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"
+                  className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-100 ${
+                    isActive
+                      ? "bg-nav-active-bg text-nav-active-text"
+                      : "bg-black/5 text-slate-600 hover:bg-black/8 hover:text-slate-900"
                   }`}
                 >
                   {item.label}
@@ -493,8 +503,10 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
                 <Link
                   key={item.href}
                   href={item.href as Route}
-                  className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs ${
-                    isActive ? "bg-red-700 text-white" : "bg-red-50 text-red-700"
+                  className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-100 ${
+                    isActive
+                      ? "bg-admin-active-bg text-admin-active-text"
+                      : "bg-red-50/70 text-red-500 hover:bg-red-100/80"
                   }`}
                 >
                   {item.label}
@@ -504,7 +516,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
           </nav>
         </header>
 
-        <main className="dashboard-content mx-auto w-full max-w-7xl px-4 py-6 md:px-6 md:py-8">
+        <main className="dashboard-content mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">
           {children}
         </main>
       </div>

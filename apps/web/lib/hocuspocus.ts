@@ -15,6 +15,9 @@ const normalizeRelativeCollabPath = (rawPath: string) => {
   }
 };
 
+const isLocalHost = (hostname: string) =>
+  hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+
 const normalizeWsLikeUrl = (rawUrl: string) => {
   try {
     const parsed = new URL(rawUrl);
@@ -63,8 +66,12 @@ export const resolveHocuspocusUrl = (): ResolvedHocuspocus => {
   if (raw.startsWith("/")) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const path = normalizeRelativeCollabPath(raw);
+    const shouldUseLocalFallback =
+      isLocalHost(window.location.hostname) &&
+      window.location.port !== "1234" &&
+      (configured.length === 0 || configured === "/collab" || configured === "/collab/");
 
-    if (window.location.port === "3000") {
+    if (shouldUseLocalFallback) {
       return {
         url: `${protocol}//${window.location.hostname}:1234${path}`,
         source: "docker-dev-fallback",
