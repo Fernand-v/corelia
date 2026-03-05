@@ -4,11 +4,8 @@ import { StatusService } from "../status/service.js";
 import { parseAnnouncementBody } from "../announcements/content.js";
 
 const ACTIVE_TASK_STATUSES: TaskStatus[] = [
-  "BACKLOG",
   "PENDIENTE",
-  "EN_PROGRESO",
-  "EN_REVISION",
-  "BLOQUEADA"
+  "EN_REVISION"
 ];
 
 const roundPct = (value: number): number => Math.round(value * 100) / 100;
@@ -50,19 +47,28 @@ export class HomeService {
     const base = [
       { key: "buscar", label: "Buscar en Corelia", path: "/search", intent: "SEARCH" as const }
     ];
+    const internalGlobal = [
+      { key: "directorio", label: "Directorio", path: "/directory", intent: "VIEW" as const },
+      { key: "anuncios", label: "Anuncios", path: "/announcements", intent: "VIEW" as const }
+    ];
+    const workGlobal = [
+      { key: "mensajes-globales", label: "Mensajes globales", path: "/messaging", intent: "VIEW" as const }
+    ];
 
     if (role === "INVITADO_EXTERNO") {
       return [];
     }
 
     if (role === "OBSERVADOR") {
-      return base;
+      return [...internalGlobal, ...base];
     }
 
     const collaborator = [
       { key: "nueva-tarea", label: "Nueva tarea", path: "/tasks", intent: "CREATE" as const },
       { key: "calendario", label: "Ver mi calendario", path: "/calendar", intent: "VIEW" as const },
       { key: "mis-proyectos", label: "Ir a mis proyectos", path: "/projects", intent: "VIEW" as const },
+      ...workGlobal,
+      ...internalGlobal,
       ...base
     ];
 
@@ -81,6 +87,7 @@ export class HomeService {
     if (role === "LIDER_PROYECTO") {
       return [
         ...collaborator,
+        { key: "gestion-tareas", label: "Gestión de tareas", path: "/tasks?tab=gestion", intent: "MANAGE" as const },
         { key: "gantt", label: "Ver Gantt del proyecto", path: "/projects", intent: "VIEW" as const },
         { key: "indicadores", label: "Ver panel de indicadores", path: "/projects", intent: "VIEW" as const },
         { key: "aprobar", label: "Aprobar solicitudes pendientes", path: "/requests", intent: "APPROVE" as const }
@@ -98,7 +105,11 @@ export class HomeService {
         },
         { key: "auditoria", label: "Ver log de auditoría", path: "/admin/panel", intent: "VIEW" as const },
         { key: "roles", label: "Gestionar roles", path: "/admin/panel", intent: "MANAGE" as const },
-        { key: "estado", label: "Ver estado del sistema", path: "/admin/system", intent: "VIEW" as const }
+        { key: "estado", label: "Ver estado del sistema", path: "/admin/system", intent: "VIEW" as const },
+        { key: "gestion-tareas", label: "Gestión de tareas", path: "/tasks?tab=gestion", intent: "MANAGE" as const },
+        ...workGlobal,
+        ...internalGlobal,
+        ...base
       ];
     }
 
@@ -223,11 +234,11 @@ export class HomeService {
       await Promise.all([
         this.app.prisma.task.count({ where: { projectId } }),
         this.app.prisma.task.count({ where: { projectId, status: "COMPLETADA" } }),
-        this.app.prisma.task.count({ where: { projectId, status: "BLOQUEADA" } }),
+        this.app.prisma.task.count({ where: { projectId, status: "EN_REVISION" } }),
         this.app.prisma.task.count({
           where: {
             projectId,
-            status: "BLOQUEADA",
+            status: "EN_REVISION",
             assigneeId: userId
           }
         }),
@@ -445,7 +456,9 @@ export class HomeService {
               endsAt: nextMeeting.endsAt.toISOString(),
               projectId: nextMeeting.project?.id ?? null,
               projectName: nextMeeting.project?.name ?? null,
-              joinPath: `/meetings/${nextMeeting.id}`
+              joinPath: `/call?meetingId=${encodeURIComponent(nextMeeting.id)}${
+                nextMeeting.project?.id ? `&projectId=${encodeURIComponent(nextMeeting.project.id)}` : ""
+              }`
             }
           : null,
         pendingRequests: pendingRequests.map((request) => ({
@@ -631,7 +644,7 @@ export class HomeService {
               },
               assigneeId: null,
               status: {
-                in: ["BACKLOG", "PENDIENTE"]
+                in: ["PENDIENTE"]
               }
             },
             include: {
@@ -789,7 +802,7 @@ export class HomeService {
       }),
       this.app.prisma.task.findMany({
         where: {
-          status: "BLOQUEADA",
+          status: "EN_REVISION",
           assigneeId: {
             not: null
           }

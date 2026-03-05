@@ -4,9 +4,11 @@ import { ProjectContextRequired } from "@/components/project-context-required";
 export default function FilesPage({
   searchParams
 }: {
-  searchParams?: { projectId?: string; teamId?: string };
+  searchParams?: { projectId?: string; projectName?: string; teamId?: string };
 }) {
   const projectId = searchParams?.projectId ?? "";
+  const projectName = searchParams?.projectName ?? "";
+  const teamId = searchParams?.teamId ?? "";
 
   if (!projectId) {
     return (
@@ -18,12 +20,8 @@ export default function FilesPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Archivos del proyecto</h1>
-        <p className="text-sm text-slate-600">Exploración y gestión de carpetas/archivos por proyecto.</p>
-      </header>
-      <FilesExplorer projectId={projectId} />
+    <main className="-mx-4 -my-6 h-[calc(100vh-4rem)] w-[calc(100%+2rem)] md:-mx-6 md:-my-8 md:w-[calc(100%+3rem)]">
+      <FilesExplorer projectId={projectId} projectName={projectName} teamId={teamId} />
     </main>
   );
 }

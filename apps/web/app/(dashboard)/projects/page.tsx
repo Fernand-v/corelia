@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card } from "@corelia/ui";
 import type { Route } from "next";
-import { NotificationsBadge } from "@/components/notifications-badge";
+import { UiModal } from "@/components/ui-modal";
 import { apiRequest } from "@/lib/api";
 import { withDashboardContext } from "@/lib/context";
 import { useSession } from "@/lib/session";
@@ -24,10 +24,10 @@ type ProjectTemplate = "SOFTWARE" | "CONTENIDO" | "OPERACIONES";
 
 const resourceCards = [
   { label: "Tareas", href: "/tasks", description: "Backlog, estado y asignaciones" },
-  { label: "Mensajería", href: "/messaging", description: "Canales del proyecto y menciones" },
   { label: "Reuniones", href: "/meetings", description: "Agenda y videollamadas del proyecto" },
   { label: "Calendario", href: "/calendar", description: "Vista semanal y agenda por hora" },
-  { label: "Archivos", href: "/files", description: "Documentación del proyecto" }
+  { label: "Archivos", href: "/files", description: "Documentación del proyecto" },
+  { label: "Ver cambios", href: "/changes", description: "Historial reciente de carpetas y archivos" }
 ];
 
 export default function ProjectsPage() {
@@ -35,7 +35,9 @@ export default function ProjectsPage() {
   const queryClient = useQueryClient();
   const session = useSession();
   const params = useSearchParams();
+
   const [selectedProjectId, setSelectedProjectId] = useState<string>(params.get("projectId") ?? "");
+  const [newProjectModalOpen, setNewProjectModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
   const [newProjectTemplate, setNewProjectTemplate] = useState<ProjectTemplate>("SOFTWARE");
@@ -73,6 +75,7 @@ export default function ProjectsPage() {
       setNewProjectName("");
       setNewProjectDescription("");
       setNewProjectTemplate("SOFTWARE");
+      setNewProjectModalOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       selectProject(project.id);
     },
@@ -94,9 +97,11 @@ export default function ProjectsPage() {
   );
 
   const selectProject = (projectId: string) => {
+    const selected = projectsQuery.data?.find((project) => project.id === projectId) ?? null;
     setSelectedProjectId(projectId);
     const next = withDashboardContext("/projects", {
       projectId,
+      projectName: selected?.name ?? null,
       teamId: params.get("teamId")
     });
     router.push(next as Route);
@@ -104,81 +109,25 @@ export default function ProjectsPage() {
 
   return (
     <main className="mx-auto w-full max-w-7xl space-y-4">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Proyectos</h1>
-          <p className="text-sm text-slate-600">
-            Selecciona un proyecto para abrir sus recursos y trabajar en su contexto.
-          </p>
-        </div>
-        <NotificationsBadge />
-      </header>
+      <h1 className="sr-only">Proyectos</h1>
 
-      {canCreateProject ? (
-        <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Crear nuevo proyecto</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="block space-y-1 md:col-span-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Nombre</span>
-              <input
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-                value={newProjectName}
-                onChange={(event) => setNewProjectName(event.target.value)}
-                placeholder="Ej. Plataforma de Soporte"
-              />
-            </label>
-
-            <label className="block space-y-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Plantilla</span>
-              <select
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-                value={newProjectTemplate}
-                onChange={(event) => setNewProjectTemplate(event.target.value as ProjectTemplate)}
-              >
-                <option value="SOFTWARE">SOFTWARE</option>
-                <option value="CONTENIDO">CONTENIDO</option>
-                <option value="OPERACIONES">OPERACIONES</option>
-              </select>
-            </label>
-
-            <label className="block space-y-1 md:col-span-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Descripción (opcional)
-              </span>
-              <textarea
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                rows={3}
-                value={newProjectDescription}
-                onChange={(event) => setNewProjectDescription(event.target.value)}
-                placeholder="Objetivo y alcance del proyecto"
-              />
-            </label>
-          </div>
-
-          {createError ? (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {createError}
-            </p>
-          ) : null}
-
-          <div className="flex justify-end">
+      <Card className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mis proyectos</p>
+          {canCreateProject ? (
             <Button
               type="button"
               className="h-9 px-3 text-xs"
-              disabled={createProjectMutation.isPending}
               onClick={() => {
                 setCreateError(null);
-                createProjectMutation.mutate();
+                setNewProjectModalOpen(true);
               }}
             >
-              {createProjectMutation.isPending ? "Creando..." : "Crear proyecto"}
+              Nuevo proyecto
             </Button>
-          </div>
-        </Card>
-      ) : null}
+          ) : null}
+        </div>
 
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">Lista de proyectos</h2>
         {projectsQuery.isLoading ? <p className="text-sm text-slate-600">Cargando proyectos...</p> : null}
         {projectsQuery.error ? <p className="text-sm text-red-600">{projectsQuery.error.message}</p> : null}
         <ul className="space-y-2">
@@ -210,16 +159,15 @@ export default function ProjectsPage() {
       {selectedProject ? (
         <Card className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-slate-900">{selectedProject.name}</h2>
-            <p className="text-sm text-slate-600">
-              {selectedProject.description || "Sin descripción"}
-            </p>
+            <p className="text-sm font-semibold text-slate-900">{selectedProject.name}</p>
+            <p className="text-sm text-slate-600">{selectedProject.description || "Sin descripción"}</p>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {resourceCards.map((resource) => {
               const href = withDashboardContext(resource.href, {
                 projectId: selectedProject.id,
+                projectName: selectedProject.name,
                 teamId: params.get("teamId")
               });
               return (
@@ -245,6 +193,81 @@ export default function ProjectsPage() {
           </div>
         </Card>
       ) : null}
+
+      <UiModal
+        open={newProjectModalOpen}
+        onClose={() => {
+          if (!createProjectMutation.isPending) {
+            setNewProjectModalOpen(false);
+          }
+        }}
+        title="Nuevo proyecto"
+      >
+        <form
+          id="new-project-form"
+          className="space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setCreateError(null);
+            createProjectMutation.mutate();
+          }}
+        >
+          <label className="block space-y-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Nombre</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={newProjectName}
+              onChange={(event) => setNewProjectName(event.target.value)}
+              placeholder="Ej. Plataforma de Soporte"
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Plantilla</span>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={newProjectTemplate}
+              onChange={(event) => setNewProjectTemplate(event.target.value as ProjectTemplate)}
+            >
+              <option value="SOFTWARE">SOFTWARE</option>
+              <option value="CONTENIDO">CONTENIDO</option>
+              <option value="OPERACIONES">OPERACIONES</option>
+            </select>
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Descripción (opcional)
+            </span>
+            <textarea
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+              rows={3}
+              value={newProjectDescription}
+              onChange={(event) => setNewProjectDescription(event.target.value)}
+              placeholder="Objetivo y alcance del proyecto"
+            />
+          </label>
+
+          {createError ? (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {createError}
+            </p>
+          ) : null}
+        </form>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setNewProjectModalOpen(false)}
+            disabled={createProjectMutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" form="new-project-form" disabled={createProjectMutation.isPending}>
+            {createProjectMutation.isPending ? "Creando..." : "Crear proyecto"}
+          </Button>
+        </div>
+      </UiModal>
     </main>
   );
 }

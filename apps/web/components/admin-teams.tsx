@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SystemRole } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
+import { UiModal } from "@/components/ui-modal";
 import { apiRequest } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
@@ -48,12 +49,23 @@ type TeamDetail = {
   }>;
 };
 
+type MemberRemovalTarget = {
+  teamId: string;
+  memberId: string;
+  memberName: string;
+};
+
 export const AdminTeamsView = () => {
   const session = useSession();
   const queryClient = useQueryClient();
+
+  const [teamModalOpen, setTeamModalOpen] = useState(false);
+  const [membersModalOpen, setMembersModalOpen] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
+  const [memberRemovalTarget, setMemberRemovalTarget] = useState<MemberRemovalTarget | null>(null);
+  const [dissolveTarget, setDissolveTarget] = useState<{ id: string; name: string } | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -74,7 +86,7 @@ export const AdminTeamsView = () => {
   const selectedTeamQuery = useQuery({
     queryKey: ["admin-team-detail", selectedTeamId],
     queryFn: () => apiRequest<TeamDetail>(`/admin/teams/${selectedTeamId}`),
-    enabled: Boolean(selectedTeamId)
+    enabled: Boolean(selectedTeamId && membersModalOpen)
   });
 
   const createTeamMutation = useMutation({
@@ -89,12 +101,7 @@ export const AdminTeamsView = () => {
         })
       }),
     onSuccess: async () => {
-      setForm({
-        name: "",
-        description: "",
-        coordinatorUserId: "",
-        memberIds: []
-      });
+      closeTeamModal();
       await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
     }
   });
@@ -108,6 +115,9 @@ export const AdminTeamsView = () => {
     onSuccess: async (_result, input) => {
       await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-team-detail", input.teamId] });
+      if (editingTeamId) {
+        closeTeamModal();
+      }
     }
   });
 
@@ -117,9 +127,8 @@ export const AdminTeamsView = () => {
         method: "DELETE"
       }),
     onSuccess: async () => {
-      if (selectedTeamId) {
-        setSelectedTeamId(null);
-      }
+      setDissolveTarget(null);
+      closeMembersModal();
       await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
     }
   });
@@ -140,12 +149,32 @@ export const AdminTeamsView = () => {
 
   const resetForm = () => {
     setEditingTeamId(null);
+    setMemberSearch("");
     setForm({
       name: "",
       description: "",
       coordinatorUserId: "",
       memberIds: []
     });
+  };
+
+  const closeTeamModal = () => {
+    if (createTeamMutation.isPending || updateTeamMutation.isPending) {
+      return;
+    }
+    setTeamModalOpen(false);
+    resetForm();
+  };
+
+  const closeMembersModal = () => {
+    setMembersModalOpen(false);
+    setSelectedTeamId(null);
+    setMemberRemovalTarget(null);
+  };
+
+  const openCreateTeamModal = () => {
+    resetForm();
+    setTeamModalOpen(true);
   };
 
   const loadTeamForEdit = async (teamId: string) => {
@@ -161,6 +190,13 @@ export const AdminTeamsView = () => {
       coordinatorUserId: detail.coordinatorUserId ?? "",
       memberIds: detail.members.map((member) => member.userId)
     });
+    setMemberSearch("");
+    setTeamModalOpen(true);
+  };
+
+  const openMembersModal = (teamId: string) => {
+    setSelectedTeamId(teamId);
+    setMembersModalOpen(true);
   };
 
   if (session.isLoading || !session.data) {
@@ -182,130 +218,14 @@ export const AdminTeamsView = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">
-          {editingTeamId ? "Editar equipo" : "Crear equipo"}
-        </h2>
-
-        <div className="grid gap-2 md:grid-cols-2">
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Nombre del equipo"
-            value={form.name}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                name: event.target.value
-              }))
-            }
-          />
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Descripción (opcional)"
-            value={form.description}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                description: event.target.value
-              }))
-            }
-          />
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={form.coordinatorUserId}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                coordinatorUserId: event.target.value
-              }))
-            }
-          >
-            <option value="">Sin coordinador</option>
-            {userOptions.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.fullName}
-              </option>
-            ))}
-          </select>
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Buscar miembros"
-            value={memberSearch}
-            onChange={(event) => setMemberSearch(event.target.value)}
-          />
-        </div>
-
-        <div className="max-h-56 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3">
-          {filteredUsers.map((user) => {
-            const checked = form.memberIds.includes(user.id);
-            return (
-              <label key={user.id} className="flex items-center justify-between gap-2 text-sm text-slate-700">
-                <span>
-                  {user.fullName} · {user.email}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      memberIds: event.target.checked
-                        ? [...new Set([...prev.memberIds, user.id])]
-                        : prev.memberIds.filter((id) => id !== user.id)
-                    }))
-                  }
-                />
-              </label>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={
-              !form.name.trim() ||
-              createTeamMutation.isPending ||
-              updateTeamMutation.isPending
-            }
-            onClick={() => {
-              if (editingTeamId) {
-                updateTeamMutation.mutate({
-                  teamId: editingTeamId,
-                  payload: {
-                    name: form.name.trim(),
-                    description: form.description.trim() || null,
-                    coordinatorUserId: form.coordinatorUserId || null,
-                    memberIds: form.memberIds
-                  }
-                });
-                return;
-              }
-
-              createTeamMutation.mutate();
-            }}
-          >
-            {editingTeamId
-              ? updateTeamMutation.isPending
-                ? "Guardando..."
-                : "Guardar cambios"
-              : createTeamMutation.isPending
-                ? "Creando..."
-                : "Crear equipo"}
-          </Button>
-          {editingTeamId ? (
-            <Button type="button" variant="secondary" onClick={resetForm}>
-              Cancelar edición
-            </Button>
-          ) : null}
-        </div>
-
-        {createTeamMutation.error ? <p className="text-sm text-red-600">{createTeamMutation.error.message}</p> : null}
-        {updateTeamMutation.error ? <p className="text-sm text-red-600">{updateTeamMutation.error.message}</p> : null}
-      </Card>
-
       <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">Equipos</h2>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Equipos</p>
+          <Button type="button" className="h-9 px-3 text-xs" onClick={openCreateTeamModal}>
+            Nuevo equipo
+          </Button>
+        </div>
+
         {teamsQuery.isLoading ? <p className="text-sm text-slate-600">Cargando equipos...</p> : null}
         {teamsQuery.error ? <p className="text-sm text-red-600">{teamsQuery.error.message}</p> : null}
 
@@ -322,16 +242,19 @@ export const AdminTeamsView = () => {
                   {team.description ? <p className="text-xs text-slate-600">{team.description}</p> : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="secondary" className="h-8 px-3 text-xs" onClick={() => loadTeamForEdit(team.id)}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-8 px-3 text-xs"
+                    onClick={() => loadTeamForEdit(team.id)}
+                  >
                     Editar
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     className="h-8 px-3 text-xs"
-                    onClick={() =>
-                      setSelectedTeamId((current) => (current === team.id ? null : team.id))
-                    }
+                    onClick={() => openMembersModal(team.id)}
                   >
                     Ver miembros
                   </Button>
@@ -339,16 +262,8 @@ export const AdminTeamsView = () => {
                     type="button"
                     variant="danger"
                     className="h-8 px-3 text-xs"
-                    disabled={dissolveTeamMutation.isPending || team.activeProjects > 0}
-                    onClick={() => {
-                      if (team.activeProjects > 0) {
-                        return;
-                      }
-                      if (!window.confirm(`¿Disolver el equipo ${team.name}?`)) {
-                        return;
-                      }
-                      dissolveTeamMutation.mutate(team.id);
-                    }}
+                    disabled={team.activeProjects > 0}
+                    onClick={() => setDissolveTarget({ id: team.id, name: team.name })}
                   >
                     Disolver equipo
                   </Button>
@@ -359,53 +274,249 @@ export const AdminTeamsView = () => {
         </ul>
       </Card>
 
-      {selectedTeamId ? (
-        <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Miembros del equipo</h2>
-          {selectedTeamQuery.isLoading ? <p className="text-sm text-slate-600">Cargando miembros...</p> : null}
-          {selectedTeamQuery.error ? <p className="text-sm text-red-600">{selectedTeamQuery.error.message}</p> : null}
+      <UiModal
+        open={teamModalOpen}
+        onClose={closeTeamModal}
+        title={editingTeamId ? "Editar equipo" : "Nuevo equipo"}
+        widthClassName="max-w-3xl"
+      >
+        <form
+          id="team-form"
+          className="space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!form.name.trim()) {
+              return;
+            }
 
-          {selectedTeamQuery.data ? (
-            <ul className="space-y-2">
-              {selectedTeamQuery.data.members.map((member) => (
-                <li key={member.userId} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{member.fullName}</p>
-                    <p className="text-xs text-slate-600">
-                      {member.email} · {member.baseRole}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    className="h-8 px-3 text-xs"
-                    disabled={updateTeamMutation.isPending}
-                    onClick={() => {
-                      if (!window.confirm(`¿Quitar a ${member.fullName} del equipo?`)) {
-                        return;
-                      }
-                      updateTeamMutation.mutate({
-                        teamId: selectedTeamQuery.data!.id,
-                        payload: {
-                          memberIds: selectedTeamQuery.data!.members
-                            .map((item) => item.userId)
-                            .filter((id) => id !== member.userId),
-                          coordinatorUserId:
-                            selectedTeamQuery.data!.coordinatorUserId === member.userId
-                              ? null
-                              : selectedTeamQuery.data!.coordinatorUserId
-                        }
-                      });
-                    }}
-                  >
-                    Quitar
-                  </Button>
-                </li>
+            if (editingTeamId) {
+              updateTeamMutation.mutate({
+                teamId: editingTeamId,
+                payload: {
+                  name: form.name.trim(),
+                  description: form.description.trim() || null,
+                  coordinatorUserId: form.coordinatorUserId || null,
+                  memberIds: form.memberIds
+                }
+              });
+              return;
+            }
+
+            createTeamMutation.mutate();
+          }}
+        >
+          <div className="grid gap-2 md:grid-cols-2">
+            <input
+              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="Nombre del equipo"
+              value={form.name}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  name: event.target.value
+                }))
+              }
+            />
+            <input
+              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="Descripción (opcional)"
+              value={form.description}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  description: event.target.value
+                }))
+              }
+            />
+            <select
+              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              value={form.coordinatorUserId}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  coordinatorUserId: event.target.value
+                }))
+              }
+            >
+              <option value="">Sin coordinador</option>
+              {userOptions.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.fullName}
+                </option>
               ))}
-            </ul>
+            </select>
+            <input
+              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="Buscar miembros"
+              value={memberSearch}
+              onChange={(event) => setMemberSearch(event.target.value)}
+            />
+          </div>
+
+          <div className="max-h-56 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3">
+            {filteredUsers.map((user) => {
+              const checked = form.memberIds.includes(user.id);
+              return (
+                <label
+                  key={user.id}
+                  className="flex items-center justify-between gap-2 text-sm text-slate-700"
+                >
+                  <span>
+                    {user.fullName} · {user.email}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        memberIds: event.target.checked
+                          ? [...new Set([...prev.memberIds, user.id])]
+                          : prev.memberIds.filter((id) => id !== user.id)
+                      }))
+                    }
+                  />
+                </label>
+              );
+            })}
+          </div>
+
+          {createTeamMutation.error ? (
+            <p className="text-sm text-red-600">{createTeamMutation.error.message}</p>
           ) : null}
-        </Card>
-      ) : null}
+          {updateTeamMutation.error ? (
+            <p className="text-sm text-red-600">{updateTeamMutation.error.message}</p>
+          ) : null}
+        </form>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={closeTeamModal}>
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            form="team-form"
+            disabled={
+              !form.name.trim() || createTeamMutation.isPending || updateTeamMutation.isPending
+            }
+          >
+            {editingTeamId
+              ? updateTeamMutation.isPending
+                ? "Guardando..."
+                : "Guardar cambios"
+              : createTeamMutation.isPending
+                ? "Creando..."
+                : "Crear equipo"}
+          </Button>
+        </div>
+      </UiModal>
+
+      <UiModal
+        open={membersModalOpen}
+        onClose={closeMembersModal}
+        title="Miembros del equipo"
+        widthClassName="max-w-2xl"
+      >
+        {selectedTeamQuery.isLoading ? <p className="text-sm text-slate-600">Cargando miembros...</p> : null}
+        {selectedTeamQuery.error ? <p className="text-sm text-red-600">{selectedTeamQuery.error.message}</p> : null}
+
+        {selectedTeamQuery.data ? (
+          <ul className="space-y-2">
+            {selectedTeamQuery.data.members.map((member) => (
+              <li key={member.userId} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{member.fullName}</p>
+                  <p className="text-xs text-slate-600">
+                    {member.email} · {member.baseRole}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="danger"
+                  className="h-8 px-3 text-xs"
+                  disabled={updateTeamMutation.isPending}
+                  onClick={() =>
+                    setMemberRemovalTarget({
+                      teamId: selectedTeamQuery.data!.id,
+                      memberId: member.userId,
+                      memberName: member.fullName
+                    })
+                  }
+                >
+                  Quitar
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </UiModal>
+
+      <UiModal
+        open={Boolean(memberRemovalTarget)}
+        onClose={() => setMemberRemovalTarget(null)}
+        title="Quitar miembro"
+      >
+        <p className="text-sm text-slate-700">
+          ¿Confirmas quitar a {memberRemovalTarget?.memberName} del equipo?
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setMemberRemovalTarget(null)}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={updateTeamMutation.isPending || !memberRemovalTarget || !selectedTeamQuery.data}
+            onClick={() => {
+              if (!memberRemovalTarget || !selectedTeamQuery.data) {
+                return;
+              }
+              updateTeamMutation.mutate({
+                teamId: memberRemovalTarget.teamId,
+                payload: {
+                  memberIds: selectedTeamQuery.data.members
+                    .map((item) => item.userId)
+                    .filter((id) => id !== memberRemovalTarget.memberId),
+                  coordinatorUserId:
+                    selectedTeamQuery.data.coordinatorUserId === memberRemovalTarget.memberId
+                      ? null
+                      : selectedTeamQuery.data.coordinatorUserId
+                }
+              });
+              setMemberRemovalTarget(null);
+            }}
+          >
+            {updateTeamMutation.isPending ? "Quitando..." : "Quitar"}
+          </Button>
+        </div>
+      </UiModal>
+
+      <UiModal
+        open={Boolean(dissolveTarget)}
+        onClose={() => setDissolveTarget(null)}
+        title="Disolver equipo"
+      >
+        <p className="text-sm text-slate-700">
+          ¿Confirmas disolver el equipo {dissolveTarget?.name}? Esta acción no se puede deshacer.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setDissolveTarget(null)}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={dissolveTeamMutation.isPending || !dissolveTarget}
+            onClick={() => {
+              if (!dissolveTarget) {
+                return;
+              }
+              dissolveTeamMutation.mutate(dissolveTarget.id);
+            }}
+          >
+            {dissolveTeamMutation.isPending ? "Disolviendo..." : "Disolver"}
+          </Button>
+        </div>
+      </UiModal>
     </div>
   );
 };

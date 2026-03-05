@@ -14,9 +14,13 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         requiredPermission: "TAREA_LEER"
       }
     },
-    async (request) => {
-      const projectId = (request.query as { projectId?: string } | undefined)?.projectId;
-      return service.listTasks(request.authUser!.id, projectId);
+    async (request, reply) => {
+      try {
+        const query = parseWithSchema(taskSchemas.taskListQuerySchema, request.query ?? {});
+        return service.listTasks(request.authUser!.id, query);
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
     }
   );
 
@@ -33,6 +37,42 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         const query = parseWithSchema(taskSchemas.projectMembersQuerySchema, request.query ?? {});
         const members = await service.listProjectMembers(request.authUser!.id, query.projectId);
         return reply.send(members);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/finalize-and-advance",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_CAMBIAR_ESTADO"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(taskSchemas.finalizeAndAdvanceInputSchema, request.body);
+        const result = await service.finalizeAndAdvance({
+          ...payload,
+          changedById: request.authUser!.id,
+          activeRole: request.accessContext!.activeRole
+        });
+
+        request.auditEvent = {
+          entityType: "TAREA",
+          entityId: payload.taskId,
+          action: "CAMBIO_ESTADO_TAREA",
+          reason: payload.reason,
+          newData: {
+            completedTaskId: result.completedTask.id,
+            nextTaskId: result.nextTask?.id ?? null
+          }
+        };
+
+        return reply.send(result);
       } catch (error) {
         const status = (error as Error).name === "Forbidden" ? 403 : 400;
         return reply.code(status).send({ message: (error as Error).message });
@@ -93,6 +133,84 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
     }
   );
 
+  app.patch(
+    "/:taskId/schedule",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(taskSchemas.taskIdParamsSchema, request.params);
+        const payload = parseWithSchema(taskSchemas.updateTaskScheduleInputSchema, request.body);
+        const task = await service.updateSchedule({
+          taskId: params.taskId,
+          startDate: payload.startDate,
+          dueDate: payload.dueDate,
+          reason: payload.reason,
+          reasonCode: payload.reasonCode,
+          changedById: request.authUser!.id
+        });
+
+        request.auditEvent = {
+          entityType: "TAREA",
+          entityId: params.taskId,
+          action: "ACTUALIZAR",
+          reason: payload.reason,
+          newData: {
+            startDate: task.startDate,
+            dueDate: task.dueDate
+          }
+        };
+
+        return reply.send(task);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/activate",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "TAREA_CAMBIAR_ESTADO"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(taskSchemas.activateTaskInputSchema, request.body);
+        const task = await service.activateTask({
+          taskId: payload.taskId,
+          reason: payload.reason,
+          reasonCode: payload.reasonCode,
+          changedById: request.authUser!.id,
+          activeRole: request.accessContext!.activeRole
+        });
+
+        request.auditEvent = {
+          entityType: "TAREA",
+          entityId: payload.taskId,
+          action: "CAMBIO_ESTADO_TAREA",
+          reason: payload.reason,
+          newData: {
+            status: task.status,
+            activatedManually: true
+          }
+        };
+
+        return reply.send(task);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
   app.post(
     "/status",
     {
@@ -106,7 +224,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         const payload = parseWithSchema(taskSchemas.taskStatusTransitionInputSchema, request.body);
         const task = await service.changeStatus({
           ...payload,
-          changedById: request.authUser!.id
+          changedById: request.authUser!.id,
+          activeRole: request.accessContext!.activeRole
         });
 
         request.auditEvent = {

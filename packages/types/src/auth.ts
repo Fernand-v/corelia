@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { idSchema } from "./common.js";
+import { projectTemplateSchema, systemRoleSchema } from "./enums.js";
 
 const passwordSchema = z.string().min(8).max(128);
 
@@ -45,8 +46,31 @@ export const adminResetPasswordInputSchema = z.object({
   newPassword: passwordSchema
 });
 
+export const authProjectMembershipSummarySchema = z.object({
+  id: idSchema,
+  name: z.string().min(1).max(160),
+  template: projectTemplateSchema,
+  isOwner: z.boolean(),
+  role: systemRoleSchema.nullable(),
+  joinedAt: z.string().datetime().nullable()
+});
+
+export const authTeamMembershipSummarySchema = z.object({
+  id: idSchema,
+  name: z.string().min(1).max(160),
+  description: z.string().max(2000).nullable(),
+  joinedAt: z.string().datetime()
+});
+
+export const authMembershipSummarySchema = z.object({
+  userId: idSchema,
+  projects: z.array(authProjectMembershipSummarySchema),
+  teams: z.array(authTeamMembershipSummarySchema)
+});
+
 export type LoginInput = z.infer<typeof loginInputSchema>;
 export type RefreshInput = z.infer<typeof refreshInputSchema>;
 export type AuthToken = z.infer<typeof authTokenSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;
 export type AdminResetPasswordInput = z.infer<typeof adminResetPasswordInputSchema>;
+export type AuthMembershipSummary = z.infer<typeof authMembershipSummarySchema>;

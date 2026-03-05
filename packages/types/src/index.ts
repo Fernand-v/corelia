@@ -15,6 +15,7 @@ export * from "./realtime.js";
 export * from "./announcements.js";
 export * from "./forms.js";
 export * from "./files.js";
+export * from "./documents.js";
 export * from "./search.js";
 export * from "./decisions.js";
 export * from "./automations.js";

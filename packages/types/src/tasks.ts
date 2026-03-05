@@ -1,66 +1,121 @@
 import { z } from "zod";
-import { idSchema, timestampSchema } from "./common.js";
+import { codeValueSchema, idSchema, timestampSchema } from "./common.js";
 import { systemRoleSchema, taskStatusSchema } from "./enums.js";
 
 export const taskSchema = z.object({
   id: idSchema,
   projectId: idSchema,
+  stageId: idSchema.nullable().optional(),
+  stageCode: z.string().regex(/^([A-Z0-9_]{3,50}|\d+)$/).nullable().optional(),
+  stageName: z.string().nullable().optional(),
+  stageColor: z.string().nullable().optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(4000).nullable(),
+  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionLabel: z.string().nullable().optional(),
   assigneeId: idSchema.nullable(),
+  assigneeName: z.string().nullable().optional(),
+  pendingActivatedAt: z.string().datetime().nullable().optional(),
+  startDate: z.string().datetime().nullable(),
   status: taskStatusSchema,
   dueDate: z.string().datetime().nullable(),
   blockedReason: z.string().max(500).nullable(),
+  blockedReasonCode: codeValueSchema.nullable().optional(),
+  blockedReasonLabel: z.string().nullable().optional(),
   blockingTaskId: idSchema.nullable(),
   createdById: idSchema,
+  createdByName: z.string().nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema
 });
 
 export const createTaskInputSchema = z.object({
   projectId: idSchema,
+  stageId: idSchema.optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(4000).optional(),
+  descriptionCode: codeValueSchema.optional(),
   assigneeId: idSchema.optional(),
+  startDate: z.string().datetime().optional(),
   dueDate: z.string().datetime().optional(),
-  status: taskStatusSchema.default("BACKLOG")
+  status: taskStatusSchema.default("PENDIENTE")
 });
 
-export const taskStatusTransitionInputSchema = z
-  .object({
-    taskId: idSchema,
-    status: taskStatusSchema,
-    reason: z.string().min(3).max(500),
-    blockingTaskId: idSchema.optional(),
-    blockedReason: z.string().min(5).max(500).optional()
-  })
-  .superRefine((input, ctx) => {
-    if (input.status === "BLOQUEADA") {
-      if (!input.blockingTaskId) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Bloquear tarea requiere task bloqueante"
-        });
-      }
-      if (!input.blockedReason) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Bloquear tarea requiere causa"
-        });
-      }
-    }
-  });
+export const taskStatusTransitionInputSchema = z.object({
+  taskId: idSchema,
+  status: taskStatusSchema,
+  reason: z.string().min(3).max(500),
+  reasonCode: codeValueSchema.optional(),
+  blockingTaskId: idSchema.optional(),
+  blockedReason: z.string().min(5).max(500).optional(),
+  blockedReasonCode: codeValueSchema.optional()
+});
 
 export const taskReassignmentInputSchema = z.object({
   taskId: idSchema,
   newAssigneeId: idSchema,
   reason: z.string().min(5).max(500),
+  reasonCode: codeValueSchema.optional(),
   reopenIfCompleted: z.boolean().default(false)
 });
 
 export const taskDependencyInputSchema = z.object({
   taskId: idSchema,
   dependsOnTaskId: idSchema
+});
+
+export const updateTaskScheduleInputSchema = z
+  .object({
+    startDate: z.string().datetime().nullable().optional(),
+    dueDate: z.string().datetime().nullable().optional(),
+    reason: z.string().min(3).max(500),
+    reasonCode: codeValueSchema.optional()
+  })
+  .superRefine((input, ctx) => {
+    if (!input.startDate || !input.dueDate) {
+      return;
+    }
+
+    if (new Date(input.startDate).getTime() > new Date(input.dueDate).getTime()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La fecha desde no puede ser mayor que la fecha hasta",
+        path: ["dueDate"]
+      });
+    }
+  });
+
+export const finalizeAndAdvanceInputSchema = z.object({
+  taskId: idSchema,
+  reason: z.string().min(3).max(500).optional(),
+  reasonCode: codeValueSchema.optional()
+});
+
+export const activateTaskInputSchema = z.object({
+  taskId: idSchema,
+  reason: z.string().min(3).max(500),
+  reasonCode: codeValueSchema.optional()
+});
+
+export const taskScheduleHistoryItemSchema = z.object({
+  id: idSchema,
+  taskId: idSchema,
+  previousStartDate: z.string().datetime().nullable(),
+  previousDueDate: z.string().datetime().nullable(),
+  newStartDate: z.string().datetime().nullable(),
+  newDueDate: z.string().datetime().nullable(),
+  reason: z.string().min(1),
+  reasonCode: codeValueSchema.nullable().optional(),
+  reasonLabel: z.string().nullable().optional(),
+  changedById: idSchema,
+  changedByName: z.string().nullable().optional(),
+  changedAt: timestampSchema
+});
+
+export const taskFinalizeAndAdvanceResultSchema = z.object({
+  completedTask: taskSchema,
+  nextTask: taskSchema.nullable(),
+  notificationsSent: z.number().int().min(0)
 });
 
 export const taskStartValidationResultSchema = z.object({
@@ -84,3 +139,8 @@ export type Task = z.infer<typeof taskSchema>;
 export type TaskStatusTransitionInput = z.infer<typeof taskStatusTransitionInputSchema>;
 export type TaskReassignmentInput = z.infer<typeof taskReassignmentInputSchema>;
 export type TaskProjectMemberAvailability = z.infer<typeof taskProjectMemberAvailabilitySchema>;
+export type UpdateTaskScheduleInput = z.infer<typeof updateTaskScheduleInputSchema>;
+export type FinalizeAndAdvanceInput = z.infer<typeof finalizeAndAdvanceInputSchema>;
+export type TaskFinalizeAndAdvanceResult = z.infer<typeof taskFinalizeAndAdvanceResultSchema>;
+export type ActivateTaskInput = z.infer<typeof activateTaskInputSchema>;
+export type TaskScheduleHistoryItem = z.infer<typeof taskScheduleHistoryItemSchema>;

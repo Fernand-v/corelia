@@ -20,6 +20,7 @@ const resolveApiBaseUrl = () => {
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
+const PUBLIC_API_KEY = (process.env.NEXT_PUBLIC_API_KEY ?? "").trim();
 const AUTH_STORAGE_KEY = "corelia_access_token";
 
 interface AuthState {
@@ -63,16 +64,31 @@ export const useAuthStore = create<AuthState>((set) => ({
   }
 }));
 
+export const getApiBaseUrl = () => API_BASE_URL;
+export const getAuthToken = () => useAuthStore.getState().accessToken;
+export const getPublicApiKey = () => PUBLIC_API_KEY;
+
 export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const token = useAuthStore.getState().accessToken;
+  const hasBody = init?.body !== undefined && init?.body !== null;
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
+  const headers = new Headers(init?.headers ?? {});
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  if (PUBLIC_API_KEY) {
+    headers.set("x-api-key", PUBLIC_API_KEY);
+  }
+
+  if (hasBody && !isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers ?? {})
-    }
+    headers
   });
 
   if (!response.ok) {

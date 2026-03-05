@@ -340,4 +340,135 @@ export class AuthService {
 
     return token.userId;
   }
+
+  async getMembershipSummary(userId: string) {
+    const user = await this.app.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    const [ownedProjects, projectMemberships, teamMemberships] = await Promise.all([
+      this.app.prisma.project.findMany({
+        where: { ownerId: userId },
+        select: {
+          id: true,
+          name: true,
+          template: true
+        }
+      }),
+      this.app.prisma.projectMember.findMany({
+        where: { userId },
+        select: {
+          role: true,
+          joinedAt: true,
+          project: {
+            select: {
+              id: true,
+              name: true,
+              template: true,
+              ownerId: true
+            }
+          }
+        }
+      }),
+      this.app.prisma.teamMember.findMany({
+        where: { userId },
+        select: {
+          createdAt: true,
+          team: {
+            select: {
+              id: true,
+              name: true,
+              description: true
+            }
+          }
+        },
+        orderBy: { createdAt: "asc" }
+      })
+    ]);
+
+    const projectsById = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        template: "SOFTWARE" | "CONTENIDO" | "OPERACIONES";
+        isOwner: boolean;
+        role:
+          | "ADMINISTRADOR"
+          | "LIDER_PROYECTO"
+          | "COORDINADOR_EQUIPO"
+          | "COLABORADOR"
+          | "OBSERVADOR"
+          | "INVITADO_EXTERNO"
+          | null;
+        joinedAt: Date | null;
+      }
+    >();
+
+    for (const project of ownedProjects) {
+      projectsById.set(project.id, {
+        id: project.id,
+        name: project.name,
+        template: project.template,
+        isOwner: true,
+        role: "LIDER_PROYECTO",
+        joinedAt: null
+      });
+    }
+
+    for (const membership of projectMemberships) {
+      const current = projectsById.get(membership.project.id);
+      const isOwner = membership.project.ownerId === userId;
+
+      if (!current) {
+        projectsById.set(membership.project.id, {
+          id: membership.project.id,
+          name: membership.project.name,
+          template: membership.project.template,
+          isOwner,
+          role: membership.role,
+          joinedAt: membership.joinedAt
+        });
+        continue;
+      }
+
+      projectsById.set(membership.project.id, {
+        ...current,
+        isOwner: current.isOwner || isOwner,
+        role: current.role ?? membership.role,
+        joinedAt: current.joinedAt ?? membership.joinedAt
+      });
+    }
+
+    const projects = [...projectsById.values()]
+      .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }))
+      .map((project) => ({
+        id: project.id,
+        name: project.name,
+        template: project.template,
+        isOwner: project.isOwner,
+        role: project.role,
+        joinedAt: project.joinedAt ? project.joinedAt.toISOString() : null
+      }));
+
+    const teams = teamMemberships
+      .sort((a, b) => a.team.name.localeCompare(b.team.name, "es", { sensitivity: "base" }))
+      .map((membership) => ({
+        id: membership.team.id,
+        name: membership.team.name,
+        description: membership.team.description,
+        joinedAt: membership.createdAt.toISOString()
+      }));
+
+    return {
+      userId,
+      projects,
+      teams
+    };
+  }
 }

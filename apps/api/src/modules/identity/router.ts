@@ -77,6 +77,35 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     async () => service.getDirectory()
   );
 
+  app.get(
+    "/presence",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const query = parseWithSchema(identitySchemas.userPresenceQuerySchema, request.query ?? {});
+        return reply.send(await service.getPresenceForUsers(query.userIds));
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/teams",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request) => service.listTeamsForUser(request.authUser!.id)
+  );
+
   app.post(
     "/onboarding/checklists",
     {

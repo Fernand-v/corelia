@@ -50,6 +50,20 @@ const formatDate = (value: string) =>
     dateStyle: "medium"
   });
 
+const summarizeNotification = (body: string, maxLength = 140) => {
+  const compact = body
+    .replace(/\s*Ruta:\s*\/\S+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!compact) {
+    return "Sin detalle";
+  }
+  if (compact.length <= maxLength) {
+    return compact;
+  }
+  return `${compact.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`;
+};
+
 const toneForStatus = (status: string) => {
   if (status === "down") {
     return "text-red-700 bg-red-50 border-red-200";
@@ -147,6 +161,10 @@ export const HomeDashboardView = () => {
 
   const dashboard = query.data;
   const blocks = dashboard.blocks;
+  const canCreateAnnouncements =
+    dashboard.role === "ADMINISTRADOR" ||
+    dashboard.role === "LIDER_PROYECTO" ||
+    dashboard.role === "COORDINADOR_EQUIPO";
 
   return (
     <div className="space-y-6">
@@ -229,6 +247,8 @@ export const HomeDashboardView = () => {
                   ) : null}
                   <Link
                     href={blocks.myDay.nextMeeting.joinPath as Route}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="mt-2 inline-block text-xs font-medium text-blue-700 hover:underline"
                   >
                     Unirme
@@ -303,7 +323,7 @@ export const HomeDashboardView = () => {
                       className="block rounded-xl border border-slate-200 p-3 hover:bg-slate-50"
                     >
                       <p className="text-sm font-medium text-slate-900">{notification.title}</p>
-                      <p className="text-xs text-slate-600">{notification.body}</p>
+                      <p className="text-xs text-slate-600">{summarizeNotification(notification.body)}</p>
                       <p className="text-xs text-slate-500">{formatDateTime(notification.createdAt)}</p>
                     </Link>
                   </li>
@@ -335,7 +355,27 @@ export const HomeDashboardView = () => {
 
       {blocks.announcements ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Anuncios activos</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-slate-900">Anuncios activos</h2>
+            <div className="flex items-center gap-2">
+              <Link
+                href={"/announcements" as Route}
+                className="rounded-xl border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                Ver todos
+              </Link>
+              {canCreateAnnouncements ? (
+                <Link
+                  href={"/announcements/new" as Route}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-xl border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-700"
+                >
+                  Nuevo anuncio
+                </Link>
+              ) : null}
+            </div>
+          </div>
           {blocks.announcements.length === 0 ? (
             <p className="text-sm text-slate-600">No hay anuncios activos.</p>
           ) : (

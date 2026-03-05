@@ -14,11 +14,19 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "turbo run format",
+    "verify:peers-caller-patch": "node scripts/check-peers-caller-patch.mjs",
+    "preflight:docker": "bash scripts/preflight-docker.sh",
+    "backfill:project-general-channels": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/backfill-project-general-channels.ts",
     "prisma:generate": "pnpm --filter @corelia/api prisma:generate",
     "prisma:migrate:dev": "pnpm --filter @corelia/api prisma:migrate:dev",
     "prisma:migrate:status": "pnpm --filter @corelia/api prisma:migrate:status"
   },
   "devDependencies": {
     "turbo": "^2.3.3"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@sawport/peers-caller@0.0.1": "patches/@sawport__peers-caller@0.0.1.patch"
+    }
   }
 }

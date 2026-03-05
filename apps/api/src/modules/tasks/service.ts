@@ -1,26 +1,155 @@
 import type { FastifyInstance } from "fastify";
-import type { SystemRole } from "@corelia/types";
+import type { SystemRole, TaskStatus } from "@corelia/types";
 import { canReassign, canReopenCompletedTask } from "../../lib/rbac.js";
 import { createAndDispatchNotification } from "../../lib/notifications.js";
 import { attachTraceContext } from "../../lib/tracing.js";
 
 export class TaskService {
+  private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
+  private static readonly MANAGER_ROLES: SystemRole[] = [
+    "ADMINISTRADOR",
+    "LIDER_PROYECTO",
+    "COORDINADOR_EQUIPO"
+  ];
+
   constructor(private readonly app: FastifyInstance) {}
 
-  async listTasks(userId: string, projectId?: string) {
-    return this.app.prisma.task.findMany({
+  private isManagerRole(role: SystemRole): boolean {
+    return TaskService.MANAGER_ROLES.includes(role);
+  }
+
+  private normalizeLegacyCode(input: {
+    code?: string | null;
+    text?: string | null;
+  }): string | null {
+    if (input.code?.trim()) {
+      return input.code.trim();
+    }
+
+    if (input.text?.trim()) {
+      return TaskService.LEGACY_UNMAPPED_CODE;
+    }
+
+    return null;
+  }
+
+  private async resolveTaskCodeLabels(entries: Array<{ field: string; code: string | null | undefined }>) {
+    const uniqueCodes = [...new Set(entries.map((entry) => entry.code).filter((code): code is string => Boolean(code)))];
+    if (uniqueCodes.length === 0) {
+      return new Map<string, string>();
+    }
+
+    const catalogs = await this.app.prisma.taskCodeCatalog.findMany({
       where: {
-        ...(projectId ? { projectId } : {}),
-        OR: [
-          { assigneeId: userId },
-          { createdById: userId },
-          { project: { members: { some: { userId } } } }
-        ]
+        code: { in: uniqueCodes }
+      },
+      select: {
+        field: true,
+        code: true,
+        label: true
+      }
+    });
+
+    const labels = new Map<string, string>();
+    for (const catalog of catalogs) {
+      labels.set(`${catalog.field}:${catalog.code}`, catalog.label);
+    }
+
+    for (const entry of entries) {
+      if (entry.code === TaskService.LEGACY_UNMAPPED_CODE) {
+        labels.set(`${entry.field}:${entry.code}`, "Descripción heredada");
+      }
+    }
+
+    return labels;
+  }
+
+  async listTasks(
+    userId: string,
+    filters?: {
+      projectId?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    }
+  ) {
+    const admin = await this.app.prisma.user.findFirst({
+      where: {
+        id: userId,
+        baseRole: "ADMINISTRADOR"
+      },
+      select: { id: true }
+    });
+
+    const dueDateRange =
+      filters?.dateFrom || filters?.dateTo
+        ? {
+            ...(filters.dateFrom ? { gte: new Date(filters.dateFrom) } : {}),
+            ...(filters.dateTo ? { lte: new Date(filters.dateTo) } : {})
+          }
+        : undefined;
+
+    const tasks = await this.app.prisma.task.findMany({
+      where: {
+        ...(filters?.projectId ? { projectId: filters.projectId } : {}),
+        ...(dueDateRange ? { dueDate: dueDateRange } : {}),
+        ...(admin
+          ? {}
+          : {
+              OR: [
+                { assigneeId: userId },
+                { createdById: userId },
+                { project: { members: { some: { userId } } } }
+              ]
+            })
+      },
+      include: {
+        stage: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            color: true
+          }
+        },
+        createdBy: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        },
+        assignee: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        }
       },
       orderBy: {
         createdAt: "desc"
       }
     });
+
+    const labels = await this.resolveTaskCodeLabels(
+      tasks.flatMap((task) => [
+        { field: "TASK_DESCRIPTION", code: task.descriptionCode },
+        { field: "TASK_BLOCKED_REASON", code: task.blockedReasonCode }
+      ])
+    );
+
+    return tasks.map((task) => ({
+      ...task,
+      stageCode: task.stage?.code ?? null,
+      stageName: task.stage?.name ?? null,
+      stageColor: task.stage?.color ?? null,
+      descriptionLabel: task.descriptionCode
+        ? labels.get(`TASK_DESCRIPTION:${task.descriptionCode}`) ?? task.descriptionCode
+        : null,
+      blockedReasonLabel: task.blockedReasonCode
+        ? labels.get(`TASK_BLOCKED_REASON:${task.blockedReasonCode}`) ?? task.blockedReasonCode
+        : null,
+      createdByName: `${task.createdBy.firstName} ${task.createdBy.lastName}`.trim(),
+      assigneeName: task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}`.trim() : null
+    }));
   }
 
   async listProjectMembers(userId: string, projectId: string) {
@@ -109,7 +238,7 @@ export class TaskService {
         where: {
           assigneeId: { in: memberIds },
           status: {
-            in: ["BACKLOG", "PENDIENTE", "EN_PROGRESO", "EN_REVISION", "BLOQUEADA"]
+            in: ["PENDIENTE", "EN_REVISION"]
           }
         },
         _count: { _all: true }
@@ -321,7 +450,7 @@ export class TaskService {
       where: {
         assigneeId: input.assigneeId,
         status: {
-          in: ["BACKLOG", "PENDIENTE", "EN_PROGRESO", "EN_REVISION", "BLOQUEADA"]
+          in: ["PENDIENTE", "EN_REVISION"]
         }
       }
     });
@@ -333,14 +462,27 @@ export class TaskService {
 
   async createTask(input: {
     projectId: string;
+    stageId?: string;
     title: string;
     description?: string;
+    descriptionCode?: string;
     assigneeId?: string;
+    startDate?: string;
     dueDate?: string;
-    status: "BACKLOG" | "PENDIENTE" | "EN_PROGRESO" | "EN_REVISION" | "BLOQUEADA" | "COMPLETADA" | "CANCELADA";
+    status: TaskStatus;
     createdById: string;
     confirmOutOfSchedule: boolean;
   }) {
+    if (input.stageId) {
+      const stage = await this.app.prisma.projectStage.findUnique({
+        where: { id: input.stageId },
+        select: { id: true, projectId: true }
+      });
+      if (!stage || stage.projectId !== input.projectId) {
+        throw new Error("La etapa seleccionada no pertenece al proyecto");
+      }
+    }
+
     if (input.assigneeId) {
       await this.validateAssigneeAvailability({
         assigneeId: input.assigneeId,
@@ -349,14 +491,31 @@ export class TaskService {
       });
     }
 
+    const now = new Date();
+    const parsedStartDate = input.startDate ? new Date(input.startDate) : null;
+    const pendingActivatedAt =
+      input.status === "COMPLETADA" ||
+      input.status === "EN_REVISION" ||
+      !parsedStartDate ||
+      parsedStartDate.getTime() <= now.getTime()
+        ? now
+        : null;
+
     const task = await this.app.prisma.task.create({
       data: {
         projectId: input.projectId,
+        stageId: input.stageId,
         title: input.title,
         description: input.description,
+        descriptionCode: this.normalizeLegacyCode({
+          code: input.descriptionCode,
+          text: input.description
+        }),
         assigneeId: input.assigneeId,
+        startDate: parsedStartDate,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
         status: input.status,
+        pendingActivatedAt,
         createdById: input.createdById
       }
     });
@@ -374,61 +533,162 @@ export class TaskService {
   }
 
   async getTask(taskId: string) {
-    return this.app.prisma.task.findUnique({
+    const task = await this.app.prisma.task.findUnique({
       where: { id: taskId },
       include: {
+        stage: true,
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        },
         dependencies: true,
         dependents: true,
         statusHistory: {
+          include: {
+            changedBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true
+              }
+            }
+          },
           orderBy: { changedAt: "desc" }
         },
         reassignments: {
+          include: {
+            reassignedBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true
+              }
+            }
+          },
           orderBy: { reassignedAt: "desc" }
+        },
+        scheduleHistory: {
+          include: {
+            changedBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true
+              }
+            }
+          },
+          orderBy: { changedAt: "desc" }
         }
       }
     });
+
+    if (!task) {
+      return null;
+    }
+
+    const labels = await this.resolveTaskCodeLabels([
+      { field: "TASK_DESCRIPTION", code: task.descriptionCode },
+      { field: "TASK_BLOCKED_REASON", code: task.blockedReasonCode },
+      ...(task.statusHistory ?? []).map((entry) => ({
+        field: "TASK_STATUS_REASON",
+        code: entry.reasonCode
+      })),
+      ...(task.reassignments ?? []).map((entry) => ({
+        field: "TASK_REASSIGN_REASON",
+        code: entry.reasonCode
+      })),
+      ...(task.scheduleHistory ?? []).map((entry) => ({
+        field: "TASK_SCHEDULE_REASON",
+        code: entry.reasonCode
+      }))
+    ]);
+
+    return {
+      ...task,
+      descriptionLabel: task.descriptionCode
+        ? labels.get(`TASK_DESCRIPTION:${task.descriptionCode}`) ?? task.descriptionCode
+        : null,
+      blockedReasonLabel: task.blockedReasonCode
+        ? labels.get(`TASK_BLOCKED_REASON:${task.blockedReasonCode}`) ?? task.blockedReasonCode
+        : null,
+      statusHistory: (task.statusHistory ?? []).map((entry) => ({
+        ...entry,
+        reasonLabel: entry.reasonCode
+          ? labels.get(`TASK_STATUS_REASON:${entry.reasonCode}`) ?? entry.reasonCode
+          : null
+      })),
+      reassignments: (task.reassignments ?? []).map((entry) => ({
+        ...entry,
+        reasonLabel: entry.reasonCode
+          ? labels.get(`TASK_REASSIGN_REASON:${entry.reasonCode}`) ?? entry.reasonCode
+          : null
+      })),
+      scheduleHistory: (task.scheduleHistory ?? []).map((entry) => ({
+        ...entry,
+        reasonLabel: entry.reasonCode
+          ? labels.get(`TASK_SCHEDULE_REASON:${entry.reasonCode}`) ?? entry.reasonCode
+          : null
+      }))
+    };
   }
 
   async changeStatus(input: {
     taskId: string;
-    status: "BACKLOG" | "PENDIENTE" | "EN_PROGRESO" | "EN_REVISION" | "BLOQUEADA" | "COMPLETADA" | "CANCELADA";
+    status: TaskStatus;
     reason: string;
+    reasonCode?: string;
     blockingTaskId?: string;
     blockedReason?: string;
+    blockedReasonCode?: string;
     changedById: string;
+    activeRole: SystemRole;
   }) {
     const task = await this.app.prisma.task.findUnique({ where: { id: input.taskId } });
     if (!task) {
       throw new Error("Tarea no encontrada");
     }
 
-    if (input.status === "EN_PROGRESO") {
-      const unresolvedDependencies = await this.app.prisma.taskDependency.findMany({
-        where: {
-          taskId: input.taskId,
-          dependsOnTask: {
-            status: {
-              not: "COMPLETADA"
-            }
-          }
-        },
-        select: {
-          dependsOnTaskId: true
-        }
-      });
-
-      if (unresolvedDependencies.length > 0) {
-        throw new Error("No se puede iniciar la tarea: existen dependencias no resueltas");
-      }
+    if (task.status === input.status) {
+      return task;
     }
 
+    const isManager = this.isManagerRole(input.activeRole);
+    const isAssignee = task.assigneeId === input.changedById;
+
+    const transition = `${task.status}->${input.status}`;
+    const allowedTransition =
+      (transition === "PENDIENTE->EN_REVISION" && (isAssignee || isManager)) ||
+      (transition === "EN_REVISION->COMPLETADA" && isManager) ||
+      (transition === "EN_REVISION->PENDIENTE" && isManager) ||
+      (transition === "COMPLETADA->PENDIENTE" && isManager);
+
+    if (!allowedTransition) {
+      throw this.forbidden("Transición de estado no permitida para tu rol");
+    }
+
+    const now = new Date();
     const updated = await this.app.prisma.task.update({
       where: { id: input.taskId },
       data: {
         status: input.status,
-        blockingTaskId: input.status === "BLOQUEADA" ? input.blockingTaskId : null,
-        blockedReason: input.status === "BLOQUEADA" ? input.blockedReason : null,
-        completedAt: input.status === "COMPLETADA" ? new Date() : null
+        pendingActivatedAt:
+          input.status === "PENDIENTE" || input.status === "EN_REVISION" || input.status === "COMPLETADA"
+            ? now
+            : null,
+        blockingTaskId: null,
+        blockedReason: null,
+        blockedReasonCode: null,
+        completedAt: input.status === "COMPLETADA" ? now : null
       }
     });
 
@@ -438,15 +698,18 @@ export class TaskService {
         fromStatus: task.status,
         toStatus: input.status,
         reason: input.reason,
+        reasonCode: this.normalizeLegacyCode({
+          code: input.reasonCode,
+          text: input.reason
+        }),
         changedById: input.changedById
       }
     });
 
     if (updated.assigneeId) {
-      const event = input.status === "BLOQUEADA" ? "TAREA_BLOQUEADA" : "TAREA_ESTADO_CAMBIADO";
       await createAndDispatchNotification(this.app, {
         userId: updated.assigneeId,
-        event,
+        event: "TAREA_ESTADO_CAMBIADO",
         title: "Cambio de estado de tarea",
         body: `La tarea ${updated.title} cambió a ${updated.status}`
       });
@@ -512,10 +775,291 @@ export class TaskService {
     };
   }
 
+  async updateSchedule(input: {
+    taskId: string;
+    startDate?: string | null;
+    dueDate?: string | null;
+    reason: string;
+    reasonCode?: string;
+    changedById: string;
+  }) {
+    const task = await this.app.prisma.task.findUnique({
+      where: { id: input.taskId }
+    });
+    if (!task) {
+      throw new Error("Tarea no encontrada");
+    }
+
+    const startDate =
+      input.startDate === undefined ? task.startDate : input.startDate ? new Date(input.startDate) : null;
+    const dueDate =
+      input.dueDate === undefined ? task.dueDate : input.dueDate ? new Date(input.dueDate) : null;
+
+    if (startDate && dueDate && startDate.getTime() > dueDate.getTime()) {
+      throw new Error("La fecha desde no puede ser mayor que la fecha hasta");
+    }
+
+    return this.app.prisma.$transaction(async (tx) => {
+      const updated = await tx.task.update({
+        where: { id: input.taskId },
+        data: {
+          startDate,
+          dueDate
+        }
+      });
+
+      await tx.taskScheduleHistory.create({
+        data: {
+          taskId: task.id,
+          previousStartDate: task.startDate,
+          previousDueDate: task.dueDate,
+          newStartDate: startDate,
+          newDueDate: dueDate,
+          reason: input.reason,
+          reasonCode: this.normalizeLegacyCode({
+            code: input.reasonCode,
+            text: input.reason
+          }),
+          changedById: input.changedById
+        }
+      });
+
+      return updated;
+    });
+  }
+
+  async activateTask(input: {
+    taskId: string;
+    reason: string;
+    reasonCode?: string;
+    changedById: string;
+    activeRole: SystemRole;
+  }) {
+    if (!this.isManagerRole(input.activeRole)) {
+      throw this.forbidden("Solo administrador, líder o coordinador pueden activar tareas manualmente");
+    }
+
+    const task = await this.app.prisma.task.findUnique({
+      where: { id: input.taskId }
+    });
+    if (!task) {
+      throw new Error("Tarea no encontrada");
+    }
+
+    const canActivateHiddenPending = task.status === "PENDIENTE" && task.pendingActivatedAt === null;
+    const allowedFrom = new Set<TaskStatus>(["EN_REVISION", "COMPLETADA"]);
+    if (!canActivateHiddenPending && !allowedFrom.has(task.status)) {
+      return task;
+    }
+
+    const updated = await this.app.prisma.task.update({
+      where: { id: task.id },
+      data: {
+        status: "PENDIENTE",
+        pendingActivatedAt: new Date(),
+        blockingTaskId: null,
+        blockedReason: null
+      }
+    });
+
+    await this.app.prisma.taskStatusHistory.create({
+      data: {
+        taskId: task.id,
+        fromStatus: task.status,
+        toStatus: "PENDIENTE",
+        reason: input.reason,
+        reasonCode: this.normalizeLegacyCode({
+          code: input.reasonCode,
+          text: input.reason
+        }),
+        changedById: input.changedById
+      }
+    });
+
+    const leaders = await this.app.prisma.projectMember.findMany({
+      where: {
+        projectId: task.projectId,
+        role: "LIDER_PROYECTO"
+      },
+      select: { userId: true }
+    });
+
+    const recipients = new Set<string>(leaders.map((leader) => leader.userId));
+    if (task.assigneeId) {
+      recipients.add(task.assigneeId);
+    }
+
+    for (const userId of recipients) {
+      await createAndDispatchNotification(this.app, {
+        userId,
+        event: "TAREA_ESTADO_CAMBIADO",
+        title: "Tarea activada manualmente",
+        body: `La tarea ${task.title} fue activada y ahora está en PENDIENTE`
+      });
+    }
+
+    return updated;
+  }
+
+  async finalizeAndAdvance(input: {
+    taskId: string;
+    reason?: string;
+    reasonCode?: string;
+    changedById: string;
+    activeRole: SystemRole;
+  }) {
+    const task = await this.app.prisma.task.findUnique({
+      where: { id: input.taskId }
+    });
+    if (!task) {
+      throw new Error("Tarea no encontrada");
+    }
+
+    const canManageForeignTask = ["ADMINISTRADOR", "LIDER_PROYECTO", "COORDINADOR_EQUIPO"].includes(
+      input.activeRole
+    );
+    if (task.assigneeId && task.assigneeId !== input.changedById && !canManageForeignTask) {
+      throw this.forbidden("No puedes finalizar una tarea asignada a otro usuario");
+    }
+
+    const statusPriority: Record<string, number> = {
+      PENDIENTE: 0,
+      EN_REVISION: 1
+    };
+
+    const reason = input.reason?.trim() || "Finalización desde Mis Tareas";
+    const reasonCode = this.normalizeLegacyCode({
+      code: input.reasonCode,
+      text: reason
+    });
+
+    const { completedTask, nextTask } = await this.app.prisma.$transaction(async (tx) => {
+      const completedTask =
+        task.status === "COMPLETADA"
+          ? task
+          : await tx.task.update({
+              where: { id: task.id },
+              data: {
+                status: "COMPLETADA",
+                completedAt: new Date(),
+                pendingActivatedAt: new Date(),
+                blockingTaskId: null,
+                blockedReason: null
+              }
+            });
+
+      if (task.status !== "COMPLETADA") {
+        await tx.taskStatusHistory.create({
+          data: {
+            taskId: task.id,
+            fromStatus: task.status,
+            toStatus: "COMPLETADA",
+            reason,
+            reasonCode,
+            changedById: input.changedById
+          }
+        });
+      }
+
+      const candidates = await tx.task.findMany({
+        where: {
+          projectId: task.projectId,
+          id: { not: task.id },
+          status: { in: ["PENDIENTE", "EN_REVISION"] }
+        },
+        orderBy: [{ createdAt: "asc" }]
+      });
+
+      const nextCandidate = candidates.sort((a, b) => {
+        const priorityDiff = (statusPriority[a.status] ?? 99) - (statusPriority[b.status] ?? 99);
+        if (priorityDiff !== 0) {
+          return priorityDiff;
+        }
+
+        const aDue = a.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const bDue = b.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        if (aDue !== bDue) {
+          return aDue - bDue;
+        }
+
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      })[0];
+
+      if (!nextCandidate) {
+        return {
+          completedTask,
+          nextTask: null
+        };
+      }
+
+      const needsActivation = nextCandidate.status === "PENDIENTE" && nextCandidate.pendingActivatedAt === null;
+      const nextTask = needsActivation
+        ? await tx.task.update({
+            where: { id: nextCandidate.id },
+            data: {
+              pendingActivatedAt: new Date(),
+              completedAt: null
+            }
+          })
+        : nextCandidate;
+
+      if (needsActivation) {
+        await tx.taskStatusHistory.create({
+          data: {
+            taskId: nextTask.id,
+            fromStatus: "PENDIENTE",
+            toStatus: "PENDIENTE",
+            reason: "Avance automático por finalización de tarea previa",
+            reasonCode: "AUTO_ADVANCE",
+            changedById: input.changedById
+          }
+        });
+      }
+
+      return {
+        completedTask,
+        nextTask
+      };
+    });
+
+    let notificationsSent = 0;
+    if (nextTask) {
+      const leaders = await this.app.prisma.projectMember.findMany({
+        where: {
+          projectId: nextTask.projectId,
+          role: "LIDER_PROYECTO"
+        },
+        select: { userId: true }
+      });
+
+      const recipients = new Set<string>(leaders.map((leader) => leader.userId));
+      if (nextTask.assigneeId) {
+        recipients.add(nextTask.assigneeId);
+      }
+
+      for (const userId of recipients) {
+        await createAndDispatchNotification(this.app, {
+          userId,
+          event: "TAREA_ESTADO_CAMBIADO",
+          title: "Siguiente tarea activada",
+          body: `Se activó la tarea ${nextTask.title} en ${nextTask.status}`
+        });
+        notificationsSent += 1;
+      }
+    }
+
+    return {
+      completedTask,
+      nextTask,
+      notificationsSent
+    };
+  }
+
   async reassign(input: {
     taskId: string;
     newAssigneeId: string;
     reason: string;
+    reasonCode?: string;
     reopenIfCompleted: boolean;
     requestedById: string;
     activeRole: SystemRole;
@@ -556,13 +1100,14 @@ export class TaskService {
 
     const updated = await this.app.prisma.$transaction(async (tx) => {
       const newStatus =
-        task.status === "COMPLETADA" && input.reopenIfCompleted ? "EN_PROGRESO" : task.status;
+        task.status === "COMPLETADA" && input.reopenIfCompleted ? "PENDIENTE" : task.status;
 
       const nextTask = await tx.task.update({
         where: { id: input.taskId },
         data: {
           assigneeId: input.newAssigneeId,
           status: newStatus,
+          pendingActivatedAt: newStatus === "PENDIENTE" ? new Date() : task.pendingActivatedAt,
           completedAt: newStatus === "COMPLETADA" ? task.completedAt : null
         }
       });
@@ -573,6 +1118,10 @@ export class TaskService {
           previousAssigneeId: task.assigneeId,
           newAssigneeId: input.newAssigneeId,
           reason: input.reason,
+          reasonCode: this.normalizeLegacyCode({
+            code: input.reasonCode,
+            text: input.reason
+          }),
           reassignedById: input.requestedById
         }
       });
@@ -582,8 +1131,9 @@ export class TaskService {
           data: {
             taskId: task.id,
             fromStatus: "COMPLETADA",
-            toStatus: "EN_PROGRESO",
+            toStatus: "PENDIENTE",
             reason: "Reapertura autorizada para reasignación",
+            reasonCode: "REOPEN_REASSIGN",
             changedById: input.requestedById
           }
         });

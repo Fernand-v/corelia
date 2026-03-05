@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { idSchema, paginationSchema, timestampSchema, windowScheduleSchema } from "./common.js";
+import { codeValueSchema, idSchema, paginationSchema, timestampSchema, windowScheduleSchema } from "./common.js";
 import { permissionSchema } from "./rbac.js";
 import { requestStatusSchema, systemRoleSchema } from "./enums.js";
+import { serviceHealthSchema } from "./status.js";
 
 export const adminUserStateSchema = z.enum(["ACTIVO", "INACTIVO", "ONBOARDING", "OFFBOARDING"]);
 
@@ -168,6 +169,8 @@ export const adminTeamListItemSchema = z.object({
   id: idSchema,
   name: z.string().min(1),
   description: z.string().nullable(),
+  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionLabel: z.string().nullable().optional(),
   coordinator: z
     .object({
       userId: idSchema,
@@ -186,6 +189,7 @@ export const adminTeamsListSchema = z.object({
 export const adminCreateTeamInputSchema = z.object({
   name: z.string().min(2).max(120),
   description: z.string().max(400).optional(),
+  descriptionCode: codeValueSchema.optional(),
   coordinatorUserId: idSchema.optional(),
   memberIds: z.array(idSchema).default([])
 });
@@ -193,8 +197,54 @@ export const adminCreateTeamInputSchema = z.object({
 export const adminUpdateTeamInputSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   description: z.string().max(400).nullable().optional(),
+  descriptionCode: codeValueSchema.nullable().optional(),
   coordinatorUserId: idSchema.nullable().optional(),
   memberIds: z.array(idSchema).optional()
+});
+
+export const adminCodeCatalogDomainSchema = z.enum([
+  "TASK",
+  "PROJECT",
+  "TEAM",
+  "MEETING",
+  "OBJECTIVE",
+  "DECISION",
+  "IDENTITY",
+  "AUDIT"
+]);
+
+export const adminCodeCatalogFieldSchema = z.string().min(3).max(64);
+
+export const adminCodeCatalogSchema = z.object({
+  id: idSchema,
+  domain: adminCodeCatalogDomainSchema,
+  field: adminCodeCatalogFieldSchema,
+  code: codeValueSchema,
+  label: z.string().min(1).max(160),
+  description: z.string().max(500).nullable(),
+  isActive: z.boolean(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema
+});
+
+export const adminListCodeCatalogsQuerySchema = z.object({
+  domain: adminCodeCatalogDomainSchema,
+  field: adminCodeCatalogFieldSchema.optional(),
+  includeInactive: z.coerce.boolean().optional().default(false)
+});
+
+export const adminCreateCodeCatalogInputSchema = z.object({
+  domain: adminCodeCatalogDomainSchema,
+  field: adminCodeCatalogFieldSchema,
+  code: codeValueSchema,
+  label: z.string().min(1).max(160),
+  description: z.string().max(500).optional()
+});
+
+export const adminUpdateCodeCatalogInputSchema = z.object({
+  label: z.string().min(1).max(160).optional(),
+  description: z.string().max(500).nullable().optional(),
+  isActive: z.boolean().optional()
 });
 
 export const adminRolePermissionSchema = z.object({
@@ -212,6 +262,65 @@ export const adminResourceAccessItemSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   accessLevel: z.string().min(1)
+});
+
+export const adminAuditReportQuerySchema = z
+  .object({
+    from: timestampSchema.optional(),
+    to: timestampSchema.optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(200).default(50)
+  })
+  .superRefine((input, ctx) => {
+    if (!input.from || !input.to) {
+      return;
+    }
+    if (new Date(input.to).getTime() < new Date(input.from).getTime()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rango inválido: 'to' debe ser mayor o igual a 'from'",
+        path: ["to"]
+      });
+    }
+  });
+
+export const adminAuditReportExportQuerySchema = z
+  .object({
+    from: timestampSchema.optional(),
+    to: timestampSchema.optional()
+  })
+  .superRefine((input, ctx) => {
+    if (!input.from || !input.to) {
+      return;
+    }
+    if (new Date(input.to).getTime() < new Date(input.from).getTime()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rango inválido: 'to' debe ser mayor o igual a 'from'",
+        path: ["to"]
+      });
+    }
+  });
+
+export const adminAuditReportItemSchema = z.object({
+  id: idSchema,
+  entityType: z.string().min(1),
+  action: z.string().min(1),
+  entityId: z.string().nullable(),
+  reason: z.string().nullable(),
+  reasonCode: z.string().nullable(),
+  userId: idSchema.nullable(),
+  actorName: z.string().nullable(),
+  createdAt: timestampSchema
+});
+
+export const adminAuditReportResponseSchema = z.object({
+  items: z.array(adminAuditReportItemSchema),
+  total: z.number().int().min(0),
+  page: z.number().int().min(1),
+  pageSize: z.number().int().min(1),
+  from: timestampSchema,
+  to: timestampSchema
 });
 
 export const adminOverviewSchema = z.object({
@@ -302,11 +411,51 @@ export const adminOverviewSchema = z.object({
         entityType: z.string().min(1),
         action: z.string().min(1),
         createdAt: timestampSchema,
-        userId: idSchema.nullable()
+        userId: idSchema.nullable(),
+        userName: z.string().nullable()
       })
     )
   }),
   pagination: paginationSchema
 });
 
+export const adminSystemStatusOverallSchema = z.enum(["OK", "ERROR"]);
+
+export const adminSystemStatusChangedServiceSchema = z.object({
+  service: serviceHealthSchema.shape.service,
+  previousStatus: serviceHealthSchema.shape.status.nullable(),
+  previousDetail: z.string().nullable(),
+  nextStatus: serviceHealthSchema.shape.status,
+  nextDetail: z.string().nullable()
+});
+
+export const adminSystemStatusChangeSchema = z.object({
+  id: idSchema,
+  createdAt: timestampSchema,
+  userId: idSchema.nullable(),
+  reason: z.string().nullable(),
+  overallStatus: adminSystemStatusOverallSchema,
+  changedServices: z.array(adminSystemStatusChangedServiceSchema)
+});
+
+export const adminSystemStatusResponseSchema = z.object({
+  now: timestampSchema,
+  overallStatus: adminSystemStatusOverallSchema,
+  maintenance: z.object({
+    enabled: z.boolean(),
+    message: z.string().nullable()
+  }),
+  services: z.array(serviceHealthSchema),
+  recentChanges: z.array(adminSystemStatusChangeSchema)
+});
+
+export const adminSystemStatusCheckResponseSchema = adminSystemStatusResponseSchema.extend({
+  changed: z.boolean(),
+  changedServices: z.array(adminSystemStatusChangedServiceSchema),
+  auditLogged: z.boolean()
+});
+
 export type AdminOverview = z.infer<typeof adminOverviewSchema>;
+export type AdminSystemStatusResponse = z.infer<typeof adminSystemStatusResponseSchema>;
+export type AdminSystemStatusCheckResponse = z.infer<typeof adminSystemStatusCheckResponseSchema>;
+export type AdminAuditReportResponse = z.infer<typeof adminAuditReportResponseSchema>;

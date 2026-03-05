@@ -1,5 +1,4 @@
 import { CalendarBoard } from "@/components/calendar-board";
-import { NotificationsBadge } from "@/components/notifications-badge";
 import { ProjectContextRequired } from "@/components/project-context-required";
 
 export default function CalendarPage({
@@ -19,14 +18,7 @@ export default function CalendarPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 lg:px-8">
-      <header className="mb-6 flex items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-slate-900">Calendario</h1>
-          <p className="text-sm text-slate-600">Vista colaborativa de tareas, reuniones y disponibilidad</p>
-        </div>
-        <NotificationsBadge />
-      </header>
+    <main className="h-[calc(100vh-4.5rem)] w-full px-2 py-2 md:px-3">
       <CalendarBoard />
     </main>
   );

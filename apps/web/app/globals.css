@@ -17,3 +17,65 @@ body {
     radial-gradient(circle at bottom right, rgba(17, 24, 39, 0.08), transparent 40%),
     #edf1f5;
 }
+
+.docs-shell {
+  --docs-focus: #2563eb;
+}
+
+.docs-shell :focus-visible {
+  outline: 2px solid var(--docs-focus);
+  outline-offset: 2px;
+}
+
+.docs-shell[data-docs-theme="dark"] {
+  --docs-focus: #93c5fd;
+  color-scheme: dark;
+}
+
+.docs-shell[data-docs-theme="dark"] .bg-white {
+  background-color: #0f172a !important;
+}
+
+.docs-shell[data-docs-theme="dark"] .bg-\[\#f0f4f9\],
+.docs-shell[data-docs-theme="dark"] .bg-\[\#f8fafc\],
+.docs-shell[data-docs-theme="dark"] .bg-slate-50,
+.docs-shell[data-docs-theme="dark"] .bg-slate-100 {
+  background-color: #111827 !important;
+}
+
+.docs-shell[data-docs-theme="dark"] .border-slate-200,
+.docs-shell[data-docs-theme="dark"] .border-\[\#e2e8f2\] {
+  border-color: #334155 !important;
+}
+
+.docs-shell[data-docs-theme="dark"] .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+.docs-shell[data-docs-theme="dark"] .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+.docs-shell[data-docs-theme="dark"] .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+.docs-shell[data-docs-theme="dark"] .text-slate-600,
+.docs-shell[data-docs-theme="dark"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.dashboard-content h1,
+.dashboard-content h2,
+.dashboard-content h1 + p,
+.dashboard-content h2 + p {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

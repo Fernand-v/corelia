@@ -131,6 +131,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
           userId: request.authUser!.id,
           title: payload.title,
           description: payload.description,
+          descriptionCode: payload.descriptionCode,
           existingTaskId: payload.existingTaskId,
           createTask: payload.createTask
         });

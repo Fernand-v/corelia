@@ -3,15 +3,23 @@ RUN corepack enable
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
+COPY patches ./patches
 COPY apps/web/package.json apps/web/package.json
 COPY packages/types/package.json packages/types/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/config/package.json packages/config/package.json
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
+ARG NEXT_PUBLIC_API_KEY=""
+ARG NEXT_PUBLIC_HOCUSPOCUS_URL=""
+ARG NEXT_PUBLIC_DOCS_DEBUG="false"
+ENV NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
+ENV NEXT_PUBLIC_HOCUSPOCUS_URL=${NEXT_PUBLIC_HOCUSPOCUS_URL}
+ENV NEXT_PUBLIC_DOCS_DEBUG=${NEXT_PUBLIC_DOCS_DEBUG}
 COPY . .
+RUN node scripts/check-peers-caller-patch.mjs
 RUN pnpm --filter @corelia/types build
 RUN pnpm --filter @corelia/ui build
 RUN pnpm --filter @corelia/web build

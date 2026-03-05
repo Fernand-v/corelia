@@ -1,7 +1,21 @@
 import type { FastifyInstance } from "fastify";
 
 export class ObjectiveService {
+  private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
+
   constructor(private readonly app: FastifyInstance) {}
+
+  private normalizeLegacyCode(input: { code?: string | null; text?: string | null }) {
+    if (input.code?.trim()) {
+      return input.code.trim();
+    }
+
+    if (input.text?.trim()) {
+      return ObjectiveService.LEGACY_UNMAPPED_CODE;
+    }
+
+    return null;
+  }
 
   async create(input: {
     scope: "EQUIPO" | "PROYECTO";
@@ -9,6 +23,7 @@ export class ObjectiveService {
     projectId?: string | null;
     title: string;
     description?: string | null;
+    descriptionCode?: string;
     ownerId: string;
     targetDate: string;
     progressPct: number;
@@ -20,6 +35,10 @@ export class ObjectiveService {
         projectId: input.projectId,
         title: input.title,
         description: input.description,
+        descriptionCode: this.normalizeLegacyCode({
+          code: input.descriptionCode,
+          text: input.description ?? null
+        }),
         ownerId: input.ownerId,
         targetDate: new Date(input.targetDate),
         progressPct: input.progressPct

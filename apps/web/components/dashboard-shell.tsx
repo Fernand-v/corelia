@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SystemRole } from "@corelia/types";
 import type { Route } from "next";
-import { apiRequest, useAuthStore } from "@/lib/api";
-import { useSession } from "@/lib/session";
+import { useAuthStore } from "@/lib/api";
+import { useSession, useSessionMembershipSummary } from "@/lib/session";
 import { EntryAnnouncementModal } from "@/components/entry-announcement-modal";
-import { getContextFromSearchParams, withDashboardContext } from "@/lib/context";
+import { NotificationsBadge } from "@/components/notifications-badge";
+import {
+  getContextFromSearchParams,
+  readStoredDashboardContext,
+  saveStoredDashboardContext,
+  withDashboardContext
+} from "@/lib/context";
 
 type NavItem = {
   label: string;
@@ -47,19 +52,19 @@ const WORK_ROLES: SystemRole[] = [
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/home", roles: ALL_ROLES, contextual: true },
+  { label: "Mensajes", href: "/messaging", roles: WORK_ROLES },
   { label: "Mis Proyectos", href: "/projects", roles: WORK_ROLES, contextual: true },
-  { label: "Mis Tareas", href: "/tasks", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
+  { label: "Anuncios", href: "/announcements", roles: ALL_ROLES },
+  { label: "Mis Tareas", href: "/tasks", roles: WORK_ROLES, contextual: true },
   { label: "Calendario", href: "/calendar", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
-  { label: "Mensajería", href: "/messaging", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
   { label: "Reuniones", href: "/meetings", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
-  { label: "Directorio", href: "/directory", roles: INTERNAL_ROLES },
   { label: "Archivos", href: "/files", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
   {
     label: "Documentos",
     href: "/documents",
     roles: WORK_ROLES,
-    disabled: true,
-    phase: "Fase 2B"
+    contextual: true,
+    requiresProjectContext: true
   },
   {
     label: "Wiki",
@@ -68,7 +73,6 @@ const NAV_ITEMS: NavItem[] = [
     disabled: true,
     phase: "Fase 2B"
   },
-  { label: "Anuncios", href: "/announcements", roles: INTERNAL_ROLES },
   { label: "Solicitudes", href: "/requests", roles: WORK_ROLES },
   { label: "Buscar", href: "/search", roles: INTERNAL_ROLES }
 ];
@@ -88,8 +92,15 @@ const roleLabel: Record<SystemRole, string> = {
   INVITADO_EXTERNO: "Invitado Externo"
 };
 
-const formatContextLabel = (projectId: string | null, teamId: string | null): string => {
+const formatContextLabel = (
+  projectId: string | null,
+  projectName: string | null,
+  teamId: string | null
+): string => {
   if (projectId) {
+    if (projectName) {
+      return `Proyecto ${projectName}`;
+    }
     return `Proyecto ${projectId.slice(0, 8)}`;
   }
 
@@ -112,13 +123,12 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   const clearAccessToken = useAuthStore((state) => state.clearAccessToken);
 
   const session = useSession();
-
-  const unread = useQuery({
-    queryKey: ["unread-count", accessToken],
-    queryFn: () => apiRequest<{ unread: number }>("/notifications/unread-count"),
-    enabled: hydrated && Boolean(accessToken) && Boolean(session.data),
-    retry: false
-  });
+  const memberships = useSessionMembershipSummary();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [storedDashboardContext, setStoredDashboardContext] = useState(() =>
+    typeof window === "undefined" ? {} : readStoredDashboardContext()
+  );
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!hydrated) {
@@ -136,16 +146,103 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
     }
   }, [accessToken, clearAccessToken, hydrated, router, session.error]);
 
+  useEffect(() => {
+    setUserMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!userMenuOpen) {
+      return;
+    }
+
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (userMenuRef.current?.contains(target)) {
+        return;
+      }
+
+      setUserMenuOpen(false);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setUserMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [userMenuOpen]);
+
   const activeRole = session.data?.activeRole;
-  const dashboardContext = getContextFromSearchParams(params);
+  const queryContext = getContextFromSearchParams(params);
+  const dashboardContext = useMemo(
+    () => ({
+      projectId: queryContext.projectId ?? storedDashboardContext.projectId ?? null,
+      projectName: queryContext.projectName ?? storedDashboardContext.projectName ?? null,
+      teamId: queryContext.teamId ?? storedDashboardContext.teamId ?? null
+    }),
+    [
+      queryContext.projectId,
+      queryContext.projectName,
+      queryContext.teamId,
+      storedDashboardContext.projectId,
+      storedDashboardContext.projectName,
+      storedDashboardContext.teamId
+    ]
+  );
+
+  useEffect(() => {
+    if (!queryContext.projectId && !queryContext.projectName && !queryContext.teamId) {
+      return;
+    }
+
+    const mergedContext = {
+      projectId: queryContext.projectId ?? storedDashboardContext.projectId ?? null,
+      projectName: queryContext.projectName ?? storedDashboardContext.projectName ?? null,
+      teamId: queryContext.teamId ?? storedDashboardContext.teamId ?? null
+    };
+
+    saveStoredDashboardContext(mergedContext);
+    setStoredDashboardContext(mergedContext);
+  }, [
+    queryContext.projectId,
+    queryContext.projectName,
+    queryContext.teamId,
+    storedDashboardContext.projectId,
+    storedDashboardContext.projectName,
+    storedDashboardContext.teamId
+  ]);
 
   const visibleItems = useMemo(() => {
     if (!activeRole) {
       return [];
     }
 
+    const hasProjectContext = Boolean(dashboardContext.projectId);
+
     return NAV_ITEMS.filter((item) => {
       if (!includesRole(item, activeRole)) {
+        return false;
+      }
+
+      if (
+        !hasProjectContext &&
+        item.href !== "/home" &&
+        item.href !== "/projects" &&
+        item.href !== "/messaging" &&
+        item.href !== "/announcements" &&
+        item.href !== "/tasks"
+      ) {
         return false;
       }
 
@@ -177,9 +274,22 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
     return null;
   }
 
-  const contextLabel = formatContextLabel(params.get("projectId"), params.get("teamId"));
-  const unreadCount = unread.data?.unread ?? 0;
+  const contextLabel = formatContextLabel(
+    dashboardContext.projectId ?? null,
+    dashboardContext.projectName ?? null,
+    dashboardContext.teamId ?? null
+  );
   const fullName = `${session.data?.firstName ?? ""} ${session.data?.lastName ?? ""}`.trim();
+  const projectCount = memberships.data?.projects.length ?? 0;
+  const teamCount = memberships.data?.teams.length ?? 0;
+  const topProjects = memberships.data?.projects.slice(0, 2).map((item) => item.name) ?? [];
+  const topTeams = memberships.data?.teams.slice(0, 2).map((item) => item.name) ?? [];
+
+  const handleSignOut = () => {
+    clearAccessToken();
+    setUserMenuOpen(false);
+    router.replace("/login" as Route);
+  };
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
@@ -225,7 +335,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
         {!dashboardContext.projectId ? (
           <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            Selecciona un proyecto en Mis Proyectos para habilitar mensajería, reuniones, calendario y archivos.
+            Selecciona un proyecto en Mis Proyectos para habilitar tareas, reuniones, calendario y archivos del proyecto.
           </p>
         ) : null}
 
@@ -263,15 +373,100 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700">
-                Notificaciones: {unreadCount}
-              </span>
-              <Link
-                href={"/profile" as Route}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-              >
-                {fullName || "Mi perfil"}
-              </Link>
+              <NotificationsBadge />
+              <div ref={userMenuRef} className="relative">
+                <button
+                  type="button"
+                  aria-label="Menú de usuario"
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setUserMenuOpen((current) => !current)}
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-slate-700 hover:bg-slate-50"
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path d="M20 21a8 8 0 1 0-16 0" />
+                      <circle cx="12" cy="8" r="4" />
+                    </svg>
+                  </span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`h-4 w-4 transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+
+                <div
+                  className={`absolute right-0 z-30 mt-2 w-[min(20rem,calc(100vw-1rem))] origin-top-right rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl transition duration-150 ease-out sm:w-80 ${
+                    userMenuOpen
+                      ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
+                      : "pointer-events-none -translate-y-1 scale-95 opacity-0"
+                  }`}
+                  role="menu"
+                >
+                  <div className="space-y-0.5 border-b border-slate-200 pb-3">
+                    <p className="truncate text-sm font-semibold text-slate-900">{fullName || "Usuario"}</p>
+                    <p className="truncate text-xs text-slate-500">{session.data?.email}</p>
+                    <p className="text-[11px] text-slate-500">{roleLabel[activeRole]}</p>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
+                      <p className="font-semibold text-slate-900">{projectCount}</p>
+                      <p className="text-slate-600">Proyectos</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
+                      <p className="font-semibold text-slate-900">{teamCount}</p>
+                      <p className="text-slate-600">Equipos</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-xs text-slate-600">
+                    <p className="sm:hidden">
+                      {projectCount} proyectos · {teamCount} equipos
+                    </p>
+                    <div className="hidden space-y-1 sm:block">
+                      <p>
+                        Proyectos: {topProjects.length > 0 ? topProjects.join(", ") : "Sin proyectos asignados"}
+                      </p>
+                      <p>Equipos: {topTeams.length > 0 ? topTeams.join(", ") : "Sin equipos asignados"}</p>
+                    </div>
+                  </div>
+
+                  <nav className="mt-3 grid gap-1 sm:space-y-1" aria-label="Opciones de usuario">
+                    <Link
+                      href={"/profile" as Route}
+                      className="block rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      Perfil
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="block w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-700 hover:bg-red-100"
+                    >
+                      Cerrar sesión
+                    </button>
+                  </nav>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -309,7 +504,9 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
           </nav>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6 md:py-8">{children}</main>
+        <main className="dashboard-content mx-auto w-full max-w-7xl px-4 py-6 md:px-6 md:py-8">
+          {children}
+        </main>
       </div>
     </div>
   );

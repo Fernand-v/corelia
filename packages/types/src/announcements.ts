@@ -7,6 +7,11 @@ export const announcementAudienceSchema = z.object({
   userIds: z.array(idSchema).default([])
 });
 
+const announcementAssetPathSchema = z
+  .string()
+  .trim()
+  .regex(/^\/(?:api\/v1\/)?announcements\/assets\/content\?/i);
+
 export const announcementContentBlockSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("TITLE"),
@@ -22,13 +27,13 @@ export const announcementContentBlockSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("IMAGE"),
-    url: z.string().url(),
+    url: z.union([z.string().url(), announcementAssetPathSchema]),
     alt: z.string().max(300).default("")
   }),
   z.object({
     type: z.literal("FILE"),
     label: z.string().min(1).max(180),
-    url: z.string().url()
+    url: z.union([z.string().url(), announcementAssetPathSchema])
   }),
   z.object({
     type: z.literal("DIVIDER")

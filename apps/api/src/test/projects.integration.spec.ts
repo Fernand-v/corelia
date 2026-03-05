@@ -31,6 +31,17 @@ const createMockApp = () =>
         deleteMany: vi.fn().mockResolvedValue({
           count: 1
         })
+      },
+      channel: {
+        findMany: vi.fn().mockResolvedValue([])
+      },
+      channelMember: {
+        createMany: vi.fn().mockResolvedValue({
+          count: 0
+        }),
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 0
+        })
       }
     }
   }) as unknown as ConstructorParameters<typeof ProjectService>[0];
@@ -38,6 +49,7 @@ const createMockApp = () =>
 describe("ProjectService member management", () => {
   it("adds member with role from project settings flow", async () => {
     const app = createMockApp();
+    app.prisma.channel.findMany = vi.fn().mockResolvedValue([{ id: "c-1" }, { id: "c-2" }]);
     const service = new ProjectService(app);
 
     const member = await service.addProjectMember("u-admin", {
@@ -52,10 +64,24 @@ describe("ProjectService member management", () => {
       role: "COLABORADOR"
     });
     expect(app.prisma.projectMember.upsert).toHaveBeenCalledTimes(1);
+    expect(app.prisma.channelMember.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          channelId: "c-1",
+          userId: "u-2"
+        },
+        {
+          channelId: "c-2",
+          userId: "u-2"
+        }
+      ],
+      skipDuplicates: true
+    });
   });
 
   it("removes member from project settings flow", async () => {
     const app = createMockApp();
+    app.prisma.channel.findMany = vi.fn().mockResolvedValue([{ id: "c-1" }]);
     const service = new ProjectService(app);
 
     const result = await service.removeProjectMember("u-admin", "p-1", "u-2");
@@ -65,6 +91,14 @@ describe("ProjectService member management", () => {
       where: {
         projectId: "p-1",
         userId: "u-2"
+      }
+    });
+    expect(app.prisma.channelMember.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: "u-2",
+        channelId: {
+          in: ["c-1"]
+        }
       }
     });
   });

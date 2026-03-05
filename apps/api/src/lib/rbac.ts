@@ -47,6 +47,7 @@ const rolePermissions: Record<SystemRole, Permission[]> = {
     "MENSAJE_ESCRIBIR",
     "NOTIFICACION_LEER",
     "ARCHIVO_SUBIR",
+    "ANUNCIO_PUBLICAR",
     "SOLICITUD_APROBAR",
     "OBJETIVO_GESTIONAR",
     "AUTOMATIZACION_GESTIONAR",
@@ -66,6 +67,7 @@ const rolePermissions: Record<SystemRole, Permission[]> = {
     "MENSAJE_ESCRIBIR",
     "NOTIFICACION_LEER",
     "ARCHIVO_SUBIR",
+    "ANUNCIO_PUBLICAR",
     "SOLICITUD_APROBAR",
     "AUDITORIA_LEER"
   ],
@@ -106,5 +108,5 @@ export const canReassign = (role: SystemRole): boolean => {
 };
 
 export const canReopenCompletedTask = (role: SystemRole): boolean => {
-  return ["ADMINISTRADOR", "LIDER_PROYECTO"].includes(role);
+  return ["ADMINISTRADOR", "LIDER_PROYECTO", "COORDINADOR_EQUIPO"].includes(role);
 };

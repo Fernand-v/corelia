@@ -10,13 +10,9 @@ export const systemRoleSchema = z.enum([
 ]);
 
 export const taskStatusSchema = z.enum([
-  "BACKLOG",
   "PENDIENTE",
-  "EN_PROGRESO",
   "EN_REVISION",
-  "BLOQUEADA",
-  "COMPLETADA",
-  "CANCELADA"
+  "COMPLETADA"
 ]);
 
 export const projectTemplateSchema = z.enum(["SOFTWARE", "CONTENIDO", "OPERACIONES"]);

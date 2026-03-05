@@ -11,7 +11,21 @@ interface MeetingConflictWarning {
 const MAX_MEETING_PARTICIPANTS = 20;
 
 export class MeetingsService {
+  private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
+
   constructor(private readonly app: FastifyInstance) {}
+
+  private normalizeLegacyCode(input: { code?: string | null; text?: string | null }) {
+    if (input.code?.trim()) {
+      return input.code.trim();
+    }
+
+    if (input.text?.trim()) {
+      return MeetingsService.LEGACY_UNMAPPED_CODE;
+    }
+
+    return null;
+  }
 
   private async assertContextAccess(input: {
     userId: string;
@@ -206,6 +220,7 @@ export class MeetingsService {
   async createMeeting(input: {
     title: string;
     description?: string;
+    descriptionCode?: string;
     projectId?: string;
     teamId?: string;
     startsAt: string;
@@ -229,6 +244,10 @@ export class MeetingsService {
       data: {
         title: input.title,
         description: input.description,
+        descriptionCode: this.normalizeLegacyCode({
+          code: input.descriptionCode,
+          text: input.description
+        }),
         projectId: input.projectId,
         teamId: input.teamId,
         startsAt,
@@ -354,11 +373,13 @@ export class MeetingsService {
     userId: string;
     title: string;
     description?: string;
+    descriptionCode?: string;
     existingTaskId?: string;
     createTask?: {
       projectId: string;
       title: string;
       description?: string;
+      descriptionCode?: string;
       assigneeId?: string;
       dueDate?: string;
     };
@@ -389,6 +410,10 @@ export class MeetingsService {
           projectId: input.createTask.projectId,
           title: input.createTask.title,
           description: input.createTask.description,
+          descriptionCode: this.normalizeLegacyCode({
+            code: input.createTask.descriptionCode,
+            text: input.createTask.description
+          }),
           assigneeId: input.createTask.assigneeId,
           dueDate: input.createTask.dueDate ? new Date(input.createTask.dueDate) : null,
           createdById: input.userId,
@@ -435,6 +460,10 @@ export class MeetingsService {
         meetingId: input.meetingId,
         title: input.title,
         description: input.description,
+        descriptionCode: this.normalizeLegacyCode({
+          code: input.descriptionCode,
+          text: input.description
+        }),
         authorId: input.userId,
         taskId: linkedTaskId,
         createdTask,

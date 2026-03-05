@@ -21,11 +21,11 @@ describe("shared schemas", () => {
     expect(parsed.baseRole).toBe("COLABORADOR");
   });
 
-  it("enforces blocked status requirements", () => {
+  it("rejects legacy task statuses not present in the normalized model", () => {
     expect(() =>
       taskStatusTransitionInputSchema.parse({
         taskId: crypto.randomUUID(),
-        status: "BLOQUEADA",
+        status: "EN_PROGRESO",
         reason: "Bloqueada"
       })
     ).toThrowError();

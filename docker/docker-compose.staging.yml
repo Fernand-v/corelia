@@ -14,9 +14,17 @@ services:
           memory: 2G
 
   web:
+    build:
+      args:
+        NEXT_PUBLIC_API_KEY: ${NEXT_PUBLIC_API_KEY_DOCKER:-0b142799e2fb202684f31eff9ea71965d84e81a4b7a58adb6e90d704165f9773}
+        NEXT_PUBLIC_HOCUSPOCUS_URL: ${NEXT_PUBLIC_HOCUSPOCUS_URL_DOCKER:-/collab}
+        NEXT_PUBLIC_DOCS_DEBUG: ${NEXT_PUBLIC_DOCS_DEBUG:-false}
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SOCKET_PATH: /ws/socket.io
+      NEXT_PUBLIC_API_KEY: ${NEXT_PUBLIC_API_KEY_DOCKER:-0b142799e2fb202684f31eff9ea71965d84e81a4b7a58adb6e90d704165f9773}
+      NEXT_PUBLIC_HOCUSPOCUS_URL: ${NEXT_PUBLIC_HOCUSPOCUS_URL_DOCKER:-/collab}
+      NEXT_PUBLIC_DOCS_DEBUG: ${NEXT_PUBLIC_DOCS_DEBUG:-false}
     deploy:
       resources:
         limits:
@@ -33,7 +41,14 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 2G
+        memory: 2G
+
+  hocuspocus:
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
 
   postgres:
     deploy:

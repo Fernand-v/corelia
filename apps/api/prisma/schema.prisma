@@ -18,19 +18,20 @@ enum SystemRole {
 }
 
 enum TaskStatus {
-  BACKLOG
   PENDIENTE
-  EN_PROGRESO
   EN_REVISION
-  BLOQUEADA
   COMPLETADA
-  CANCELADA
 }
 
 enum ProjectTemplate {
   SOFTWARE
   CONTENIDO
   OPERACIONES
+}
+
+enum ProjectMembershipSource {
+  MANUAL
+  SYNC
 }
 
 enum AvailabilityType {
@@ -78,6 +79,40 @@ enum RequestStatus {
 enum ChannelScope {
   EQUIPO
   PROYECTO
+}
+
+enum MessageKind {
+  TEXT
+  FILE
+  CALL_INVITE
+}
+
+enum DocumentType {
+  TEXTO
+  DIAGRAMA
+  TABLA
+  WHITEBOARD
+  PRESENTACION
+}
+
+enum DiagramEngine {
+  EXCALIDRAW
+  REACT_FLOW
+}
+
+enum DiagramKind {
+  FLUJO
+  SECUENCIA
+  UML_CLASES
+  ENTIDAD_RELACION
+  ESTADO
+  ARQUITECTURA
+  BPMN
+}
+
+enum DocumentVersionKind {
+  MANUAL
+  AUTO
 }
 
 enum FolderScope {
@@ -166,6 +201,43 @@ enum ImportSource {
   NOTION_CSV
 }
 
+enum TaskCodeField {
+  TASK_DESCRIPTION
+  TASK_BLOCKED_REASON
+  TASK_STATUS_REASON
+  TASK_REASSIGN_REASON
+  TASK_SCHEDULE_REASON
+}
+
+enum ProjectCodeField {
+  PROJECT_DESCRIPTION
+}
+
+enum TeamCodeField {
+  TEAM_DESCRIPTION
+}
+
+enum MeetingCodeField {
+  MEETING_DESCRIPTION
+  MEETING_AGREEMENT_DESCRIPTION
+}
+
+enum ObjectiveCodeField {
+  OBJECTIVE_DESCRIPTION
+}
+
+enum DecisionCodeField {
+  DECISION_DESCRIPTION
+}
+
+enum IdentityCodeField {
+  OFFBOARDING_REASON
+}
+
+enum AuditCodeField {
+  AUDIT_REASON
+}
+
 enum GuestResourceType {
   PROYECTO
   ARCHIVO
@@ -178,77 +250,85 @@ enum StorageQuotaScope {
 }
 
 model User {
-  id             String   @id @default(uuid()) @db.Uuid
-  email          String   @unique
-  passwordHash   String
-  firstName      String
-  lastName       String
-  baseRole       SystemRole @default(COLABORADOR)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  deactivatedAt  DateTime?
+  id            String     @id @default(uuid()) @db.Uuid
+  email         String     @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  baseRole      SystemRole @default(COLABORADOR)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deactivatedAt DateTime?
 
-  teamMemberships      TeamMember[]
-  projectMemberships   ProjectMember[]
-  createdProjects      Project[] @relation("ProjectOwner")
-  assignedTasks        Task[] @relation("TaskAssignee")
-  createdTasks         Task[] @relation("TaskCreator")
-  statusChangedTasks   TaskStatusHistory[] @relation("TaskStatusChangedBy")
-  taskReassignments    TaskReassignment[] @relation("TaskReassignedBy")
-  onboardingRuns       OnboardingRun[] @relation("OnboardedUser")
-  offboardingRecords   OffboardingRecord[] @relation("OffboardedUser")
-  offboardingTransfers OffboardingRecord[] @relation("OffboardingTransferUser")
-  guestInvitesCreated  GuestInvite[] @relation("GuestInviteCreator")
-  internalInvitesCreated InternalInvite[] @relation("InternalInviteCreator")
-  personProfile        PersonProfile?
-  availabilityBlocks   AvailabilityBlock[]
-  workSchedule         WorkSchedule?
-  timeEntries          TimeEntry[]
-  channelMemberships   ChannelMember[]
-  messages             Message[]
-  createdMeetings      Meeting[] @relation("MeetingCreator")
-  meetingParticipants  MeetingParticipant[]
-  meetingNotes         MeetingNote[] @relation("MeetingNoteAuthor")
-  meetingAgreements    MeetingAgreement[] @relation("MeetingAgreementAuthor")
-  externalCalendarConnections ExternalCalendarConnection[]
-  notificationPreferences NotificationPreference[]
-  notifications        Notification[]
-  announcementsCreated Announcement[] @relation("AnnouncementCreator")
-  announcementsAudience AnnouncementUser[]
-  formRequests         FormRequest[] @relation("FormRequester")
-  formApprovals        FormRequest[] @relation("FormApprover")
-  foldersCreated       Folder[] @relation("FolderCreator")
-  filesCreated         FileObject[] @relation("FileOwner")
-  decisionNotes        DecisionNote[] @relation("DecisionAuthor")
-  automationRulesCreated AutomationRule[] @relation("AutomationCreator")
-  objectivesOwned      Objective[] @relation("ObjectiveOwner")
-  refreshTokens        RefreshToken[]
-  auditLogs            AuditLog[]
-  webhookEndpointsCreated WebhookEndpoint[] @relation("WebhookCreator")
-  importJobsCreated    ImportJob[] @relation("ImportCreator")
+  teamMemberships                      TeamMember[]
+  projectMemberships                   ProjectMember[]
+  projectTeamLinksCreated              ProjectTeamLink[]              @relation("ProjectTeamLinkCreator")
+  createdProjects                      Project[]                      @relation("ProjectOwner")
+  assignedTasks                        Task[]                         @relation("TaskAssignee")
+  createdTasks                         Task[]                         @relation("TaskCreator")
+  statusChangedTasks                   TaskStatusHistory[]            @relation("TaskStatusChangedBy")
+  taskReassignments                    TaskReassignment[]             @relation("TaskReassignedBy")
+  taskScheduleChanges                  TaskScheduleHistory[]          @relation("TaskScheduleChangedBy")
+  onboardingRuns                       OnboardingRun[]                @relation("OnboardedUser")
+  offboardingRecords                   OffboardingRecord[]            @relation("OffboardedUser")
+  offboardingTransfers                 OffboardingRecord[]            @relation("OffboardingTransferUser")
+  guestInvitesCreated                  GuestInvite[]                  @relation("GuestInviteCreator")
+  internalInvitesCreated               InternalInvite[]               @relation("InternalInviteCreator")
+  personProfile                        PersonProfile?
+  availabilityBlocks                   AvailabilityBlock[]
+  workSchedule                         WorkSchedule?
+  timeEntries                          TimeEntry[]
+  channelMemberships                   ChannelMember[]
+  messages                             Message[]
+  createdMeetings                      Meeting[]                      @relation("MeetingCreator")
+  meetingParticipants                  MeetingParticipant[]
+  meetingNotes                         MeetingNote[]                  @relation("MeetingNoteAuthor")
+  meetingAgreements                    MeetingAgreement[]             @relation("MeetingAgreementAuthor")
+  externalCalendarConnections          ExternalCalendarConnection[]
+  notificationPreferences              NotificationPreference[]
+  notifications                        Notification[]
+  announcementsCreated                 Announcement[]                 @relation("AnnouncementCreator")
+  announcementsAudience                AnnouncementUser[]
+  formRequests                         FormRequest[]                  @relation("FormRequester")
+  formApprovals                        FormRequest[]                  @relation("FormApprover")
+  foldersCreated                       Folder[]                       @relation("FolderCreator")
+  filesCreated                         FileObject[]                   @relation("FileOwner")
+  createdCollaborativeDocuments        CollaborativeDocument[]        @relation("DocumentCreator")
+  createdCollaborativeDocumentVersions CollaborativeDocumentVersion[] @relation("DocumentVersionCreator")
+  createdDocumentAssets                DocumentAsset[]                @relation("DocumentAssetCreator")
+  decisionNotes                        DecisionNote[]                 @relation("DecisionAuthor")
+  automationRulesCreated               AutomationRule[]               @relation("AutomationCreator")
+  objectivesOwned                      Objective[]                    @relation("ObjectiveOwner")
+  refreshTokens                        RefreshToken[]
+  auditLogs                            AuditLog[]
+  webhookEndpointsCreated              WebhookEndpoint[]              @relation("WebhookCreator")
+  importJobsCreated                    ImportJob[]                    @relation("ImportCreator")
 
   @@index([baseRole])
   @@index([isActive])
 }
 
 model Team {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @unique
+  description     String?
+  descriptionCode String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  members      TeamMember[]
-  channels     Channel[]
-  folders      Folder[]
-  meetings     Meeting[]
+  members                TeamMember[]
+  channels               Channel[]
+  folders                Folder[]
+  meetings               Meeting[]
   externalCalendarEvents ExternalCalendarEvent[]
-  announcements AnnouncementTeam[]
-  objectives   Objective[]
-  internalInvites InternalInvite[]
+  announcements          AnnouncementTeam[]
+  objectives             Objective[]
+  internalInvites        InternalInvite[]
+  projectLinks           ProjectTeamLink[]
 
   @@index([name])
+  @@index([descriptionCode])
 }
 
 model TeamMember {
@@ -266,34 +346,42 @@ model TeamMember {
 }
 
 model Project {
-  id          String          @id @default(uuid()) @db.Uuid
-  name        String
-  description String?
-  template    ProjectTemplate
-  ownerId     String          @db.Uuid
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id              String          @id @default(uuid()) @db.Uuid
+  name            String
+  description     String?
+  descriptionCode String?
+  template        ProjectTemplate
+  ownerId         String          @db.Uuid
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
-  members     ProjectMember[]
-  tasks       Task[]
-  meetings    Meeting[]
+  owner                  User                    @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members                ProjectMember[]
+  tasks                  Task[]
+  meetings               Meeting[]
   externalCalendarEvents ExternalCalendarEvent[]
-  channels    Channel[]
-  folders     Folder[]
-  automationRules AutomationRule[]
-  objectives  Objective[]
+  channels               Channel[]
+  folders                Folder[]
+  collaborativeDocuments CollaborativeDocument[]
+  documentSpace          ProjectDocumentSpace?
+  automationRules        AutomationRule[]
+  objectives             Objective[]
+  stages                 ProjectStage[]
+  teamLinks              ProjectTeamLink[]
 
   @@index([ownerId])
   @@index([template])
+  @@index([descriptionCode])
 }
 
 model ProjectMember {
-  id        String     @id @default(uuid()) @db.Uuid
-  projectId String     @db.Uuid
-  userId    String     @db.Uuid
-  role      SystemRole
-  joinedAt  DateTime   @default(now())
+  id               String                  @id @default(uuid()) @db.Uuid
+  projectId        String                  @db.Uuid
+  userId           String                  @db.Uuid
+  role             SystemRole
+  membershipSource ProjectMembershipSource @default(MANUAL)
+  syncTeamsCount   Int                     @default(0)
+  joinedAt         DateTime                @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -302,51 +390,101 @@ model ProjectMember {
   @@index([projectId])
   @@index([userId])
   @@index([role])
+  @@index([membershipSource])
+}
+
+model ProjectTeamLink {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  teamId      String   @db.Uuid
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("ProjectTeamLinkCreator", fields: [createdById], references: [id])
+
+  @@unique([projectId, teamId])
+  @@index([projectId])
+  @@index([teamId])
+  @@index([createdById])
 }
 
 model Task {
-  id             String      @id @default(uuid()) @db.Uuid
-  projectId      String      @db.Uuid
-  title          String
-  description    String?
-  assigneeId     String?     @db.Uuid
-  createdById    String      @db.Uuid
-  status         TaskStatus  @default(BACKLOG)
-  dueDate        DateTime?
-  blockingTaskId String?     @db.Uuid
-  blockedReason  String?
-  completedAt    DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id                 String     @id @default(uuid()) @db.Uuid
+  projectId          String     @db.Uuid
+  stageId            String?    @db.Uuid
+  title              String
+  description        String?
+  descriptionCode    String?
+  assigneeId         String?    @db.Uuid
+  createdById        String     @db.Uuid
+  status             TaskStatus @default(PENDIENTE)
+  pendingActivatedAt DateTime?
+  startDate          DateTime?
+  dueDate            DateTime?
+  blockingTaskId     String?    @db.Uuid
+  blockedReason      String?
+  blockedReasonCode  String?
+  completedAt        DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
-  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee      User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  createdBy     User      @relation("TaskCreator", fields: [createdById], references: [id])
-  blockingTask  Task?     @relation("TaskBlockingSelf", fields: [blockingTaskId], references: [id])
-  blockedTasks  Task[]    @relation("TaskBlockingSelf")
-  dependencies  TaskDependency[] @relation("TaskDependencies")
-  dependents    TaskDependency[] @relation("TaskDependents")
-  statusHistory TaskStatusHistory[]
-  reassignments TaskReassignment[]
-  timeEntries   TimeEntry[]
+  project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage             ProjectStage?         @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  assignee          User?                 @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy         User                  @relation("TaskCreator", fields: [createdById], references: [id])
+  blockingTask      Task?                 @relation("TaskBlockingSelf", fields: [blockingTaskId], references: [id])
+  blockedTasks      Task[]                @relation("TaskBlockingSelf")
+  dependencies      TaskDependency[]      @relation("TaskDependencies")
+  dependents        TaskDependency[]      @relation("TaskDependents")
+  statusHistory     TaskStatusHistory[]
+  reassignments     TaskReassignment[]
+  timeEntries       TimeEntry[]
   meetingAgreements MeetingAgreement[]
-  objectiveLinks ObjectiveTask[]
+  objectiveLinks    ObjectiveTask[]
+  scheduleHistory   TaskScheduleHistory[]
 
   @@index([projectId])
+  @@index([stageId])
   @@index([assigneeId])
   @@index([createdById])
   @@index([status])
+  @@index([pendingActivatedAt])
+  @@index([startDate])
   @@index([dueDate])
   @@index([blockingTaskId])
+  @@index([descriptionCode])
+  @@index([blockedReasonCode])
+}
+
+model ProjectStage {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  code      String
+  name      String
+  color     String   @default("#4F7CFF")
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@unique([projectId, name])
+  @@unique([projectId, code])
+  @@index([projectId])
+  @@index([projectId, order])
 }
 
 model TaskDependency {
-  id            String   @id @default(uuid()) @db.Uuid
-  taskId        String   @db.Uuid
-  dependsOnTaskId String @db.Uuid
-  createdAt     DateTime @default(now())
+  id              String   @id @default(uuid()) @db.Uuid
+  taskId          String   @db.Uuid
+  dependsOnTaskId String   @db.Uuid
+  createdAt       DateTime @default(now())
 
-  task         Task @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+  task          Task @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
   dependsOnTask Task @relation("TaskDependents", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, dependsOnTaskId])
@@ -355,13 +493,14 @@ model TaskDependency {
 }
 
 model TaskStatusHistory {
-  id          String     @id @default(uuid()) @db.Uuid
-  taskId      String     @db.Uuid
+  id          String      @id @default(uuid()) @db.Uuid
+  taskId      String      @db.Uuid
   fromStatus  TaskStatus?
   toStatus    TaskStatus
   reason      String
-  changedById String     @db.Uuid
-  changedAt   DateTime   @default(now())
+  reasonCode  String?
+  changedById String      @db.Uuid
+  changedAt   DateTime    @default(now())
 
   task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   changedBy User @relation("TaskStatusChangedBy", fields: [changedById], references: [id])
@@ -369,16 +508,18 @@ model TaskStatusHistory {
   @@index([taskId])
   @@index([changedById])
   @@index([changedAt])
+  @@index([reasonCode])
 }
 
 model TaskReassignment {
-  id               String   @id @default(uuid()) @db.Uuid
-  taskId            String   @db.Uuid
-  previousAssigneeId String? @db.Uuid
-  newAssigneeId     String   @db.Uuid
-  reason            String
-  reassignedById    String   @db.Uuid
-  reassignedAt      DateTime @default(now())
+  id                 String   @id @default(uuid()) @db.Uuid
+  taskId             String   @db.Uuid
+  previousAssigneeId String?  @db.Uuid
+  newAssigneeId      String   @db.Uuid
+  reason             String
+  reasonCode         String?
+  reassignedById     String   @db.Uuid
+  reassignedAt       DateTime @default(now())
 
   task         Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   reassignedBy User @relation("TaskReassignedBy", fields: [reassignedById], references: [id])
@@ -386,6 +527,28 @@ model TaskReassignment {
   @@index([taskId])
   @@index([newAssigneeId])
   @@index([reassignedById])
+  @@index([reasonCode])
+}
+
+model TaskScheduleHistory {
+  id                String    @id @default(uuid()) @db.Uuid
+  taskId            String    @db.Uuid
+  previousStartDate DateTime?
+  previousDueDate   DateTime?
+  newStartDate      DateTime?
+  newDueDate        DateTime?
+  reason            String
+  reasonCode        String?
+  changedById       String    @db.Uuid
+  changedAt         DateTime  @default(now())
+
+  task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  changedBy User @relation("TaskScheduleChangedBy", fields: [changedById], references: [id])
+
+  @@index([taskId])
+  @@index([changedById])
+  @@index([changedAt])
+  @@index([reasonCode])
 }
 
 model OnboardingChecklist {
@@ -399,11 +562,11 @@ model OnboardingChecklist {
 }
 
 model OnboardingChecklistItem {
-  id          String   @id @default(uuid()) @db.Uuid
-  checklistId String   @db.Uuid
+  id          String  @id @default(uuid()) @db.Uuid
+  checklistId String  @db.Uuid
   stepKey     String
   label       String
-  required    Boolean  @default(true)
+  required    Boolean @default(true)
   order       Int
 
   checklist OnboardingChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
@@ -414,10 +577,10 @@ model OnboardingChecklistItem {
 }
 
 model OnboardingRun {
-  id          String   @id @default(uuid()) @db.Uuid
-  checklistId String   @db.Uuid
-  userId      String   @db.Uuid
-  startedAt   DateTime @default(now())
+  id          String    @id @default(uuid()) @db.Uuid
+  checklistId String    @db.Uuid
+  userId      String    @db.Uuid
+  startedAt   DateTime  @default(now())
   completedAt DateTime?
 
   checklist OnboardingChecklist @relation(fields: [checklistId], references: [id])
@@ -429,10 +592,10 @@ model OnboardingRun {
 }
 
 model OnboardingRunStep {
-  id        String   @id @default(uuid()) @db.Uuid
-  runId      String   @db.Uuid
-  stepKey    String
-  completed  Boolean  @default(false)
+  id          String    @id @default(uuid()) @db.Uuid
+  runId       String    @db.Uuid
+  stepKey     String
+  completed   Boolean   @default(false)
   completedAt DateTime?
 
   run OnboardingRun @relation(fields: [runId], references: [id], onDelete: Cascade)
@@ -442,11 +605,12 @@ model OnboardingRunStep {
 }
 
 model OffboardingRecord {
-  id               String   @id @default(uuid()) @db.Uuid
-  userId           String   @db.Uuid
-  transferToUserId String   @db.Uuid
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  transferToUserId String    @db.Uuid
   reason           String
-  revokedAt        DateTime @default(now())
+  reasonCode       String?
+  revokedAt        DateTime  @default(now())
   archivedAt       DateTime?
 
   user           User @relation("OffboardedUser", fields: [userId], references: [id])
@@ -454,19 +618,20 @@ model OffboardingRecord {
 
   @@index([userId])
   @@index([transferToUserId])
+  @@index([reasonCode])
 }
 
 model GuestInvite {
-  id            String            @id @default(uuid()) @db.Uuid
-  email         String
-  tokenHash     String
-  resourceType  GuestResourceType
-  resourceId    String            @db.Uuid
-  expiresAt     DateTime
-  createdById   String            @db.Uuid
-  acceptedAt    DateTime?
-  revokedAt     DateTime?
-  createdAt     DateTime          @default(now())
+  id           String            @id @default(uuid()) @db.Uuid
+  email        String
+  tokenHash    String
+  resourceType GuestResourceType
+  resourceId   String            @db.Uuid
+  expiresAt    DateTime
+  createdById  String            @db.Uuid
+  acceptedAt   DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime          @default(now())
 
   createdBy User @relation("GuestInviteCreator", fields: [createdById], references: [id])
 
@@ -489,7 +654,7 @@ model InternalInvite {
   createdAt   DateTime   @default(now())
   resentAt    DateTime?
 
-  createdBy User @relation("InternalInviteCreator", fields: [createdById], references: [id])
+  createdBy User  @relation("InternalInviteCreator", fields: [createdById], references: [id])
   team      Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   @@index([email])
@@ -499,14 +664,14 @@ model InternalInvite {
 }
 
 model PersonProfile {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @unique @db.Uuid
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @unique @db.Uuid
   internalContactEmail String
-  internalPhone String?
-  skills       String[]
-  timezone     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  internalPhone        String?
+  skills               String[]
+  timezone             String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -547,12 +712,12 @@ model WorkSchedule {
 }
 
 model TimeEntry {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  taskId    String   @db.Uuid
-  minutes   Int
-  note      String?
-  loggedAt  DateTime @default(now())
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @db.Uuid
+  taskId   String   @db.Uuid
+  minutes  Int
+  note     String?
+  loggedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -563,16 +728,16 @@ model TimeEntry {
 }
 
 model Channel {
-  id        String      @id @default(uuid()) @db.Uuid
+  id        String       @id @default(uuid()) @db.Uuid
   name      String
   scope     ChannelScope
-  teamId    String?     @db.Uuid
-  projectId String?     @db.Uuid
-  createdAt DateTime    @default(now())
+  teamId    String?      @db.Uuid
+  projectId String?      @db.Uuid
+  createdAt DateTime     @default(now())
 
-  team    Team?    @relation(fields: [teamId], references: [id])
-  project Project? @relation(fields: [projectId], references: [id])
-  members ChannelMember[]
+  team     Team?           @relation(fields: [teamId], references: [id])
+  project  Project?        @relation(fields: [projectId], references: [id])
+  members  ChannelMember[]
   messages Message[]
 
   @@index([teamId])
@@ -595,35 +760,57 @@ model ChannelMember {
 }
 
 model Message {
-  id        String   @id @default(uuid()) @db.Uuid
-  channelId String   @db.Uuid
-  authorId  String   @db.Uuid
+  id        String      @id @default(uuid()) @db.Uuid
+  channelId String      @db.Uuid
+  authorId  String      @db.Uuid
+  kind      MessageKind @default(TEXT)
   content   String
   mentions  String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  meetingId String?     @db.Uuid
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  channel     Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author      User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  meeting     Meeting?            @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  attachments MessageAttachment[]
 
   @@index([channelId])
   @@index([authorId])
+  @@index([kind])
+  @@index([meetingId])
+  @@index([createdAt])
+}
+
+model MessageAttachment {
+  id           String   @id @default(uuid()) @db.Uuid
+  messageId    String   @db.Uuid
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  minioPath    String
+  createdAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
   @@index([createdAt])
 }
 
 model Meeting {
-  id          String        @id @default(uuid()) @db.Uuid
-  title       String
-  description String?
-  projectId   String?       @db.Uuid
-  teamId      String?       @db.Uuid
-  startsAt    DateTime
-  endsAt      DateTime
-  createdById String        @db.Uuid
-  status      MeetingStatus @default(PROGRAMADA)
-  mediaRoomId String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id              String        @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?
+  descriptionCode String?
+  projectId       String?       @db.Uuid
+  teamId          String?       @db.Uuid
+  startsAt        DateTime
+  endsAt          DateTime
+  createdById     String        @db.Uuid
+  status          MeetingStatus @default(PROGRAMADA)
+  mediaRoomId     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   project      Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
   team         Team?                @relation(fields: [teamId], references: [id], onDelete: SetNull)
@@ -632,26 +819,28 @@ model Meeting {
   agendaItems  MeetingAgendaItem[]
   notes        MeetingNote[]
   agreements   MeetingAgreement[]
+  messages     Message[]
 
   @@index([projectId])
   @@index([teamId])
   @@index([createdById])
   @@index([startsAt, endsAt])
   @@index([status])
+  @@index([descriptionCode])
 }
 
 model MeetingParticipant {
-  id            String   @id @default(uuid()) @db.Uuid
-  meetingId     String   @db.Uuid
-  userId        String   @db.Uuid
+  id            String      @id @default(uuid()) @db.Uuid
+  meetingId     String      @db.Uuid
+  userId        String      @db.Uuid
   role          SystemRole?
-  muted         Boolean  @default(false)
-  cameraOn      Boolean  @default(true)
-  screenSharing Boolean  @default(false)
-  speaking      Boolean  @default(false)
+  muted         Boolean     @default(false)
+  cameraOn      Boolean     @default(true)
+  screenSharing Boolean     @default(false)
+  speaking      Boolean     @default(false)
   joinedAt      DateTime?
   leftAt        DateTime?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime    @default(now())
 
   meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -690,16 +879,17 @@ model MeetingNote {
 }
 
 model MeetingAgreement {
-  id          String                 @id @default(uuid()) @db.Uuid
-  meetingId   String                 @db.Uuid
-  title       String
-  description String?
-  status      MeetingAgreementStatus @default(PENDIENTE_ACCION)
-  authorId    String                 @db.Uuid
-  taskId      String?                @db.Uuid
-  createdTask Boolean                @default(false)
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  id              String                 @id @default(uuid()) @db.Uuid
+  meetingId       String                 @db.Uuid
+  title           String
+  description     String?
+  descriptionCode String?
+  status          MeetingAgreementStatus @default(PENDIENTE_ACCION)
+  authorId        String                 @db.Uuid
+  taskId          String?                @db.Uuid
+  createdTask     Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   author  User    @relation("MeetingAgreementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
@@ -709,6 +899,7 @@ model MeetingAgreement {
   @@index([authorId])
   @@index([taskId])
   @@index([status])
+  @@index([descriptionCode])
 }
 
 model ExternalCalendarConnection {
@@ -769,16 +960,16 @@ model NotificationPreference {
 }
 
 model Notification {
-  id        String               @id @default(uuid()) @db.Uuid
-  userId    String               @db.Uuid
-  event     NotificationEvent
-  channel   NotificationChannel
-  title     String
-  body      String
-  sentAt    DateTime?
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @db.Uuid
+  event       NotificationEvent
+  channel     NotificationChannel
+  title       String
+  body        String
+  sentAt      DateTime?
   deliveredAt DateTime?
-  readAt    DateTime?
-  createdAt DateTime             @default(now())
+  readAt      DateTime?
+  createdAt   DateTime            @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -798,7 +989,7 @@ model Announcement {
   createdById String   @db.Uuid
   createdAt   DateTime @default(now())
 
-  createdBy User @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  createdBy User               @relation("AnnouncementCreator", fields: [createdById], references: [id])
   teams     AnnouncementTeam[]
   users     AnnouncementUser[]
 
@@ -861,12 +1052,13 @@ model Folder {
   createdById String      @db.Uuid
   createdAt   DateTime    @default(now())
 
-  team      Team?     @relation(fields: [teamId], references: [id])
-  project   Project?  @relation(fields: [projectId], references: [id])
-  parent    Folder?   @relation("FolderTree", fields: [parentId], references: [id])
-  children  Folder[]  @relation("FolderTree")
-  createdBy User      @relation("FolderCreator", fields: [createdById], references: [id])
-  files     FileObject[]
+  team                   Team?                   @relation(fields: [teamId], references: [id])
+  project                Project?                @relation(fields: [projectId], references: [id])
+  parent                 Folder?                 @relation("FolderTree", fields: [parentId], references: [id])
+  children               Folder[]                @relation("FolderTree")
+  createdBy              User                    @relation("FolderCreator", fields: [createdById], references: [id])
+  files                  FileObject[]
+  collaborativeDocuments CollaborativeDocument[]
 
   @@index([teamId])
   @@index([projectId])
@@ -874,19 +1066,95 @@ model Folder {
   @@index([createdById])
 }
 
-model FileObject {
+model ProjectDocumentSpace {
+  projectId              String   @id @db.Uuid
+  rootFolderId           String   @db.Uuid
+  textoFolderId          String   @db.Uuid
+  diagramasFolderId      String   @db.Uuid
+  tablasFolderId         String   @db.Uuid
+  whiteboardFolderId     String   @db.Uuid
+  presentacionesFolderId String   @db.Uuid
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model CollaborativeDocument {
+  id             String       @id @default(uuid()) @db.Uuid
+  projectId      String       @db.Uuid
+  folderId       String       @db.Uuid
+  type           DocumentType
+  name           String
+  yDocName       String       @unique
+  diagramEngine  DiagramEngine?
+  diagramKind    DiagramKind?
+  currentVersion Int          @default(0)
+  createdById    String       @db.Uuid
+  deletedAt      DateTime?
+  purgeAt        DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project   Project                        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  folder    Folder                         @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  createdBy User                           @relation("DocumentCreator", fields: [createdById], references: [id])
+  versions  CollaborativeDocumentVersion[]
+  assets    DocumentAsset[]
+
+  @@index([projectId, type, updatedAt])
+  @@index([deletedAt, purgeAt])
+}
+
+model CollaborativeDocumentVersion {
+  id                String              @id @default(uuid()) @db.Uuid
+  documentId        String              @db.Uuid
+  versionNumber     Int
+  kind              DocumentVersionKind
+  snapshotPath      String
+  snapshotSizeBytes Int
+  createdById       String              @db.Uuid
+  createdAt         DateTime            @default(now())
+
+  document  CollaborativeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy User                  @relation("DocumentVersionCreator", fields: [createdById], references: [id])
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId, versionNumber(sort: Desc)])
+}
+
+model DocumentAsset {
   id           String   @id @default(uuid()) @db.Uuid
-  folderId     String   @db.Uuid
-  ownerId      String   @db.Uuid
+  documentId   String   @db.Uuid
+  createdById  String   @db.Uuid
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  minioPath    String
+  createdAt    DateTime @default(now())
+
+  document  CollaborativeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy User                  @relation("DocumentAssetCreator", fields: [createdById], references: [id])
+
+  @@index([documentId, createdAt(sort: Desc)])
+  @@index([createdById])
+}
+
+model FileObject {
+  id           String    @id @default(uuid()) @db.Uuid
+  folderId     String    @db.Uuid
+  ownerId      String    @db.Uuid
   originalName String
   mimeType     String
   sizeBytes    Int
   minioPath    String
   deletedAt    DateTime?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
-  folder Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  owner  User   @relation("FileOwner", fields: [ownerId], references: [id])
+  folder      Folder     @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  owner       User       @relation("FileOwner", fields: [ownerId], references: [id])
   trashRecord FileTrash?
 
   @@index([folderId])
@@ -895,10 +1163,10 @@ model FileObject {
 }
 
 model FileTrash {
-  id          String   @id @default(uuid()) @db.Uuid
-  fileId       String   @unique @db.Uuid
+  id               String   @id @default(uuid()) @db.Uuid
+  fileId           String   @unique @db.Uuid
   scheduledPurgeAt DateTime
-  createdAt    DateTime @default(now())
+  createdAt        DateTime @default(now())
 
   file FileObject @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
@@ -906,30 +1174,32 @@ model FileTrash {
 }
 
 model StorageQuota {
-  id                String           @id @default(uuid()) @db.Uuid
+  id                String            @id @default(uuid()) @db.Uuid
   scopeType         StorageQuotaScope
-  scopeId           String           @db.Uuid
+  scopeId           String            @db.Uuid
   bytesLimit        BigInt
-  alertThresholdPct Float            @default(0.8)
-  createdAt         DateTime         @default(now())
+  alertThresholdPct Float             @default(0.8)
+  createdAt         DateTime          @default(now())
 
   @@unique([scopeType, scopeId])
   @@index([scopeType, scopeId])
 }
 
 model DecisionNote {
-  id               String    @id @default(uuid()) @db.Uuid
+  id               String     @id @default(uuid()) @db.Uuid
   title            String
   description      String
-  authorId         String    @db.Uuid
+  descriptionCode  String?
+  authorId         String     @db.Uuid
   linkedEntityType EntityType
-  linkedEntityId   String    @db.Uuid
-  createdAt        DateTime  @default(now())
+  linkedEntityId   String     @db.Uuid
+  createdAt        DateTime   @default(now())
 
   author User @relation("DecisionAuthor", fields: [authorId], references: [id])
 
   @@index([authorId])
   @@index([linkedEntityType, linkedEntityId])
+  @@index([descriptionCode])
 }
 
 model AutomationRule {
@@ -952,25 +1222,27 @@ model AutomationRule {
 }
 
 model Objective {
-  id          String         @id @default(uuid()) @db.Uuid
-  scope       ObjectiveScope
-  teamId      String?        @db.Uuid
-  projectId   String?        @db.Uuid
-  title       String
-  description String?
-  ownerId     String         @db.Uuid
-  targetDate  DateTime
-  progressPct Float          @default(0)
-  createdAt   DateTime       @default(now())
+  id              String         @id @default(uuid()) @db.Uuid
+  scope           ObjectiveScope
+  teamId          String?        @db.Uuid
+  projectId       String?        @db.Uuid
+  title           String
+  description     String?
+  descriptionCode String?
+  ownerId         String         @db.Uuid
+  targetDate      DateTime
+  progressPct     Float          @default(0)
+  createdAt       DateTime       @default(now())
 
-  team    Team?    @relation(fields: [teamId], references: [id])
-  project Project? @relation(fields: [projectId], references: [id])
-  owner   User     @relation("ObjectiveOwner", fields: [ownerId], references: [id])
+  team    Team?           @relation(fields: [teamId], references: [id])
+  project Project?        @relation(fields: [projectId], references: [id])
+  owner   User            @relation("ObjectiveOwner", fields: [ownerId], references: [id])
   tasks   ObjectiveTask[]
 
   @@index([teamId])
   @@index([projectId])
   @@index([ownerId])
+  @@index([descriptionCode])
 }
 
 model ObjectiveTask {
@@ -995,7 +1267,7 @@ model WebhookEndpoint {
   createdById String       @db.Uuid
   createdAt   DateTime     @default(now())
 
-  createdBy User @relation("WebhookCreator", fields: [createdById], references: [id])
+  createdBy  User              @relation("WebhookCreator", fields: [createdById], references: [id])
   deliveries WebhookDelivery[]
 
   @@index([createdById])
@@ -1017,15 +1289,15 @@ model WebhookDelivery {
 }
 
 model ImportJob {
-  id          String      @id @default(uuid()) @db.Uuid
+  id          String       @id @default(uuid()) @db.Uuid
   source      ImportSource
   filename    String
-  startedAt   DateTime    @default(now())
+  startedAt   DateTime     @default(now())
   finishedAt  DateTime?
-  success     Boolean     @default(false)
-  createdById String      @db.Uuid
+  success     Boolean      @default(false)
+  createdById String       @db.Uuid
 
-  createdBy User @relation("ImportCreator", fields: [createdById], references: [id])
+  createdBy User          @relation("ImportCreator", fields: [createdById], references: [id])
   errors    ImportError[]
 
   @@index([createdById])
@@ -1033,12 +1305,12 @@ model ImportJob {
 }
 
 model ImportError {
-  id          String   @id @default(uuid()) @db.Uuid
-  jobId       String   @db.Uuid
-  rowNumber   Int
-  field       String
-  message     String
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid()) @db.Uuid
+  jobId     String   @db.Uuid
+  rowNumber Int
+  field     String
+  message   String
+  createdAt DateTime @default(now())
 
   job ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
@@ -1046,13 +1318,13 @@ model ImportError {
 }
 
 model RefreshToken {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  tokenHash   String
-  expiresAt   DateTime
-  revokedAt   DateTime?
-  rotatedFromId String? @db.Uuid
-  createdAt   DateTime @default(now())
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  tokenHash     String
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  rotatedFromId String?   @db.Uuid
+  createdAt     DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1062,15 +1334,16 @@ model RefreshToken {
 }
 
 model AuditLog {
-  id           String    @id @default(uuid()) @db.Uuid
+  id           String     @id @default(uuid()) @db.Uuid
   entityType   EntityType
-  entityId     String    @db.Uuid
+  entityId     String     @db.Uuid
   action       ActionType
-  userId       String?   @db.Uuid
+  userId       String?    @db.Uuid
   previousData Json?
   newData      Json?
   reason       String?
-  createdAt    DateTime  @default(now())
+  reasonCode   String?
+  createdAt    DateTime   @default(now())
 
   user User? @relation(fields: [userId], references: [id])
 
@@ -1078,6 +1351,119 @@ model AuditLog {
   @@index([action])
   @@index([userId])
   @@index([createdAt])
+  @@index([reasonCode])
+}
+
+model TaskCodeCatalog {
+  id          String        @id @default(uuid()) @db.Uuid
+  field       TaskCodeField
+  code        String
+  label       String
+  description String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([field, code])
+  @@index([field, isActive])
+}
+
+model ProjectCodeCatalog {
+  id          String           @id @default(uuid()) @db.Uuid
+  field       ProjectCodeField
+  code        String
+  label       String
+  description String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([field, code])
+  @@index([field, isActive])
+}
+
+model TeamCodeCatalog {
+  id          String        @id @default(uuid()) @db.Uuid
+  field       TeamCodeField
+  code        String
+  label       String
+  description String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([field, code])
+  @@index([field, isActive])
+}
+
+model MeetingCodeCatalog {
+  id          String           @id @default(uuid()) @db.Uuid
+  field       MeetingCodeField
+  code        String
+  label       String
+  description String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([field, code])
+  @@index([field, isActive])
+}
+
+model ObjectiveCodeCatalog {
+  id          String             @id @default(uuid()) @db.Uuid
+  field       ObjectiveCodeField
+  code        String
+  label       String
+  description String?
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([field, code])
+  @@index([field, isActive])
+}
+
+model DecisionCodeCatalog {
+  id          String            @id @default(uuid()) @db.Uuid
+  field       DecisionCodeField
+  code        String
+  label       String
+  description String?
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([field, code])
+  @@index([field, isActive])
+}
+
+model IdentityCodeCatalog {
+  id          String            @id @default(uuid()) @db.Uuid
+  field       IdentityCodeField
+  code        String
+  label       String
+  description String?
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([field, code])
+  @@index([field, isActive])
+}
+
+model AuditCodeCatalog {
+  id          String         @id @default(uuid()) @db.Uuid
+  field       AuditCodeField
+  code        String
+  label       String
+  description String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([field, code])
+  @@index([field, isActive])
 }
 
 model MaintenanceMode {

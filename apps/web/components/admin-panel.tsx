@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AdminOverview, SystemRole } from "@corelia/types";
+import type { AdminAuditReportResponse, AdminOverview, SystemRole } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
-import type { Route } from "next";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, getApiBaseUrl, getAuthToken, getPublicApiKey } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { UiModal } from "@/components/ui-modal";
 
 type AdminUsersResponse = {
   items: Array<{
@@ -95,6 +94,11 @@ type OffboardingTransfersState = {
   documents: Record<string, string>;
 };
 
+type ProjectItem = {
+  id: string;
+  name: string;
+};
+
 const ROLE_OPTIONS: SystemRole[] = [
   "COLABORADOR",
   "COORDINADOR_EQUIPO",
@@ -127,6 +131,39 @@ const statusTone = (state: string) => {
   return "text-emerald-700 bg-emerald-50 border-emerald-200";
 };
 
+const ActionCard = ({
+  title,
+  description,
+  helper,
+  buttonLabel,
+  onOpen
+}: {
+  title: string;
+  description: string;
+  helper?: string;
+  buttonLabel: string;
+  onOpen: () => void;
+}) => (
+  <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <p className="text-sm font-semibold text-slate-900">{title}</p>
+    <p className="mt-1 text-xs text-slate-600">{description}</p>
+    {helper ? <p className="mt-2 text-xs text-slate-500">{helper}</p> : null}
+    <div className="mt-3">
+      <Button type="button" className="h-8 px-3 text-xs" onClick={onOpen}>
+        {buttonLabel}
+      </Button>
+    </div>
+  </article>
+);
+
+const toIso = (value: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error("Selecciona una fecha válida");
+  }
+  return parsed.toISOString();
+};
+
 export const AdminPanelView = () => {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -135,7 +172,17 @@ export const AdminPanelView = () => {
   const [userRoleFilter, setUserRoleFilter] = useState<SystemRole | "">("");
   const [userStateFilter, setUserStateFilter] = useState<
     AdminUsersResponse["items"][number]["state"] | ""
-  >("");
+  >(""
+  );
+
+  const [openCreateUserModal, setOpenCreateUserModal] = useState(false);
+  const [openOffboardingModal, setOpenOffboardingModal] = useState(false);
+  const [openInternalInviteModal, setOpenInternalInviteModal] = useState(false);
+  const [openExternalInviteModal, setOpenExternalInviteModal] = useState(false);
+  const [openCreateTeamModal, setOpenCreateTeamModal] = useState(false);
+  const [openAccessModal, setOpenAccessModal] = useState(false);
+  const [openAuditModal, setOpenAuditModal] = useState(false);
+  const [openResetPasswordModal, setOpenResetPasswordModal] = useState(false);
 
   const [createUserForm, setCreateUserForm] = useState({
     firstName: "",
@@ -146,6 +193,14 @@ export const AdminPanelView = () => {
     startOnboarding: true
   });
 
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    userId: "",
+    fullName: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [adminPasswordResetFeedback, setAdminPasswordResetFeedback] = useState<string | null>(null);
+
   const [createTeamForm, setCreateTeamForm] = useState({
     name: "",
     description: "",
@@ -154,7 +209,6 @@ export const AdminPanelView = () => {
 
   const [inviteForm, setInviteForm] = useState({
     email: "",
-    resourceType: "PROYECTO" as "PROYECTO" | "ARCHIVO" | "DOCUMENTO",
     resourceId: "",
     expiresAt: ""
   });
@@ -181,11 +235,16 @@ export const AdminPanelView = () => {
     leadership: {},
     documents: {}
   });
-  const [adminPasswordResetFeedback, setAdminPasswordResetFeedback] = useState<string | null>(null);
 
   const [accessLookupForm, setAccessLookupForm] = useState({
-    type: "PROYECTO" as "PROYECTO" | "EQUIPO" | "ARCHIVO" | "DOCUMENTO",
-    id: ""
+    projectId: ""
+  });
+
+  const [auditFilters, setAuditFilters] = useState({
+    from: "",
+    to: "",
+    page: 1,
+    pageSize: 50
   });
 
   const usersQuery = useQuery({
@@ -203,6 +262,11 @@ export const AdminPanelView = () => {
       }
       return apiRequest<AdminUsersResponse>(`/admin/users?${params.toString()}`);
     }
+  });
+
+  const projectsQuery = useQuery({
+    queryKey: ["admin-project-options"],
+    queryFn: () => apiRequest<ProjectItem[]>("/projects")
   });
 
   const teamsQuery = useQuery({
@@ -230,12 +294,26 @@ export const AdminPanelView = () => {
     queryFn: () => apiRequest<AdminOverview>("/admin/overview?page=1&pageSize=10")
   });
 
+  const auditReportQuery = useQuery({
+    queryKey: ["admin-audit-report", auditFilters.from, auditFilters.to, auditFilters.page, auditFilters.pageSize],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (auditFilters.from) {
+        params.set("from", toIso(auditFilters.from));
+      }
+      if (auditFilters.to) {
+        params.set("to", toIso(auditFilters.to));
+      }
+      params.set("page", String(auditFilters.page));
+      params.set("pageSize", String(auditFilters.pageSize));
+      return apiRequest<AdminAuditReportResponse>(`/admin/audit-report?${params.toString()}`);
+    },
+    enabled: openAuditModal
+  });
+
   const createUserMutation = useMutation({
     mutationFn: () =>
-      apiRequest<{
-        id: string;
-        email: string;
-      }>("/admin/users", {
+      apiRequest<{ id: string; email: string }>("/admin/users", {
         method: "POST",
         body: JSON.stringify({
           firstName: createUserForm.firstName,
@@ -254,6 +332,7 @@ export const AdminPanelView = () => {
         email: "",
         teamId: ""
       }));
+      setOpenCreateUserModal(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
     }
@@ -281,6 +360,13 @@ export const AdminPanelView = () => {
       }),
     onSuccess: () => {
       setAdminPasswordResetFeedback("Contraseña restablecida correctamente.");
+      setOpenResetPasswordModal(false);
+      setResetPasswordForm({
+        userId: "",
+        fullName: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
     }
   });
 
@@ -295,9 +381,7 @@ export const AdminPanelView = () => {
     onSuccess: (preview) => {
       const defaultTarget = offboardingForm.primaryTransferToUserId;
       setOffboardingTransfers({
-        tasks: Object.fromEntries(
-          preview.activeTasks.map((task) => [task.id, defaultTarget])
-        ) as Record<string, string>,
+        tasks: Object.fromEntries(preview.activeTasks.map((task) => [task.id, defaultTarget])) as Record<string, string>,
         leadership: Object.fromEntries(
           preview.leadershipProjects.map((item) => [item.projectId, defaultTarget])
         ) as Record<string, string>,
@@ -325,14 +409,12 @@ export const AdminPanelView = () => {
             projectId: project.projectId,
             role: project.role,
             toUserId:
-              offboardingTransfers.leadership[project.projectId] ??
-              offboardingForm.primaryTransferToUserId
+              offboardingTransfers.leadership[project.projectId] ?? offboardingForm.primaryTransferToUserId
           })),
           documentTransfers: (previewOffboardingMutation.data?.ownedDocuments ?? []).map((document) => ({
             fileId: document.fileId,
             toUserId:
-              offboardingTransfers.documents[document.fileId] ??
-              offboardingForm.primaryTransferToUserId
+              offboardingTransfers.documents[document.fileId] ?? offboardingForm.primaryTransferToUserId
           }))
         })
       }),
@@ -340,16 +422,9 @@ export const AdminPanelView = () => {
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
       previewOffboardingMutation.reset();
-      setOffboardingForm({
-        userId: "",
-        primaryTransferToUserId: "",
-        reason: ""
-      });
-      setOffboardingTransfers({
-        tasks: {},
-        leadership: {},
-        documents: {}
-      });
+      setOffboardingForm({ userId: "", primaryTransferToUserId: "", reason: "" });
+      setOffboardingTransfers({ tasks: {}, leadership: {}, documents: {} });
+      setOpenOffboardingModal(false);
     }
   });
 
@@ -365,11 +440,8 @@ export const AdminPanelView = () => {
         })
       }),
     onSuccess: async () => {
-      setCreateTeamForm({
-        name: "",
-        description: "",
-        coordinatorUserId: ""
-      });
+      setCreateTeamForm({ name: "", description: "", coordinatorUserId: "" });
+      setOpenCreateTeamModal(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
     }
@@ -387,60 +459,40 @@ export const AdminPanelView = () => {
   });
 
   const createInviteMutation = useMutation({
-    mutationFn: () => {
-      const expires = new Date(inviteForm.expiresAt);
-      if (Number.isNaN(expires.getTime())) {
-        throw new Error("Selecciona una fecha de expiración válida");
-      }
-
-      return apiRequest<{ linkPreview: string }>("/admin/guest-invites", {
+    mutationFn: () =>
+      apiRequest<{ linkPreview: string }>("/admin/guest-invites", {
         method: "POST",
         body: JSON.stringify({
           email: inviteForm.email,
-          resourceType: inviteForm.resourceType,
+          resourceType: "PROYECTO",
           resourceId: inviteForm.resourceId,
-          expiresAt: expires.toISOString()
+          expiresAt: toIso(inviteForm.expiresAt)
         })
-      });
-    },
+      }),
     onSuccess: async (data) => {
       setExternalInviteLinkPreview(data.linkPreview);
-      setInviteForm({
-        email: "",
-        resourceType: "PROYECTO",
-        resourceId: "",
-        expiresAt: ""
-      });
+      setInviteForm({ email: "", resourceId: "", expiresAt: "" });
+      setOpenExternalInviteModal(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-invites"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
     }
   });
 
   const createInternalInviteMutation = useMutation({
-    mutationFn: () => {
-      const expires = new Date(internalInviteForm.expiresAt);
-      if (Number.isNaN(expires.getTime())) {
-        throw new Error("Selecciona una fecha de expiración válida");
-      }
-
-      return apiRequest<{ linkPreview: string }>("/admin/internal-invites", {
+    mutationFn: () =>
+      apiRequest<{ linkPreview: string }>("/admin/internal-invites", {
         method: "POST",
         body: JSON.stringify({
           email: internalInviteForm.email,
           baseRole: internalInviteForm.baseRole,
           teamId: internalInviteForm.teamId || undefined,
-          expiresAt: expires.toISOString()
+          expiresAt: toIso(internalInviteForm.expiresAt)
         })
-      });
-    },
+      }),
     onSuccess: async (data) => {
       setInternalInviteLinkPreview(data.linkPreview);
-      setInternalInviteForm({
-        email: "",
-        baseRole: "COLABORADOR",
-        teamId: "",
-        expiresAt: ""
-      });
+      setInternalInviteForm({ email: "", baseRole: "COLABORADOR", teamId: "", expiresAt: "" });
+      setOpenInternalInviteModal(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-internal-invites"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
     }
@@ -493,16 +545,19 @@ export const AdminPanelView = () => {
   const accessLookupMutation = useMutation({
     mutationFn: () =>
       apiRequest<AccessItem[]>(
-        `/admin/access?type=${accessLookupForm.type}&id=${encodeURIComponent(accessLookupForm.id)}`
+        `/admin/access?type=PROYECTO&id=${encodeURIComponent(accessLookupForm.projectId)}`
       )
   });
 
   const userOptions = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data?.items]);
+  const projectOptions = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
+
   const offboardingPreview = previewOffboardingMutation.data;
   const offboardingTargetOptions = useMemo(
     () => userOptions.filter((user) => user.id !== offboardingForm.userId),
     [offboardingForm.userId, userOptions]
   );
+
   const missingOffboardingAssignments = useMemo(() => {
     if (!offboardingPreview) {
       return 0;
@@ -522,6 +577,45 @@ export const AdminPanelView = () => {
 
     return missingTasks + missingLeadership + missingDocuments;
   }, [offboardingForm.primaryTransferToUserId, offboardingPreview, offboardingTransfers]);
+
+  const runAuditExport = async () => {
+    const params = new URLSearchParams();
+    if (auditFilters.from) {
+      params.set("from", toIso(auditFilters.from));
+    }
+    if (auditFilters.to) {
+      params.set("to", toIso(auditFilters.to));
+    }
+
+    const headers = new Headers();
+    const token = getAuthToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    const apiKey = getPublicApiKey();
+    if (apiKey) {
+      headers.set("x-api-key", apiKey);
+    }
+
+    const response = await fetch(`${getApiBaseUrl()}/admin/audit-report/export.csv?${params.toString()}`, {
+      headers
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ message: "No se pudo descargar auditoría" }));
+      throw new Error(body.message ?? "No se pudo descargar auditoría");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `audit-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
 
   if (session.isLoading || !session.data) {
     return (
@@ -549,17 +643,66 @@ export const AdminPanelView = () => {
       <Card className="space-y-2">
         <p className="text-xs uppercase tracking-wide text-slate-500">Panel de Administración</p>
         <h1 className="text-2xl font-semibold text-slate-900">Administración Corelia</h1>
-        <p className="text-sm text-slate-600">
-          Gestión de usuarios, equipos, accesos, integraciones y operación global.
-        </p>
+        <p className="text-sm text-slate-600">Acciones administrativas principales en un solo lugar.</p>
       </Card>
 
       <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">1. Gestión de Usuarios</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Acciones</h2>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <ActionCard
+            title="Crear usuario"
+            description="Alta de usuario interno con rol base y equipo opcional."
+            helper={`Usuarios actuales: ${usersQuery.data?.total ?? 0}`}
+            buttonLabel="Abrir"
+            onOpen={() => setOpenCreateUserModal(true)}
+          />
+          <ActionCard
+            title="Flujo de offboarding"
+            description="Transferencia de tareas, liderazgo y documentos antes de desactivar usuario."
+            buttonLabel="Abrir"
+            onOpen={() => setOpenOffboardingModal(true)}
+          />
+          <ActionCard
+            title="Invitación interna"
+            description="Genera enlace de activación para nuevos usuarios internos."
+            helper={`Pendientes: ${internalInvitesQuery.data?.items.filter((item) => !item.revokedAt && !item.acceptedAt).length ?? 0}`}
+            buttonLabel="Abrir"
+            onOpen={() => setOpenInternalInviteModal(true)}
+          />
+          <ActionCard
+            title="Invitación externa"
+            description="Invita externos a un proyecto específico con fecha de expiración."
+            helper={`Activas: ${invitesQuery.data?.items.filter((item) => !item.revokedAt).length ?? 0}`}
+            buttonLabel="Abrir"
+            onOpen={() => setOpenExternalInviteModal(true)}
+          />
+          <ActionCard
+            title="Crear equipo"
+            description="Crea equipos y define coordinador para la operación."
+            helper={`Equipos actuales: ${teamsQuery.data?.total ?? 0}`}
+            buttonLabel="Abrir"
+            onOpen={() => setOpenCreateTeamModal(true)}
+          />
+          <ActionCard
+            title="Consultar accesos"
+            description="Consulta los accesos efectivos por proyecto."
+            buttonLabel="Abrir"
+            onOpen={() => setOpenAccessModal(true)}
+          />
+          <ActionCard
+            title="Reporte de auditoría"
+            description="Filtra eventos por fecha y descarga CSV."
+            helper={`Eventos recientes: ${overview?.audit.latestEvents.length ?? 0}`}
+            buttonLabel="Abrir"
+            onOpen={() => setOpenAuditModal(true)}
+          />
+        </div>
+      </Card>
 
-        <div className="grid gap-2 md:grid-cols-4">
+      <Card className="space-y-4">
+        <div className="flex flex-wrap gap-2">
           <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 min-w-48 rounded-xl border border-slate-300 px-3 text-sm"
             placeholder="Buscar nombre o email"
             value={userSearch}
             onChange={(event) => setUserSearch(event.target.value)}
@@ -604,14 +747,6 @@ export const AdminPanelView = () => {
         </div>
 
         {usersQuery.error ? <p className="text-sm text-red-600">{usersQuery.error.message}</p> : null}
-        {usersQuery.isLoading ? <p className="text-sm text-slate-600">Cargando usuarios...</p> : null}
-        {adminResetPasswordMutation.error ? (
-          <p className="text-sm text-red-600">{adminResetPasswordMutation.error.message}</p>
-        ) : null}
-        {adminPasswordResetFeedback ? (
-          <p className="text-sm text-emerald-700">{adminPasswordResetFeedback}</p>
-        ) : null}
-
         <ul className="space-y-2">
           {usersQuery.data?.items.map((user) => (
             <li key={user.id} className="rounded-xl border border-slate-200 p-3">
@@ -630,23 +765,15 @@ export const AdminPanelView = () => {
                     type="button"
                     variant="secondary"
                     className="h-8 px-3 text-xs"
-                    disabled={adminResetPasswordMutation.isPending}
                     onClick={() => {
-                      const newPassword = window.prompt(
-                        `Nueva contraseña para ${user.fullName} (mínimo 8 caracteres)`
-                      );
-                      if (!newPassword) {
-                        return;
-                      }
-                      if (newPassword.length < 8) {
-                        window.alert("La contraseña debe tener al menos 8 caracteres.");
-                        return;
-                      }
                       setAdminPasswordResetFeedback(null);
-                      adminResetPasswordMutation.mutate({
+                      setResetPasswordForm({
                         userId: user.id,
-                        newPassword
+                        fullName: user.fullName,
+                        newPassword: "",
+                        confirmPassword: ""
                       });
+                      setOpenResetPasswordModal(true);
                     }}
                   >
                     Restablecer clave
@@ -669,159 +796,298 @@ export const AdminPanelView = () => {
             </li>
           ))}
         </ul>
+        {adminPasswordResetFeedback ? <p className="text-sm text-emerald-700">{adminPasswordResetFeedback}</p> : null}
+      </Card>
 
-        <div className="rounded-2xl border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Crear usuario</h3>
-          <div className="mt-2 grid gap-2 md:grid-cols-2">
-            <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              placeholder="Nombre"
-              value={createUserForm.firstName}
-              onChange={(event) =>
-                setCreateUserForm((prev) => ({
-                  ...prev,
-                  firstName: event.target.value
-                }))
-              }
-            />
-            <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              placeholder="Apellido"
-              value={createUserForm.lastName}
-              onChange={(event) =>
-                setCreateUserForm((prev) => ({
-                  ...prev,
-                  lastName: event.target.value
-                }))
-              }
-            />
-            <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              placeholder="Email"
-              value={createUserForm.email}
-              onChange={(event) =>
-                setCreateUserForm((prev) => ({
-                  ...prev,
-                  email: event.target.value
-                }))
-              }
-            />
-            <select
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              value={createUserForm.baseRole}
-              onChange={(event) =>
-                setCreateUserForm((prev) => ({
-                  ...prev,
-                  baseRole: event.target.value as SystemRole
-                }))
-              }
-            >
-              {ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              value={createUserForm.teamId}
-              onChange={(event) =>
-                setCreateUserForm((prev) => ({
-                  ...prev,
-                  teamId: event.target.value
-                }))
-              }
-            >
-              <option value="">Sin equipo</option>
-              {teamsQuery.data?.items.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={createUserForm.startOnboarding}
-                onChange={(event) =>
-                  setCreateUserForm((prev) => ({
-                    ...prev,
-                    startOnboarding: event.target.checked
-                  }))
-                }
-              />
-              Iniciar onboarding
-            </label>
-          </div>
-          {createUserMutation.error ? (
-            <p className="mt-2 text-sm text-red-600">{createUserMutation.error.message}</p>
-          ) : null}
-          <div className="mt-3">
+      <Card className="space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">Equipos</h2>
+        <ul className="space-y-2">
+          {teamsQuery.data?.items.map((team) => (
+            <li key={team.id} className="rounded-xl border border-slate-200 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{team.name}</p>
+                  <p className="text-xs text-slate-600">
+                    Coordinador: {team.coordinator?.fullName ?? "No asignado"} · Miembros: {team.membersCount}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="danger"
+                  className="h-8 px-3 text-xs"
+                  disabled={dissolveTeamMutation.isPending}
+                  onClick={() => dissolveTeamMutation.mutate(team.id)}
+                >
+                  Disolver
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card className="space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">Invitaciones internas</h2>
+        <ul className="space-y-2">
+          {internalInvitesQuery.data?.items.map((invite) => (
+            <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{invite.email}</p>
+                  <p className="text-xs text-slate-600">
+                    {invite.baseRole} · {invite.teamName ?? "Sin equipo"} · expira {formatDateTime(invite.expiresAt)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8 px-3 text-xs"
+                    disabled={resendInternalInviteMutation.isPending}
+                    onClick={() => resendInternalInviteMutation.mutate(invite.id)}
+                  >
+                    Reenviar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    className="h-8 px-3 text-xs"
+                    disabled={
+                      revokeInternalInviteMutation.isPending || Boolean(invite.revokedAt) || Boolean(invite.acceptedAt)
+                    }
+                    onClick={() => revokeInternalInviteMutation.mutate(invite.id)}
+                  >
+                    {invite.revokedAt ? "Revocada" : invite.acceptedAt ? "Aceptada" : "Revocar"}
+                  </Button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {internalInviteLinkPreview ? (
+          <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            Enlace interno: {internalInviteLinkPreview}
+          </p>
+        ) : null}
+      </Card>
+
+      <Card className="space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">Invitaciones externas</h2>
+        <ul className="space-y-2">
+          {invitesQuery.data?.items.map((invite) => (
+            <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{invite.email}</p>
+                  <p className="text-xs text-slate-600">
+                    PROYECTO · {invite.resourceId} · expira {formatDateTime(invite.expiresAt)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8 px-3 text-xs"
+                    disabled={extendInviteMutation.isPending}
+                    onClick={() => extendInviteMutation.mutate(invite.id)}
+                  >
+                    Extender 7 días
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    className="h-8 px-3 text-xs"
+                    disabled={revokeInviteMutation.isPending || Boolean(invite.revokedAt)}
+                    onClick={() => revokeInviteMutation.mutate(invite.id)}
+                  >
+                    {invite.revokedAt ? "Revocada" : "Revocar"}
+                  </Button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {externalInviteLinkPreview ? (
+          <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            Enlace externo: {externalInviteLinkPreview}
+          </p>
+        ) : null}
+      </Card>
+
+      <Card className="space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">Roles y permisos</h2>
+        <ul className="space-y-2">
+          {rolesQuery.data?.map((item) => (
+            <li key={item.role} className="rounded-xl border border-slate-200 p-3">
+              <p className="text-sm font-medium text-slate-900">{item.role}</p>
+              <p className="text-xs text-slate-600">{item.permissions.join(", ")}</p>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="space-y-2">
+          <p className="text-sm font-semibold text-slate-900">Integraciones</p>
+          <p className="text-xs text-slate-600">
+            Webhooks: {overview?.integrations.webhooksConfigured ?? 0} · activos: {overview?.integrations.webhooksEnabled ?? 0}
+          </p>
+        </Card>
+        <Card className="space-y-2">
+          <p className="text-sm font-semibold text-slate-900">Automatizaciones</p>
+          <p className="text-xs text-slate-600">
+            Total: {overview?.automations.total ?? 0} · Activas: {overview?.automations.enabled ?? 0} · Fallidas 24h: {overview?.automations.failedLast24h ?? 0}
+          </p>
+        </Card>
+        <Card className="space-y-2">
+          <p className="text-sm font-semibold text-slate-900">Formularios</p>
+          <p className="text-xs text-slate-600">
+            Activas: {overview?.forms.activeRequests ?? 0} · Pendientes: {overview?.forms.pendingApproval ?? 0}
+          </p>
+        </Card>
+        <Card className="space-y-2">
+          <p className="text-sm font-semibold text-slate-900">Importaciones</p>
+          <p className="text-xs text-slate-600">Últimos jobs: {overview?.imports.latestJobs.length ?? 0}</p>
+        </Card>
+      </div>
+
+      <UiModal
+        open={openCreateUserModal}
+        onClose={() => setOpenCreateUserModal(false)}
+        title="Crear usuario"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setOpenCreateUserModal(false)}>
+              Cancelar
+            </Button>
             <Button
               type="button"
               disabled={
-                createUserMutation.isPending ||
-                !createUserForm.firstName ||
-                !createUserForm.lastName ||
-                !createUserForm.email
+                createUserMutation.isPending || !createUserForm.firstName || !createUserForm.lastName || !createUserForm.email
               }
               onClick={() => createUserMutation.mutate()}
             >
               {createUserMutation.isPending ? "Creando..." : "Crear usuario"}
             </Button>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Flujo de offboarding</h3>
-          <div className="mt-2 grid gap-2 md:grid-cols-3">
-            <select
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              value={offboardingForm.userId}
-              onChange={(event) =>
-                setOffboardingForm((prev) => ({
-                  ...prev,
-                  userId: event.target.value
-                }))
-              }
-            >
-              <option value="">Selecciona usuario a offboard</option>
-              {userOptions.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.fullName}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              value={offboardingForm.primaryTransferToUserId}
-              onChange={(event) =>
-                setOffboardingForm((prev) => ({
-                  ...prev,
-                  primaryTransferToUserId: event.target.value
-                }))
-              }
-            >
-              <option value="">Responsable principal</option>
-              {offboardingTargetOptions.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.fullName}
-                </option>
-              ))}
-            </select>
+          </>
+        }
+      >
+        <div className="grid gap-2 md:grid-cols-2">
+          <input
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            placeholder="Nombre"
+            value={createUserForm.firstName}
+            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, firstName: event.target.value }))}
+          />
+          <input
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            placeholder="Apellido"
+            value={createUserForm.lastName}
+            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, lastName: event.target.value }))}
+          />
+          <input
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            placeholder="Email"
+            value={createUserForm.email}
+            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, email: event.target.value }))}
+          />
+          <select
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            value={createUserForm.baseRole}
+            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, baseRole: event.target.value as SystemRole }))}
+          >
+            {ROLE_OPTIONS.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
+          </select>
+          <select
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            value={createUserForm.teamId}
+            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, teamId: event.target.value }))}
+          >
+            <option value="">Sin equipo</option>
+            {teamsQuery.data?.items.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm text-slate-700">
             <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              placeholder="Motivo"
-              value={offboardingForm.reason}
-              onChange={(event) =>
-                setOffboardingForm((prev) => ({
-                  ...prev,
-                  reason: event.target.value
-                }))
-              }
+              type="checkbox"
+              checked={createUserForm.startOnboarding}
+              onChange={(event) => setCreateUserForm((prev) => ({ ...prev, startOnboarding: event.target.checked }))}
             />
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+            Iniciar onboarding
+          </label>
+        </div>
+        {createUserMutation.error ? <p className="text-sm text-red-600">{createUserMutation.error.message}</p> : null}
+      </UiModal>
+
+      <UiModal
+        open={openResetPasswordModal}
+        onClose={() => setOpenResetPasswordModal(false)}
+        title={`Restablecer clave: ${resetPasswordForm.fullName || "Usuario"}`}
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setOpenResetPasswordModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={adminResetPasswordMutation.isPending}
+              onClick={() => {
+                if (resetPasswordForm.newPassword.length < 8) {
+                  setAdminPasswordResetFeedback("La contraseña debe tener al menos 8 caracteres.");
+                  return;
+                }
+                if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
+                  setAdminPasswordResetFeedback("La confirmación de contraseña no coincide.");
+                  return;
+                }
+                setAdminPasswordResetFeedback(null);
+                adminResetPasswordMutation.mutate({
+                  userId: resetPasswordForm.userId,
+                  newPassword: resetPasswordForm.newPassword
+                });
+              }}
+            >
+              {adminResetPasswordMutation.isPending ? "Guardando..." : "Restablecer"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <input
+            type="password"
+            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            placeholder="Nueva contraseña"
+            value={resetPasswordForm.newPassword}
+            onChange={(event) => setResetPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
+          />
+          <input
+            type="password"
+            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            placeholder="Confirmar contraseña"
+            value={resetPasswordForm.confirmPassword}
+            onChange={(event) => setResetPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+          />
+        </div>
+        {adminResetPasswordMutation.error ? <p className="text-sm text-red-600">{adminResetPasswordMutation.error.message}</p> : null}
+      </UiModal>
+
+      <UiModal
+        open={openOffboardingModal}
+        onClose={() => setOpenOffboardingModal(false)}
+        title="Flujo de offboarding"
+        widthClassName="max-w-4xl"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setOpenOffboardingModal(false)}>
+              Cerrar
+            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -845,422 +1111,302 @@ export const AdminPanelView = () => {
             >
               {executeOffboardingMutation.isPending ? "Ejecutando..." : "Ejecutar offboarding"}
             </Button>
-          </div>
-          {previewOffboardingMutation.error ? (
-            <p className="mt-2 text-sm text-red-600">{previewOffboardingMutation.error.message}</p>
-          ) : null}
-          {executeOffboardingMutation.error ? (
-            <p className="mt-2 text-sm text-red-600">{executeOffboardingMutation.error.message}</p>
-          ) : null}
-          {offboardingPreview ? (
-            <div className="mt-3 space-y-3 rounded-xl border border-slate-200 p-3">
-              <p className="text-sm text-slate-700">
-                Tareas activas: {offboardingPreview.activeTasks.length} · Roles de liderazgo:{" "}
-                {offboardingPreview.leadershipProjects.length} · Documentos propietarios:{" "}
-                {offboardingPreview.ownedDocuments.length}
-              </p>
-              {missingOffboardingAssignments > 0 ? (
-                <p className="text-sm text-amber-700">
-                  Faltan {missingOffboardingAssignments} asignaciones por definir antes de ejecutar.
-                </p>
-              ) : null}
-
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Transferencia de tareas</p>
-                {offboardingPreview.activeTasks.length === 0 ? (
-                  <p className="text-sm text-slate-600">Sin tareas activas.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {offboardingPreview.activeTasks.map((task) => (
-                      <li key={task.id} className="grid gap-2 rounded-xl border border-slate-200 p-2 md:grid-cols-[1fr_240px]">
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{task.title}</p>
-                          <p className="text-xs text-slate-600">{task.projectName}</p>
-                        </div>
-                        <select
-                          className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
-                          value={offboardingTransfers.tasks[task.id] ?? offboardingForm.primaryTransferToUserId}
-                          onChange={(event) =>
-                            setOffboardingTransfers((prev) => ({
-                              ...prev,
-                              tasks: {
-                                ...prev.tasks,
-                                [task.id]: event.target.value
-                              }
-                            }))
-                          }
-                        >
-                          <option value="">Seleccionar responsable</option>
-                          {offboardingTargetOptions.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.fullName}
-                            </option>
-                          ))}
-                        </select>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  Transferencia de liderazgo en proyectos
-                </p>
-                {offboardingPreview.leadershipProjects.length === 0 ? (
-                  <p className="text-sm text-slate-600">Sin roles de liderazgo activos.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {offboardingPreview.leadershipProjects.map((project) => (
-                      <li
-                        key={project.projectId}
-                        className="grid gap-2 rounded-xl border border-slate-200 p-2 md:grid-cols-[1fr_240px]"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{project.projectName}</p>
-                          <p className="text-xs text-slate-600">{project.role}</p>
-                        </div>
-                        <select
-                          className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
-                          value={
-                            offboardingTransfers.leadership[project.projectId] ??
-                            offboardingForm.primaryTransferToUserId
-                          }
-                          onChange={(event) =>
-                            setOffboardingTransfers((prev) => ({
-                              ...prev,
-                              leadership: {
-                                ...prev.leadership,
-                                [project.projectId]: event.target.value
-                              }
-                            }))
-                          }
-                        >
-                          <option value="">Seleccionar sustituto</option>
-                          {offboardingTargetOptions.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.fullName}
-                            </option>
-                          ))}
-                        </select>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Transferencia de documentos</p>
-                {offboardingPreview.ownedDocuments.length === 0 ? (
-                  <p className="text-sm text-slate-600">Sin documentos a transferir.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {offboardingPreview.ownedDocuments.map((document) => (
-                      <li
-                        key={document.fileId}
-                        className="grid gap-2 rounded-xl border border-slate-200 p-2 md:grid-cols-[1fr_240px]"
-                      >
-                        <p className="text-sm font-medium text-slate-900">{document.originalName}</p>
-                        <select
-                          className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
-                          value={
-                            offboardingTransfers.documents[document.fileId] ??
-                            offboardingForm.primaryTransferToUserId
-                          }
-                          onChange={(event) =>
-                            setOffboardingTransfers((prev) => ({
-                              ...prev,
-                              documents: {
-                                ...prev.documents,
-                                [document.fileId]: event.target.value
-                              }
-                            }))
-                          }
-                        >
-                          <option value="">Seleccionar propietario</option>
-                          {offboardingTargetOptions.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.fullName}
-                            </option>
-                          ))}
-                        </select>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          ) : null}
+          </>
+        }
+      >
+        <div className="grid gap-2 md:grid-cols-3">
+          <select
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            value={offboardingForm.userId}
+            onChange={(event) => setOffboardingForm((prev) => ({ ...prev, userId: event.target.value }))}
+          >
+            <option value="">Selecciona usuario a offboard</option>
+            {userOptions.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.fullName}
+              </option>
+            ))}
+          </select>
+          <select
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            value={offboardingForm.primaryTransferToUserId}
+            onChange={(event) => setOffboardingForm((prev) => ({ ...prev, primaryTransferToUserId: event.target.value }))}
+          >
+            <option value="">Responsable principal</option>
+            {offboardingTargetOptions.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.fullName}
+              </option>
+            ))}
+          </select>
+          <input
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            placeholder="Motivo"
+            value={offboardingForm.reason}
+            onChange={(event) => setOffboardingForm((prev) => ({ ...prev, reason: event.target.value }))}
+          />
         </div>
-      </Card>
 
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">2. Invitaciones y Acceso Externo</h2>
-        <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
-          <p className="text-sm font-semibold text-slate-900">Invitación interna (activación por enlace)</p>
-          <div className="grid gap-2 md:grid-cols-4">
-            <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              placeholder="Email corporativo"
-              value={internalInviteForm.email}
-              onChange={(event) =>
-                setInternalInviteForm((prev) => ({
-                  ...prev,
-                  email: event.target.value
-                }))
-              }
-            />
-            <select
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              value={internalInviteForm.baseRole}
-              onChange={(event) =>
-                setInternalInviteForm((prev) => ({
-                  ...prev,
-                  baseRole: event.target.value as SystemRole
-                }))
-              }
-            >
-              {ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
+        {previewOffboardingMutation.error ? <p className="text-sm text-red-600">{previewOffboardingMutation.error.message}</p> : null}
+        {executeOffboardingMutation.error ? <p className="text-sm text-red-600">{executeOffboardingMutation.error.message}</p> : null}
+
+        {offboardingPreview ? (
+          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+            <p className="text-sm text-slate-700">
+              Tareas activas: {offboardingPreview.activeTasks.length} · Roles de liderazgo: {offboardingPreview.leadershipProjects.length} · Documentos propietarios: {offboardingPreview.ownedDocuments.length}
+            </p>
+            {missingOffboardingAssignments > 0 ? (
+              <p className="text-sm text-amber-700">Faltan {missingOffboardingAssignments} asignaciones por definir antes de ejecutar.</p>
+            ) : null}
+
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Transferencia de tareas</p>
+              {offboardingPreview.activeTasks.map((task) => (
+                <div key={task.id} className="grid gap-2 rounded-lg border border-slate-200 p-2 md:grid-cols-[1fr_220px]">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{task.title}</p>
+                    <p className="text-xs text-slate-600">{task.projectName}</p>
+                  </div>
+                  <select
+                    className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+                    value={offboardingTransfers.tasks[task.id] ?? offboardingForm.primaryTransferToUserId}
+                    onChange={(event) =>
+                      setOffboardingTransfers((prev) => ({
+                        ...prev,
+                        tasks: {
+                          ...prev.tasks,
+                          [task.id]: event.target.value
+                        }
+                      }))
+                    }
+                  >
+                    <option value="">Seleccionar responsable</option>
+                    {offboardingTargetOptions.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ))}
-            </select>
-            <select
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              value={internalInviteForm.teamId}
-              onChange={(event) =>
-                setInternalInviteForm((prev) => ({
-                  ...prev,
-                  teamId: event.target.value
-                }))
-              }
-            >
-              <option value="">Sin equipo</option>
-              {teamsQuery.data?.items.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Transferencia de liderazgo</p>
+              {offboardingPreview.leadershipProjects.map((project) => (
+                <div key={project.projectId} className="grid gap-2 rounded-lg border border-slate-200 p-2 md:grid-cols-[1fr_220px]">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{project.projectName}</p>
+                    <p className="text-xs text-slate-600">{project.role}</p>
+                  </div>
+                  <select
+                    className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+                    value={offboardingTransfers.leadership[project.projectId] ?? offboardingForm.primaryTransferToUserId}
+                    onChange={(event) =>
+                      setOffboardingTransfers((prev) => ({
+                        ...prev,
+                        leadership: {
+                          ...prev.leadership,
+                          [project.projectId]: event.target.value
+                        }
+                      }))
+                    }
+                  >
+                    <option value="">Seleccionar sustituto</option>
+                    {offboardingTargetOptions.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ))}
-            </select>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Transferencia de documentos</p>
+              {offboardingPreview.ownedDocuments.map((document) => (
+                <div key={document.fileId} className="grid gap-2 rounded-lg border border-slate-200 p-2 md:grid-cols-[1fr_220px]">
+                  <p className="text-sm font-medium text-slate-900">{document.originalName}</p>
+                  <select
+                    className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+                    value={offboardingTransfers.documents[document.fileId] ?? offboardingForm.primaryTransferToUserId}
+                    onChange={(event) =>
+                      setOffboardingTransfers((prev) => ({
+                        ...prev,
+                        documents: {
+                          ...prev.documents,
+                          [document.fileId]: event.target.value
+                        }
+                      }))
+                    }
+                  >
+                    <option value="">Seleccionar propietario</option>
+                    {offboardingTargetOptions.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </UiModal>
+
+      <UiModal
+        open={openInternalInviteModal}
+        onClose={() => setOpenInternalInviteModal(false)}
+        title="Invitación interna"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setOpenInternalInviteModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={createInternalInviteMutation.isPending || !internalInviteForm.email || !internalInviteForm.expiresAt}
+              onClick={() => createInternalInviteMutation.mutate()}
+            >
+              {createInternalInviteMutation.isPending ? "Generando..." : "Generar enlace"}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-2 md:grid-cols-2">
+          <input
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            placeholder="Email corporativo"
+            value={internalInviteForm.email}
+            onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, email: event.target.value }))}
+          />
+          <select
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            value={internalInviteForm.baseRole}
+            onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, baseRole: event.target.value as SystemRole }))}
+          >
+            {ROLE_OPTIONS.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
+          </select>
+          <select
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            value={internalInviteForm.teamId}
+            onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, teamId: event.target.value }))}
+          >
+            <option value="">Sin equipo</option>
+            {teamsQuery.data?.items.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+          <label className="space-y-1">
+            <span className="block text-xs font-medium text-slate-600">Fecha de expiración</span>
             <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
               type="datetime-local"
               value={internalInviteForm.expiresAt}
-              onChange={(event) =>
-                setInternalInviteForm((prev) => ({
-                  ...prev,
-                  expiresAt: event.target.value
-                }))
-              }
+              onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
             />
-          </div>
-          <Button
-            type="button"
-            disabled={
-              createInternalInviteMutation.isPending ||
-              !internalInviteForm.email ||
-              !internalInviteForm.expiresAt
-            }
-            onClick={() => createInternalInviteMutation.mutate()}
-          >
-            {createInternalInviteMutation.isPending
-              ? "Generando..."
-              : "Generar enlace de invitación interna"}
-          </Button>
-          {createInternalInviteMutation.error ? (
-            <p className="text-sm text-red-600">{createInternalInviteMutation.error.message}</p>
-          ) : null}
-          {internalInviteLinkPreview ? (
-            <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-              Enlace interno: {internalInviteLinkPreview}
-            </p>
-          ) : null}
-
-          <ul className="space-y-2">
-            {internalInvitesQuery.data?.items.map((invite) => (
-              <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{invite.email}</p>
-                    <p className="text-xs text-slate-600">
-                      {invite.baseRole} · {invite.teamName ?? "Sin equipo"} · expira{" "}
-                      {formatDateTime(invite.expiresAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-8 px-3 text-xs"
-                      disabled={resendInternalInviteMutation.isPending}
-                      onClick={() => resendInternalInviteMutation.mutate(invite.id)}
-                    >
-                      Reenviar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      className="h-8 px-3 text-xs"
-                      disabled={
-                        revokeInternalInviteMutation.isPending ||
-                        Boolean(invite.revokedAt) ||
-                        Boolean(invite.acceptedAt)
-                      }
-                      onClick={() => revokeInternalInviteMutation.mutate(invite.id)}
-                    >
-                      {invite.revokedAt ? "Revocada" : invite.acceptedAt ? "Aceptada" : "Revocar"}
-                    </Button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          </label>
         </div>
+        {createInternalInviteMutation.error ? <p className="text-sm text-red-600">{createInternalInviteMutation.error.message}</p> : null}
+      </UiModal>
 
-        <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
-          <p className="text-sm font-semibold text-slate-900">Invitados externos</p>
-          <div className="grid gap-2 md:grid-cols-4">
-            <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              placeholder="Email invitado externo"
-              value={inviteForm.email}
-              onChange={(event) =>
-                setInviteForm((prev) => ({
-                  ...prev,
-                  email: event.target.value
-                }))
-              }
-            />
-            <select
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              value={inviteForm.resourceType}
-              onChange={(event) =>
-                setInviteForm((prev) => ({
-                  ...prev,
-                  resourceType: event.target.value as "PROYECTO" | "ARCHIVO" | "DOCUMENTO"
-                }))
-              }
+      <UiModal
+        open={openExternalInviteModal}
+        onClose={() => setOpenExternalInviteModal(false)}
+        title="Invitación externa"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setOpenExternalInviteModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={createInviteMutation.isPending || !inviteForm.email || !inviteForm.resourceId || !inviteForm.expiresAt}
+              onClick={() => createInviteMutation.mutate()}
             >
-              <option value="PROYECTO">Proyecto</option>
-              <option value="ARCHIVO">Archivo</option>
-              <option value="DOCUMENTO">Documento</option>
-            </select>
-            <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-              placeholder="ID del recurso"
+              {createInviteMutation.isPending ? "Generando..." : "Generar enlace"}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-2 md:grid-cols-2">
+          <input
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            placeholder="Email invitado externo"
+            value={inviteForm.email}
+            onChange={(event) => setInviteForm((prev) => ({ ...prev, email: event.target.value }))}
+          />
+          <label className="space-y-1">
+            <span className="block text-xs font-medium text-slate-600">Proyecto</span>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
               value={inviteForm.resourceId}
-              onChange={(event) =>
-                setInviteForm((prev) => ({
-                  ...prev,
-                  resourceId: event.target.value
-                }))
-              }
-            />
+              onChange={(event) => setInviteForm((prev) => ({ ...prev, resourceId: event.target.value }))}
+            >
+              <option value="">Selecciona un proyecto</option>
+              {projectOptions.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1 md:col-span-2">
+            <span className="block text-xs font-medium text-slate-600">Fecha de expiración</span>
             <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
               type="datetime-local"
               value={inviteForm.expiresAt}
-              onChange={(event) =>
-                setInviteForm((prev) => ({
-                  ...prev,
-                  expiresAt: event.target.value
-                }))
-              }
+              onChange={(event) => setInviteForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
             />
-          </div>
-          <Button
-            type="button"
-            disabled={
-              createInviteMutation.isPending ||
-              !inviteForm.email ||
-              !inviteForm.resourceId ||
-              !inviteForm.expiresAt
-            }
-            onClick={() => createInviteMutation.mutate()}
-          >
-            {createInviteMutation.isPending ? "Generando..." : "Generar enlace externo"}
-          </Button>
-          {createInviteMutation.error ? (
-            <p className="text-sm text-red-600">{createInviteMutation.error.message}</p>
-          ) : null}
-          {externalInviteLinkPreview ? (
-            <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-              Enlace externo: {externalInviteLinkPreview}
-            </p>
-          ) : null}
-
-          <ul className="space-y-2">
-            {invitesQuery.data?.items.map((invite) => (
-              <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{invite.email}</p>
-                    <p className="text-xs text-slate-600">
-                      {invite.resourceType} · {invite.resourceId} · expira {formatDateTime(invite.expiresAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-8 px-3 text-xs"
-                      disabled={extendInviteMutation.isPending}
-                      onClick={() => extendInviteMutation.mutate(invite.id)}
-                    >
-                      Extender 7 días
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      className="h-8 px-3 text-xs"
-                      disabled={revokeInviteMutation.isPending || Boolean(invite.revokedAt)}
-                      onClick={() => revokeInviteMutation.mutate(invite.id)}
-                    >
-                      {invite.revokedAt ? "Revocada" : "Revocar"}
-                    </Button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          </label>
         </div>
-      </Card>
+        {createInviteMutation.error ? <p className="text-sm text-red-600">{createInviteMutation.error.message}</p> : null}
+      </UiModal>
 
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">3. Gestión de Equipos</h2>
-        <div className="grid gap-2 md:grid-cols-3">
+      <UiModal
+        open={openCreateTeamModal}
+        onClose={() => setOpenCreateTeamModal(false)}
+        title="Crear equipo"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setOpenCreateTeamModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={createTeamMutation.isPending || !createTeamForm.name}
+              onClick={() => createTeamMutation.mutate()}
+            >
+              {createTeamMutation.isPending ? "Creando..." : "Crear equipo"}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-2 md:grid-cols-2">
           <input
             className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
             placeholder="Nombre del equipo"
             value={createTeamForm.name}
-            onChange={(event) =>
-              setCreateTeamForm((prev) => ({
-                ...prev,
-                name: event.target.value
-              }))
-            }
+            onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, name: event.target.value }))}
           />
           <input
             className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
             placeholder="Descripción"
             value={createTeamForm.description}
-            onChange={(event) =>
-              setCreateTeamForm((prev) => ({
-                ...prev,
-                description: event.target.value
-              }))
-            }
+            onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, description: event.target.value }))}
           />
           <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 rounded-xl border border-slate-300 px-3 text-sm md:col-span-2"
             value={createTeamForm.coordinatorUserId}
-            onChange={(event) =>
-              setCreateTeamForm((prev) => ({
-                ...prev,
-                coordinatorUserId: event.target.value
-              }))
-            }
+            onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, coordinatorUserId: event.target.value }))}
           >
             <option value="">Sin coordinador</option>
             {userOptions.map((user) => (
@@ -1270,91 +1416,46 @@ export const AdminPanelView = () => {
             ))}
           </select>
         </div>
-        <Button
-          type="button"
-          disabled={createTeamMutation.isPending || !createTeamForm.name}
-          onClick={() => createTeamMutation.mutate()}
-        >
-          {createTeamMutation.isPending ? "Creando..." : "Crear equipo"}
-        </Button>
         {createTeamMutation.error ? <p className="text-sm text-red-600">{createTeamMutation.error.message}</p> : null}
-        <ul className="space-y-2">
-          {teamsQuery.data?.items.map((team) => (
-            <li key={team.id} className="rounded-xl border border-slate-200 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{team.name}</p>
-                  <p className="text-xs text-slate-600">
-                    Coordinador: {team.coordinator?.fullName ?? "No asignado"} · Miembros:{" "}
-                    {team.membersCount}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="danger"
-                  className="h-8 px-3 text-xs"
-                  disabled={dissolveTeamMutation.isPending}
-                  onClick={() => dissolveTeamMutation.mutate(team.id)}
-                >
-                  Disolver
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      </UiModal>
 
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">4. Gestión de Roles y Permisos</h2>
-        <p className="text-sm text-slate-600">Matriz de permisos por rol y vista de acceso por recurso.</p>
-        {rolesQuery.error ? <p className="text-sm text-red-600">{rolesQuery.error.message}</p> : null}
-        <ul className="space-y-2">
-          {rolesQuery.data?.map((item) => (
-            <li key={item.role} className="rounded-xl border border-slate-200 p-3">
-              <p className="text-sm font-medium text-slate-900">{item.role}</p>
-              <p className="text-xs text-slate-600">{item.permissions.join(", ")}</p>
-            </li>
-          ))}
-        </ul>
-        <div className="grid gap-2 md:grid-cols-[180px_1fr_auto]">
+      <UiModal
+        open={openAccessModal}
+        onClose={() => setOpenAccessModal(false)}
+        title="Consultar accesos por proyecto"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setOpenAccessModal(false)}>
+              Cerrar
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={accessLookupMutation.isPending || !accessLookupForm.projectId}
+              onClick={() => accessLookupMutation.mutate()}
+            >
+              Consultar acceso
+            </Button>
+          </>
+        }
+      >
+        <label className="space-y-1">
+          <span className="block text-xs font-medium text-slate-600">Proyecto</span>
           <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={accessLookupForm.type}
-            onChange={(event) =>
-              setAccessLookupForm((prev) => ({
-                ...prev,
-                type: event.target.value as "PROYECTO" | "EQUIPO" | "ARCHIVO" | "DOCUMENTO"
-              }))
-            }
+            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            value={accessLookupForm.projectId}
+            onChange={(event) => setAccessLookupForm({ projectId: event.target.value })}
           >
-            <option value="PROYECTO">Proyecto</option>
-            <option value="EQUIPO">Equipo</option>
-            <option value="ARCHIVO">Archivo</option>
-            <option value="DOCUMENTO">Documento</option>
+            <option value="">Selecciona un proyecto</option>
+            {projectOptions.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
           </select>
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="ID del recurso"
-            value={accessLookupForm.id}
-            onChange={(event) =>
-              setAccessLookupForm((prev) => ({
-                ...prev,
-                id: event.target.value
-              }))
-            }
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={accessLookupMutation.isPending || !accessLookupForm.id}
-            onClick={() => accessLookupMutation.mutate()}
-          >
-            Consultar acceso
-          </Button>
-        </div>
-        {accessLookupMutation.error ? (
-          <p className="text-sm text-red-600">{accessLookupMutation.error.message}</p>
-        ) : null}
+        </label>
+
+        {accessLookupMutation.error ? <p className="text-sm text-red-600">{accessLookupMutation.error.message}</p> : null}
         {accessLookupMutation.data ? (
           <ul className="space-y-2">
             {accessLookupMutation.data.map((item) => (
@@ -1367,171 +1468,116 @@ export const AdminPanelView = () => {
             ))}
           </ul>
         ) : null}
-      </Card>
+      </UiModal>
 
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">5. Configuración de la Organización</h2>
-        {overview ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <p className="text-sm text-slate-700">Nombre: {overview.organization.name}</p>
-            <p className="text-sm text-slate-700">
-              Zona horaria por defecto: {overview.organization.defaultTimezone}
-            </p>
-            <p className="text-sm text-slate-700">Idioma por defecto: {overview.organization.defaultLanguage}</p>
-            <p className="text-sm text-slate-700">
-              Jornada: {overview.organization.workingHours.startHour} -{" "}
-              {overview.organization.workingHours.endHour}
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-600">Cargando configuración...</p>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">6. Configuración de Integraciones</h2>
-        {overview ? (
+      <UiModal
+        open={openAuditModal}
+        onClose={() => setOpenAuditModal(false)}
+        title="Reporte de auditoría"
+        widthClassName="max-w-5xl"
+        footer={
           <>
-            <p className="text-sm text-slate-700">
-              Webhooks configurados: {overview.integrations.webhooksConfigured} · activos:{" "}
-              {overview.integrations.webhooksEnabled}
-            </p>
-            <ul className="space-y-2">
-              {overview.integrations.latestDeliveries.map((delivery) => (
-                <li key={delivery.id} className="rounded-xl border border-slate-200 p-3">
-                  <p className="text-sm font-medium text-slate-900">{delivery.endpointId}</p>
-                  <p className="text-xs text-slate-600">
-                    {delivery.success ? "OK" : "Fallido"} · {formatDateTime(delivery.attemptedAt)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="text-sm text-slate-600">Cargando integraciones...</p>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">7. Automatizaciones Globales</h2>
-        {overview ? (
-          <p className="text-sm text-slate-700">
-            Total: {overview.automations.total} · Activas: {overview.automations.enabled} · Fallidas
-            (24h): {overview.automations.failedLast24h}
-          </p>
-        ) : (
-          <p className="text-sm text-slate-600">Cargando automatizaciones...</p>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">8. Tablón de Anuncios — Gestión</h2>
-        {overview ? (
-          <>
-            <p className="text-sm text-slate-700">Anuncios activos: {overview.announcements.active}</p>
-            <ul className="space-y-2">
-              {overview.announcements.recent.map((announcement) => (
-                <li key={announcement.id} className="rounded-xl border border-slate-200 p-3">
-                  <p className="text-sm font-medium text-slate-900">{announcement.title}</p>
-                  <p className="text-xs text-slate-600">
-                    Publicado: {formatDateTime(announcement.createdAt)} · Expira:{" "}
-                    {formatDateTime(announcement.expiresAt)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="text-sm text-slate-600">Cargando anuncios...</p>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">9. Formularios y Solicitudes — Configuración</h2>
-        {overview ? (
-          <>
-            <p className="text-sm text-slate-700">
-              Solicitudes activas: {overview.forms.activeRequests} · Pendientes de aprobación:{" "}
-              {overview.forms.pendingApproval}
-            </p>
-            <ul className="space-y-2">
-              {overview.forms.byStatus.map((row) => (
-                <li key={row.status} className="rounded-xl border border-slate-200 p-3 text-sm text-slate-700">
-                  {row.status}: {row.total}
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="text-sm text-slate-600">Cargando formularios...</p>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">10. Log de Auditoría</h2>
-        {overview ? (
-          <ul className="space-y-2">
-            {overview.audit.latestEvents.map((event) => (
-              <li key={event.id} className="rounded-xl border border-slate-200 p-3">
-                <p className="text-sm font-medium text-slate-900">
-                  {event.entityType} · {event.action}
-                </p>
-                <p className="text-xs text-slate-600">
-                  {formatDateTime(event.createdAt)} · usuario {event.userId ?? "sistema"}
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-slate-600">Cargando auditoría...</p>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">11. Estado del Sistema</h2>
-        {overview ? (
-          <>
-            <p className="text-sm text-slate-700">
-              Mantenimiento: {overview.system.maintenanceEnabled ? "Activo" : "Inactivo"}
-            </p>
-            <ul className="space-y-2">
-              {overview.system.services.map((service) => (
-                <li key={service.service} className="rounded-xl border border-slate-200 p-3 text-sm">
-                  {service.service}: {service.status}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href={"/admin/system" as Route}
-              className="text-sm font-medium text-blue-700 hover:underline"
+            <Button type="button" variant="ghost" onClick={() => setOpenAuditModal(false)}>
+              Cerrar
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={auditReportQuery.isFetching}
+              onClick={() => auditReportQuery.refetch()}
             >
-              Abrir vista detallada del sistema
-            </Link>
+              Filtrar
+            </Button>
+            <Button type="button" onClick={runAuditExport}>
+              Descargar CSV
+            </Button>
           </>
-        ) : (
-          <p className="text-sm text-slate-600">Cargando estado...</p>
-        )}
-      </Card>
+        }
+      >
+        <div className="grid gap-2 md:grid-cols-2">
+          <label className="space-y-1">
+            <span className="block text-xs font-medium text-slate-600">Desde</span>
+            <input
+              type="datetime-local"
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={auditFilters.from}
+              onChange={(event) => setAuditFilters((prev) => ({ ...prev, from: event.target.value, page: 1 }))}
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="block text-xs font-medium text-slate-600">Hasta</span>
+            <input
+              type="datetime-local"
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={auditFilters.to}
+              onChange={(event) => setAuditFilters((prev) => ({ ...prev, to: event.target.value, page: 1 }))}
+            />
+          </label>
+        </div>
 
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">12. Importación de Datos</h2>
-        {overview ? (
-          <ul className="space-y-2">
-            {overview.imports.latestJobs.map((job) => (
-              <li key={job.id} className="rounded-xl border border-slate-200 p-3">
-                <p className="text-sm font-medium text-slate-900">
-                  {job.source} · {job.filename}
-                </p>
-                <p className="text-xs text-slate-600">
-                  Inicio: {formatDateTime(job.startedAt)} · Resultado: {job.success ? "OK" : "Error"}
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-slate-600">Cargando importaciones...</p>
-        )}
-      </Card>
+        {auditReportQuery.error ? <p className="text-sm text-red-600">{auditReportQuery.error.message}</p> : null}
+        {auditReportQuery.isLoading ? <p className="text-sm text-slate-600">Cargando auditoría...</p> : null}
+
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-slate-50 text-slate-600">
+              <tr>
+                <th className="px-3 py-2">Fecha</th>
+                <th className="px-3 py-2">Actor</th>
+                <th className="px-3 py-2">Entidad</th>
+                <th className="px-3 py-2">Acción</th>
+                <th className="px-3 py-2">Razón</th>
+              </tr>
+            </thead>
+            <tbody>
+              {auditReportQuery.data?.items.map((item) => (
+                <tr key={item.id} className="border-t border-slate-200">
+                  <td className="px-3 py-2 text-slate-700">{formatDateTime(item.createdAt)}</td>
+                  <td className="px-3 py-2 text-slate-700">{item.actorName ?? (item.userId ? item.userId : "Sistema")}</td>
+                  <td className="px-3 py-2 text-slate-700">{item.entityType}</td>
+                  <td className="px-3 py-2 text-slate-700">{item.action}</td>
+                  <td className="px-3 py-2 text-slate-700">{item.reason ?? item.reasonCode ?? "-"}</td>
+                </tr>
+              ))}
+              {!auditReportQuery.data || auditReportQuery.data.items.length === 0 ? (
+                <tr>
+                  <td className="px-3 py-4 text-center text-slate-500" colSpan={5}>
+                    Sin eventos para el rango seleccionado.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        {auditReportQuery.data ? (
+          <div className="flex items-center justify-between text-xs text-slate-600">
+            <p>
+              Página {auditReportQuery.data.page} · Total {auditReportQuery.data.total}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 px-3 text-xs"
+                disabled={auditFilters.page <= 1}
+                onClick={() => setAuditFilters((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+              >
+                Anterior
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 px-3 text-xs"
+                disabled={auditFilters.page * auditFilters.pageSize >= auditReportQuery.data.total}
+                onClick={() => setAuditFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
+              >
+                Siguiente
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </UiModal>
     </div>
   );
 };

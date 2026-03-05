@@ -2,7 +2,85 @@ import type { FastifyInstance } from "fastify";
 import { getMostRestrictiveRole, getPermissionsForRole } from "../../lib/rbac.js";
 
 export class IdentityService {
+  private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
+  private static readonly PRESENCE_ONLINE_KEY_PREFIX = "presence:online:";
+
   constructor(private readonly app: FastifyInstance) {}
+
+  private presenceKey(userId: string) {
+    return `${IdentityService.PRESENCE_ONLINE_KEY_PREFIX}${userId}`;
+  }
+
+  async getPresenceForUsers(userIds: string[]) {
+    const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+    if (uniqueUserIds.length === 0) {
+      return {
+        items: []
+      };
+    }
+
+    const redisPipeline = this.app.redis.pipeline();
+    for (const userId of uniqueUserIds) {
+      redisPipeline.scard(this.presenceKey(userId));
+    }
+    const redisResult = await redisPipeline.exec();
+
+    const onlineSet = new Set<string>();
+    if (redisResult) {
+      for (const [index, [error, value]] of redisResult.entries()) {
+        if (error) {
+          continue;
+        }
+        const userId = uniqueUserIds[index];
+        if (!userId) {
+          continue;
+        }
+        const socketsCount = typeof value === "number" ? value : Number(value ?? 0);
+        if (socketsCount > 0) {
+          onlineSet.add(userId);
+        }
+      }
+    }
+
+    const inMeetingRows = await this.app.prisma.meetingParticipant.findMany({
+      where: {
+        userId: { in: uniqueUserIds },
+        joinedAt: { not: null },
+        leftAt: null,
+        meeting: {
+          status: "EN_CURSO"
+        }
+      },
+      select: {
+        userId: true
+      },
+      distinct: ["userId"]
+    });
+    const inMeetingSet = new Set(inMeetingRows.map((row) => row.userId));
+
+    return {
+      items: uniqueUserIds.map((userId) => ({
+        userId,
+        status: inMeetingSet.has(userId)
+          ? ("EN_REUNION" as const)
+          : onlineSet.has(userId)
+            ? ("EN_LINEA" as const)
+            : ("DESCONECTADO" as const)
+      }))
+    };
+  }
+
+  private normalizeLegacyCode(input: { code?: string | null; text?: string | null }) {
+    if (input.code?.trim()) {
+      return input.code.trim();
+    }
+
+    if (input.text?.trim()) {
+      return IdentityService.LEGACY_UNMAPPED_CODE;
+    }
+
+    return null;
+  }
 
   async resolveActiveRole(userId: string, projectId?: string) {
     if (projectId) {
@@ -124,7 +202,13 @@ export class IdentityService {
     return step;
   }
 
-  async offboard(input: { userId: string; transferToUserId: string; reason: string; archiveHistory: boolean }) {
+  async offboard(input: {
+    userId: string;
+    transferToUserId: string;
+    reason: string;
+    reasonCode?: string;
+    archiveHistory: boolean;
+  }) {
     if (input.userId === input.transferToUserId) {
       throw new Error("No se puede transferir al mismo usuario");
     }
@@ -134,7 +218,7 @@ export class IdentityService {
         where: {
           assigneeId: input.userId,
           status: {
-            notIn: ["COMPLETADA", "CANCELADA"]
+            notIn: ["COMPLETADA"]
           }
         },
         data: {
@@ -155,6 +239,10 @@ export class IdentityService {
           userId: input.userId,
           transferToUserId: input.transferToUserId,
           reason: input.reason,
+          reasonCode: this.normalizeLegacyCode({
+            code: input.reasonCode,
+            text: input.reason
+          }),
           archivedAt: input.archiveHistory ? new Date() : null
         }
       });
@@ -199,12 +287,18 @@ export class IdentityService {
       }
     });
 
+    const presenceResult = await this.getPresenceForUsers(users.map((user) => user.id));
+    const presenceByUserId = new Map(
+      presenceResult.items.map((item) => [item.userId, item.status])
+    );
+
     return users.map((user) => {
       const team = user.teamMemberships[0]?.team?.name ?? null;
       return {
         userId: user.id,
         fullName: `${user.firstName} ${user.lastName}`,
         activeRole: user.baseRole,
+        presence: presenceByUserId.get(user.id) ?? "DESCONECTADO",
         teamName: team,
         schedule: user.workSchedule
           ? {
@@ -222,5 +316,58 @@ export class IdentityService {
         }
       };
     });
+  }
+
+  async listTeamsForUser(userId: string) {
+    const user = await this.app.prisma.user.findUnique({
+      where: { id: userId },
+      select: { baseRole: true }
+    });
+
+    if (user?.baseRole === "ADMINISTRADOR") {
+      const teams = await this.app.prisma.team.findMany({
+        select: {
+          id: true,
+          name: true
+        },
+        orderBy: {
+          name: "asc"
+        }
+      });
+
+      return {
+        items: teams,
+        total: teams.length
+      };
+    }
+
+    const memberships = await this.app.prisma.teamMember.findMany({
+      where: { userId },
+      select: {
+        team: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        team: {
+          name: "asc"
+        }
+      }
+    });
+
+    const deduped = new Map<string, { id: string; name: string }>();
+    for (const membership of memberships) {
+      deduped.set(membership.team.id, membership.team);
+    }
+
+    const items = [...deduped.values()];
+
+    return {
+      items,
+      total: items.length
+    };
   }
 }

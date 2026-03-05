@@ -1,8 +1,64 @@
 "use client";
 
 import type { AnnouncementContentBlock } from "@corelia/types";
+import { getApiBaseUrl } from "@/lib/api";
 
-const isSafeHttpUrl = (value: string) => /^https?:\/\//i.test(value);
+const isSafeHttpUrl = (value: string) => /^https?:\/\//i.test(value.trim());
+const isSafeAnnouncementAssetUrl = (value: string) =>
+  /^\/(?:api\/v1\/)?announcements\/assets\/content\?/i.test(value.trim());
+
+const normalizeRelativeAnnouncementAssetUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (/^\/announcements\/assets\/content\?/i.test(trimmed)) {
+    return `/api/v1${trimmed}`;
+  }
+  return trimmed;
+};
+
+const normalizeAbsoluteAnnouncementAssetUrl = (value: string): string | null => {
+  try {
+    const parsed = new URL(value.trim());
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    if (/^\/announcements\/assets\/content$/i.test(parsed.pathname)) {
+      parsed.pathname = `/api/v1${parsed.pathname}`;
+      return parsed.toString();
+    }
+
+    if (/^\/api\/v1\/announcements\/assets\/content$/i.test(parsed.pathname)) {
+      return parsed.toString();
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const resolveAnnouncementUrl = (value: string): string | null => {
+  if (isSafeHttpUrl(value)) {
+    const normalizedAssetUrl = normalizeAbsoluteAnnouncementAssetUrl(value);
+    if (normalizedAssetUrl) {
+      return normalizedAssetUrl;
+    }
+    return value;
+  }
+
+  if (!isSafeAnnouncementAssetUrl(value)) {
+    return null;
+  }
+
+  const normalizedPath = normalizeRelativeAnnouncementAssetUrl(value);
+  const apiBase = getApiBaseUrl();
+  if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+    const apiOrigin = apiBase.replace(/\/api\/v1\/?$/i, "");
+    return `${apiOrigin}${normalizedPath}`;
+  }
+
+  return normalizedPath;
+};
 
 export const AnnouncementContent = ({
   blocks,
@@ -48,7 +104,8 @@ export const AnnouncementContent = ({
         }
 
         if (block.type === "IMAGE") {
-          if (!isSafeHttpUrl(block.url)) {
+          const resolvedUrl = resolveAnnouncementUrl(block.url);
+          if (!resolvedUrl) {
             return null;
           }
 
@@ -56,7 +113,7 @@ export const AnnouncementContent = ({
             <figure key={`block-${index}`} className="space-y-1">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={block.url}
+                src={resolvedUrl}
                 alt={block.alt || "Imagen del anuncio"}
                 className="max-h-96 w-full rounded-xl border border-slate-200 object-contain"
               />
@@ -66,14 +123,15 @@ export const AnnouncementContent = ({
         }
 
         if (block.type === "FILE") {
-          if (!isSafeHttpUrl(block.url)) {
+          const resolvedUrl = resolveAnnouncementUrl(block.url);
+          if (!resolvedUrl) {
             return null;
           }
 
           return (
             <a
               key={`block-${index}`}
-              href={block.url}
+              href={resolvedUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"

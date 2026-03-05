@@ -35,6 +35,12 @@ declare module "fastify" {
         roomId: string
       ) => Promise<{ available: boolean; rtpCapabilities: unknown | null }>;
     };
+    storage?: {
+      bucket: string;
+      putObject: (objectKey: string, body: Buffer, mimeType: string) => Promise<void>;
+      getObjectStream: (objectKey: string) => Promise<NodeJS.ReadableStream>;
+      removeObject: (objectKey: string) => Promise<void>;
+    };
   }
 
   interface FastifyRequest {
@@ -54,6 +60,7 @@ declare module "fastify" {
       previousData?: Record<string, unknown> | null;
       newData?: Record<string, unknown> | null;
       reason?: string;
+      reasonCode?: string;
     };
   }
 

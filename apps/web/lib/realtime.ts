@@ -22,6 +22,9 @@ const SOCKET_PATH = process.env.NEXT_PUBLIC_SOCKET_PATH ?? "/ws/socket.io";
 
 let socket: Socket | null = null;
 
+export const getRealtimeBaseUrl = () => WS_BASE;
+export const getRealtimePath = () => SOCKET_PATH;
+
 export const getRealtimeSocket = (accessToken: string): Socket => {
   if (socket) {
     return socket;

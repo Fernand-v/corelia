@@ -8,11 +8,24 @@ type DirectoryProfile = {
   userId: string;
   fullName: string;
   activeRole: string;
+  presence?: "EN_LINEA" | "DESCONECTADO" | "EN_REUNION";
   teamName: string | null;
   contact: {
     email: string;
     phone?: string;
   };
+};
+
+const presenceLabel: Record<NonNullable<DirectoryProfile["presence"]>, string> = {
+  EN_LINEA: "En línea",
+  DESCONECTADO: "Desconectado",
+  EN_REUNION: "En reunión"
+};
+
+const presenceTone: Record<NonNullable<DirectoryProfile["presence"]>, string> = {
+  EN_LINEA: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  DESCONECTADO: "border-slate-200 bg-slate-50 text-slate-700",
+  EN_REUNION: "border-amber-200 bg-amber-50 text-amber-700"
 };
 
 export default function DirectoryPage() {
@@ -34,7 +47,14 @@ export default function DirectoryPage() {
         <ul className="space-y-2">
           {query.data?.map((person) => (
             <li key={person.userId} className="rounded-xl border border-slate-200 p-3">
-              <p className="text-sm font-medium text-slate-900">{person.fullName}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium text-slate-900">{person.fullName}</p>
+                {person.presence ? (
+                  <span className={`inline-flex rounded-lg border px-2 py-0.5 text-[11px] ${presenceTone[person.presence]}`}>
+                    {presenceLabel[person.presence]}
+                  </span>
+                ) : null}
+              </div>
               <p className="text-xs text-slate-600">
                 {person.activeRole} · {person.teamName ?? "Sin equipo"}
               </p>

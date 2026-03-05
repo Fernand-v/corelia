@@ -2,6 +2,18 @@
 set -euo pipefail
 
 API_BASE="${API_BASE:-http://localhost:4000/api/v1}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+API_KEY="${API_KEY:-}"
+
+if [[ -z "${API_KEY}" && -f "${ROOT_DIR}/.env" ]]; then
+  API_KEY="$(grep -E '^API_KEY=' "${ROOT_DIR}/.env" | tail -n1 | cut -d'=' -f2- | tr -d '\r' || true)"
+fi
+
+if [[ -z "${API_KEY}" ]]; then
+  echo "ERROR: API_KEY no está definida. Exporta API_KEY o configúrala en .env"
+  exit 1
+fi
 
 create_user() {
   local email="$1"
@@ -24,6 +36,7 @@ JSON
     curl -sS -o "${response_file}" -w "%{http_code}" \
       -X POST "${API_BASE}/auth/register" \
       -H "Content-Type: application/json" \
+      -H "x-api-key: ${API_KEY}" \
       --data "${payload}" || true
   )
 
@@ -47,6 +60,7 @@ JSON
 }
 
 echo "API_BASE=${API_BASE}"
+echo "API_KEY=***"
 echo "Creando usuarios por defecto..."
 
 create_user "admin2@corelia.local" "Admin2" "Corelia" "Corelia2026Secure" "ADMINISTRADOR"

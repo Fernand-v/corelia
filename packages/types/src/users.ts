@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { contactSchema, idSchema, timestampSchema, windowScheduleSchema } from "./common.js";
+import { codeValueSchema, contactSchema, idSchema, timestampSchema, windowScheduleSchema } from "./common.js";
 import { systemRoleSchema } from "./enums.js";
+
+export const userPresenceStatusSchema = z.enum(["EN_LINEA", "DESCONECTADO", "EN_REUNION"]);
 
 export const userSchema = z.object({
   id: idSchema,
@@ -25,10 +27,30 @@ export const personDirectoryProfileSchema = z.object({
   userId: idSchema,
   fullName: z.string().min(1),
   activeRole: systemRoleSchema,
+  presence: userPresenceStatusSchema.default("DESCONECTADO"),
   teamName: z.string().nullable(),
   schedule: windowScheduleSchema.nullable(),
   skills: z.array(z.string().min(1).max(64)),
   contact: contactSchema
+});
+
+export const userPresenceItemSchema = z.object({
+  userId: idSchema,
+  status: userPresenceStatusSchema
+});
+
+export const userPresenceListSchema = z.object({
+  items: z.array(userPresenceItemSchema)
+});
+
+export const identityTeamSummarySchema = z.object({
+  id: idSchema,
+  name: z.string().min(1).max(160)
+});
+
+export const identityTeamSummaryListSchema = z.object({
+  items: z.array(identityTeamSummarySchema),
+  total: z.number().int().min(0)
 });
 
 export const onboardingChecklistItemSchema = z.object({
@@ -49,6 +71,7 @@ export const offboardingInputSchema = z.object({
   userId: idSchema,
   transferToUserId: idSchema,
   reason: z.string().min(5).max(500),
+  reasonCode: codeValueSchema.optional(),
   archiveHistory: z.boolean().default(true)
 });
 
@@ -63,3 +86,4 @@ export const guestInviteInputSchema = z.object({
 export type User = z.infer<typeof userSchema>;
 export type CreateUserInput = z.infer<typeof createUserInputSchema>;
 export type OffboardingInput = z.infer<typeof offboardingInputSchema>;
+export type UserPresenceStatus = z.infer<typeof userPresenceStatusSchema>;

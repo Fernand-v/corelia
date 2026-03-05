@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RequestStatus, RequestType } from "@corelia/types";
 import { Card } from "@corelia/ui";
-import { NotificationsBadge } from "@/components/notifications-badge";
 import { apiRequest } from "@/lib/api";
 
 type RequestItem = {
@@ -28,7 +27,6 @@ export default function RequestsPage() {
           <h1 className="text-2xl font-semibold text-slate-900">Solicitudes</h1>
           <p className="text-sm text-slate-600">Estado de solicitudes internas y aprobaciones</p>
         </div>
-        <NotificationsBadge />
       </header>
 
       <Card className="space-y-3">

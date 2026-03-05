@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card } from "@corelia/ui";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, getApiBaseUrl, getAuthToken, getPublicApiKey } from "@/lib/api";
+import { useSession } from "@/lib/session";
+import { withDashboardContext } from "@/lib/context";
+import { FilesModule } from "@/components/files-module";
+import { UiModal } from "@/components/ui-modal";
 
 type ExplorerResponse = {
   project: {
@@ -28,6 +33,7 @@ type ExplorerResponse = {
   files: Array<{
     id: string;
     folderId: string;
+    ownerId: string;
     folderName: string;
     originalName: string;
     mimeType: string;
@@ -38,11 +44,40 @@ type ExplorerResponse = {
   }>;
 };
 
-const formatDateTime = (value: string) =>
-  new Date(value).toLocaleString("es-ES", {
-    dateStyle: "short",
-    timeStyle: "short"
-  });
+type ProjectChangesResponse = {
+  project: {
+    id: string;
+    name: string;
+  };
+  changes: Array<{
+    id: string;
+    type: "CARPETA_CREADA" | "ARCHIVO_SUBIDO" | "ARCHIVO_ELIMINADO";
+    title: string;
+    detail: string;
+    actorName: string;
+    occurredAt: string;
+  }>;
+};
+
+type StorageSummaryResponse = {
+  projectId: string;
+  usageBytes: number;
+  bytesLimit: number;
+  remainingBytes: number;
+  usagePct: number;
+  warning80: boolean;
+};
+
+type ExplorerFileItem = {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  modifiedAt: string;
+  uploadedBy: string;
+  uploadedById?: string | null;
+  folderPath?: string | null;
+};
 
 const formatBytes = (value: number) => {
   if (value < 1024) {
@@ -51,18 +86,33 @@ const formatBytes = (value: number) => {
   if (value < 1024 * 1024) {
     return `${(value / 1024).toFixed(1)} KB`;
   }
-  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
+  if (value < 1024 * 1024 * 1024) {
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${(value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 };
 
-export const FilesExplorer = ({ projectId }: { projectId: string }) => {
+export const FilesExplorer = ({
+  projectId,
+  projectName,
+  teamId
+}: {
+  projectId: string;
+  projectName?: string | null;
+  teamId?: string | null;
+}) => {
+  const router = useRouter();
+  const session = useSession();
   const queryClient = useQueryClient();
+
   const [folderId, setFolderId] = useState<string | null>(null);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [newFile, setNewFile] = useState({
-    originalName: "",
-    mimeType: "application/octet-stream",
-    sizeBytes: "1024",
-    minioPath: ""
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ExplorerFileItem | null>(null);
+
+  const changesHref = withDashboardContext("/changes", {
+    projectId,
+    projectName: projectName ?? null,
+    teamId: teamId ?? null
   });
 
   const explorerQuery = useQuery({
@@ -77,53 +127,69 @@ export const FilesExplorer = ({ projectId }: { projectId: string }) => {
     }
   });
 
+  const historyQuery = useQuery({
+    queryKey: ["files", "history", projectId],
+    queryFn: () =>
+      apiRequest<ProjectChangesResponse>(
+        `/files/history?projectId=${encodeURIComponent(projectId)}&limit=40`
+      )
+  });
+
+  const storageSummaryQuery = useQuery({
+    queryKey: ["files", "storage-summary", projectId],
+    queryFn: () =>
+      apiRequest<StorageSummaryResponse>(
+        `/files/storage-summary?projectId=${encodeURIComponent(projectId)}`
+      )
+  });
+
   const createFolderMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (name: string) =>
       apiRequest(`/files/folders?projectId=${encodeURIComponent(projectId)}`, {
         method: "POST",
         body: JSON.stringify({
-          name: newFolderName.trim(),
+          name,
           scope: "PROYECTO",
           projectId,
           parentId: folderId
         })
       }),
     onSuccess: async () => {
-      setNewFolderName("");
-      await queryClient.invalidateQueries({ queryKey: ["files", "explorer", projectId] });
+      setActionError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["files", "explorer", projectId] }),
+        queryClient.invalidateQueries({ queryKey: ["files", "history", projectId] })
+      ]);
+    },
+    onError: (error) => {
+      setActionError(error.message);
     }
   });
 
-  const createFileMutation = useMutation({
-    mutationFn: () => {
+  const uploadFileMutation = useMutation({
+    mutationFn: async (file: File) => {
       if (!folderId) {
-        throw new Error("Selecciona una carpeta para registrar el archivo");
+        throw new Error("Debes abrir una carpeta antes de subir archivos");
       }
 
-      const parsedSize = Number.parseInt(newFile.sizeBytes, 10);
-      if (!Number.isFinite(parsedSize) || parsedSize <= 0) {
-        throw new Error("Tamaño inválido");
-      }
+      const formData = new FormData();
+      formData.append("folderId", folderId);
+      formData.append("file", file, file.name);
 
-      return apiRequest(`/files/objects?projectId=${encodeURIComponent(projectId)}`, {
+      return apiRequest(`/files/upload?projectId=${encodeURIComponent(projectId)}`, {
         method: "POST",
-        body: JSON.stringify({
-          folderId,
-          originalName: newFile.originalName.trim(),
-          mimeType: newFile.mimeType.trim(),
-          sizeBytes: parsedSize,
-          minioPath: newFile.minioPath.trim() || `project/${projectId}/${crypto.randomUUID()}`
-        })
+        body: formData
       });
     },
     onSuccess: async () => {
-      setNewFile({
-        originalName: "",
-        mimeType: "application/octet-stream",
-        sizeBytes: "1024",
-        minioPath: ""
-      });
-      await queryClient.invalidateQueries({ queryKey: ["files", "explorer", projectId] });
+      setActionError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["files", "explorer", projectId] }),
+        queryClient.invalidateQueries({ queryKey: ["files", "history", projectId] })
+      ]);
+    },
+    onError: (error) => {
+      setActionError(error.message);
     }
   });
 
@@ -133,201 +199,248 @@ export const FilesExplorer = ({ projectId }: { projectId: string }) => {
         method: "DELETE"
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["files", "explorer", projectId] });
+      setActionError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["files", "explorer", projectId] }),
+        queryClient.invalidateQueries({ queryKey: ["files", "history", projectId] })
+      ]);
+    },
+    onError: (error) => {
+      setActionError(error.message);
     }
   });
 
+  const openFile = async (file: ExplorerFileItem, mode: "inline" | "attachment") => {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error("Sesión no válida para abrir el archivo");
+    }
+
+    const response = await fetch(
+      `${getApiBaseUrl()}/files/objects/${file.id}/content?mode=${encodeURIComponent(mode)}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-api-key": getPublicApiKey()
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ message: "No se pudo abrir el archivo" }));
+      throw new Error(body.message ?? "No se pudo abrir el archivo");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    if (mode === "inline") {
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        URL.revokeObjectURL(url);
+        throw new Error("El navegador bloqueó la previsualización");
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      return;
+    }
+
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = file.name;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
+
+  const shareFile = async (file: ExplorerFileItem) => {
+    const shareText = `${file.name} (${formatBytes(file.sizeBytes)})`;
+    const shareUrl = `${window.location.origin}${changesHref}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Archivo de ${projectName ?? "proyecto"}`,
+          text: shareText,
+          url: shareUrl
+        });
+        setActionError(null);
+        return;
+      } catch {
+        return;
+      }
+    }
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+      setActionError(null);
+      return;
+    }
+
+    throw new Error("No se pudo compartir el archivo en este navegador");
+  };
+
   const currentFolder = explorerQuery.data?.currentFolder ?? null;
-  const breadcrumbs = explorerQuery.data?.breadcrumbs ?? [];
   const folders = explorerQuery.data?.folders ?? [];
   const files = explorerQuery.data?.files ?? [];
-  const isRoot = !currentFolder;
 
-  const rootBreadcrumb = [{ id: "", name: "Proyecto" }, ...breadcrumbs];
+  const mappedFiles = useMemo<ExplorerFileItem[]>(() => {
+    return files.map((file) => ({
+      id: file.id,
+      name: file.originalName,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+      modifiedAt: file.createdAt,
+      uploadedBy: file.ownerName,
+      uploadedById: file.ownerId,
+      folderPath: file.folderName
+    }));
+  }, [files]);
+
+  const mappedFolders = useMemo(() => {
+    return folders.map((folder) => ({
+      id: folder.id,
+      name: folder.name
+    }));
+  }, [folders]);
+
+  const mappedChangeLog = useMemo(() => {
+    return (historyQuery.data?.changes ?? []).map((change) => {
+      const description =
+        change.type === "CARPETA_CREADA"
+          ? "creó carpeta"
+          : change.type === "ARCHIVO_ELIMINADO"
+            ? "eliminó"
+            : "subió";
+
+      const folderPathMatch = change.detail.match(/en\s+(.+)$/i);
+      return {
+        id: change.id,
+        actorName: change.actorName,
+        fileName: change.title,
+        folderPath: folderPathMatch?.[1] ?? null,
+        description,
+        occurredAt: change.occurredAt
+      };
+    });
+  }, [historyQuery.data?.changes]);
+
+  const fallbackStorageUsed = useMemo(() => {
+    const unique = new Map<string, number>();
+    for (const file of mappedFiles) {
+      unique.set(file.id, file.sizeBytes);
+    }
+    return [...unique.values()].reduce((total, size) => total + size, 0);
+  }, [mappedFiles]);
+
+  const storageUsed = storageSummaryQuery.data?.usageBytes ?? fallbackStorageUsed;
+  const storageTotal = storageSummaryQuery.data?.bytesLimit ?? 0;
+
+  const combinedError =
+    actionError ??
+    explorerQuery.error?.message ??
+    historyQuery.error?.message ??
+    storageSummaryQuery.error?.message ??
+    null;
 
   return (
-    <div className="space-y-4">
-      <Card className="space-y-2">
-        <h2 className="text-lg font-semibold text-slate-900">Explorador de Archivos</h2>
-        <p className="text-sm text-slate-600">
-          {explorerQuery.data?.project.name ? `Proyecto: ${explorerQuery.data.project.name}` : "Cargando proyecto..."}
+    <section className="h-[calc(100vh-8rem)] min-h-[680px] w-full">
+      <FilesModule
+        folders={mappedFolders}
+        currentFolder={
+          currentFolder
+            ? { id: currentFolder.id, name: currentFolder.name }
+            : null
+        }
+        folderPath={explorerQuery.data?.breadcrumbs ?? []}
+        files={mappedFiles}
+        recentFiles={mappedFiles}
+        storageUsed={storageUsed}
+        storageTotal={storageTotal}
+        changeLog={mappedChangeLog}
+        isLoading={explorerQuery.isLoading}
+        errorMessage={combinedError}
+        currentUser={{
+          id: session.data?.id ?? "",
+          name: `${session.data?.firstName ?? ""} ${session.data?.lastName ?? ""}`.trim()
+        }}
+        onCreateFolder={(name) => {
+          createFolderMutation.mutate(name);
+        }}
+        onUploadFile={(file) => {
+          uploadFileMutation.mutate(file);
+        }}
+        onOpenFolder={(folder) => {
+          setActionError(null);
+          setFolderId(folder.id);
+        }}
+        onOpenRoot={() => {
+          setActionError(null);
+          setFolderId(null);
+        }}
+        onGoBack={() => {
+          setActionError(null);
+          setFolderId(currentFolder?.parentId ?? null);
+        }}
+        onDownloadFile={(file) => {
+          void openFile(file, "attachment").catch((error) => {
+            setActionError(error.message);
+          });
+        }}
+        onDeleteFile={(file) => {
+          setDeleteTarget(file);
+        }}
+        onShareFile={(file) => {
+          void shareFile(file).catch((error) => {
+            setActionError(error.message);
+          });
+        }}
+        onViewChanges={() => {
+          router.push(changesHref as Route);
+        }}
+      />
+
+      <UiModal
+        open={Boolean(deleteTarget)}
+        onClose={() => {
+          if (!deleteFileMutation.isPending) {
+            setDeleteTarget(null);
+          }
+        }}
+        title="Eliminar archivo"
+      >
+        <p className="text-sm text-slate-700">
+          ¿Seguro que deseas eliminar{" "}
+          <span className="font-semibold text-slate-900">{deleteTarget?.name ?? "-"}</span>?
         </p>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {rootBreadcrumb.map((crumb, index) => {
-            const isLast = index === rootBreadcrumb.length - 1;
-            return (
-              <button
-                key={`${crumb.id}-${index}`}
-                type="button"
-                className={`rounded-lg border px-2 py-1 ${
-                  isLast
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                }`}
-                onClick={() => setFolderId(crumb.id || null)}
-              >
-                {crumb.name}
-              </button>
-            );
-          })}
-        </div>
-
-        {!isRoot ? (
-          <Button type="button" variant="secondary" onClick={() => setFolderId(currentFolder?.parentId ?? null)}>
-            Subir un nivel
-          </Button>
-        ) : null}
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-        <Card className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-900">Crear carpeta</h3>
-          <input
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Nombre de carpeta"
-            value={newFolderName}
-            onChange={(event) => setNewFolderName(event.target.value)}
-          />
-          <Button
+        <div className="flex justify-end gap-2">
+          <button
             type="button"
-            className="w-full"
-            disabled={createFolderMutation.isPending || newFolderName.trim().length < 2}
-            onClick={() => createFolderMutation.mutate()}
+            onClick={() => setDeleteTarget(null)}
+            disabled={deleteFileMutation.isPending}
+            className="rounded-[10px] border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {createFolderMutation.isPending ? "Creando..." : "Crear carpeta"}
-          </Button>
-          {createFolderMutation.error ? (
-            <p className="text-sm text-red-600">{createFolderMutation.error.message}</p>
-          ) : null}
-
-          <div className="border-t border-slate-200 pt-3">
-            <h3 className="text-sm font-semibold text-slate-900">Registrar archivo</h3>
-            <p className="text-xs text-slate-500">
-              {folderId
-                ? "Se registrará en la carpeta activa."
-                : "Abre una carpeta para registrar archivos."}
-            </p>
-            <div className="mt-2 space-y-2">
-              <input
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-                placeholder="Nombre del archivo"
-                value={newFile.originalName}
-                onChange={(event) =>
-                  setNewFile((prev) => ({
-                    ...prev,
-                    originalName: event.target.value
-                  }))
-                }
-              />
-              <input
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-                placeholder="MIME Type"
-                value={newFile.mimeType}
-                onChange={(event) =>
-                  setNewFile((prev) => ({
-                    ...prev,
-                    mimeType: event.target.value
-                  }))
-                }
-              />
-              <input
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-                placeholder="Tamaño (bytes)"
-                value={newFile.sizeBytes}
-                onChange={(event) =>
-                  setNewFile((prev) => ({
-                    ...prev,
-                    sizeBytes: event.target.value
-                  }))
-                }
-              />
-              <input
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-                placeholder="Ruta interna (opcional)"
-                value={newFile.minioPath}
-                onChange={(event) =>
-                  setNewFile((prev) => ({
-                    ...prev,
-                    minioPath: event.target.value
-                  }))
-                }
-              />
-            </div>
-            <Button
-              type="button"
-              className="mt-2 w-full"
-              disabled={createFileMutation.isPending || !folderId || !newFile.originalName.trim()}
-              onClick={() => createFileMutation.mutate()}
-            >
-              {createFileMutation.isPending ? "Guardando..." : "Guardar archivo"}
-            </Button>
-            {createFileMutation.error ? (
-              <p className="mt-2 text-sm text-red-600">{createFileMutation.error.message}</p>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-900">
-            {isRoot ? "Carpetas del proyecto y archivos recientes" : `Contenido de ${currentFolder?.name}`}
-          </h3>
-
-          {explorerQuery.isLoading ? <p className="text-sm text-slate-600">Cargando recursos...</p> : null}
-          {explorerQuery.error ? <p className="text-sm text-red-600">{explorerQuery.error.message}</p> : null}
-
-          <div className="grid gap-2 md:grid-cols-2">
-            {folders.map((folder) => (
-              <button
-                key={folder.id}
-                type="button"
-                onClick={() => setFolderId(folder.id)}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left hover:bg-slate-100"
-              >
-                <p className="text-sm font-medium text-slate-900">{folder.name}</p>
-                <p className="text-xs text-slate-600">{formatDateTime(folder.createdAt)}</p>
-              </button>
-            ))}
-          </div>
-
-          {folders.length === 0 ? (
-            <p className="text-sm text-slate-600">No hay carpetas en esta ruta.</p>
-          ) : null}
-
-          <div className="space-y-2 border-t border-slate-200 pt-3">
-            {files.length === 0 ? (
-              <p className="text-sm text-slate-600">Sin archivos para mostrar.</p>
-            ) : (
-              <ul className="space-y-2">
-                {files.map((file) => (
-                  <li key={file.id} className="rounded-xl border border-slate-200 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">{file.originalName}</p>
-                        <p className="text-xs text-slate-600">
-                          {file.mimeType} · {formatBytes(file.sizeBytes)} · {file.folderName}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {file.ownerName} · {formatDateTime(file.createdAt)}
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        className="h-8 px-3 text-xs"
-                        disabled={deleteFileMutation.isPending}
-                        onClick={() => deleteFileMutation.mutate(file.id)}
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Card>
-      </div>
-    </div>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!deleteTarget) {
+                return;
+              }
+              deleteFileMutation.mutate(deleteTarget.id);
+              setDeleteTarget(null);
+            }}
+            disabled={deleteFileMutation.isPending}
+            className="rounded-[10px] bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {deleteFileMutation.isPending ? "Eliminando..." : "Eliminar"}
+          </button>
+        </div>
+      </UiModal>
+    </section>
   );
 };

@@ -31,5 +31,16 @@ export const identitySchemas = {
   onboardingStepCompleteSchema: z.object({
     runId: z.string().uuid(),
     stepKey: z.string().min(2)
+  }),
+  userPresenceQuerySchema: z.object({
+    userIds: z
+      .string()
+      .min(1)
+      .transform((value) =>
+        value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
   })
 };

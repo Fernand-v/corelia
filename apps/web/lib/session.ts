@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { SystemRole } from "@corelia/types";
+import type { AuthMembershipSummary, SystemRole } from "@corelia/types";
 import { apiRequest, useAuthStore } from "@/lib/api";
 
 export interface SessionUser {
@@ -14,6 +14,8 @@ export interface SessionUser {
   isActive: boolean;
   activeRole: SystemRole;
 }
+
+export interface SessionMembershipSummary extends AuthMembershipSummary {}
 
 export const useAuthBootstrap = () => {
   const hydrate = useAuthStore((state) => state.hydrate);
@@ -37,5 +39,18 @@ export const useSession = () => {
     queryFn: () => apiRequest<SessionUser>("/auth/me"),
     enabled: hydrated && Boolean(accessToken),
     retry: false
+  });
+};
+
+export const useSessionMembershipSummary = () => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const hydrated = useAuthBootstrap();
+
+  return useQuery({
+    queryKey: ["session-memberships", accessToken],
+    queryFn: () => apiRequest<SessionMembershipSummary>("/auth/memberships"),
+    enabled: hydrated && Boolean(accessToken),
+    retry: false,
+    staleTime: 60 * 1000
   });
 };

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const idSchema = z.string().uuid();
+export const codeValueSchema = z.string().regex(/^[A-Z0-9_]{3,50}$/);
+export const colorHexSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

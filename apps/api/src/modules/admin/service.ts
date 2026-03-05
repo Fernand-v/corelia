@@ -4,6 +4,7 @@ import { getPermissionsForRole } from "../../lib/rbac.js";
 import { hashPassword } from "../../lib/password.js";
 import { createOpaqueToken, hashOpaqueToken } from "../../lib/tokens.js";
 import { StatusService } from "../status/service.js";
+import { ProjectTeamSyncService } from "../projects/team-sync-service.js";
 
 const ROLE_ORDER: SystemRole[] = [
   "ADMINISTRADOR",
@@ -14,12 +15,43 @@ const ROLE_ORDER: SystemRole[] = [
   "INVITADO_EXTERNO"
 ];
 
-const ACTIVE_TASK_STATUSES: Array<
-  "BACKLOG" | "PENDIENTE" | "EN_PROGRESO" | "EN_REVISION" | "BLOQUEADA"
-> = ["BACKLOG", "PENDIENTE", "EN_PROGRESO", "EN_REVISION", "BLOQUEADA"];
+const ACTIVE_TASK_STATUSES: Array<"PENDIENTE" | "EN_REVISION"> = ["PENDIENTE", "EN_REVISION"];
+
+const CODE_CATALOG_FIELDS = {
+  TASK: [
+    "TASK_DESCRIPTION",
+    "TASK_BLOCKED_REASON",
+    "TASK_STATUS_REASON",
+    "TASK_REASSIGN_REASON",
+    "TASK_SCHEDULE_REASON"
+  ],
+  PROJECT: ["PROJECT_DESCRIPTION"],
+  TEAM: ["TEAM_DESCRIPTION"],
+  MEETING: ["MEETING_DESCRIPTION", "MEETING_AGREEMENT_DESCRIPTION"],
+  OBJECTIVE: ["OBJECTIVE_DESCRIPTION"],
+  DECISION: ["DECISION_DESCRIPTION"],
+  IDENTITY: ["OFFBOARDING_REASON"],
+  AUDIT: ["AUDIT_REASON"]
+} as const;
+
+type CodeCatalogDomain = keyof typeof CODE_CATALOG_FIELDS;
+type SystemHealthService = {
+  service: "api" | "postgres" | "redis" | "storage" | "media";
+  status: "up" | "down" | "degraded";
+  detail: string | null;
+};
+type SystemOverallStatus = "OK" | "ERROR";
+
+const SYSTEM_STATUS_ENTITY_ID = "11111111-1111-4111-8111-111111111111";
+const SYSTEM_STATUS_REASON_CODE = "SYSTEM_STATUS_CHANGE";
 
 export class AdminService {
-  constructor(private readonly app: FastifyInstance) {}
+  private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
+  private readonly teamSync: ProjectTeamSyncService;
+
+  constructor(private readonly app: FastifyInstance) {
+    this.teamSync = new ProjectTeamSyncService(app);
+  }
 
   private forbidden(message: string): Error {
     const error = new Error(message);
@@ -35,6 +67,25 @@ export class AdminService {
 
     if (!actor || actor.baseRole !== "ADMINISTRADOR") {
       throw this.forbidden("Solo administradores pueden usar el panel de administración");
+    }
+  }
+
+  private normalizeLegacyCode(input: { code?: string | null; text?: string | null }) {
+    if (input.code?.trim()) {
+      return input.code.trim();
+    }
+
+    if (input.text?.trim()) {
+      return AdminService.LEGACY_UNMAPPED_CODE;
+    }
+
+    return null;
+  }
+
+  private assertValidCatalogField(domain: CodeCatalogDomain, field: string) {
+    const valid = CODE_CATALOG_FIELDS[domain].includes(field as never);
+    if (!valid) {
+      throw new Error(`Campo ${field} no válido para dominio ${domain}`);
     }
   }
 
@@ -56,6 +107,181 @@ export class AdminService {
     }
 
     return "ACTIVO";
+  }
+
+  private getOverallSystemStatus(services: SystemHealthService[]): SystemOverallStatus {
+    return services.some((service) => service.status !== "up") ? "ERROR" : "OK";
+  }
+
+  private normalizeSystemServices(services: SystemHealthService[]): SystemHealthService[] {
+    return [...services].sort((a, b) => a.service.localeCompare(b.service));
+  }
+
+  private parseSnapshotFromAuditData(
+    data: Prisma.JsonValue | null
+  ): { services: SystemHealthService[]; overallStatus: SystemOverallStatus } | null {
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return null;
+    }
+
+    const objectData = data as Prisma.JsonObject;
+    const snapshot = objectData.snapshot;
+    const overallStatus = objectData.overallStatus;
+
+    if (
+      !Array.isArray(snapshot) ||
+      (overallStatus !== "OK" && overallStatus !== "ERROR")
+    ) {
+      return null;
+    }
+
+    const services = snapshot
+      .map((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) {
+          return null;
+        }
+        const serviceItem = item as Prisma.JsonObject;
+        const service = serviceItem.service;
+        const status = serviceItem.status;
+        const detail = serviceItem.detail;
+
+        if (
+          typeof service !== "string" ||
+          !["api", "postgres", "redis", "storage", "media"].includes(service) ||
+          typeof status !== "string" ||
+          !["up", "down", "degraded"].includes(status)
+        ) {
+          return null;
+        }
+
+        if (detail !== null && typeof detail !== "string") {
+          return null;
+        }
+
+        return {
+          service: service as SystemHealthService["service"],
+          status: status as SystemHealthService["status"],
+          detail
+        };
+      })
+      .filter((item): item is SystemHealthService => item !== null);
+
+    return {
+      services: this.normalizeSystemServices(services),
+      overallStatus
+    };
+  }
+
+  private diffSystemServices(
+    previousServices: SystemHealthService[] | null,
+    nextServices: SystemHealthService[]
+  ) {
+    const previousMap = new Map(
+      (previousServices ?? []).map((service) => [service.service, service])
+    );
+
+    return nextServices
+      .map((nextService) => {
+        const previousService = previousMap.get(nextService.service) ?? null;
+        const hasChanged =
+          !previousService ||
+          previousService.status !== nextService.status ||
+          previousService.detail !== nextService.detail;
+
+        if (!hasChanged) {
+          return null;
+        }
+
+        return {
+          service: nextService.service,
+          previousStatus: previousService?.status ?? null,
+          previousDetail: previousService?.detail ?? null,
+          nextStatus: nextService.status,
+          nextDetail: nextService.detail
+        };
+      })
+      .filter((item): item is {
+        service: SystemHealthService["service"];
+        previousStatus: SystemHealthService["status"] | null;
+        previousDetail: string | null;
+        nextStatus: SystemHealthService["status"];
+        nextDetail: string | null;
+      } => item !== null);
+  }
+
+  private async listSystemStatusRecentChanges(limit = 10) {
+    const entries = await this.app.prisma.auditLog.findMany({
+      where: {
+        entityType: "AUTOMATIZACION",
+        entityId: SYSTEM_STATUS_ENTITY_ID,
+        reasonCode: SYSTEM_STATUS_REASON_CODE
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: limit
+    });
+
+    return entries.map((entry) => {
+      const parsedSnapshot = this.parseSnapshotFromAuditData(entry.newData);
+      const changedServicesRaw =
+        entry.newData &&
+        typeof entry.newData === "object" &&
+        !Array.isArray(entry.newData) &&
+        Array.isArray((entry.newData as Prisma.JsonObject).changedServices)
+          ? ((entry.newData as Prisma.JsonObject).changedServices as Prisma.JsonArray)
+          : [];
+
+      const changedServices = changedServicesRaw
+        .map((item) => {
+          if (!item || typeof item !== "object" || Array.isArray(item)) {
+            return null;
+          }
+          const value = item as Prisma.JsonObject;
+          const service = value.service;
+          const previousStatus = value.previousStatus;
+          const previousDetail = value.previousDetail;
+          const nextStatus = value.nextStatus;
+          const nextDetail = value.nextDetail;
+
+          if (
+            typeof service !== "string" ||
+            !["api", "postgres", "redis", "storage", "media"].includes(service) ||
+            (previousStatus !== null &&
+              (typeof previousStatus !== "string" || !["up", "down", "degraded"].includes(previousStatus))) ||
+            typeof nextStatus !== "string" ||
+            !["up", "down", "degraded"].includes(nextStatus) ||
+            (previousDetail !== null && typeof previousDetail !== "string") ||
+            (nextDetail !== null && typeof nextDetail !== "string")
+          ) {
+            return null;
+          }
+
+          return {
+            service: service as SystemHealthService["service"],
+            previousStatus: previousStatus as SystemHealthService["status"] | null,
+            previousDetail: previousDetail as string | null,
+            nextStatus: nextStatus as SystemHealthService["status"],
+            nextDetail: nextDetail as string | null
+          };
+        })
+        .filter((item): item is {
+          service: SystemHealthService["service"];
+          previousStatus: SystemHealthService["status"] | null;
+          previousDetail: string | null;
+          nextStatus: SystemHealthService["status"];
+          nextDetail: string | null;
+        } => item !== null);
+
+      return {
+        id: entry.id,
+        createdAt: entry.createdAt.toISOString(),
+        userId: entry.userId,
+        reason: entry.reason,
+        overallStatus: parsedSnapshot?.overallStatus ?? "ERROR",
+        changedServices
+      };
+    });
   }
 
   async listUsers(
@@ -218,6 +444,14 @@ export class AdminService {
             userId: user.id
           }
         });
+
+        await this.teamSync.handleTeamMembershipAdded(
+          {
+            teamId: input.teamId,
+            userId: user.id
+          },
+          tx
+        );
       }
 
       if (input.workSchedule) {
@@ -345,12 +579,23 @@ export class AdminService {
       }
 
       if (input.teamId !== undefined) {
+        const previousMemberships = await tx.teamMember.findMany({
+          where: {
+            userId
+          },
+          select: {
+            teamId: true
+          }
+        });
+        const previousTeamIds = [...new Set(previousMemberships.map((membership) => membership.teamId))];
+
         await tx.teamMember.deleteMany({
           where: {
             userId
           }
         });
 
+        const nextTeamIds: string[] = [];
         if (input.teamId) {
           await tx.teamMember.create({
             data: {
@@ -358,6 +603,30 @@ export class AdminService {
               userId
             }
           });
+          nextTeamIds.push(input.teamId);
+        }
+
+        const removedTeamIds = previousTeamIds.filter((teamId) => !nextTeamIds.includes(teamId));
+        const addedTeamIds = nextTeamIds.filter((teamId) => !previousTeamIds.includes(teamId));
+
+        for (const teamId of removedTeamIds) {
+          await this.teamSync.handleTeamMembershipRemoved(
+            {
+              teamId,
+              userId
+            },
+            tx
+          );
+        }
+
+        for (const teamId of addedTeamIds) {
+          await this.teamSync.handleTeamMembershipAdded(
+            {
+              teamId,
+              userId
+            },
+            tx
+          );
         }
       }
 
@@ -1044,6 +1313,31 @@ export class AdminService {
       }
     });
 
+    const descriptionCodes = [
+      ...new Set(
+        teams
+          .map((team) => team.descriptionCode)
+          .filter((code): code is string => Boolean(code))
+      )
+    ];
+    const descriptionCatalog =
+      descriptionCodes.length > 0
+        ? await this.app.prisma.teamCodeCatalog.findMany({
+            where: {
+              field: "TEAM_DESCRIPTION",
+              code: {
+                in: descriptionCodes
+              }
+            },
+            select: {
+              code: true,
+              label: true
+            }
+          })
+        : [];
+    const labels = new Map(descriptionCatalog.map((entry) => [entry.code, entry.label]));
+    labels.set(AdminService.LEGACY_UNMAPPED_CODE, "Descripción heredada");
+
     const items = await Promise.all(
       teams.map(async (team) => {
         const coordinator =
@@ -1067,6 +1361,8 @@ export class AdminService {
           id: team.id,
           name: team.name,
           description: team.description,
+          descriptionCode: team.descriptionCode,
+          descriptionLabel: team.descriptionCode ? labels.get(team.descriptionCode) ?? team.descriptionCode : null,
           coordinator: coordinator
             ? {
                 userId: coordinator.userId,
@@ -1130,10 +1426,27 @@ export class AdminService {
 
     const coordinator = team.members.find((member) => member.user.baseRole === "COORDINADOR_EQUIPO");
 
+    const descriptionLabel = team.descriptionCode
+      ? (
+          await this.app.prisma.teamCodeCatalog.findFirst({
+            where: {
+              field: "TEAM_DESCRIPTION",
+              code: team.descriptionCode
+            },
+            select: { label: true }
+          })
+        )?.label ??
+        (team.descriptionCode === AdminService.LEGACY_UNMAPPED_CODE
+          ? "Descripción heredada"
+          : team.descriptionCode)
+      : null;
+
     return {
       id: team.id,
       name: team.name,
       description: team.description,
+      descriptionCode: team.descriptionCode,
+      descriptionLabel,
       coordinatorUserId: coordinator?.userId ?? null,
       activeProjects: new Set(projectMemberships.map((membership) => membership.projectId)).size,
       members: team.members.map((member) => ({
@@ -1150,6 +1463,7 @@ export class AdminService {
     input: {
       name: string;
       description?: string;
+      descriptionCode?: string;
       coordinatorUserId?: string;
       memberIds: string[];
     }
@@ -1162,6 +1476,10 @@ export class AdminService {
       data: {
         name: input.name,
         description: input.description,
+        descriptionCode: this.normalizeLegacyCode({
+          code: input.descriptionCode,
+          text: input.description
+        }),
         members: {
           create: memberIds.map((memberId) => ({
             userId: memberId
@@ -1182,6 +1500,7 @@ export class AdminService {
     input: {
       name?: string;
       description?: string | null;
+      descriptionCode?: string | null;
       coordinatorUserId?: string | null;
       memberIds?: string[];
     }
@@ -1196,6 +1515,12 @@ export class AdminService {
       }
       if (input.description !== undefined) {
         updateData.description = input.description;
+        updateData.descriptionCode = this.normalizeLegacyCode({
+          code: input.descriptionCode,
+          text: input.description
+        });
+      } else if (input.descriptionCode !== undefined) {
+        updateData.descriptionCode = input.descriptionCode;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -1210,20 +1535,19 @@ export class AdminService {
       const shouldReplaceMembers = input.memberIds !== undefined || input.coordinatorUserId !== undefined;
 
       if (shouldReplaceMembers) {
-        const currentMembers =
-          input.memberIds ??
-          (
-            await tx.teamMember.findMany({
-              where: {
-                teamId
-              },
-              select: {
-                userId: true
-              }
-            })
-          ).map((member) => member.userId);
+        const beforeMembers = (
+          await tx.teamMember.findMany({
+            where: {
+              teamId
+            },
+            select: {
+              userId: true
+            }
+          })
+        ).map((member) => member.userId);
 
-        const nextMembers = [...new Set(currentMembers)];
+        const desiredMembers = input.memberIds ?? beforeMembers;
+        const nextMembers = [...new Set(desiredMembers)];
 
         if (input.coordinatorUserId) {
           nextMembers.push(input.coordinatorUserId);
@@ -1246,6 +1570,15 @@ export class AdminService {
             skipDuplicates: true
           });
         }
+
+        await this.teamSync.handleTeamMembershipSetChanged(
+          {
+            teamId,
+            beforeUserIds: beforeMembers,
+            afterUserIds: normalizedMembers
+          },
+          tx
+        );
       }
     });
 
@@ -1256,7 +1589,8 @@ export class AdminService {
     await this.assertAdmin(actorId);
 
     const now = new Date();
-    const [teamMembers, activeMeetings, activeObjectives, linkedFolders, linkedChannels] = await Promise.all([
+    const [teamMembers, activeMeetings, activeObjectives, linkedFolders, linkedChannels, linkedProjectLinks] =
+      await Promise.all([
       this.app.prisma.teamMember.findMany({
         where: {
           teamId
@@ -1290,6 +1624,11 @@ export class AdminService {
         where: {
           teamId
         }
+      }),
+      this.app.prisma.projectTeamLink.count({
+        where: {
+          teamId
+        }
       })
     ]);
 
@@ -1315,6 +1654,7 @@ export class AdminService {
       activeObjectives > 0 ||
       linkedFolders > 0 ||
       linkedChannels > 0 ||
+      linkedProjectLinks > 0 ||
       activeProjects > 0
     ) {
       throw new Error(
@@ -1464,6 +1804,461 @@ export class AdminService {
     ];
   }
 
+  private resolveAuditRange(input: { from?: string; to?: string }) {
+    const now = new Date();
+    const to = input.to ? new Date(input.to) : now;
+    if (Number.isNaN(to.getTime())) {
+      throw new Error("Fecha hasta inválida");
+    }
+
+    const from = input.from ? new Date(input.from) : new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (Number.isNaN(from.getTime())) {
+      throw new Error("Fecha desde inválida");
+    }
+
+    if (from.getTime() > to.getTime()) {
+      throw new Error("El rango de fechas es inválido");
+    }
+
+    const maxRangeMs = 90 * 24 * 60 * 60 * 1000;
+    if (to.getTime() - from.getTime() > maxRangeMs) {
+      throw new Error("El rango máximo permitido es de 90 días");
+    }
+
+    return { from, to };
+  }
+
+  private formatAuditActor(input: {
+    user:
+      | {
+          firstName: string;
+          lastName: string;
+          email: string;
+        }
+      | null;
+    userId: string | null;
+  }) {
+    if (!input.userId) {
+      return "Sistema";
+    }
+
+    if (!input.user) {
+      return input.userId;
+    }
+
+    const fullName = `${input.user.firstName} ${input.user.lastName}`.trim();
+    return fullName || input.user.email || input.userId;
+  }
+
+  async getAuditReport(
+    actorId: string,
+    input: {
+      from?: string;
+      to?: string;
+      page: number;
+      pageSize: number;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+    const range = this.resolveAuditRange({
+      from: input.from,
+      to: input.to
+    });
+
+    const where: Prisma.AuditLogWhereInput = {
+      createdAt: {
+        gte: range.from,
+        lte: range.to
+      }
+    };
+
+    const [items, total] = await Promise.all([
+      this.app.prisma.auditLog.findMany({
+        where,
+        orderBy: {
+          createdAt: "desc"
+        },
+        skip: (input.page - 1) * input.pageSize,
+        take: input.pageSize,
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      }),
+      this.app.prisma.auditLog.count({ where })
+    ]);
+
+    return {
+      items: items.map((item) => ({
+        id: item.id,
+        entityType: item.entityType,
+        action: item.action,
+        entityId: item.entityId,
+        reason: item.reason,
+        reasonCode: item.reasonCode,
+        userId: item.userId,
+        actorName: this.formatAuditActor({
+          user: item.user,
+          userId: item.userId
+        }),
+        createdAt: item.createdAt.toISOString()
+      })),
+      total,
+      page: input.page,
+      pageSize: input.pageSize,
+      from: range.from.toISOString(),
+      to: range.to.toISOString()
+    };
+  }
+
+  async exportAuditReportCsv(
+    actorId: string,
+    input: {
+      from?: string;
+      to?: string;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+    const range = this.resolveAuditRange({
+      from: input.from,
+      to: input.to
+    });
+
+    const items = await this.app.prisma.auditLog.findMany({
+      where: {
+        createdAt: {
+          gte: range.from,
+          lte: range.to
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 10000,
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    const escapeCsv = (value: string | null | undefined) => {
+      const text = value ?? "";
+      const normalized = text.replaceAll('"', '""');
+      return `"${normalized}"`;
+    };
+
+    const header = ["fecha", "actor", "entityType", "action", "entityId", "reason", "reasonCode"];
+    const rows = items.map((item) =>
+      [
+        item.createdAt.toISOString(),
+        this.formatAuditActor({
+          user: item.user,
+          userId: item.userId
+        }),
+        item.entityType,
+        item.action,
+        item.entityId ?? "",
+        item.reason ?? "",
+        item.reasonCode ?? ""
+      ]
+        .map((value) => escapeCsv(value))
+        .join(",")
+    );
+
+    return {
+      from: range.from.toISOString(),
+      to: range.to.toISOString(),
+      csv: [header.map((value) => escapeCsv(value)).join(","), ...rows].join("\n")
+    };
+  }
+
+  async getSystemStatus(actorId: string) {
+    await this.assertAdmin(actorId);
+
+    const statusService = new StatusService(this.app);
+    const status = await statusService.getSystemStatus();
+    const services = this.normalizeSystemServices(status.services);
+    const overallStatus = this.getOverallSystemStatus(services);
+    const recentChanges = await this.listSystemStatusRecentChanges();
+
+    return {
+      now: status.now,
+      overallStatus,
+      maintenance: status.maintenance,
+      services,
+      recentChanges
+    };
+  }
+
+  async checkSystemStatus(actorId: string) {
+    await this.assertAdmin(actorId);
+
+    const statusService = new StatusService(this.app);
+    const status = await statusService.getSystemStatus();
+    const services = this.normalizeSystemServices(status.services);
+    const overallStatus = this.getOverallSystemStatus(services);
+
+    const previousEntry = await this.app.prisma.auditLog.findFirst({
+      where: {
+        entityType: "AUTOMATIZACION",
+        entityId: SYSTEM_STATUS_ENTITY_ID,
+        reasonCode: SYSTEM_STATUS_REASON_CODE
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    const previousSnapshot = this.parseSnapshotFromAuditData(previousEntry?.newData ?? null);
+    const changedServices = this.diffSystemServices(previousSnapshot?.services ?? null, services);
+    const changed =
+      !previousSnapshot ||
+      previousSnapshot.overallStatus !== overallStatus ||
+      changedServices.length > 0;
+
+    const recentChanges = await this.listSystemStatusRecentChanges();
+
+    return {
+      now: status.now,
+      overallStatus,
+      maintenance: status.maintenance,
+      services,
+      changed,
+      changedServices,
+      auditLogged: changed,
+      recentChanges,
+      auditEvent: changed
+        ? {
+            entityType: "AUTOMATIZACION" as const,
+            entityId: SYSTEM_STATUS_ENTITY_ID,
+            action: "ACTUALIZAR" as const,
+            reasonCode: SYSTEM_STATUS_REASON_CODE,
+            reason:
+              changedServices.length > 0
+                ? `Cambio detectado en servicios: ${changedServices.map((item) => item.service).join(", ")}`
+                : "Cambio detectado en estado general del sistema",
+            previousData: previousSnapshot
+              ? {
+                  snapshot: previousSnapshot.services,
+                  overallStatus: previousSnapshot.overallStatus
+                }
+              : null,
+            newData: {
+              snapshot: services,
+              overallStatus,
+              changedServices
+            }
+          }
+        : null
+    };
+  }
+
+  async listCodeCatalogs(
+    actorId: string,
+    input: {
+      domain: CodeCatalogDomain;
+      field?: string;
+      includeInactive: boolean;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+    if (input.field) {
+      this.assertValidCatalogField(input.domain, input.field);
+    }
+
+    const whereBase = {
+      ...(input.field ? { field: input.field as never } : {}),
+      ...(input.includeInactive ? {} : { isActive: true })
+    };
+
+    const mapItem = (item: {
+      id: string;
+      field: string;
+      code: string;
+      label: string;
+      description: string | null;
+      isActive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    }) => ({
+      id: item.id,
+      domain: input.domain,
+      field: item.field,
+      code: item.code,
+      label: item.label,
+      description: item.description,
+      isActive: item.isActive,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString()
+    });
+
+    if (input.domain === "TASK") {
+      return (
+        await this.app.prisma.taskCodeCatalog.findMany({
+          where: whereBase,
+          orderBy: [{ field: "asc" }, { code: "asc" }]
+        })
+      ).map((item) => mapItem(item));
+    }
+    if (input.domain === "PROJECT") {
+      return (
+        await this.app.prisma.projectCodeCatalog.findMany({
+          where: whereBase,
+          orderBy: [{ field: "asc" }, { code: "asc" }]
+        })
+      ).map((item) => mapItem(item));
+    }
+    if (input.domain === "TEAM") {
+      return (
+        await this.app.prisma.teamCodeCatalog.findMany({
+          where: whereBase,
+          orderBy: [{ field: "asc" }, { code: "asc" }]
+        })
+      ).map((item) => mapItem(item));
+    }
+    if (input.domain === "MEETING") {
+      return (
+        await this.app.prisma.meetingCodeCatalog.findMany({
+          where: whereBase,
+          orderBy: [{ field: "asc" }, { code: "asc" }]
+        })
+      ).map((item) => mapItem(item));
+    }
+    if (input.domain === "OBJECTIVE") {
+      return (
+        await this.app.prisma.objectiveCodeCatalog.findMany({
+          where: whereBase,
+          orderBy: [{ field: "asc" }, { code: "asc" }]
+        })
+      ).map((item) => mapItem(item));
+    }
+    if (input.domain === "DECISION") {
+      return (
+        await this.app.prisma.decisionCodeCatalog.findMany({
+          where: whereBase,
+          orderBy: [{ field: "asc" }, { code: "asc" }]
+        })
+      ).map((item) => mapItem(item));
+    }
+    if (input.domain === "IDENTITY") {
+      return (
+        await this.app.prisma.identityCodeCatalog.findMany({
+          where: whereBase,
+          orderBy: [{ field: "asc" }, { code: "asc" }]
+        })
+      ).map((item) => mapItem(item));
+    }
+
+    return (
+      await this.app.prisma.auditCodeCatalog.findMany({
+        where: whereBase,
+        orderBy: [{ field: "asc" }, { code: "asc" }]
+      })
+    ).map((item) => mapItem(item));
+  }
+
+  async createCodeCatalog(
+    actorId: string,
+    input: {
+      domain: CodeCatalogDomain;
+      field: string;
+      code: string;
+      label: string;
+      description?: string;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+    this.assertValidCatalogField(input.domain, input.field);
+
+    const data = {
+      field: input.field as never,
+      code: input.code,
+      label: input.label,
+      description: input.description ?? null
+    };
+
+    if (input.domain === "TASK") {
+      return this.app.prisma.taskCodeCatalog.create({ data });
+    }
+    if (input.domain === "PROJECT") {
+      return this.app.prisma.projectCodeCatalog.create({ data });
+    }
+    if (input.domain === "TEAM") {
+      return this.app.prisma.teamCodeCatalog.create({ data });
+    }
+    if (input.domain === "MEETING") {
+      return this.app.prisma.meetingCodeCatalog.create({ data });
+    }
+    if (input.domain === "OBJECTIVE") {
+      return this.app.prisma.objectiveCodeCatalog.create({ data });
+    }
+    if (input.domain === "DECISION") {
+      return this.app.prisma.decisionCodeCatalog.create({ data });
+    }
+    if (input.domain === "IDENTITY") {
+      return this.app.prisma.identityCodeCatalog.create({ data });
+    }
+
+    return this.app.prisma.auditCodeCatalog.create({ data });
+  }
+
+  async updateCodeCatalog(
+    actorId: string,
+    domain: CodeCatalogDomain,
+    id: string,
+    input: {
+      label?: string;
+      description?: string | null;
+      isActive?: boolean;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+    const data = {
+      ...(input.label !== undefined ? { label: input.label } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
+      ...(input.isActive !== undefined ? { isActive: input.isActive } : {})
+    };
+
+    if (domain === "TASK") {
+      return this.app.prisma.taskCodeCatalog.update({ where: { id }, data });
+    }
+    if (domain === "PROJECT") {
+      return this.app.prisma.projectCodeCatalog.update({ where: { id }, data });
+    }
+    if (domain === "TEAM") {
+      return this.app.prisma.teamCodeCatalog.update({ where: { id }, data });
+    }
+    if (domain === "MEETING") {
+      return this.app.prisma.meetingCodeCatalog.update({ where: { id }, data });
+    }
+    if (domain === "OBJECTIVE") {
+      return this.app.prisma.objectiveCodeCatalog.update({ where: { id }, data });
+    }
+    if (domain === "DECISION") {
+      return this.app.prisma.decisionCodeCatalog.update({ where: { id }, data });
+    }
+    if (domain === "IDENTITY") {
+      return this.app.prisma.identityCodeCatalog.update({ where: { id }, data });
+    }
+
+    return this.app.prisma.auditCodeCatalog.update({ where: { id }, data });
+  }
+
+  async deactivateCodeCatalog(actorId: string, domain: CodeCatalogDomain, id: string) {
+    await this.assertAdmin(actorId);
+    return this.updateCodeCatalog(actorId, domain, id, { isActive: false });
+  }
+
   async getOverview(
     actorId: string,
     input: {
@@ -1587,7 +2382,16 @@ export class AdminService {
           createdAt: "desc"
         },
         skip: (input.page - 1) * input.pageSize,
-        take: input.pageSize
+        take: input.pageSize,
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
       })
     ]);
 
@@ -1669,13 +2473,142 @@ export class AdminService {
           entityType: event.entityType,
           action: event.action,
           createdAt: event.createdAt.toISOString(),
-          userId: event.userId
+          userId: event.userId,
+          userName: this.formatAuditActor({
+            user: event.user,
+            userId: event.userId
+          })
         }))
       },
       pagination: {
         page: input.page,
         pageSize: input.pageSize
       }
+    };
+  }
+
+  async backfillProjectGeneralChannels(actorId: string, input: { dryRun: boolean }) {
+    await this.assertAdmin(actorId);
+
+    const projects = await this.app.prisma.project.findMany({
+      select: {
+        id: true,
+        name: true,
+        ownerId: true
+      },
+      orderBy: {
+        createdAt: "asc"
+      }
+    });
+
+    const projectIds = projects.map((project) => project.id);
+    const [projectMembers, projectChannels] = await Promise.all([
+      projectIds.length
+        ? this.app.prisma.projectMember.findMany({
+            where: {
+              projectId: {
+                in: projectIds
+              }
+            },
+            select: {
+              projectId: true,
+              userId: true
+            }
+          })
+        : [],
+      projectIds.length
+        ? this.app.prisma.channel.findMany({
+            where: {
+              scope: "PROYECTO",
+              projectId: {
+                in: projectIds
+              }
+            },
+            include: {
+              members: {
+                select: {
+                  userId: true
+                }
+              }
+            },
+            orderBy: {
+              createdAt: "asc"
+            }
+          })
+        : []
+    ]);
+
+    const membersByProject = new Map<string, Set<string>>();
+    for (const project of projects) {
+      membersByProject.set(project.id, new Set([project.ownerId]));
+    }
+    for (const member of projectMembers) {
+      const set = membersByProject.get(member.projectId) ?? new Set<string>();
+      set.add(member.userId);
+      membersByProject.set(member.projectId, set);
+    }
+
+    const channelsByProject = new Map<string, typeof projectChannels>();
+    for (const channel of projectChannels) {
+      if (!channel.projectId) {
+        continue;
+      }
+      const list = channelsByProject.get(channel.projectId) ?? [];
+      list.push(channel);
+      channelsByProject.set(channel.projectId, list);
+    }
+
+    let channelsCreated = 0;
+    let membershipsInserted = 0;
+
+    for (const project of projects) {
+      const memberIds = [...(membersByProject.get(project.id) ?? new Set<string>([project.ownerId]))];
+      const candidates = channelsByProject.get(project.id) ?? [];
+      const selected = candidates.find((channel) => /general/i.test(channel.name)) ?? candidates[0] ?? null;
+
+      if (!selected) {
+        channelsCreated += 1;
+        membershipsInserted += memberIds.length;
+
+        if (input.dryRun) {
+          continue;
+        }
+
+        await this.app.prisma.channel.create({
+          data: {
+            name: `${project.name} · General`.slice(0, 120),
+            scope: "PROYECTO",
+            projectId: project.id,
+            members: {
+              create: memberIds.map((userId) => ({ userId }))
+            }
+          }
+        });
+        continue;
+      }
+
+      const existingMemberIds = new Set(selected.members.map((member) => member.userId));
+      const missingMemberIds = memberIds.filter((userId) => !existingMemberIds.has(userId));
+      membershipsInserted += missingMemberIds.length;
+
+      if (input.dryRun || missingMemberIds.length === 0) {
+        continue;
+      }
+
+      await this.app.prisma.channelMember.createMany({
+        data: missingMemberIds.map((userId) => ({
+          channelId: selected.id,
+          userId
+        })),
+        skipDuplicates: true
+      });
+    }
+
+    return {
+      dryRun: input.dryRun,
+      projectsScanned: projects.length,
+      channelsCreated,
+      membershipsInserted
     };
   }
 }

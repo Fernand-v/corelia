@@ -1,7 +1,7 @@
 import fp from "fastify-plugin";
 import { type Permission, type SystemRole } from "@corelia/types";
 import { getProjectIdFromRequest } from "../lib/http.js";
-import { getMostRestrictiveRole, getPermissionsForRole } from "../lib/rbac.js";
+import { getPermissionsForRole } from "../lib/rbac.js";
 
 export const rbacPlugin = fp(async (app) => {
   app.addHook("preHandler", async (request, reply) => {
@@ -17,31 +17,33 @@ export const rbacPlugin = fp(async (app) => {
     let activeRole: SystemRole;
 
     if (projectId) {
-      const membership = await app.prisma.projectMember.findFirst({
-        where: {
-          projectId,
-          userId: request.authUser.id
-        }
-      });
+      const [membership, user] = await Promise.all([
+        app.prisma.projectMember.findFirst({
+          where: {
+            projectId,
+            userId: request.authUser.id
+          }
+        }),
+        app.prisma.user.findUnique({
+          where: { id: request.authUser.id },
+          select: { baseRole: true }
+        })
+      ]);
 
-      activeRole = membership?.role ?? "INVITADO_EXTERNO";
+      if (user?.baseRole === "ADMINISTRADOR") {
+        activeRole = "ADMINISTRADOR";
+      } else {
+        activeRole = membership?.role ?? "INVITADO_EXTERNO";
+      }
     } else {
-      const memberships = await app.prisma.projectMember.findMany({
-        where: { userId: request.authUser.id },
-        select: { role: true }
-      });
-
       const user = await app.prisma.user.findUnique({
-        where: { id: request.authUser.id },
+        where: {
+          id: request.authUser.id
+        },
         select: { baseRole: true }
       });
 
-      const candidateRoles = memberships.map((item) => item.role);
-      if (user?.baseRole) {
-        candidateRoles.push(user.baseRole);
-      }
-
-      activeRole = getMostRestrictiveRole(candidateRoles.length ? candidateRoles : ["INVITADO_EXTERNO"]);
+      activeRole = user?.baseRole ?? "INVITADO_EXTERNO";
     }
 
     const permissions = getPermissionsForRole(activeRole);

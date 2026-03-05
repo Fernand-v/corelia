@@ -1,5 +1,4 @@
 import { MeetingBoard } from "@/components/meeting-board";
-import { NotificationsBadge } from "@/components/notifications-badge";
 import { ProjectContextRequired } from "@/components/project-context-required";
 
 export default function MeetingsPage({
@@ -25,7 +24,6 @@ export default function MeetingsPage({
           <h1 className="text-2xl font-semibold text-slate-900">Reuniones</h1>
           <p className="text-sm text-slate-600">Agenda y acceso a videollamada en pestaña dedicada</p>
         </div>
-        <NotificationsBadge />
       </header>
       <MeetingBoard />
     </main>

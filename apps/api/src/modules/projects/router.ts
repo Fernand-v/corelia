@@ -73,6 +73,186 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
     }
   );
 
+  app.get(
+    "/:projectId/teams",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(projectSchemas.projectIdParamsSchema, request.params);
+        const result = await service.listLinkedTeams(request.authUser!.id, params.projectId);
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/:projectId/teams",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(projectSchemas.projectIdParamsSchema, request.params);
+        const payload = parseWithSchema(projectSchemas.linkProjectTeamInputSchema, request.body);
+        const result = await service.linkTeam(request.authUser!.id, {
+          projectId: params.projectId,
+          teamId: payload.teamId
+        });
+
+        request.auditEvent = {
+          entityType: "PROYECTO",
+          entityId: params.projectId,
+          action: "ACTUALIZAR",
+          reasonCode: "PROJECT_TEAM_LINK",
+          reason: "Vinculación de equipo a proyecto",
+          newData: {
+            teamId: payload.teamId,
+            syncedCreated: result.syncedCreated,
+            syncedUpdated: result.syncedUpdated
+          }
+        };
+
+        return reply.code(201).send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.delete(
+    "/:projectId/teams/:teamId",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(projectSchemas.projectTeamParamsSchema, request.params);
+        const result = await service.unlinkTeam(request.authUser!.id, {
+          projectId: params.projectId,
+          teamId: params.teamId
+        });
+
+        request.auditEvent = {
+          entityType: "PROYECTO",
+          entityId: params.projectId,
+          action: "ACTUALIZAR",
+          reasonCode: "PROJECT_TEAM_UNLINK",
+          reason: "Desvinculación de equipo de proyecto",
+          newData: {
+            teamId: params.teamId,
+            removedMembers: result.removedMembers
+          }
+        };
+
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/:projectId/stages",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(projectSchemas.projectIdParamsSchema, request.params);
+        const stages = await service.listStages(request.authUser!.id, params.projectId);
+        return reply.send(stages);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/:projectId/stages",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(projectSchemas.projectIdParamsSchema, request.params);
+        const payload = parseWithSchema(projectSchemas.createProjectStageInputSchema, request.body);
+        const stage = await service.createStage(request.authUser!.id, {
+          projectId: params.projectId,
+          name: payload.name,
+          color: payload.color
+        });
+        return reply.code(201).send(stage);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.patch(
+    "/stages/:stageId",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(projectSchemas.stageIdParamsSchema, request.params);
+        const payload = parseWithSchema(projectSchemas.updateProjectStageInputSchema, request.body);
+        const stage = await service.updateStage(request.authUser!.id, params.stageId, payload);
+        return reply.send(stage);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.delete(
+    "/stages/:stageId",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(projectSchemas.stageIdParamsSchema, request.params);
+        const result = await service.deleteStage(request.authUser!.id, params.stageId);
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
   app.post(
     "/assign-role",
     {

@@ -147,8 +147,11 @@ export const authRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: request.authUser!.id,
           action: "ACTUALIZAR",
+          reasonCode: "PASSWORD_CHANGE",
+          reason: "Cambio de contraseña desde perfil",
           newData: {
-            passwordChanged: true
+            passwordChanged: true,
+            source: "PROFILE_MODAL"
           }
         };
         return reply.send(result);
@@ -189,6 +192,23 @@ export const authRouter: FastifyPluginAsync = async (app) => {
           status = 404;
         }
         return reply.code(status).send({ message: knownError.message });
+      }
+    }
+  );
+
+  app.get(
+    "/memberships",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        const summary = await service.getMembershipSummary(request.authUser!.id);
+        return reply.send(summary);
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
       }
     }
   );

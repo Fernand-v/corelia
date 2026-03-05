@@ -30,3 +30,12 @@ export const storageQuotaSchema = z.object({
   bytesLimit: z.number().int().positive(),
   alertThresholdPct: z.number().min(0.1).max(1).default(0.8)
 });
+
+export const storageSummarySchema = z.object({
+  projectId: idSchema,
+  usageBytes: z.number().int().nonnegative(),
+  bytesLimit: z.number().int().nonnegative(),
+  remainingBytes: z.number().int().nonnegative(),
+  usagePct: z.number().min(0).max(1),
+  warning80: z.boolean()
+});

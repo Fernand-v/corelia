@@ -14,7 +14,7 @@ const createMockApp = () => {
       task: {
         create: vi.fn().mockResolvedValue({ id: crypto.randomUUID(), title: "Task" }),
         findUnique: vi.fn(),
-        update: vi.fn().mockResolvedValue({ id: crypto.randomUUID(), status: "EN_PROGRESO" }),
+        update: vi.fn().mockResolvedValue({ id: crypto.randomUUID(), status: "PENDIENTE" }),
         findMany: vi.fn().mockResolvedValue([]),
         count: vi.fn().mockResolvedValue(0),
         groupBy: vi.fn().mockResolvedValue([])
@@ -43,6 +43,9 @@ const createMockApp = () => {
         create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
       },
       taskReassignment: {
+        create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
+      },
+      taskScheduleHistory: {
         create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
       },
       notification: {
@@ -131,7 +134,7 @@ describe("Task integration flows", () => {
       description: "desc",
       assigneeId: crypto.randomUUID(),
       dueDate: new Date().toISOString(),
-      status: "BACKLOG",
+      status: "PENDIENTE",
       createdById: crypto.randomUUID(),
       confirmOutOfSchedule: true
     });
@@ -151,7 +154,7 @@ describe("Task integration flows", () => {
         projectId: crypto.randomUUID(),
         title: "Tarea",
         assigneeId: crypto.randomUUID(),
-        status: "BACKLOG",
+        status: "PENDIENTE",
         createdById: crypto.randomUUID(),
         confirmOutOfSchedule: true
       })
@@ -174,7 +177,7 @@ describe("Task integration flows", () => {
         projectId: crypto.randomUUID(),
         title: "Tarea fuera de jornada",
         assigneeId: crypto.randomUUID(),
-        status: "BACKLOG",
+        status: "PENDIENTE",
         createdById: crypto.randomUUID(),
         confirmOutOfSchedule: false
       })
@@ -199,7 +202,7 @@ describe("Task integration flows", () => {
         projectId: crypto.randomUUID(),
         title: "Sobrecarga",
         assigneeId: crypto.randomUUID(),
-        status: "BACKLOG",
+        status: "PENDIENTE",
         createdById: crypto.randomUUID(),
         confirmOutOfSchedule: true
       })
@@ -217,15 +220,16 @@ describe("Task integration flows", () => {
 
     await service.changeStatus({
       taskId: crypto.randomUUID(),
-      status: "EN_PROGRESO",
+      status: "EN_REVISION",
       reason: "Inicio",
-      changedById: crypto.randomUUID()
+      changedById: crypto.randomUUID(),
+      activeRole: "ADMINISTRADOR"
     });
 
     expect(app.prisma.taskStatusHistory.create).toHaveBeenCalledTimes(1);
   });
 
-  it("prevents starting task with unresolved dependencies", async () => {
+  it("allows moving task to review even when dependencies remain unresolved", async () => {
     const app = createMockApp();
     app.prisma.task.findUnique = vi.fn().mockResolvedValue({
       id: crypto.randomUUID(),
@@ -235,14 +239,15 @@ describe("Task integration flows", () => {
 
     const service = new TaskService(app);
 
-    await expect(
-      service.changeStatus({
-        taskId: crypto.randomUUID(),
-        status: "EN_PROGRESO",
-        reason: "Inicio",
-        changedById: crypto.randomUUID()
-      })
-    ).rejects.toThrowError("dependencias no resueltas");
+    const updated = await service.changeStatus({
+      taskId: crypto.randomUUID(),
+      status: "EN_REVISION",
+      reason: "Inicio",
+      changedById: crypto.randomUUID(),
+      activeRole: "ADMINISTRADOR"
+    });
+
+    expect(updated).toHaveProperty("id");
   });
 
   it("rejects self dependency", async () => {
@@ -264,6 +269,109 @@ describe("Task integration flows", () => {
 
     expect(result.canStart).toBe(false);
     expect(result.unresolvedDependencies.length).toBe(1);
+  });
+
+  it("updates schedule when dates are valid", async () => {
+    const app = createMockApp();
+    const taskId = crypto.randomUUID();
+
+    app.prisma.task.findUnique = vi.fn().mockResolvedValue({
+      id: taskId,
+      startDate: null,
+      dueDate: null
+    });
+    app.prisma.$transaction = vi.fn().mockImplementation(async (cb) =>
+      cb({
+        task: {
+          update: vi.fn().mockResolvedValue({
+            id: taskId,
+            startDate: new Date("2026-03-01T10:00:00.000Z"),
+            dueDate: new Date("2026-03-02T10:00:00.000Z")
+          })
+        },
+        taskScheduleHistory: {
+          create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
+        }
+      })
+    );
+
+    const service = new TaskService(app);
+    const updated = await service.updateSchedule({
+      taskId,
+      startDate: "2026-03-01T10:00:00.000Z",
+      dueDate: "2026-03-02T10:00:00.000Z",
+      reason: "Ajuste manual de prueba",
+      changedById: crypto.randomUUID()
+    });
+
+    expect(updated).toHaveProperty("id", taskId);
+    expect(app.prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("finalizes task and activates next task in project flow", async () => {
+    const app = createMockApp();
+    const taskId = crypto.randomUUID();
+    const projectId = crypto.randomUUID();
+    const nextTaskId = crypto.randomUUID();
+    const assigneeId = crypto.randomUUID();
+
+    app.prisma.task.findUnique = vi.fn().mockResolvedValue({
+      id: taskId,
+      projectId,
+      title: "Tarea actual",
+      status: "EN_REVISION",
+      assigneeId
+    });
+
+    app.prisma.$transaction = vi.fn().mockImplementation(async (cb) =>
+      cb({
+        task: {
+          update: vi
+            .fn()
+            .mockResolvedValueOnce({
+              id: taskId,
+              projectId,
+              title: "Tarea actual",
+              status: "COMPLETADA",
+              assigneeId
+            })
+            .mockResolvedValueOnce({
+              id: nextTaskId,
+              projectId,
+              title: "Siguiente tarea",
+              status: "PENDIENTE",
+              assigneeId
+            }),
+          findMany: vi.fn().mockResolvedValue([
+            {
+              id: nextTaskId,
+              projectId,
+              title: "Siguiente tarea",
+              status: "PENDIENTE",
+              dueDate: new Date("2026-03-10T10:00:00.000Z"),
+              createdAt: new Date("2026-03-01T09:00:00.000Z"),
+              assigneeId
+            }
+          ])
+        },
+        taskStatusHistory: {
+          create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
+        }
+      })
+    );
+
+    app.prisma.projectMember.findMany = vi.fn().mockResolvedValue([{ userId: crypto.randomUUID() }]);
+
+    const service = new TaskService(app);
+    const result = await service.finalizeAndAdvance({
+      taskId,
+      changedById: assigneeId,
+      activeRole: "COLABORADOR"
+    });
+
+    expect(result.completedTask.status).toBe("COMPLETADA");
+    expect(result.nextTask?.status).toBe("PENDIENTE");
+    expect(app.prisma.notification.create).toHaveBeenCalled();
   });
 
   it("forbids reassignment of completed task without reopen flag", async () => {
@@ -321,7 +429,7 @@ describe("Task integration flows", () => {
     app.prisma.$transaction = vi.fn().mockImplementation(async (cb) =>
       cb({
         task: {
-          update: vi.fn().mockResolvedValue({ id: crypto.randomUUID(), status: "EN_PROGRESO" })
+          update: vi.fn().mockResolvedValue({ id: crypto.randomUUID(), status: "PENDIENTE" })
         },
         taskReassignment: {
           create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
@@ -343,7 +451,7 @@ describe("Task integration flows", () => {
       activeRole: "ADMINISTRADOR"
     });
 
-    expect(task.status).toBe("EN_PROGRESO");
+    expect(task.status).toBe("PENDIENTE");
     expect(app.prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(app.prisma.notification.create).toHaveBeenCalledTimes(2);
   });

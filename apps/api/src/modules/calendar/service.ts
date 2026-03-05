@@ -466,7 +466,7 @@ export class CalendarService {
             where: {
               assigneeId: member.user.id,
               status: {
-                in: ["BACKLOG", "PENDIENTE", "EN_PROGRESO", "EN_REVISION", "BLOQUEADA"]
+                in: ["PENDIENTE", "EN_REVISION"]
               }
             }
           })

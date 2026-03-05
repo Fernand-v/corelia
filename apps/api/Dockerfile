@@ -1,10 +1,13 @@
-FROM node:20-alpine AS base
-RUN apk add --no-cache python3 py3-pip make g++ linux-headers
+FROM node:20-bookworm-slim AS base
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 python3-pip make g++ pkg-config ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 WORKDIR /app
 
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
+COPY patches ./patches
 COPY apps/api/package.json apps/api/package.json
 COPY packages/types/package.json packages/types/package.json
 COPY packages/config/package.json packages/config/package.json
@@ -16,8 +19,10 @@ RUN pnpm --filter @corelia/types build
 RUN pnpm --filter @corelia/api prisma:generate
 RUN pnpm --filter @corelia/api build
 
-FROM node:20-alpine AS runner
-RUN apk add --no-cache libstdc++
+FROM node:20-bookworm-slim AS runner
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 WORKDIR /app
 ENV NODE_ENV=production

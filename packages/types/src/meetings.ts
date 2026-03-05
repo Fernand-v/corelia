@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { idSchema, timestampSchema } from "./common.js";
+import { codeValueSchema, idSchema, timestampSchema } from "./common.js";
 import {
   meetingAgreementStatusSchema,
   meetingStatusSchema,
@@ -42,6 +42,8 @@ export const meetingAgreementSchema = z.object({
   meetingId: idSchema,
   title: z.string().min(3).max(200),
   description: z.string().max(2000).nullable(),
+  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionLabel: z.string().nullable().optional(),
   status: meetingAgreementStatusSchema,
   authorId: idSchema,
   taskId: idSchema.nullable(),
@@ -54,6 +56,8 @@ export const meetingSchema = z.object({
   id: idSchema,
   title: z.string().min(3).max(200),
   description: z.string().max(2000).nullable(),
+  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionLabel: z.string().nullable().optional(),
   projectId: idSchema.nullable(),
   teamId: idSchema.nullable(),
   startsAt: timestampSchema,
@@ -69,6 +73,7 @@ export const createMeetingInputSchema = z
   .object({
     title: z.string().min(3).max(200),
     description: z.string().max(2000).optional(),
+    descriptionCode: codeValueSchema.optional(),
     projectId: idSchema.optional(),
     teamId: idSchema.optional(),
     startsAt: timestampSchema,
@@ -100,12 +105,14 @@ export const createMeetingAgreementInputSchema = z.object({
   meetingId: idSchema,
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
+  descriptionCode: codeValueSchema.optional(),
   existingTaskId: idSchema.optional(),
   createTask: z
     .object({
       projectId: idSchema,
       title: z.string().min(3).max(200),
       description: z.string().max(4000).optional(),
+      descriptionCode: codeValueSchema.optional(),
       assigneeId: idSchema.optional(),
       dueDate: timestampSchema.optional()
     })

@@ -27,6 +27,48 @@ const extractNotificationPath = (body: string) => {
   return match[1].replace(/[).,;!?]+$/g, "");
 };
 
+const summarizeNotificationBody = (body: string, maxLength = 140) => {
+  const compact = body
+    .replace(/\s*Ruta:\s*\/\S+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!compact) {
+    return "Sin detalle";
+  }
+
+  if (compact.length <= maxLength) {
+    return compact;
+  }
+
+  return `${compact.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`;
+};
+
+const parseNotificationDisplay = (notification: NotificationItem) => {
+  const cleaned = summarizeNotificationBody(notification.body, 220);
+  const separatorIndex = cleaned.indexOf(":");
+
+  if (separatorIndex > 0) {
+    const head = cleaned.slice(0, separatorIndex).trim();
+    const tail = cleaned.slice(separatorIndex + 1).trim();
+    return {
+      title: head || notification.title,
+      subtitle: tail || notification.title
+    };
+  }
+
+  return {
+    title: notification.title,
+    subtitle: cleaned
+  };
+};
+
+const formatDateTime = (value: string) =>
+  new Date(value).toLocaleString("es-ES", {
+    dateStyle: "short",
+    timeStyle: "short"
+  });
+
 export const NotificationsBadge = () => {
   const queryClient = useQueryClient();
   const token = useAuthStore((state) => state.accessToken);
@@ -67,6 +109,53 @@ export const NotificationsBadge = () => {
       });
     },
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications", "latest"] });
+    }
+  });
+
+  const markSingleReadMutation = useMutation({
+    onMutate: async (notificationId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["notifications", "latest"] });
+      await queryClient.cancelQueries({ queryKey: ["notifications", "unread-count"] });
+
+      const previousLatest = queryClient.getQueryData<NotificationItem[]>(["notifications", "latest"]);
+      const previousUnread = queryClient.getQueryData<NotificationUnread>([
+        "notifications",
+        "unread-count"
+      ]);
+
+      queryClient.setQueryData<NotificationItem[]>(["notifications", "latest"], (current) =>
+        (current ?? []).map((item) =>
+          item.id === notificationId ? { ...item, readAt: new Date().toISOString() } : item
+        )
+      );
+
+      if (previousUnread) {
+        queryClient.setQueryData<NotificationUnread>(["notifications", "unread-count"], {
+          unread: Math.max(0, previousUnread.unread - 1)
+        });
+      }
+
+      return { previousLatest, previousUnread };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previousLatest) {
+        queryClient.setQueryData(["notifications", "latest"], context.previousLatest);
+      }
+      if (context?.previousUnread) {
+        queryClient.setQueryData(["notifications", "unread-count"], context.previousUnread);
+      }
+    },
+    mutationFn: (notificationId: string) =>
+      apiRequest<{ updated: number }>("/notifications/read", {
+        method: "POST",
+        body: JSON.stringify({
+          ids: [notificationId]
+        })
+      }),
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notifications"] });
       await queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
       await queryClient.invalidateQueries({ queryKey: ["notifications", "latest"] });
@@ -120,23 +209,35 @@ export const NotificationsBadge = () => {
 
   const unread = unreadQuery.data?.unread ?? 0;
   const latest = notificationsQuery.data ?? [];
+  const unreadNotifications = latest.filter((item) => item.readAt === null);
 
   return (
     <div className="relative">
       <button
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700"
         onClick={() => setOpen((current) => !current)}
         type="button"
+        aria-label="Notificaciones"
+        title="Notificaciones"
       >
-        <span
-          className={`inline-block h-2.5 w-2.5 rounded-full ${
-            realtimeOnline ? "bg-emerald-500" : "bg-amber-500"
-          }`}
-        />
-        <span>{realtimeOnline ? "Realtime" : "Polling 30s"}</span>
-        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
-          {unread}
-        </span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-4 w-4"
+          aria-hidden="true"
+        >
+          <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
+          <path d="M9 17a3 3 0 0 0 6 0" />
+        </svg>
+        {unread > 0 ? (
+          <span className="absolute -right-1 -top-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+            {unread}
+          </span>
+        ) : null}
       </button>
 
       {open ? (
@@ -157,26 +258,37 @@ export const NotificationsBadge = () => {
           {notificationsQuery.error ? (
             <p className="text-xs text-red-600">{notificationsQuery.error.message}</p>
           ) : null}
-          {latest.length === 0 ? (
+          {unreadNotifications.length === 0 ? (
             <p className="text-xs text-slate-500">Sin notificaciones.</p>
           ) : (
             <ul className="max-h-72 space-y-2 overflow-y-auto">
-              {latest.slice(0, 12).map((notification) => (
-                <li key={notification.id}>
-                  <Link
-                    href={extractNotificationPath(notification.body) as Route}
-                    className={`block rounded-lg border px-2 py-2 ${
-                      notification.readAt
-                        ? "border-slate-200 bg-white"
-                        : "border-blue-200 bg-blue-50"
-                    }`}
-                    onClick={() => setOpen(false)}
-                  >
-                    <p className="text-xs font-medium text-slate-900">{notification.title}</p>
-                    <p className="text-[11px] text-slate-600">{notification.body}</p>
-                  </Link>
-                </li>
-              ))}
+              {unreadNotifications.slice(0, 12).map((notification) => {
+                const display = parseNotificationDisplay(notification);
+
+                return (
+                  <li key={notification.id}>
+                    <Link
+                      href={extractNotificationPath(notification.body) as Route}
+                      className="block rounded-lg border border-blue-200 bg-blue-50 px-2 py-2"
+                      onClick={() => {
+                        markSingleReadMutation.mutate(notification.id);
+                        setOpen(false);
+                      }}
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-slate-900">{display.title}</p>
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                          No leído
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600">{display.subtitle}</p>
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        {formatDateTime(notification.createdAt)}
+                      </p>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

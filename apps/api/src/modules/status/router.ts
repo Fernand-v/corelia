@@ -30,11 +30,20 @@ export const statusRouter: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       try {
         const payload = parseWithSchema(statusSchemas.maintenanceToggleSchema, request.body);
+        const currentStatus = await service.getSystemStatus();
         const result = await service.setMaintenance(payload);
         request.auditEvent = {
           entityType: "AUTOMATIZACION",
           entityId: String(result.id),
           action: "ACTUALIZAR",
+          reasonCode: "MAINTENANCE_TOGGLE",
+          reason: payload.enabled
+            ? "Activación de modo mantenimiento"
+            : "Desactivación de modo mantenimiento",
+          previousData: {
+            enabled: currentStatus.maintenance.enabled,
+            message: currentStatus.maintenance.message
+          },
           newData: {
             enabled: result.enabled,
             message: result.message

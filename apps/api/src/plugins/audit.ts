@@ -16,7 +16,10 @@ export const auditPlugin = fp(async (app) => {
         userId: request.authUser?.id,
         previousData: request.auditEvent.previousData as never,
         newData: request.auditEvent.newData as never,
-        reason: request.auditEvent.reason
+        reason: request.auditEvent.reason,
+        reasonCode:
+          request.auditEvent.reasonCode ??
+          (request.auditEvent.reason ? "LEGACY_UNMAPPED" : null)
       }
     });
   });
