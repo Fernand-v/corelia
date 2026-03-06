@@ -10,9 +10,9 @@ export default function CallPage({
 
   if (!meetingId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-100">
-        <div className="max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 text-center">
-          <p className="text-sm">Falta el parámetro de reunión (`meetingId`).</p>
+      <main className="teams-call flex min-h-screen items-center justify-center px-4">
+        <div className="teams-call-panel max-w-md rounded-2xl p-5 text-center">
+          <p className="text-sm text-[--teams-call-text]">Falta el parámetro de reunión (`meetingId`).</p>
         </div>
       </main>
     );

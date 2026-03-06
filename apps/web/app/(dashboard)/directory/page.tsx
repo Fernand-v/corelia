@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
+import { useFrontendSettings } from "@/lib/frontend-settings";
 
 type DirectoryProfile = {
   userId: string;
@@ -29,6 +30,7 @@ const presenceTone: Record<NonNullable<DirectoryProfile["presence"]>, string> = 
 };
 
 export default function DirectoryPage() {
+  const { settings: frontendSettings } = useFrontendSettings();
   const query = useQuery({
     queryKey: ["directory"],
     queryFn: () => apiRequest<DirectoryProfile[]>("/identity/directory")
@@ -38,7 +40,9 @@ export default function DirectoryPage() {
     <main className="mx-auto w-full max-w-7xl space-y-4">
       <header>
         <h1 className="text-2xl font-semibold text-slate-900">Directorio</h1>
-        <p className="text-sm text-slate-600">Personas y equipos dentro de Corelia</p>
+        <p className="text-sm text-slate-600">
+          Personas y equipos dentro de {frontendSettings.organizationName}
+        </p>
       </header>
 
       <Card className="space-y-3">

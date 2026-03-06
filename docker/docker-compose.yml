@@ -82,6 +82,10 @@ services:
     build:
       context: ..
       dockerfile: apps/api/Dockerfile
+      target: runner
+      args:
+        PNPM_VERSION: ${PNPM_VERSION:-9.12.3}
+        PRISMA_CLI_VERSION: ${PRISMA_CLI_VERSION:-6.19.2}
     container_name: corelia-api
     restart: unless-stopped
     depends_on:
@@ -150,7 +154,9 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
+      target: runner
       args:
+        PNPM_VERSION: ${PNPM_VERSION:-9.12.3}
         NEXT_PUBLIC_API_KEY: ${NEXT_PUBLIC_API_KEY_DOCKER:-0b142799e2fb202684f31eff9ea71965d84e81a4b7a58adb6e90d704165f9773}
         NEXT_PUBLIC_HOCUSPOCUS_URL: ${NEXT_PUBLIC_HOCUSPOCUS_URL_DOCKER:-/collab}
         NEXT_PUBLIC_DOCS_DEBUG: ${NEXT_PUBLIC_DOCS_DEBUG:-false}

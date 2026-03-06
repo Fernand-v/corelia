@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Channel, Message, MessagingConversationsResponse } from "@corelia/types";
-import { apiRequest, useAuthStore } from "@/lib/api";
+import { apiRequest, getApiBaseUrl, getAuthToken, getPublicApiKey, useAuthStore } from "@/lib/api";
 import { getRealtimeSocket, disconnectRealtimeSocket } from "@/lib/realtime";
 import { useSession } from "@/lib/session";
 import { MessagingModule } from "@/components/messaging-module";
@@ -30,6 +30,33 @@ type ProjectMember = {
 };
 
 const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
+
+const downloadAttachment = async (attachmentId: string, fileName: string) => {
+  const token = getAuthToken();
+  const apiKey = getPublicApiKey();
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (apiKey) headers.set("x-api-key", apiKey);
+
+  const response = await fetch(
+    `${getApiBaseUrl()}/messaging/attachments/${encodeURIComponent(attachmentId)}/content?mode=attachment`,
+    { headers }
+  );
+
+  if (!response.ok) {
+    return;
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+};
 
 const formatBytes = (value: number) => {
   if (value < 1024) {
@@ -524,6 +551,9 @@ export const MessagingBoard = () => {
           }
 
           sendFileMessageMutation.mutate(file);
+        }}
+        onDownloadAttachment={(attachmentId, fileName) => {
+          void downloadAttachment(attachmentId, fileName);
         }}
       />
 

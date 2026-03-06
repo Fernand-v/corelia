@@ -58,8 +58,16 @@ export const exportGraphModelXml = (graph: AbstractGraph): string => {
 };
 
 export const importGraphModelXml = (graph: AbstractGraph, xml: string): void => {
-  const serializer = new ModelXmlSerializer(graph.getDataModel());
-  serializer.import(xml);
+  const parent = graph.getDefaultParent();
+  graph.batchUpdate(() => {
+    const existing = graph.getChildCells(parent, true, true);
+    if (existing.length > 0) {
+      const model = graph.getDataModel();
+      existing.forEach((cell) => model.remove(cell));
+    }
+    const serializer = new ModelXmlSerializer(graph.getDataModel());
+    serializer.import(xml);
+  });
 };
 
 export const serializeDrawioDocument = (document: DrawioDocument): string => serializeMxfile(document);

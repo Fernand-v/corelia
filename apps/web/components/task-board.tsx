@@ -17,6 +17,12 @@ import type { ProjectStage, Task, TaskStatus } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
 import { useForm } from "react-hook-form";
 import { apiRequest } from "@/lib/api";
+import {
+  getTaskStatusBadgeStyle,
+  getTaskStatusColor,
+  hexToRgba,
+  useFrontendSettings
+} from "@/lib/frontend-settings";
 import { useSession } from "@/lib/session";
 import { allTasksQueryKey, filterMyTasks, mergeTaskIntoList, taskBoardQueryKey } from "@/components/task-board-state";
 
@@ -79,11 +85,6 @@ type TaskDetail = Task & {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_STAGE_COLOR = "#4F7CFF";
 const NO_STAGE_COLOR = "#64748B";
-const GANTT_STATUS_COLORS: Record<TaskStatus, string> = {
-  PENDIENTE: "#F59E0B",
-  EN_REVISION: "#2563EB",
-  COMPLETADA: "#16A34A"
-};
 
 const createTaskFormSchema = z
   .object({
@@ -192,16 +193,6 @@ const formatRemaining = (task: Task): { label: string; tone: string } => {
   };
 };
 
-const statusTone = (task: Task) => {
-  if (task.status === "COMPLETADA") {
-    return "text-emerald-700 border-emerald-200 bg-emerald-50";
-  }
-  if (task.status === "EN_REVISION") {
-    return "text-blue-700 border-blue-200 bg-blue-50";
-  }
-  return "text-amber-700 border-amber-200 bg-amber-50";
-};
-
 const isVisibleInMyTasks = (task: Task) => {
   if (task.status === "COMPLETADA") {
     return false;
@@ -233,19 +224,6 @@ const formatTimelineDate = (ms: number) =>
     month: "2-digit"
   });
 
-const hexToRgba = (hex: string, alpha: number) => {
-  const match = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!match) {
-    return `rgba(79, 124, 255, ${alpha})`;
-  }
-
-  const value = match[1] ?? "4F7CFF";
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
 export const TaskBoard = ({
   initialProjectId = "",
   lockProjectSelection = false,
@@ -256,6 +234,7 @@ export const TaskBoard = ({
   showPersonalPanels?: boolean;
 }) => {
   const session = useSession();
+  const { settings: frontendSettings } = useFrontendSettings();
   const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId);
   const [dateFromFilter, setDateFromFilter] = useState("");
@@ -267,6 +246,7 @@ export const TaskBoard = ({
   const [createStageModalOpen, setCreateStageModalOpen] = useState(false);
   const [selectedHistoryTaskId, setSelectedHistoryTaskId] = useState<string | null>(null);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const taskStatusColors = frontendSettings.taskStatusColors;
 
   const dragStateRef = useRef<
     | {
@@ -897,7 +877,10 @@ export const TaskBoard = ({
                           </Link>
                         </div>
 
-                        <p className={`inline-flex rounded-lg border px-2 py-1 text-[11px] ${statusTone(task)}`}>
+                        <p
+                          className="inline-flex rounded-lg border px-2 py-1 text-[11px] font-semibold"
+                          style={getTaskStatusBadgeStyle(task.status, taskStatusColors)}
+                        >
                           {task.status}
                         </p>
 
@@ -925,7 +908,7 @@ export const TaskBoard = ({
                 <span key={`legend-${column.status}`} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
                   <span
                     className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: GANTT_STATUS_COLORS[column.status] }}
+                    style={{ backgroundColor: getTaskStatusColor(column.status, taskStatusColors) }}
                   />
                   {column.label}
                 </span>
@@ -963,13 +946,12 @@ export const TaskBoard = ({
             <div className="overflow-x-auto">
               <div className="min-w-[1200px]">
                 <div className="grid" style={{ gridTemplateColumns: `460px ${timelineWidthPx}px` }}>
-                  <div className="sticky left-0 z-10 grid grid-cols-[110px_1fr_110px_80px_80px_90px] border-b border-slate-200 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    <div className="px-2 py-2">Etapa</div>
+                  <div className="sticky left-0 z-10 grid grid-cols-[120px_1fr_110px_80px_80px] border-b border-slate-200 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     <div className="px-2 py-2">Tarea</div>
+                    <div className="px-2 py-2">Detalle</div>
                     <div className="px-2 py-2">Responsable</div>
                     <div className="px-2 py-2">Inicio</div>
                     <div className="px-2 py-2">Fin</div>
-                    <div className="px-2 py-2">Estado</div>
                   </div>
 
                   <div className="grid border-b border-slate-200 bg-white text-[11px] text-slate-500" style={{ gridTemplateColumns: `repeat(${timelineDays}, minmax(0, 1fr))` }}>
@@ -1004,33 +986,20 @@ export const TaskBoard = ({
                         const widthPct =
                           ((range.endMs - range.startMs) / (timelineBounds.endMs - timelineBounds.startMs)) *
                           100;
-                        const statusColor = GANTT_STATUS_COLORS[task.status] ?? "#64748B";
+                        const statusColor = getTaskStatusColor(task.status, taskStatusColors);
 
                         const hoverLabel = [
                           `Tarea: ${task.title}`,
                           `Etapa: ${group.stageName}`,
                           `Creó: ${task.createdByName ?? task.createdById}`,
                           `Asignado: ${task.assigneeName ?? "Sin asignar"}`,
-                          `Estado: ${task.status}`,
                           `Desde: ${formatDateTime(task.startDate)}`,
                           `Hasta: ${formatDateTime(task.dueDate)}`
                         ].join("\n");
 
                         return (
                           <div key={task.id} className="contents">
-                            <div className="sticky left-0 z-[8] grid grid-cols-[110px_1fr_110px_80px_80px_90px] items-center border-b border-slate-200 bg-white text-xs text-slate-700">
-                              <div className="truncate px-2 py-2">
-                                <span
-                                  className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px]"
-                                  style={{
-                                    borderColor: hexToRgba(group.stageColor, 0.35),
-                                    backgroundColor: hexToRgba(group.stageColor, 0.12)
-                                  }}
-                                >
-                                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: group.stageColor }} />
-                                  {group.stageName}
-                                </span>
-                              </div>
+                            <div className="sticky left-0 z-[8] grid grid-cols-[120px_1fr_110px_80px_80px] items-center border-b border-slate-200 bg-white text-xs text-slate-700">
                               <button
                                 type="button"
                                 className="truncate px-2 py-2 text-left font-medium text-slate-900 hover:text-blue-700"
@@ -1038,10 +1007,12 @@ export const TaskBoard = ({
                               >
                                 {task.title}
                               </button>
+                              <div className="truncate px-2 py-2 text-slate-500">
+                                {task.description?.trim() || "Sin descripción"}
+                              </div>
                               <div className="truncate px-2 py-2">{task.assigneeName ?? "Sin asignar"}</div>
                               <div className="px-2 py-2">{formatDateShort(task.startDate)}</div>
                               <div className="px-2 py-2">{formatDateShort(task.dueDate)}</div>
-                              <div className="px-2 py-2">{task.status}</div>
                             </div>
 
                             <div
@@ -1166,7 +1137,12 @@ export const TaskBoard = ({
                     </div>
 
                     <div className="flex flex-wrap gap-1 text-[11px]">
-                      <span className={`rounded-lg border px-2 py-1 ${statusTone(task)}`}>{task.status}</span>
+                      <span
+                        className="rounded-lg border px-2 py-1 text-[11px] font-semibold"
+                        style={getTaskStatusBadgeStyle(task.status, taskStatusColors)}
+                      >
+                        {task.status}
+                      </span>
                       <span className={`rounded-lg border px-2 py-1 ${remaining.tone}`}>{remaining.label}</span>
                     </div>
 

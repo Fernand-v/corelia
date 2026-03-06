@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { HomeDashboard, SystemRole, TaskStatus } from "@corelia/types";
+import { getFrontendSettings } from "../../lib/frontend-settings.js";
 import { StatusService } from "../status/service.js";
 import { parseAnnouncementBody } from "../announcements/content.js";
 
@@ -43,9 +44,9 @@ const extractNotificationPath = (body: string): string | null => {
 export class HomeService {
   constructor(private readonly app: FastifyInstance) {}
 
-  private getQuickActions(role: SystemRole): HomeDashboard["quickActions"] {
+  private getQuickActions(role: SystemRole, organizationName: string): HomeDashboard["quickActions"] {
     const base = [
-      { key: "buscar", label: "Buscar en Corelia", path: "/search", intent: "SEARCH" as const }
+      { key: "buscar", label: `Buscar en ${organizationName}`, path: "/search", intent: "SEARCH" as const }
     ];
     const internalGlobal = [
       { key: "directorio", label: "Directorio", path: "/directory", intent: "VIEW" as const },
@@ -933,6 +934,7 @@ export class HomeService {
   private async getExternalGuestBlocks(input: {
     userId: string;
     userEmail: string;
+    organizationName: string;
   }): Promise<Pick<HomeDashboard["blocks"], "sharedResources" | "externalBanner">> {
     const now = new Date();
     const invites = await this.app.prisma.guestInvite.findMany({
@@ -967,7 +969,7 @@ export class HomeService {
     const firstExpiration = invites[0]?.expiresAt;
     const firstContact = invites[0]
       ? `${invites[0].createdBy.firstName} ${invites[0].createdBy.lastName}`.trim()
-      : "soporte Corelia";
+      : `soporte ${input.organizationName}`;
 
     const externalBanner = firstExpiration
       ? `Tu acceso expira el ${firstExpiration.toLocaleDateString("es-ES")}. Contacta a ${firstContact} para extenderlo.`
@@ -986,6 +988,8 @@ export class HomeService {
     teamId?: string;
   }): Promise<HomeDashboard> {
     const now = new Date();
+    const frontendSettings = await getFrontendSettings(this.app.prisma);
+    const organizationName = frontendSettings.organizationName;
     const user = await this.app.prisma.user.findUnique({
       where: {
         id: input.userId
@@ -1049,7 +1053,8 @@ export class HomeService {
     if (input.role === "INVITADO_EXTERNO") {
       const externalBlocks = await this.getExternalGuestBlocks({
         userId: input.userId,
-        userEmail: user.email
+        userEmail: user.email,
+        organizationName
       });
       Object.assign(baseBlocks, externalBlocks);
     }
@@ -1057,11 +1062,11 @@ export class HomeService {
     return {
       generatedAt: now.toISOString(),
       role: input.role,
-      organizationName: process.env.CORELIA_ORG_NAME ?? "Corelia",
+      organizationName,
       activeContext,
       unreadNotificationCount,
       blocks: baseBlocks,
-      quickActions: this.getQuickActions(input.role)
+      quickActions: this.getQuickActions(input.role, organizationName)
     };
   }
 }

@@ -112,7 +112,7 @@ const activatePendingTasksLifecycle = async () => {
       }
     });
 
-    const recipients = new Set<string>(leaders.map((leader) => leader.userId));
+    const recipients = new Set<string>(leaders.map((leader: { userId: string }) => leader.userId));
     if (task.assigneeId) {
       recipients.add(task.assigneeId);
     }

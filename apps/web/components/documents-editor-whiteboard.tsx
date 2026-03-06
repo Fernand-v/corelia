@@ -44,8 +44,18 @@ export const DocumentsEditorWhiteboard = ({
   const yDoc = provider?.document ?? fallbackDocRef.current;
   const yText = useMemo(() => yDoc.getText(`doc:${documentId}:whiteboard`), [documentId, yDoc]);
   const applyingRemoteRef = useRef(false);
+  const readOnlyRef = useRef(readOnly);
   const editorRef = useRef<any>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+  }, [readOnly]);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const [snapshotPayload, setSnapshotPayload] = useState<string>(() => value || yText.toString());
 
@@ -94,9 +104,14 @@ export const DocumentsEditorWhiteboard = ({
               loadSnapshot(editor.store, parsed as any);
             }
 
+            // Populate initial draft so manual save works without drawing
+            const initialSnapshot = getSnapshot(editor.store);
+            const initialPayload = JSON.stringify(initialSnapshot);
+            onChangeRef.current(initialPayload);
+
             unsubscribeRef.current?.();
             unsubscribeRef.current = editor.store.listen(() => {
-              if (readOnly || applyingRemoteRef.current) {
+              if (applyingRemoteRef.current) {
                 return;
               }
 
@@ -104,12 +119,15 @@ export const DocumentsEditorWhiteboard = ({
               const payload = JSON.stringify(snapshot);
 
               setSnapshotPayload(payload);
-              onChange(payload);
+              onChangeRef.current(payload);
 
-              applyingRemoteRef.current = true;
-              yText.delete(0, yText.length);
-              yText.insert(0, payload);
-              applyingRemoteRef.current = false;
+              // Only sync to Y.js when not in readOnly (offline) mode
+              if (!readOnlyRef.current) {
+                applyingRemoteRef.current = true;
+                yText.delete(0, yText.length);
+                yText.insert(0, payload);
+                applyingRemoteRef.current = false;
+              }
             });
           },
           isReadonly: readOnly

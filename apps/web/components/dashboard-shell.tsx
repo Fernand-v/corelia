@@ -7,6 +7,7 @@ import type { SystemRole } from "@corelia/types";
 import type { Route } from "next";
 import { useAuthStore } from "@/lib/api";
 import { useSession, useSessionMembershipSummary } from "@/lib/session";
+import { useFrontendSettings } from "@/lib/frontend-settings";
 import { EntryAnnouncementModal } from "@/components/entry-announcement-modal";
 import { NotificationsBadge } from "@/components/notifications-badge";
 import {
@@ -125,6 +126,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
   const session = useSession();
   const memberships = useSessionMembershipSummary();
+  const { settings: frontendSettings } = useFrontendSettings();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [storedDashboardContext, setStoredDashboardContext] = useState(() =>
     typeof window === "undefined" ? {} : readStoredDashboardContext()
@@ -281,6 +283,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
     dashboardContext.teamId ?? null
   );
   const fullName = `${session.data?.firstName ?? ""} ${session.data?.lastName ?? ""}`.trim();
+  const organizationName = frontendSettings.organizationName;
   const projectCount = memberships.data?.projects.length ?? 0;
   const teamCount = memberships.data?.teams.length ?? 0;
   const topProjects = memberships.data?.projects.slice(0, 2).map((item) => item.name) ?? [];
@@ -300,7 +303,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
       <aside className="hidden lg:flex lg:flex-col border-r border-[rgba(0,0,0,0.07)] bg-sidebar px-3 py-5 backdrop-blur-sidebar">
         <div className="mb-5 px-2 space-y-0.5">
           <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Organización</p>
-          <h1 className="text-lg font-semibold text-slate-900 tracking-tight">Corelia</h1>
+          <h1 className="text-lg font-semibold text-slate-900 tracking-tight">{organizationName}</h1>
           <p className="text-xs text-slate-500">{roleLabel[activeRole]}</p>
         </div>
 
@@ -376,7 +379,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
             <div>
               <p className="text-[11px] text-slate-400 font-medium tracking-wide">Contexto activo</p>
               <p className="text-sm font-semibold text-slate-800 tracking-tight">
-                Corelia · {contextLabel} · {roleLabel[activeRole]}
+                {organizationName} · {contextLabel} · {roleLabel[activeRole]}
               </p>
             </div>
 

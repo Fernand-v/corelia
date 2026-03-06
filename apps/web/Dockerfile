@@ -1,11 +1,17 @@
+# syntax=docker/dockerfile:1.7
+
 FROM node:20-alpine AS base
 ARG PNPM_VERSION=9.12.3
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV PNPM_STORE_DIR=/pnpm/store
 RUN npm config set fetch-retries 8 \
   && npm config set fetch-retry-factor 2 \
   && npm config set fetch-retry-mintimeout 20000 \
   && npm config set fetch-retry-maxtimeout 120000 \
   && npm config set fetch-timeout 600000 \
-  && npm install -g pnpm@${PNPM_VERSION}
+  && corepack enable \
+  && corepack prepare pnpm@${PNPM_VERSION} --activate
 WORKDIR /app
 
 FROM base AS deps
@@ -15,7 +21,8 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/types/package.json packages/types/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/config/package.json packages/config/package.json
-RUN pnpm install --frozen-lockfile --filter @corelia/web...
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+  pnpm install --frozen-lockfile --filter @corelia/web... --store-dir /pnpm/store
 
 FROM deps AS builder
 ARG NEXT_PUBLIC_API_KEY=""
@@ -28,22 +35,16 @@ COPY . .
 RUN node scripts/check-peers-caller-patch.mjs
 RUN pnpm --filter @corelia/types build
 RUN pnpm --filter @corelia/ui build
-RUN pnpm --filter @corelia/web build
+RUN --mount=type=cache,id=next-cache,target=/app/apps/web/.next/cache \
+  pnpm --filter @corelia/web build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=builder /app/apps/web/.next ./apps/web/.next
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
-COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
-COPY --from=builder /app/packages/types/dist ./packages/types/dist
-COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
-COPY --from=builder /app/packages/types/node_modules ./packages/types/node_modules
-COPY --from=builder /app/packages/ui/dist ./packages/ui/dist
-COPY --from=builder /app/packages/ui/package.json ./packages/ui/package.json
-COPY --from=builder /app/packages/ui/node_modules ./packages/ui/node_modules
 WORKDIR /app/apps/web
 EXPOSE 3000
-CMD ["node", "node_modules/next/dist/bin/next", "start"]
+CMD ["node", "server.js"]

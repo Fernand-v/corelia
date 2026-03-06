@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import type { DiagramKind } from "@corelia/types";
 
@@ -50,6 +50,7 @@ const diagramBadgeColor: Record<DiagramKind, string> = {
 
 export const MaxGraphPropertiesPanel = ({
   diagramKind,
+  side = "right",
   readOnly,
   selected,
   onLabelChange,
@@ -65,6 +66,7 @@ export const MaxGraphPropertiesPanel = ({
   onOpenStyleEditor
 }: {
   diagramKind: DiagramKind;
+  side?: "left" | "right";
   readOnly: boolean;
   selected: SelectedCellView;
   onLabelChange: (value: string) => void;
@@ -92,25 +94,20 @@ export const MaxGraphPropertiesPanel = ({
   const fontSize = Number(selected.style.fontSize ?? 13);
   const styleType = String(selected.style.edgeStyle ?? "orthogonalEdgeStyle");
 
-  const counts = useMemo(
-    () => ({
-      cells: selected.diagramInfo?.totalCells ?? 0,
-      vertices: selected.diagramInfo?.totalVertices ?? 0,
-      edges: selected.diagramInfo?.totalEdges ?? 0
-    }),
-    [selected.diagramInfo]
-  );
-
   return (
-    <aside className="flex h-full min-h-[560px] w-full flex-col overflow-hidden border-l border-[#e2e8f2] bg-white xl:w-[280px]">
+    <aside
+      className={`flex h-full min-h-[560px] w-full flex-col overflow-hidden ${
+        side === "left" ? "border-r" : "border-l"
+      } border-[#e2e8f2] bg-white xl:w-[280px]`}
+    >
       <header className="border-b border-[#e2e8f2] p-3">
         <p className="text-[11px] uppercase tracking-wide text-slate-500">Propiedades</p>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold text-slate-800">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <p className="min-w-0 flex-1 text-sm font-semibold text-slate-800">
             {selected.type === "none" ? "Diagrama" : selected.type === "vertex" ? "Nodo" : "Conector"}
           </p>
           <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
+            className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
             style={{ background: diagramBadgeColor[diagramKind] }}
           >
             {diagramKind}
@@ -120,13 +117,9 @@ export const MaxGraphPropertiesPanel = ({
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
         {selected.type === "none" ? (
-          <section className={sectionClass}>
-            <p className={titleClass}>Diagrama</p>
-            <p className="text-xs text-slate-600">Página activa: {selected.diagramInfo?.pageName ?? "N/A"}</p>
-            <p className="text-xs text-slate-600">Elementos: {counts.cells}</p>
-            <p className="text-xs text-slate-600">Nodos: {counts.vertices}</p>
-            <p className="text-xs text-slate-600">Conectores: {counts.edges}</p>
-          </section>
+          <p className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            Selecciona un nodo o un conector para editar sus propiedades.
+          </p>
         ) : (
           <>
             <section className={sectionClass}>

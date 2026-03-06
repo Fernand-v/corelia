@@ -28,6 +28,14 @@ type Member = {
   color: string;
 };
 
+type ActiveCollaborator = {
+  userId: string;
+  name: string;
+  color: string;
+  cursorLabel?: string | null;
+  lastSeenAt?: string;
+};
+
 type MentionSuggestionItem = {
   id: string;
   label: string;
@@ -92,6 +100,31 @@ const normalizeMentionQuery = (value: string) => {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+};
+
+const initialsFromName = (name: string) => {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return "??";
+  }
+  if (parts.length === 1) {
+    return parts[0]!.slice(0, 2).toUpperCase();
+  }
+  return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase();
+};
+
+const formatSeenTime = (value?: string) => {
+  if (!value) {
+    return "activo";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "activo";
+  }
+  return `activo ${date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`;
 };
 
 const buildMentionSuggestion = (items: MentionSuggestionItem[]) => ({
@@ -246,6 +279,7 @@ export const DocumentsEditorText = ({
   provider,
   currentUser,
   members,
+  activeCollaborators,
   onUploadImage,
   onChange
 }: {
@@ -259,6 +293,7 @@ export const DocumentsEditorText = ({
     color: string;
   };
   members?: Member[];
+  activeCollaborators?: ActiveCollaborator[];
   onUploadImage?: (file: File) => Promise<{ url: string } | null>;
   onChange: (value: string) => void;
 }) => {
@@ -273,15 +308,51 @@ export const DocumentsEditorText = ({
   const onChangeRef = useRef(onChange);
   const [uploadingImage, setUploadingImage] = useState(false);
   const memberList = members ?? [];
+  const activeCollaboratorList = activeCollaborators ?? [];
 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  const liveCollaborators = useMemo(() => {
+    const map = new Map<string, ActiveCollaborator>();
+
+    for (const collaborator of activeCollaboratorList) {
+      if (!collaborator.userId || !collaborator.name || map.has(collaborator.userId)) {
+        continue;
+      }
+      map.set(collaborator.userId, collaborator);
+    }
+
+    if (!map.has(currentUser.id)) {
+      map.set(currentUser.id, {
+        userId: currentUser.id,
+        name: currentUser.name,
+        color: currentUser.color,
+        cursorLabel: readOnly ? "viendo" : "editando"
+      });
+    }
+
+    return [...map.values()].sort((left, right) => {
+      if (left.userId === currentUser.id) {
+        return -1;
+      }
+      if (right.userId === currentUser.id) {
+        return 1;
+      }
+      return left.name.localeCompare(right.name, "es");
+    });
+  }, [activeCollaboratorList, currentUser.color, currentUser.id, currentUser.name, readOnly]);
+
   const mentionItems = useMemo(() => {
     const map = new Map<string, MentionSuggestionItem>();
     const sourceMembers: Member[] = [
       ...memberList,
+      ...liveCollaborators.map((collaborator) => ({
+        id: collaborator.userId,
+        name: collaborator.name,
+        color: collaborator.color
+      })),
       {
         id: currentUser.id,
         name: currentUser.name,
@@ -301,7 +372,20 @@ export const DocumentsEditorText = ({
     }
 
     return [...map.values()];
-  }, [currentUser.color, currentUser.id, currentUser.name, memberList]);
+  }, [currentUser.color, currentUser.id, currentUser.name, liveCollaborators, memberList]);
+
+  const liveCollaboratorIds = useMemo(
+    () => new Set(liveCollaborators.map((collaborator) => collaborator.userId)),
+    [liveCollaborators]
+  );
+
+  const mentionDirectory = useMemo(
+    () =>
+      mentionItems.filter(
+        (item) => item.id !== currentUser.id && !liveCollaboratorIds.has(item.id)
+      ),
+    [currentUser.id, liveCollaboratorIds, mentionItems]
+  );
 
   const mentionSuggestion = useMemo(() => buildMentionSuggestion(mentionItems), [mentionItems]);
 
@@ -447,10 +531,33 @@ export const DocumentsEditorText = ({
     }`;
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+    <div className="flex h-full w-full flex-col overflow-hidden">
+      <div className="word-status-bar">
+        <div className="word-avatar-stack">
+          {liveCollaborators.slice(0, 5).map((collaborator) => (
+            <span
+              key={`avatar-${collaborator.userId}`}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
+              style={{ backgroundColor: collaborator.color }}
+              title={`${collaborator.userId === currentUser.id ? "Tú" : collaborator.name} · ${collaborator.cursorLabel ?? formatSeenTime(collaborator.lastSeenAt)}`}
+            >
+              {initialsFromName(collaborator.name)}
+            </span>
+          ))}
+          {liveCollaborators.length > 5 ? (
+            <span className="ml-1 text-slate-500">+{liveCollaborators.length - 5}</span>
+          ) : null}
+        </div>
+        <span className="text-slate-400">{liveCollaborators.length > 1 ? `${liveCollaborators.length} conectados` : ""}</span>
+        <span className="ml-auto">
+          <span className={`rounded-full px-2 py-0.5 font-semibold ${readOnly ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
+            {readOnly ? "Solo lectura" : "Editando"}
+          </span>
+        </span>
+      </div>
 
       {!readOnly && editor ? (
-        <div className="flex flex-wrap items-center gap-1 border-b border-[rgba(0,0,0,0.07)] bg-[#f8f9fa] px-3 py-2">
+        <div className="word-toolbar flex flex-wrap items-center gap-1 px-4 py-1.5">
           {/* Headings */}
           <div className="flex items-center gap-0.5">
             <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={tbBtn(editor.isActive("heading", { level: 1 }))}>H1</button>
@@ -531,6 +638,14 @@ export const DocumentsEditorText = ({
           <div className="flex items-center gap-0.5">
             <button
               type="button"
+              onClick={() => editorChain().insertContent("@").run()}
+              className={tbBtn(false)}
+              title="Mencionar colaborador"
+            >
+              @
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 const link = window.prompt("URL del enlace");
                 if (!link) return;
@@ -586,31 +701,17 @@ export const DocumentsEditorText = ({
             </button>
           </div>
 
-          <div className="ml-auto text-[11px] text-slate-400">{readOnly ? "Solo lectura" : "Editando"}</div>
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-y-auto px-8 py-6">
-        <EditorContent
-          editor={editor}
-          className="prose prose-slate max-w-none min-h-[400px] text-slate-800 focus:outline-none"
-        />
+      <div className="word-workspace flex-1 overflow-y-auto">
+        <div className="word-page">
+          <EditorContent
+            editor={editor}
+            className="prose prose-slate max-w-none text-[15px] leading-7 text-slate-800 focus:outline-none [&_.ProseMirror]:min-h-[400px] md:[&_.ProseMirror]:min-h-[900px] [&_.ProseMirror]:outline-none [&_.collaboration-cursor__label]:rounded [&_.collaboration-cursor__label]:px-1 [&_.collaboration-cursor__label]:py-0.5 [&_.collaboration-cursor__label]:text-[10px] [&_.collaboration-cursor__label]:font-semibold [&_.collaboration-cursor__label]:text-white [&_.collaboration-cursor__caret]:border-l-2 [&_.collaboration-cursor__caret]:border-l-current"
+          />
+        </div>
       </div>
-
-      {memberList.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1.5 border-t border-[rgba(0,0,0,0.06)] bg-[#f8f9fa] px-4 py-2 text-[11px] text-slate-400">
-          <span>Colaboradores:</span>
-          {memberList.slice(0, 8).map((member) => (
-            <span
-              key={member.id}
-              className="inline-flex items-center gap-1 rounded-full border border-[rgba(0,0,0,0.07)] bg-white px-2 py-0.5 shadow-sm"
-            >
-              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: member.color }} />
-              {member.name}
-            </span>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 };

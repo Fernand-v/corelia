@@ -26,3 +26,4 @@ export * from "./audit.js";
 export * from "./status.js";
 export * from "./home.js";
 export * from "./admin.js";
+export * from "./frontend-settings.js";

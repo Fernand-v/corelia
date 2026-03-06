@@ -571,6 +571,7 @@ export const CollaborativeDocumentsModule = ({
           provider={yjsProvider}
           currentUser={currentUser}
           members={members}
+          activeCollaborators={activeDocumentCollaborators}
           {...uploadProps}
           onChange={handleDraftChange}
         />
@@ -592,7 +593,7 @@ export const CollaborativeDocumentsModule = ({
           key={activeDocument.id}
           documentId={activeDocument.id}
           value={activeDraft}
-          readOnly={isProviderOffline}
+          readOnly={false}
           provider={yjsProvider}
           currentUser={currentUser}
           {...diagramProps}
@@ -885,6 +886,11 @@ export const CollaborativeDocumentsModule = ({
                 {saveStatusBadge.label}
               </span>
             ) : null}
+            <span className="rounded-full border border-[rgba(0,0,0,0.09)] bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+              {activeDocumentCollaborators.length > 0
+                ? `${activeDocumentCollaborators.length} colaborando`
+                : "Sin colaboradores en vivo"}
+            </span>
 
             <div className="flex -space-x-2">
               {activeDocumentCollaborators.map((user) => (

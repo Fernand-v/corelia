@@ -189,27 +189,6 @@ export class MessagingService {
       teamId: input.channel.teamId
     });
 
-    const messagePreview = this.formatMessagePreview({
-      kind: input.message.kind,
-      content: input.message.content,
-      attachmentName: input.message.attachments[0]?.originalName ?? null
-    });
-
-    const memberRecipients = input.channel.members
-      .map((member) => member.userId)
-      .filter((userId) => userId !== input.message.authorId);
-
-    await Promise.all(
-      memberRecipients.map((userId) =>
-        createAndDispatchNotification(this.app, {
-          userId,
-          event: "MENSAJE_NUEVO_CANAL",
-          title: "Nuevo mensaje en canal",
-          body: `${input.channel.name}: ${messagePreview}. Ruta: ${deepLink}`
-        })
-      )
-    );
-
     const mentionRecipients = input.mentions.filter((userId) => userId !== input.message.authorId);
 
     if (mentionRecipients.length > 0) {

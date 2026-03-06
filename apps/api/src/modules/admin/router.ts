@@ -13,6 +13,7 @@ const codeCatalogParamsSchema = z.object({
   domain: z.enum(["TASK", "PROJECT", "TEAM", "MEETING", "OBJECTIVE", "DECISION", "IDENTITY", "AUDIT"]),
   id: idSchema
 });
+const FRONTEND_SETTINGS_ENTITY_ID = "33333333-3333-4333-8333-333333333333";
 
 export const adminRouter: FastifyPluginAsync = async (app) => {
   const service = new AdminService(app);
@@ -483,6 +484,80 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         };
 
         return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/frontend-settings",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        return reply.send(await service.getFrontendSettings(request.authUser!.id));
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.patch(
+    "/frontend-settings",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(adminSchemas.adminUpdateFrontendSettingsInputSchema, request.body ?? {});
+        const updated = await service.updateFrontendSettings(request.authUser!.id, payload);
+
+        request.auditEvent = {
+          entityType: "AUTOMATIZACION",
+          entityId: FRONTEND_SETTINGS_ENTITY_ID,
+          action: "ACTUALIZAR",
+          newData: payload as unknown as Record<string, unknown>
+        };
+
+        return reply.send(updated);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/frontend-settings/reset",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        const updated = await service.resetFrontendSettings(request.authUser!.id);
+
+        request.auditEvent = {
+          entityType: "AUTOMATIZACION",
+          entityId: FRONTEND_SETTINGS_ENTITY_ID,
+          action: "ACTUALIZAR",
+          reasonCode: "FRONTEND_SETTINGS_RESET",
+          reason: "Restauración de configuración visual por defecto",
+          newData: {
+            reset: true
+          }
+        };
+
+        return reply.send(updated);
       } catch (error) {
         const status = (error as Error).name === "Forbidden" ? 403 : 400;
         return reply.code(status).send({ message: (error as Error).message });

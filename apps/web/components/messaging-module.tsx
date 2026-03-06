@@ -82,6 +82,7 @@ export type MessagingModuleProps = {
   onSendMessage: (input: { content: string; mentions: string[] }) => void | Promise<void>;
   onSelectConversation: (conversationId: string) => void;
   onUploadFile: (file: File) => void | Promise<void>;
+  onDownloadAttachment?: (attachmentId: string, fileName: string) => void | Promise<void>;
   currentUser: CurrentUser;
   onOpenNewChat?: () => void;
   onStartCall?: () => void;
@@ -236,6 +237,7 @@ export const MessagingModule = ({
   onSendMessage,
   onSelectConversation,
   onUploadFile,
+  onDownloadAttachment,
   currentUser,
   onOpenNewChat,
   onStartCall,
@@ -711,25 +713,14 @@ export const MessagingModule = ({
                                     : "-")}
                               </p>
                               <div className="mt-1 flex gap-2 text-[11px]">
-                                {attachment.previewUrl ? (
-                                  <a
-                                    href={attachment.previewUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#128c7e] hover:underline"
-                                  >
-                                    Previsualizar
-                                  </a>
-                                ) : null}
-                                {attachment.downloadUrl ? (
-                                  <a
-                                    href={attachment.downloadUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                {onDownloadAttachment ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => onDownloadAttachment(attachment.id, attachment.name)}
                                     className="text-[#128c7e] hover:underline"
                                   >
                                     Descargar
-                                  </a>
+                                  </button>
                                 ) : null}
                               </div>
                             </div>

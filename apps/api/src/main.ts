@@ -56,7 +56,8 @@ const ensureSchemaCompatibility = async (
     { table: "MessageAttachment", column: "minioPath" },
     { table: "ProjectDocumentSpace", column: "projectId" },
     { table: "CollaborativeDocument", column: "yDocName" },
-    { table: "CollaborativeDocumentVersion", column: "versionNumber" }
+    { table: "CollaborativeDocumentVersion", column: "versionNumber" },
+    { table: "FrontendSettings", column: "organizationName" }
   ];
 
   for (const check of checks) {

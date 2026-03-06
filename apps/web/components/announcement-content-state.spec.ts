@@ -53,7 +53,8 @@ describe("announcement content state", () => {
 
     expect(candidates).toEqual([
       "http://localhost:4000/api/v1/announcements/assets/content?token=img-1&mode=inline",
-      "/api/v1/announcements/assets/content?token=img-1&mode=inline"
+      "/api/v1/announcements/assets/content?token=img-1&mode=inline",
+      "http://localhost:4000/api/v1/announcements/assets/content?token=img-1&mode=attachment"
     ]);
   });
 });

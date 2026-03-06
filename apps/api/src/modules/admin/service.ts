@@ -3,6 +3,11 @@ import type { Prisma, SystemRole } from "@prisma/client";
 import { getPermissionsForRole } from "../../lib/rbac.js";
 import { hashPassword } from "../../lib/password.js";
 import { createOpaqueToken, hashOpaqueToken } from "../../lib/tokens.js";
+import {
+  getFrontendSettings as getFrontendSettingsConfig,
+  resetFrontendSettings as resetFrontendSettingsConfig,
+  updateFrontendSettings as updateFrontendSettingsConfig
+} from "../../lib/frontend-settings.js";
 import { StatusService } from "../status/service.js";
 import { ProjectTeamSyncService } from "../projects/team-sync-service.js";
 
@@ -2259,6 +2264,31 @@ export class AdminService {
     return this.updateCodeCatalog(actorId, domain, id, { isActive: false });
   }
 
+  async getFrontendSettings(actorId: string) {
+    await this.assertAdmin(actorId);
+    return getFrontendSettingsConfig(this.app.prisma);
+  }
+
+  async updateFrontendSettings(
+    actorId: string,
+    input: {
+      organizationName?: string;
+      taskStatusColors?: {
+        PENDIENTE?: string;
+        EN_REVISION?: string;
+        COMPLETADA?: string;
+      };
+    }
+  ) {
+    await this.assertAdmin(actorId);
+    return updateFrontendSettingsConfig(this.app.prisma, input);
+  }
+
+  async resetFrontendSettings(actorId: string) {
+    await this.assertAdmin(actorId);
+    return resetFrontendSettingsConfig(this.app.prisma);
+  }
+
   async getOverview(
     actorId: string,
     input: {
@@ -2272,7 +2302,10 @@ export class AdminService {
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     const statusService = new StatusService(this.app);
-    const status = await statusService.getSystemStatus();
+    const [status, frontendSettings] = await Promise.all([
+      statusService.getSystemStatus(),
+      getFrontendSettingsConfig(this.app.prisma)
+    ]);
 
     const [
       users,
@@ -2410,7 +2443,7 @@ export class AdminService {
         overdueTasks
       },
       organization: {
-        name: process.env.CORELIA_ORG_NAME ?? "Corelia",
+        name: frontendSettings.organizationName,
         defaultTimezone: process.env.CORELIA_DEFAULT_TIMEZONE ?? "UTC",
         defaultLanguage: process.env.CORELIA_DEFAULT_LANGUAGE ?? "es",
         workingDays: (process.env.CORELIA_DEFAULT_WORK_DAYS ?? "1,2,3,4,5")

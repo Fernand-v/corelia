@@ -1,50 +1,38 @@
-import type { DiagramKind } from "@corelia/types";
-
 import type { GraphToolbarActions, GraphToolbarState } from "@/components/diagram/maxgraph/types";
-
-const TOOLTIP = "rounded bg-slate-900 px-2 py-1 text-[11px] text-white shadow";
 
 const iconButtonClass =
   "inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-sm text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40";
+
+const textButtonClass =
+  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40";
+
+const activeToolClass =
+  "inline-flex h-9 w-9 items-center justify-center rounded-md border border-blue-400 bg-blue-50 text-sm text-blue-700 transition disabled:cursor-not-allowed disabled:opacity-40";
 
 const groupClass = "flex items-center gap-1";
 
 const Divider = () => <div className="h-6 w-px bg-slate-200" />;
 
-const diagramOptions: Array<{ value: DiagramKind; label: string; icon: string }> = [
-  { value: "FLUJO", label: "Flujo", icon: "🔵" },
-  { value: "SECUENCIA", label: "Secuencia", icon: "🟣" },
-  { value: "UML_CLASES", label: "Clases UML", icon: "🟢" },
-  { value: "ENTIDAD_RELACION", label: "Entidad-Relación", icon: "🟠" },
-  { value: "ESTADO", label: "Estado", icon: "🩵" },
-  { value: "ARQUITECTURA", label: "Arquitectura C4", icon: "🔷" },
-  { value: "BPMN", label: "BPMN", icon: "📘" }
-];
-
 export const MaxGraphToolbar = ({
   state,
-  actions,
-  diagramKind,
-  onChangeDiagramKind
+  actions
 }: {
   state: GraphToolbarState;
   actions: GraphToolbarActions;
-  diagramKind: DiagramKind;
-  onChangeDiagramKind: (kind: DiagramKind) => void;
 }) => {
   return (
-    <header className="flex h-[52px] items-center gap-2 overflow-x-auto border-b border-[#e2e8f2] bg-white px-2">
+    <header className="flex min-h-[52px] flex-wrap items-center gap-2 border-b border-[#e2e8f2] bg-white px-2 py-1">
       <div className={groupClass}>
-        <button type="button" className={iconButtonClass} title="Selector (S o Esc)" onClick={() => actions.setTool("select")}>
+        <button type="button" className={state.activeTool === "select" ? activeToolClass : iconButtonClass} title="Selector (S o Esc)" onClick={() => actions.setTool("select")}>
           S
         </button>
-        <button type="button" className={iconButtonClass} title="Pan (H o Espacio)" onClick={() => actions.setTool("pan")}>
+        <button type="button" className={state.activeTool === "pan" ? activeToolClass : iconButtonClass} title="Pan (H o Espacio)" onClick={() => actions.setTool("pan")}>
           ✋
         </button>
-        <button type="button" className={iconButtonClass} title="Conector (C)" onClick={() => actions.setTool("connect")}>
+        <button type="button" className={state.activeTool === "connect" ? activeToolClass : iconButtonClass} title="Conector (C)" onClick={() => actions.setTool("connect")}>
           ↔
         </button>
-        <button type="button" className={iconButtonClass} title="Texto (T)" onClick={() => actions.setTool("text")}>
+        <button type="button" className={state.activeTool === "text" ? activeToolClass : iconButtonClass} title="Texto (T)" onClick={() => actions.setTool("text")}>
           T
         </button>
       </div>
@@ -96,10 +84,10 @@ export const MaxGraphToolbar = ({
           className="h-9 w-16 rounded-md border border-slate-200 px-2 text-xs font-semibold text-slate-700"
           title="Zoom %"
         />
-        <button type="button" className={iconButtonClass} title="Fit page (Ctrl+Shift+H)" onClick={actions.fit}>
+        <button type="button" className={textButtonClass} title="Fit page (Ctrl+Shift+H)" onClick={actions.fit}>
           Fit
         </button>
-        <button type="button" className={iconButtonClass} title="100%" onClick={actions.resetZoom}>
+        <button type="button" className={textButtonClass} title="100%" onClick={actions.resetZoom}>
           100
         </button>
         <button type="button" className={iconButtonClass} title="Modo claro/oscuro" onClick={actions.toggleCanvasMode}>
@@ -120,13 +108,13 @@ export const MaxGraphToolbar = ({
           <option value="lines">Grid líneas</option>
           <option value="none">Grid none</option>
         </select>
-        <button type="button" className={iconButtonClass} title="Toggle guías" onClick={actions.toggleGuides}>
+        <button type="button" className={textButtonClass} title="Toggle guías" onClick={actions.toggleGuides}>
           {state.guidesEnabled ? "Guides✓" : "Guides"}
         </button>
-        <button type="button" className={iconButtonClass} title="Toggle snap" onClick={actions.toggleSnap}>
+        <button type="button" className={textButtonClass} title="Toggle snap" onClick={actions.toggleSnap}>
           {state.snapEnabled ? "Snap✓" : "Snap"}
         </button>
-        <button type="button" className={iconButtonClass} title="Minimap" onClick={actions.toggleMinimap}>
+        <button type="button" className={textButtonClass} title="Minimap" onClick={actions.toggleMinimap}>
           Map
         </button>
         <button type="button" className={iconButtonClass} title="Pantalla completa" onClick={actions.toggleFullscreen}>
@@ -148,40 +136,22 @@ export const MaxGraphToolbar = ({
       <Divider />
 
       <div className={groupClass}>
-        <select
-          value={diagramKind}
-          onChange={(event) => onChangeDiagramKind(event.target.value as DiagramKind)}
-          className="h-9 min-w-[180px] rounded-md border border-slate-200 px-2 text-xs font-semibold text-slate-700"
-          title="Tipo de diagrama"
-          disabled={state.readOnly}
-        >
-          {diagramOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.icon} {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <Divider />
-
-      <div className={groupClass}>
         <button type="button" className={iconButtonClass} title="Plantillas" onClick={actions.openTemplates}>
           🗂
         </button>
         <button type="button" className={iconButtonClass} title="Importar XML" onClick={actions.openImportDialog}>
           ⤓
         </button>
-        <button type="button" className={iconButtonClass} title="Exportar PNG" onClick={actions.exportPng}>
+        <button type="button" className={textButtonClass} title="Exportar PNG" onClick={actions.exportPng}>
           PNG
         </button>
-        <button type="button" className={iconButtonClass} title="Exportar SVG" onClick={actions.exportSvg}>
+        <button type="button" className={textButtonClass} title="Exportar SVG" onClick={actions.exportSvg}>
           SVG
         </button>
-        <button type="button" className={iconButtonClass} title="Exportar XML draw.io" onClick={actions.exportXml}>
+        <button type="button" className={textButtonClass} title="Exportar XML draw.io" onClick={actions.exportXml}>
           XML
         </button>
-        <button type="button" className={iconButtonClass} title="Exportar PDF" onClick={actions.exportPdf}>
+        <button type="button" className={textButtonClass} title="Exportar PDF" onClick={actions.exportPdf}>
           PDF
         </button>
         <button type="button" className={iconButtonClass} title="Compartir link" onClick={actions.copyShareLink}>
@@ -189,9 +159,6 @@ export const MaxGraphToolbar = ({
         </button>
       </div>
 
-      <span className={`${TOOLTIP} ml-auto whitespace-nowrap`}>
-        Tool: {state.activeTool} · {state.zoomPercent}%
-      </span>
     </header>
   );
 };

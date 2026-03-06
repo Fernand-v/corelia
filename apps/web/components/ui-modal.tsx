@@ -40,7 +40,7 @@ export const UiModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4 sm:items-center"
       role="presentation"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -52,7 +52,7 @@ export const UiModal = ({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full ${widthClassName} rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl`}
+        className={`my-auto w-full ${widthClassName} rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl`}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <h3 className="text-base font-semibold text-slate-900">{title}</h3>
@@ -65,7 +65,7 @@ export const UiModal = ({
           </button>
         </div>
         <div className="space-y-4">{children}</div>
-        {footer ? <div className="mt-5 flex justify-end gap-2">{footer}</div> : null}
+        {footer ? <div className="mt-5 flex flex-wrap justify-end gap-2">{footer}</div> : null}
       </div>
     </div>
   );

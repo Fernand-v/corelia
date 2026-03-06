@@ -84,6 +84,7 @@ export type PaletteViewModel = {
 export type PaletteActions = {
   onSearch: (value: string) => void;
   toggleSection: (id: string) => void;
+  selectDiagramKind: (kind: DiagramKind) => void;
   insertShape: (template: ShapeTemplate) => void;
   selectEdgeTemplate: (template: EdgeTemplate) => void;
 };

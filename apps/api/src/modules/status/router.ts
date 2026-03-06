@@ -19,6 +19,19 @@ export const statusRouter: FastifyPluginAsync = async (app) => {
     }
   );
 
+  app.get(
+    "/frontend-settings",
+    {
+      config: {
+        requiresAuth: false,
+        skipMaintenance: true
+      }
+    },
+    async () => {
+      return service.getFrontendSettings();
+    }
+  );
+
   app.put(
     "/maintenance",
     {

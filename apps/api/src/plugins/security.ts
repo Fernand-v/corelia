@@ -71,8 +71,12 @@ export const securityPlugin = fp(async (app) => {
       path === "/" ||
       path === "/status" ||
       path === "/status/" ||
+      path === "/status/frontend-settings" ||
+      path === "/status/frontend-settings/" ||
       path.startsWith("/ws/socket.io") ||
+      path.startsWith("/announcements/assets/content") ||
       path.startsWith("/api/v1/announcements/assets/content") ||
+      path.startsWith("/documents/assets/content") ||
       path.startsWith("/api/v1/documents/assets/content")
     ) {
       return;

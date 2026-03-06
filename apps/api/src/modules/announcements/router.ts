@@ -13,14 +13,17 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
-        requiredPermission: "ANUNCIO_PUBLICAR"
-      }
+        requiredPermission: "ANUNCIO_PUBLICAR",
+      },
     },
     async (request, reply) => {
-      const payload = parseWithSchema(announcementSchemas.createAnnouncementInputSchema, request.body);
+      const payload = parseWithSchema(
+        announcementSchemas.createAnnouncementInputSchema,
+        request.body,
+      );
       const announcement = await service.create({
         ...payload,
-        createdById: request.authUser!.id
+        createdById: request.authUser!.id,
       });
 
       request.auditEvent = {
@@ -29,12 +32,12 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
         action: "CREAR",
         newData: {
           title: announcement.title,
-          expiresAt: announcement.expiresAt
-        }
+          expiresAt: announcement.expiresAt,
+        },
       };
 
       return reply.code(201).send(announcement);
-    }
+    },
   );
 
   app.get(
@@ -42,12 +45,12 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
-        requiredPermission: "USUARIO_LEER"
-      }
+        requiredPermission: "USUARIO_LEER",
+      },
     },
     async (request) => {
       return service.listForUser(request.authUser!.id);
-    }
+    },
   );
 
   app.delete(
@@ -55,13 +58,18 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
-        requiredPermission: "ANUNCIO_PUBLICAR"
-      }
+        requiredPermission: "ANUNCIO_PUBLICAR",
+      },
     },
     async (request, reply) => {
       try {
-        const params = parseWithSchema(announcementSchemas.announcementIdParamSchema, request.params);
-        const deleted = await service.deleteById({ announcementId: params.announcementId });
+        const params = parseWithSchema(
+          announcementSchemas.announcementIdParamSchema,
+          request.params,
+        );
+        const deleted = await service.deleteById({
+          announcementId: params.announcementId,
+        });
 
         request.auditEvent = {
           entityType: "ANUNCIO",
@@ -69,20 +77,22 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
           action: "ELIMINAR",
           previousData: {
             title: deleted.title,
-            expiresAt: deleted.expiresAt
-          }
+            expiresAt: deleted.expiresAt,
+          },
         };
 
         return reply.send({
           id: deleted.id,
-          deleted: true
+          deleted: true,
         });
       } catch (error) {
         const message = (error as Error).message;
-        const statusCode = message.toLowerCase().includes("no encontrado") ? 404 : 400;
+        const statusCode = message.toLowerCase().includes("no encontrado")
+          ? 404
+          : 400;
         return reply.code(statusCode).send({ message });
       }
-    }
+    },
   );
 
   app.post(
@@ -90,64 +100,72 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
-        requiredPermission: "ANUNCIO_PUBLICAR"
-      }
+        requiredPermission: "ANUNCIO_PUBLICAR",
+      },
     },
     async (request, reply) => {
       try {
         const upload = await request.file({
           limits: {
             files: 1,
-            fileSize: 50 * 1024 * 1024
-          }
+            fileSize: 50 * 1024 * 1024,
+          },
         });
 
         if (!upload) {
-          return reply.code(400).send({ message: "No se recibió archivo para subir" });
+          return reply
+            .code(400)
+            .send({ message: "No se recibió archivo para subir" });
         }
 
         const asset = await service.uploadAsset({
           createdById: request.authUser!.id,
           originalName: upload.filename,
           mimeType: upload.mimetype,
-          data: await upload.toBuffer()
+          data: await upload.toBuffer(),
         });
 
         return reply.code(201).send(asset);
       } catch (error) {
         return reply.code(400).send({ message: (error as Error).message });
       }
-    }
+    },
   );
 
   app.get(
     "/assets/content",
     {
       config: {
-        requiresAuth: false
-      }
+        requiresAuth: false,
+      },
     },
     async (request, reply) => {
       try {
         const query = parseWithSchema(
           announcementSchemas.announcementAssetContentQuerySchema,
-          request.query ?? {}
+          request.query ?? {},
         );
         const content = await service.getAssetContent({ token: query.token });
         const encodedFileName = encodeURIComponent(content.fileName);
 
-        reply.header("Content-Type", content.mimeType || "application/octet-stream");
+        reply.header(
+          "Content-Type",
+          content.mimeType || "application/octet-stream",
+        );
         reply.header(
           "Content-Disposition",
-          `${query.mode}; filename*=UTF-8''${encodedFileName}`
+          `${query.mode}; filename*=UTF-8''${encodedFileName}`,
         );
         reply.header("X-Content-Type-Options", "nosniff");
+        reply.header("Cross-Origin-Resource-Policy", "cross-origin");
         return reply.send(content.stream);
       } catch (error) {
         const message = (error as Error).message;
-        const statusCode = message.toLowerCase().includes("not found") ? 404 : 400;
+        const statusCode = message.toLowerCase().includes("not found")
+          ? 404
+          : 400;
         return reply.code(statusCode).send({ message });
       }
-    }
+    },
   );
 };

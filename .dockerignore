@@ -1,0 +1,35 @@
+# VCS
+.git
+.gitignore
+
+# Dependencies and caches
+node_modules
+**/node_modules
+.pnpm-store
+.turbo
+**/.turbo
+**/.cache
+
+# Build artifacts
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+
+# Runtime/temp files
+*.log
+**/*.log
+tmp
+tmp/**
+backups
+backups/**
+
+# Editor/OS
+.idea
+.vscode
+**/.DS_Store
+
+# Local environment files
+.env
+.env.*
+!.env.example

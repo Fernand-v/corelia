@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Task } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
+import { getTaskStatusBadgeStyle, useFrontendSettings } from "@/lib/frontend-settings";
 import { useSession } from "@/lib/session";
 import { allTasksQueryKey, mergeTaskIntoList, taskBoardQueryKey } from "@/components/task-board-state";
 import { TaskAssigneeSelector, type ProjectMemberOption } from "@/components/task-assignee-selector";
@@ -39,6 +40,7 @@ const formatDateTime = (value: string | null) => {
 
 export const TaskManagementBoard = ({ initialProjectId = "" }: { initialProjectId?: string }) => {
   const session = useSession();
+  const { settings: frontendSettings } = useFrontendSettings();
   const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId);
   const [statusFilter, setStatusFilter] = useState("");
@@ -232,7 +234,14 @@ export const TaskManagementBoard = ({ initialProjectId = "" }: { initialProjectI
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{task.title}</p>
                   <p className="text-xs text-slate-600">
-                    Estado: {task.status} · Desde: {formatDateTime(task.startDate)} · Hasta: {formatDateTime(task.dueDate)}
+                    Estado:{" "}
+                    <span
+                      className="inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-semibold"
+                      style={getTaskStatusBadgeStyle(task.status, frontendSettings.taskStatusColors)}
+                    >
+                      {task.status}
+                    </span>{" "}
+                    · Desde: {formatDateTime(task.startDate)} · Hasta: {formatDateTime(task.dueDate)}
                   </p>
                 </div>
                 <Link href={`/tasks/${task.id}` as Route} className="text-xs font-medium text-blue-700 hover:underline">

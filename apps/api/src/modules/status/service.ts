@@ -1,8 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { env } from "../../config/env.js";
+import { getFrontendSettings as getFrontendSettingsConfig } from "../../lib/frontend-settings.js";
 
 export class StatusService {
   constructor(private readonly app: FastifyInstance) {}
+
+  async getFrontendSettings() {
+    return getFrontendSettingsConfig(this.app.prisma);
+  }
 
   async getSystemStatus() {
     const services: Array<{

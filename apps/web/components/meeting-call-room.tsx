@@ -5,6 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@corelia/ui";
 import { useVideoCall, type PeersCaller } from "@sawport/peers-caller";
 import { apiRequest, useAuthStore } from "@/lib/api";
+import {
+  buildParticipantRail,
+  selectGalleryParticipants,
+  selectStageParticipant,
+  type CallVisualParticipant
+} from "@/components/meeting-call-room-state";
 import { getRealtimeBaseUrl, getRealtimePath } from "@/lib/realtime";
 import { useAuthBootstrap, useSession } from "@/lib/session";
 
@@ -44,6 +50,41 @@ type UiParticipant = {
   audioOn: boolean;
   screenSharing: boolean;
   isLocal: boolean;
+  hasLiveVideo: boolean;
+  hasLiveAudio: boolean;
+};
+
+type MeetingTopBarProps = {
+  title: string;
+  startsAtLabel: string;
+  meetingStatusLabel: string;
+  connected: boolean;
+  participantCount: number;
+  connecting: boolean;
+  onReconnect: () => void;
+  onLeave: () => void;
+};
+
+type StageSurfaceProps = {
+  participant: UiParticipant | null;
+  participantName: string | null;
+};
+
+type ParticipantRailProps = {
+  participants: UiParticipant[];
+  memberNameById: Map<string, string>;
+  projectStatusByUserId: Map<string, ProjectMemberStatus>;
+};
+
+type ControlDockProps = {
+  connected: boolean;
+  localAudioOn: boolean;
+  localVideoOn: boolean;
+  localScreenSharing: boolean;
+  onToggleAudio: () => void;
+  onToggleVideo: () => void;
+  onToggleScreenShare: () => void;
+  onLeave: () => void;
 };
 
 const formatDateTime = (value: string) =>
@@ -51,6 +92,25 @@ const formatDateTime = (value: string) =>
     dateStyle: "short",
     timeStyle: "short"
   });
+
+const formatMeetingStatus = (status: MeetingDetails["status"] | undefined) => {
+  if (!status) {
+    return "Conectando";
+  }
+
+  switch (status) {
+    case "PROGRAMADA":
+      return "Programada";
+    case "EN_CURSO":
+      return "En curso";
+    case "FINALIZADA":
+      return "Finalizada";
+    case "CANCELADA":
+      return "Cancelada";
+    default:
+      return status;
+  }
+};
 
 const getInitials = (name: string) => {
   const parts = name
@@ -166,6 +226,207 @@ const StreamAudio = ({
 
   return <audio ref={ref} autoPlay playsInline />;
 };
+
+const MeetingTopBar = ({
+  title,
+  startsAtLabel,
+  meetingStatusLabel,
+  connected,
+  participantCount,
+  connecting,
+  onReconnect,
+  onLeave
+}: MeetingTopBarProps) => (
+  <header className="teams-call-panel flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
+    <div className="min-w-0">
+      <h1 className="truncate text-base font-semibold text-[--teams-call-text] sm:text-lg">{title}</h1>
+      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[--teams-call-muted]">
+        <span>{startsAtLabel}</span>
+        <span className="teams-call-pill">{meetingStatusLabel}</span>
+        <span className={connected ? "teams-call-pill teams-call-pill--success" : "teams-call-pill"}>
+          {connected ? `${participantCount} participante(s)` : "Sin conexión"}
+        </span>
+      </p>
+    </div>
+
+    <div className="flex items-center gap-2">
+      {!connected ? (
+        <Button
+          type="button"
+          className="h-9 rounded-xl bg-[--teams-call-accent] px-3 text-xs text-white hover:bg-[--teams-call-accent-hover]"
+          disabled={connecting}
+          onClick={onReconnect}
+        >
+          {connecting ? "Conectando..." : "Reintentar"}
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        variant="danger"
+        className="h-9 rounded-xl bg-[#c4314b] px-3 text-xs text-white hover:bg-[#b42a43]"
+        onClick={onLeave}
+      >
+        Salir
+      </Button>
+    </div>
+  </header>
+);
+
+const StageSurface = ({ participant, participantName }: StageSurfaceProps) => {
+  if (!participant || !participantName) {
+    return (
+      <div className="teams-call-stage-surface flex min-h-[260px] items-center justify-center text-sm text-[--teams-call-muted] sm:min-h-[380px] xl:min-h-[520px]">
+        Conéctate para iniciar la videollamada.
+      </div>
+    );
+  }
+
+  const canRenderVideo = Boolean(participant.stream && (participant.hasLiveVideo || participant.screenSharing));
+  const header = participant.screenSharing ? "Pantalla compartida" : "Vista principal";
+
+  return (
+    <div className="teams-call-stage-surface">
+      <div className="flex items-center justify-between gap-2 border-b border-[--teams-call-border-soft] px-3 py-2 text-xs text-[--teams-call-muted]">
+        <span>{header}</span>
+        <span className="truncate text-[--teams-call-text]">{participantName}</span>
+      </div>
+      <div className="flex min-h-[240px] items-center justify-center bg-[#11131a] sm:min-h-[360px] xl:min-h-[500px]">
+        {canRenderVideo && participant.stream ? (
+          <StreamVideo
+            stream={participant.stream}
+            muted
+            mirror={participant.isLocal && !participant.screenSharing}
+            className="h-full max-h-[500px] w-full object-contain"
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[--teams-call-accent-soft] text-2xl font-semibold text-white">
+              {getInitials(participantName)}
+            </div>
+            <p className="text-sm text-[--teams-call-muted]">
+              {participant.videoOn ? "Esperando video..." : `${participantName} tiene la cámara apagada`}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ParticipantRail = ({
+  participants,
+  memberNameById,
+  projectStatusByUserId
+}: ParticipantRailProps) => (
+  <aside className="teams-call-panel flex min-h-[260px] flex-col rounded-2xl p-3 sm:min-h-[320px]">
+    <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[--teams-call-muted]">
+      Participantes
+    </h2>
+    {participants.length === 0 ? (
+      <p className="flex-1 rounded-xl border border-dashed border-[--teams-call-border] px-3 py-8 text-center text-sm text-[--teams-call-muted]">
+        Sin participantes conectados.
+      </p>
+    ) : (
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
+        {participants.map((participant) => {
+          const fullName = memberNameById.get(participant.userId) ?? participant.userId;
+          const status = projectStatusByUserId.get(participant.userId);
+          const canRenderVideo = Boolean(
+            participant.stream && (participant.hasLiveVideo || participant.screenSharing)
+          );
+
+          return (
+            <article
+              key={participant.userId}
+              className="rounded-xl border border-[--teams-call-border] bg-[--teams-call-surface-2] p-2"
+            >
+              <div className="relative overflow-hidden rounded-lg border border-[--teams-call-border-soft] bg-[#161a24]">
+                {canRenderVideo && participant.stream ? (
+                  <StreamVideo
+                    stream={participant.stream}
+                    muted
+                    mirror={participant.isLocal && !participant.screenSharing}
+                    className="h-24 w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-24 w-full items-center justify-center bg-[#161a24] text-base font-semibold text-[--teams-call-text]">
+                    {getInitials(fullName)}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-2 space-y-1">
+                <p className="truncate text-sm font-medium text-[--teams-call-text]">
+                  {fullName}
+                  {participant.isLocal ? " (Tú)" : ""}
+                </p>
+                <p className="text-[11px] text-[--teams-call-muted]">
+                  Mic {participant.audioOn ? "on" : "off"} · Cam {participant.videoOn ? "on" : "off"}
+                  {participant.screenSharing ? " · Compartiendo" : ""}
+                </p>
+                {status ? (
+                  <p className="text-[11px] text-[--teams-call-muted]">
+                    {status.availability} · {status.activeTasks}/{status.maxActiveTasks} tareas
+                  </p>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    )}
+  </aside>
+);
+
+const ControlDock = ({
+  connected,
+  localAudioOn,
+  localVideoOn,
+  localScreenSharing,
+  onToggleAudio,
+  onToggleVideo,
+  onToggleScreenShare,
+  onLeave
+}: ControlDockProps) => (
+  <footer className="pointer-events-none fixed inset-x-3 bottom-4 z-40 flex justify-center">
+    <div className="pointer-events-auto flex w-full max-w-[640px] items-center justify-center gap-2 rounded-2xl border border-[--teams-call-border] bg-[--teams-call-panel]/95 px-2 py-2 shadow-[var(--teams-call-shadow-strong)] backdrop-blur-xl sm:gap-3 sm:px-3">
+      <button
+        type="button"
+        className={`teams-call-dock-btn ${localAudioOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
+        disabled={!connected}
+        onClick={onToggleAudio}
+        aria-pressed={localAudioOn}
+      >
+        <span className="teams-call-dock-btn__label">Mic</span>
+        <span className="teams-call-dock-btn__state">{localAudioOn ? "On" : "Off"}</span>
+      </button>
+      <button
+        type="button"
+        className={`teams-call-dock-btn ${localVideoOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
+        disabled={!connected}
+        onClick={onToggleVideo}
+        aria-pressed={localVideoOn}
+      >
+        <span className="teams-call-dock-btn__label">Cam</span>
+        <span className="teams-call-dock-btn__state">{localVideoOn ? "On" : "Off"}</span>
+      </button>
+      <button
+        type="button"
+        className={`teams-call-dock-btn ${localScreenSharing ? "teams-call-dock-btn--accent" : "teams-call-dock-btn--active"}`}
+        disabled={!connected}
+        onClick={onToggleScreenShare}
+        aria-pressed={localScreenSharing}
+      >
+        <span className="teams-call-dock-btn__label">Pantalla</span>
+        <span className="teams-call-dock-btn__state">{localScreenSharing ? "On" : "Off"}</span>
+      </button>
+      <button type="button" className="teams-call-dock-btn teams-call-dock-btn--danger" onClick={onLeave}>
+        <span className="teams-call-dock-btn__label">Salir</span>
+        <span className="teams-call-dock-btn__state">Llamada</span>
+      </button>
+    </div>
+  </footer>
+);
 
 export const MeetingCallRoom = ({
   meetingId,
@@ -449,7 +710,9 @@ export const MeetingCallRoom = ({
           videoOn: participant.videoOn,
           audioOn: participant.audioOn,
           screenSharing: participant.screenSharing,
-          isLocal: false
+          isLocal: false,
+          hasLiveVideo: hasLiveVideoTrack(participant.stream),
+          hasLiveAudio: hasLiveAudioTrack(participant.stream)
         })),
     [libParticipants, me]
   );
@@ -458,8 +721,8 @@ export const MeetingCallRoom = ({
     const activeRemoteUsers = new Set(remoteParticipants.map((participant) => participant.userId));
 
     for (const participant of remoteParticipants) {
-      if (hasLiveAudioTrack(participant.stream)) {
-        lastAudibleRemoteStreamByUserRef.current.set(participant.userId, participant.stream!);
+      if (participant.stream && participant.hasLiveAudio) {
+        lastAudibleRemoteStreamByUserRef.current.set(participant.userId, participant.stream);
       }
 
       if (WEBRTC_DEBUG) {
@@ -471,8 +734,8 @@ export const MeetingCallRoom = ({
           videoOn: participant.videoOn,
           streamAudioTracks: audioTracks,
           streamVideoTracks: videoTracks,
-          liveAudio: hasLiveAudioTrack(participant.stream),
-          liveVideo: hasLiveVideoTrack(participant.stream)
+          liveAudio: participant.hasLiveAudio,
+          liveVideo: participant.hasLiveVideo
         });
       }
     }
@@ -495,7 +758,9 @@ export const MeetingCallRoom = ({
       videoOn: localParticipant.videoOn,
       audioOn: localParticipant.audioOn,
       screenSharing: localParticipant.screenSharing,
-      isLocal: true
+      isLocal: true,
+      hasLiveVideo: hasLiveVideoTrack(localParticipant.stream),
+      hasLiveAudio: hasLiveAudioTrack(localParticipant.stream)
     };
   }, [localParticipant, me]);
 
@@ -508,37 +773,57 @@ export const MeetingCallRoom = ({
     return participants;
   }, [localUiParticipant, remoteParticipants]);
 
-  const screenSharingParticipant = useMemo(
-    () => allParticipants.find((participant) => participant.screenSharing) ?? null,
+  const visualParticipants = useMemo<CallVisualParticipant[]>(
+    () =>
+      allParticipants.map((participant) => ({
+        userId: participant.userId,
+        isLocal: participant.isLocal,
+        screenSharing: participant.screenSharing,
+        hasLiveVideo: participant.hasLiveVideo,
+        hasLiveAudio: participant.hasLiveAudio
+      })),
     [allParticipants]
   );
 
-  const activeStageParticipant = useMemo(() => {
-    if (screenSharingParticipant) {
-      return screenSharingParticipant;
-    }
+  const participantsById = useMemo(
+    () => new Map(allParticipants.map((participant) => [participant.userId, participant])),
+    [allParticipants]
+  );
 
-    const remoteWithVideo = remoteParticipants.find((participant) => hasLiveVideoTrack(participant.stream));
-    if (remoteWithVideo) {
-      return remoteWithVideo;
-    }
+  const activeStageVisual = useMemo(
+    () => selectStageParticipant(visualParticipants),
+    [visualParticipants]
+  );
 
-    const remoteWithAudio = remoteParticipants.find((participant) => hasLiveAudioTrack(participant.stream));
-    if (remoteWithAudio) {
-      return remoteWithAudio;
-    }
+  const activeStageParticipant = useMemo(
+    () => (activeStageVisual ? participantsById.get(activeStageVisual.userId) ?? null : null),
+    [activeStageVisual, participantsById]
+  );
 
-    return localUiParticipant ?? remoteParticipants[0] ?? null;
-  }, [localUiParticipant, remoteParticipants, screenSharingParticipant]);
+  const galleryParticipants = useMemo(
+    () =>
+      selectGalleryParticipants(visualParticipants, activeStageVisual?.userId ?? null, 6)
+        .map((participant) => participantsById.get(participant.userId))
+        .filter((participant): participant is UiParticipant => Boolean(participant)),
+    [activeStageVisual?.userId, participantsById, visualParticipants]
+  );
+
+  const participantRail = useMemo(
+    () =>
+      buildParticipantRail(visualParticipants, activeStageVisual?.userId ?? null)
+        .map((participant) => participantsById.get(participant.userId))
+        .filter((participant): participant is UiParticipant => Boolean(participant)),
+    [activeStageVisual?.userId, participantsById, visualParticipants]
+  );
 
   const remoteAudioSinks = useMemo(
     () =>
       remoteParticipants
         .map((participant) => {
-          if (hasLiveAudioTrack(participant.stream)) {
+          if (participant.stream && participant.hasLiveAudio) {
             return {
               userId: participant.userId,
-              stream: participant.stream!
+              stream: participant.stream
             };
           }
 
@@ -609,30 +894,37 @@ export const MeetingCallRoom = ({
 
     logWebRtcDebug("stage-selection", {
       stageUserId: activeStageParticipant?.userId ?? null,
-      hasScreenShare: Boolean(screenSharingParticipant),
       remoteCount: remoteParticipants.length,
       sinkCount: remoteAudioSinks.length
     });
-  }, [activeStageParticipant, remoteAudioSinks.length, remoteParticipants.length, screenSharingParticipant]);
+  }, [activeStageParticipant?.userId, remoteAudioSinks.length, remoteParticipants.length]);
 
   const localAudioOn = localUiParticipant?.audioOn ?? false;
   const localVideoOn = localUiParticipant?.videoOn ?? false;
   const localScreenSharing = localUiParticipant?.screenSharing ?? false;
+  const activeStageName = activeStageParticipant
+    ? memberNameById.get(activeStageParticipant.userId) ?? activeStageParticipant.userId
+    : null;
 
   if (!hydrated) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-100">
-        <p className="text-sm">Cargando llamada...</p>
+      <main className="teams-call flex min-h-screen items-center justify-center px-4 text-[--teams-call-text]">
+        <p className="text-sm text-[--teams-call-muted]">Cargando llamada...</p>
       </main>
     );
   }
 
   if (!token) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-100">
-        <div className="max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 text-center">
-          <p className="text-sm">Sesión no válida. Inicia sesión de nuevo para entrar a la llamada.</p>
-          <Button className="mt-3 h-9 px-3 text-xs" onClick={() => (window.location.href = "/login")}>
+      <main className="teams-call flex min-h-screen items-center justify-center px-4">
+        <div className="teams-call-panel max-w-md rounded-2xl p-5 text-center">
+          <p className="text-sm text-[--teams-call-text]">
+            Sesión no válida. Inicia sesión de nuevo para entrar a la llamada.
+          </p>
+          <Button
+            className="mt-3 h-9 rounded-xl bg-[--teams-call-accent] px-3 text-xs text-white hover:bg-[--teams-call-accent-hover]"
+            onClick={() => (window.location.href = "/login")}
+          >
             Ir a login
           </Button>
         </div>
@@ -641,54 +933,48 @@ export const MeetingCallRoom = ({
   }
 
   const title = meetingQuery.data?.title ?? `Reunión ${meetingId.slice(0, 8)}`;
-  const activeStageName = activeStageParticipant
-    ? memberNameById.get(activeStageParticipant.userId) ?? activeStageParticipant.userId
-    : null;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900/90 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1700px] flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold text-white">{title}</h1>
-            <p className="text-xs text-slate-300">
-              {meetingQuery.data ? formatDateTime(meetingQuery.data.startsAt) : "Conectando..."} ·{" "}
-              {isConnected ? `${allParticipants.length} participante(s) conectados` : "Sin conexión activa"}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {!connected ? (
-              <Button className="h-9 px-3 text-xs" disabled={connecting} onClick={() => void handleJoinCall()}>
-                {connecting ? "Conectando..." : "Reintentar conexión"}
-              </Button>
+    <main className="teams-call min-h-screen px-3 py-3 text-[--teams-call-text] sm:px-4 lg:px-5">
+      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1820px] flex-col pb-28">
+        <MeetingTopBar
+          title={title}
+          startsAtLabel={meetingQuery.data ? formatDateTime(meetingQuery.data.startsAt) : "Conectando..."}
+          meetingStatusLabel={formatMeetingStatus(meetingQuery.data?.status)}
+          connected={connected}
+          participantCount={allParticipants.length}
+          connecting={connecting}
+          onReconnect={() => void handleJoinCall()}
+          onLeave={() => void handleLeaveCall()}
+        />
+
+        <div className="mt-3 grid flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <section className="teams-call-panel flex min-h-[420px] flex-col gap-3 rounded-2xl p-3 sm:p-4">
+            {callError ? (
+              <p className="rounded-xl border border-[#6f2a35] bg-[#4b1f29] px-3 py-2 text-sm text-[#ffd9df]">
+                {callError}
+              </p>
             ) : null}
-            <Button type="button" variant="danger" className="h-9 px-3 text-xs" onClick={() => void handleLeaveCall()}>
-              Salir de llamada
-            </Button>
-          </div>
-        </div>
-      </header>
+            {callWarning ? (
+              <p className="rounded-xl border border-[#7d6835] bg-[#463b1d] px-3 py-2 text-sm text-[#f7e8b0]">
+                {callWarning}
+              </p>
+            ) : null}
+            {audioPlaybackBlocked ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#3c4f7a] bg-[#1c263b] px-3 py-2">
+                <p className="text-xs text-[#c9d5ff]">
+                  El navegador bloqueó audio remoto. Presiona para activarlo.
+                </p>
+                <Button
+                  type="button"
+                  className="h-8 rounded-lg bg-[--teams-call-accent] px-3 text-xs text-white hover:bg-[--teams-call-accent-hover]"
+                  onClick={handleUnlockAudioPlayback}
+                >
+                  Activar audio
+                </Button>
+              </div>
+            ) : null}
 
-      <div className="mx-auto grid w-full max-w-[1700px] gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-24 shadow-xl sm:pb-4">
-          {callError ? (
-            <p className="mb-3 rounded-lg border border-red-300 bg-red-100 px-3 py-2 text-sm text-red-900">{callError}</p>
-          ) : null}
-          {callWarning ? (
-            <p className="mb-3 rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-sm text-amber-900">
-              {callWarning}
-            </p>
-          ) : null}
-          {audioPlaybackBlocked ? (
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-blue-300 bg-blue-100 px-3 py-2">
-              <p className="text-xs text-blue-900">El navegador bloqueó audio remoto. Presiona para activarlo.</p>
-              <Button type="button" className="h-8 bg-blue-700 px-3 text-xs text-white hover:bg-blue-600" onClick={handleUnlockAudioPlayback}>
-                Activar audio
-              </Button>
-            </div>
-          ) : null}
-
-          <div className="grid h-full gap-4">
             <div className="hidden">
               {remoteAudioSinks.map((sink) => (
                 <StreamAudio
@@ -700,145 +986,75 @@ export const MeetingCallRoom = ({
                 />
               ))}
             </div>
-            <div className="rounded-2xl border border-slate-700 bg-black p-3">
-              {activeStageParticipant ? (
-                <>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
-                    {screenSharingParticipant ? "Pantalla compartida" : "Vista principal"} · {activeStageName}
-                  </p>
-                  {activeStageParticipant.stream ? (
-                    <StreamVideo
-                      stream={activeStageParticipant.stream}
-                      muted
-                      mirror={activeStageParticipant.isLocal && !activeStageParticipant.screenSharing}
-                      className="h-[220px] w-full rounded-xl border border-slate-700 bg-slate-950 object-cover sm:h-[360px] lg:h-[460px]"
-                    />
-                  ) : (
-                    <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 px-4 text-center sm:h-[360px] lg:h-[460px]">
-                      <p className="text-sm text-slate-300">
-                        {activeStageParticipant.videoOn
-                          ? "Esperando stream de video..."
-                          : `${activeStageName} tiene la cámara apagada`}
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 px-4 text-center sm:h-[360px] lg:h-[460px]">
-                  <p className="text-sm text-slate-400">Conéctate para iniciar la videollamada.</p>
-                </div>
-              )}
-            </div>
-          </div>
 
-          <footer className="fixed inset-x-3 bottom-3 z-30 rounded-2xl border border-slate-700 bg-slate-950/95 px-3 py-2 backdrop-blur sm:static sm:inset-auto sm:bottom-auto sm:z-auto sm:mt-4 sm:rounded-full sm:bg-slate-950/90">
-            <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-center">
-              <Button
-                type="button"
-                className={`h-9 min-w-0 rounded-xl px-2 text-[11px] font-semibold text-white sm:h-10 sm:rounded-full sm:px-4 sm:text-xs ${
-                  localAudioOn ? "bg-slate-700 hover:bg-slate-600" : "bg-red-600 hover:bg-red-500"
-                }`}
-                onClick={() => toggleAudio(!localAudioOn)}
-                disabled={!connected}
-              >
-                {localAudioOn ? "Silenciar" : "Mic on"}
-              </Button>
-              <Button
-                type="button"
-                className={`h-9 min-w-0 rounded-xl px-2 text-[11px] font-semibold text-white sm:h-10 sm:rounded-full sm:px-4 sm:text-xs ${
-                  localVideoOn ? "bg-slate-700 hover:bg-slate-600" : "bg-amber-600 hover:bg-amber-500"
-                }`}
-                onClick={() => toggleVideo(!localVideoOn)}
-                disabled={!connected}
-              >
-                {localVideoOn ? "Cam off" : "Cam on"}
-              </Button>
-              <Button
-                type="button"
-                className={`h-9 min-w-0 rounded-xl px-2 text-[11px] font-semibold text-white sm:h-10 sm:rounded-full sm:px-4 sm:text-xs ${
-                  localScreenSharing ? "bg-indigo-600 hover:bg-indigo-500" : "bg-slate-700 hover:bg-slate-600"
-                }`}
-                onClick={() => {
-                  if (localScreenSharing) {
-                    void stopScreenShare();
-                    return;
-                  }
-                  void startScreenShare().catch((shareError) => {
-                    const message =
-                      shareError instanceof Error
-                        ? shareError.message
-                        : "No se pudo iniciar la pantalla compartida.";
-                    setCallWarning(message);
-                  });
-                }}
-                disabled={!connected}
-              >
-                {localScreenSharing ? "Pantalla off" : "Compartir"}
-              </Button>
-              <Button
-                type="button"
-                className="h-9 min-w-0 rounded-xl bg-slate-700 px-2 text-[11px] font-semibold text-white hover:bg-slate-600 sm:h-10 sm:rounded-full sm:px-4 sm:text-xs"
-                onClick={() => toggleAudio(localAudioOn)}
-                disabled
-              >
-                Hablando
-              </Button>
-            </div>
-          </footer>
-        </section>
+            <StageSurface participant={activeStageParticipant} participantName={activeStageName} />
 
-        <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-3">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-200">Participantes</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            {allParticipants.map((participant) => {
-              const fullName = memberNameById.get(participant.userId) ?? participant.userId;
-              const status = projectStatusByUserId.get(participant.userId);
-              const hasVideo = hasLiveVideoTrack(participant.stream);
+            {galleryParticipants.length > 0 ? (
+              <div className="teams-call-gallery">
+                {galleryParticipants.map((participant) => {
+                  const fullName = memberNameById.get(participant.userId) ?? participant.userId;
+                  const canRenderVideo = Boolean(
+                    participant.stream && (participant.hasLiveVideo || participant.screenSharing)
+                  );
 
-              return (
-                <article key={participant.userId} className="rounded-xl border border-slate-700 bg-slate-800/60 p-2">
-                  <div className="relative overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
-                    {participant.stream && hasVideo ? (
-                      <StreamVideo
-                        stream={participant.stream}
-                        muted
-                        mirror={participant.isLocal && !participant.screenSharing}
-                        className="h-28 w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-28 w-full items-center justify-center bg-slate-950 text-lg font-semibold text-slate-200">
-                        {getInitials(fullName)}
+                  return (
+                    <article
+                      key={participant.userId}
+                      className="teams-call-gallery-tile rounded-xl border border-[--teams-call-border] bg-[--teams-call-surface-2] p-2"
+                    >
+                      <div className="overflow-hidden rounded-lg border border-[--teams-call-border-soft] bg-[#121621]">
+                        {canRenderVideo && participant.stream ? (
+                          <StreamVideo
+                            stream={participant.stream}
+                            muted
+                            mirror={participant.isLocal && !participant.screenSharing}
+                            className="h-20 w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-20 w-full items-center justify-center bg-[#121621] text-sm font-semibold text-[--teams-call-text]">
+                            {getInitials(fullName)}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm font-semibold text-white">
-                      {fullName}
-                      {participant.isLocal ? " (Tú)" : ""}
-                    </p>
-                    <p className="text-xs text-slate-300">
-                      Mic {participant.audioOn ? "on" : "off"} · Cam {participant.videoOn ? "on" : "off"}
-                      {participant.screenSharing ? " · Compartiendo" : ""}
-                    </p>
-                    {status ? (
-                      <p className="text-xs text-slate-400">
-                        {status.availability} · {status.activeTasks}/{status.maxActiveTasks} tareas
+                      <p className="mt-2 truncate text-xs text-[--teams-call-muted]">
+                        {fullName}
+                        {participant.isLocal ? " (Tú)" : ""}
                       </p>
-                    ) : null}
-                  </div>
-                </article>
-              );
-            })}
-
-            {allParticipants.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-slate-700 px-3 py-6 text-center text-sm text-slate-400">
-                Sin participantes conectados.
-              </p>
+                    </article>
+                  );
+                })}
+              </div>
             ) : null}
-          </div>
-        </aside>
+          </section>
+
+          <ParticipantRail
+            participants={participantRail}
+            memberNameById={memberNameById}
+            projectStatusByUserId={projectStatusByUserId}
+          />
+        </div>
       </div>
+
+      <ControlDock
+        connected={connected}
+        localAudioOn={localAudioOn}
+        localVideoOn={localVideoOn}
+        localScreenSharing={localScreenSharing}
+        onToggleAudio={() => toggleAudio(!localAudioOn)}
+        onToggleVideo={() => toggleVideo(!localVideoOn)}
+        onToggleScreenShare={() => {
+          if (localScreenSharing) {
+            void stopScreenShare();
+            return;
+          }
+          void startScreenShare().catch((shareError) => {
+            const message =
+              shareError instanceof Error ? shareError.message : "No se pudo iniciar la pantalla compartida.";
+            setCallWarning(message);
+          });
+        }}
+        onLeave={() => void handleLeaveCall()}
+      />
     </main>
   );
 };

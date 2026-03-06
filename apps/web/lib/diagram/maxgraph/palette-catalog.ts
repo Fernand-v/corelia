@@ -344,3 +344,14 @@ export const getPaletteForKind = (
       edges: (library.edges ?? []).filter((edge) => includesKind(kind, edge.diagramKinds))
     }))
     .filter((library) => library.shapes.length > 0 || (library.edges?.length ?? 0) > 0);
+
+export const getPaletteForAllKinds = (
+  remoteLibraries: ShapeLibrary[] = []
+): ShapeLibrary[] =>
+  [...BUILTIN_LIBRARIES, ...remoteLibraries]
+    .map((library) => ({
+      ...library,
+      shapes: [...library.shapes],
+      edges: [...(library.edges ?? [])]
+    }))
+    .filter((library) => library.shapes.length > 0 || (library.edges?.length ?? 0) > 0);

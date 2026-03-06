@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { apiRequest, useAuthStore } from "@/lib/api";
+import { useFrontendSettings } from "@/lib/frontend-settings";
 
 type LoginInput = {
   email: string;
@@ -18,6 +19,7 @@ type LoginInput = {
 export const LoginForm = () => {
   const router = useRouter();
   const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  const { settings: frontendSettings } = useFrontendSettings();
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginInput>({
@@ -44,7 +46,9 @@ export const LoginForm = () => {
     <Card className="mx-auto w-full max-w-sm space-y-5 p-7 shadow-dropdown">
       <header className="space-y-1 text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Iniciar sesión</h1>
-        <p className="text-sm text-slate-500">Accede a Corelia con tu cuenta corporativa</p>
+        <p className="text-sm text-slate-500">
+          Accede a {frontendSettings.organizationName} con tu cuenta corporativa
+        </p>
       </header>
 
       <form

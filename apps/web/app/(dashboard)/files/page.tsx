@@ -14,7 +14,7 @@ export default function FilesPage({
     return (
       <ProjectContextRequired
         sectionLabel="Archivos"
-        description="Los recursos documentales de Corelia se exploran dentro del proyecto activo."
+        description="Los recursos documentales se exploran dentro del proyecto activo."
       />
     );
   }

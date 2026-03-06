@@ -3,7 +3,7 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Corelia",
+  title: "Intranet colaborativa",
   description: "Intranet colaborativa empresarial",
   icons: {
     icon: "/icon.svg",

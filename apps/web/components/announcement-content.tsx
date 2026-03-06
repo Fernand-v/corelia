@@ -5,70 +5,72 @@ import type { AnnouncementContentBlock } from "@corelia/types";
 import { getApiBaseUrl } from "@/lib/api";
 import {
   resolveAnnouncementImageCandidates,
-  resolveAnnouncementUrl
+  resolveAnnouncementUrl,
 } from "@/components/announcement-content-state";
 
 const AnnouncementImage = ({
   candidates,
-  alt
+  alt,
 }: {
   candidates: string[];
   alt: string;
 }) => {
   const candidatesKey = candidates.join("||");
   const [candidateIndex, setCandidateIndex] = useState(0);
-  const [showLinkFallback, setShowLinkFallback] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     setCandidateIndex(0);
-    setShowLinkFallback(false);
+    setFailed(false);
   }, [candidatesKey]);
 
   const currentUrl = candidates[candidateIndex] ?? null;
 
-  if (!currentUrl || showLinkFallback) {
-    const link = currentUrl ?? candidates[0] ?? null;
-    if (!link) {
-      return null;
-    }
-
-    return (
-      <a
-        href={link}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-      >
-        Abrir imagen
-      </a>
-    );
-  }
-
   return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={currentUrl}
-        alt={alt}
-        className="max-h-96 w-full rounded-xl border border-slate-200 object-contain"
-        onError={() => {
-          setCandidateIndex((current) => {
-            if (current + 1 < candidates.length) {
-              return current + 1;
-            }
-            setShowLinkFallback(true);
-            return current;
-          });
-        }}
-      />
-    </>
+    <div
+      className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100"
+      style={{ minHeight: "160px" }}
+    >
+      {!currentUrl || failed ? (
+        <div className="flex h-40 w-full items-center justify-center gap-2 text-slate-400">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="h-6 w-6"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+          <span className="text-xs">Imagen no disponible</span>
+        </div>
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={currentUrl}
+          alt={alt}
+          className="max-h-96 w-full object-contain"
+          onError={() => {
+            setCandidateIndex((current) => {
+              if (current + 1 < candidates.length) {
+                return current + 1;
+              }
+              setFailed(true);
+              return current;
+            });
+          }}
+        />
+      )}
+    </div>
   );
 };
 
 export const AnnouncementContent = ({
   blocks,
   fallbackBody,
-  compact = false
+  compact = false,
 }: {
   blocks?: AnnouncementContentBlock[] | undefined;
   fallbackBody?: string;
@@ -80,7 +82,15 @@ export const AnnouncementContent = ({
     if (!fallbackBody) {
       return null;
     }
-    return <p className={compact ? "text-sm text-slate-700" : "text-sm text-slate-700"}>{fallbackBody}</p>;
+    return (
+      <p
+        className={
+          compact ? "text-sm text-slate-700" : "text-sm text-slate-700"
+        }
+      >
+        {fallbackBody}
+      </p>
+    );
   }
 
   return (
@@ -88,7 +98,10 @@ export const AnnouncementContent = ({
       {blocks.map((block, index) => {
         if (block.type === "TITLE") {
           return (
-            <h3 key={`block-${index}`} className="text-xl font-bold text-slate-900">
+            <h3
+              key={`block-${index}`}
+              className="text-xl font-bold text-slate-900"
+            >
               {block.text}
             </h3>
           );
@@ -96,7 +109,10 @@ export const AnnouncementContent = ({
 
         if (block.type === "SUBTITLE") {
           return (
-            <h4 key={`block-${index}`} className="text-base font-semibold text-slate-800">
+            <h4
+              key={`block-${index}`}
+              className="text-base font-semibold text-slate-800"
+            >
               {block.text}
             </h4>
           );
@@ -104,7 +120,10 @@ export const AnnouncementContent = ({
 
         if (block.type === "TEXT") {
           return (
-            <p key={`block-${index}`} className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+            <p
+              key={`block-${index}`}
+              className="whitespace-pre-wrap text-sm leading-6 text-slate-700"
+            >
               {block.text}
             </p>
           );
@@ -113,7 +132,7 @@ export const AnnouncementContent = ({
         if (block.type === "IMAGE") {
           const candidates = resolveAnnouncementImageCandidates({
             value: block.url,
-            apiBase
+            apiBase,
           });
           if (candidates.length === 0) {
             return null;
@@ -121,8 +140,15 @@ export const AnnouncementContent = ({
 
           return (
             <figure key={`block-${index}`} className="space-y-1">
-              <AnnouncementImage candidates={candidates} alt={block.alt || "Imagen del anuncio"} />
-              {block.alt ? <figcaption className="text-xs text-slate-500">{block.alt}</figcaption> : null}
+              <AnnouncementImage
+                candidates={candidates}
+                alt={block.alt || "Imagen del anuncio"}
+              />
+              {block.alt ? (
+                <figcaption className="text-xs text-slate-500">
+                  {block.alt}
+                </figcaption>
+              ) : null}
             </figure>
           );
         }
@@ -131,7 +157,7 @@ export const AnnouncementContent = ({
           const resolvedUrl = resolveAnnouncementUrl({
             value: block.url,
             apiBase,
-            kind: "FILE"
+            kind: "FILE",
           });
           if (!resolvedUrl) {
             return null;

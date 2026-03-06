@@ -12,6 +12,61 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+const FORMULA_FUNCTIONS: { name: string; description: string }[] = (() => {
+  const descriptions: Record<string, string> = {
+    SUM: "Suma un rango de celdas",
+    AVERAGE: "Promedio de un rango",
+    COUNT: "Cuenta celdas con números",
+    COUNTA: "Cuenta celdas no vacías",
+    COUNTBLANK: "Cuenta celdas vacías",
+    MAX: "Valor máximo",
+    MIN: "Valor mínimo",
+    IF: "Condicional: SI(condición, verdadero, falso)",
+    AND: "Verdadero si todos los argumentos son verdaderos",
+    OR: "Verdadero si algún argumento es verdadero",
+    NOT: "Invierte un valor lógico",
+    CONCATENATE: "Une textos",
+    LEFT: "Primeros N caracteres",
+    RIGHT: "Últimos N caracteres",
+    MID: "Subcadena desde posición",
+    LEN: "Longitud de texto",
+    TRIM: "Elimina espacios extra",
+    UPPER: "Convierte a mayúsculas",
+    LOWER: "Convierte a minúsculas",
+    ROUND: "Redondea a N decimales",
+    ROUNDUP: "Redondea hacia arriba",
+    ROUNDDOWN: "Redondea hacia abajo",
+    ABS: "Valor absoluto",
+    POWER: "Potencia: POWER(base, exp)",
+    SQRT: "Raíz cuadrada",
+    TODAY: "Fecha de hoy",
+    NOW: "Fecha y hora actual",
+    VLOOKUP: "Búsqueda vertical",
+    HLOOKUP: "Búsqueda horizontal",
+    INDEX: "Valor en posición de rango",
+    MATCH: "Posición de un valor en rango",
+    SUMIF: "Suma condicional",
+    COUNTIF: "Cuenta condicional",
+    AVERAGEIF: "Promedio condicional",
+    MEDIAN: "Mediana de un rango",
+    PRODUCT: "Producto de un rango",
+    MOD: "Resto de división",
+    INT: "Parte entera"
+  };
+
+  try {
+    const registered = HyperFormula.getRegisteredFunctionNames("enGB");
+    return registered
+      .filter((name) => name in descriptions)
+      .sort()
+      .map((name) => ({ name, description: descriptions[name] as string }));
+  } catch {
+    return Object.entries(descriptions)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, description]) => ({ name, description }));
+  }
+})();
+
 type TableState = {
   columns: string[];
   rows: Array<Record<string, string>>;
@@ -168,6 +223,9 @@ export const DocumentsEditorTable = ({
   const [tableState, setTableState] = useState<TableState>(() => parseTable(value || yLegacyText.toString()));
   const [selectedCell, setSelectedCell] = useState<{ rowIndex: number; column: string } | null>(null);
   const [remoteSelections, setRemoteSelections] = useState<RemoteCellSelection[]>([]);
+  const [formulaQuery, setFormulaQuery] = useState<string | null>(null);
+  const [formulaDropdownIndex, setFormulaDropdownIndex] = useState(0);
+  const formulaBarRef = useRef<HTMLInputElement>(null);
 
   const lastSerializedRef = useRef("");
   const lastNotifiedRef = useRef("");
@@ -360,7 +418,27 @@ export const DocumentsEditorTable = ({
   );
 
   const columnDefs = useMemo<ColDef[]>(() => {
-    return tableState.columns.map((column, columnIndex) => ({
+    const rowNumberCol: ColDef = {
+      headerName: "",
+      width: 50,
+      maxWidth: 50,
+      pinned: "left",
+      editable: false,
+      sortable: false,
+      resizable: false,
+      suppressMovable: true,
+      lockPosition: true,
+      valueGetter: (params) => (params.node?.rowIndex ?? 0) + 1,
+      cellStyle: {
+        backgroundColor: "#f0f0f0",
+        textAlign: "center",
+        color: "#6b7280",
+        fontSize: "11px",
+        fontWeight: "600",
+        borderRight: "1px solid #d1d5db"
+      }
+    };
+    return [rowNumberCol, ...tableState.columns.map<ColDef>((column, columnIndex) => ({
       field: column,
       headerName: column,
       editable: !readOnly,
@@ -415,7 +493,7 @@ export const DocumentsEditorTable = ({
         const remoteSelection = remoteCellMap.get(`${rowIndex}:${column}`);
         return remoteSelection ? `${remoteSelection.name} está editando esta celda` : undefined;
       }
-    }));
+    }))];
   }, [computedMatrix, readOnly, remoteCellMap, tableState.columns, updateCellRawValue]);
 
   const selectedCellValue = useMemo(() => {
@@ -502,6 +580,73 @@ export const DocumentsEditorTable = ({
     URL.revokeObjectURL(url);
   }, [documentId, tableState]);
 
+  const formulaSuggestions = useMemo(() => {
+    if (formulaQuery === null || formulaQuery === "") return [];
+    const upper = formulaQuery.toUpperCase();
+    return FORMULA_FUNCTIONS.filter((f) => f.name.startsWith(upper)).slice(0, 8);
+  }, [formulaQuery]);
+
+  const handleFormulaBarChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!selectedCell) return;
+      const val = event.target.value;
+      updateCellRawValue(selectedCell.rowIndex, selectedCell.column, val);
+
+      if (val.startsWith("=")) {
+        const match = val.match(/[A-Za-z][A-Za-z0-9]*$/);
+        if (match) {
+          setFormulaQuery(match[0]);
+          setFormulaDropdownIndex(0);
+        } else {
+          setFormulaQuery(null);
+        }
+      } else {
+        setFormulaQuery(null);
+      }
+    },
+    [selectedCell, updateCellRawValue]
+  );
+
+  const insertFormula = useCallback(
+    (funcName: string) => {
+      if (!selectedCell || !formulaBarRef.current) return;
+      const currentVal = selectedCellValue;
+      const match = currentVal.match(/[A-Za-z][A-Za-z0-9]*$/);
+      if (!match) return;
+      const before = currentVal.slice(0, match.index);
+      const newVal = before + funcName + "(";
+      updateCellRawValue(selectedCell.rowIndex, selectedCell.column, newVal);
+      setFormulaQuery(null);
+      requestAnimationFrame(() => {
+        if (formulaBarRef.current) {
+          formulaBarRef.current.focus();
+          formulaBarRef.current.setSelectionRange(newVal.length, newVal.length);
+        }
+      });
+    },
+    [selectedCell, selectedCellValue, updateCellRawValue]
+  );
+
+  const handleFormulaBarKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (formulaSuggestions.length === 0) return;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setFormulaDropdownIndex((i) => Math.min(i + 1, formulaSuggestions.length - 1));
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setFormulaDropdownIndex((i) => Math.max(i - 1, 0));
+      } else if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        const selected = formulaSuggestions[formulaDropdownIndex];
+        if (selected) insertFormula(selected.name);
+      } else if (event.key === "Escape") {
+        setFormulaQuery(null);
+      }
+    },
+    [formulaDropdownIndex, formulaSuggestions, insertFormula]
+  );
+
   const tbBtn = (disabled = false) =>
     `inline-flex h-7 items-center gap-1 rounded-lg border px-2.5 text-xs font-semibold transition-colors active:scale-95 ${
       disabled
@@ -567,23 +712,43 @@ export const DocumentsEditorTable = ({
       </div>
 
       {/* Formula bar */}
-      <div className="flex items-center gap-2 border-b border-[rgba(0,0,0,0.06)] bg-white px-3 py-1.5">
+      <div className="relative flex items-center gap-2 border-b border-[rgba(0,0,0,0.06)] bg-white px-3 py-1.5">
         <span className="shrink-0 rounded bg-[#f0f4f9] px-2 py-1 text-[11px] font-semibold text-slate-500 min-w-[4rem] text-center">
           {selectedCell ? `${selectedCell.column}${selectedCell.rowIndex + 1}` : "—"}
         </span>
-        <svg className="h-3.5 w-3.5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7l4 4-4 4"/><path d="M12 19h8"/></svg>
+        <span className="shrink-0 text-sm italic font-bold text-slate-400 select-none">fx</span>
         <input
+          ref={formulaBarRef}
           value={selectedCellValue}
-          onChange={(event) => {
-            if (!selectedCell) {
-              return;
-            }
-            updateCellRawValue(selectedCell.rowIndex, selectedCell.column, event.target.value);
-          }}
+          onChange={handleFormulaBarChange}
+          onKeyDown={handleFormulaBarKeyDown}
+          onBlur={() => setTimeout(() => setFormulaQuery(null), 150)}
           disabled={readOnly || !selectedCell}
-          placeholder={selectedCell ? `Introduce un valor o una fórmula como =SUMA(A1:A10)` : "Selecciona una celda para editar"}
+          placeholder={selectedCell ? `Introduce un valor o una fórmula como =SUM(A1:A10)` : "Selecciona una celda para editar"}
           className="h-8 flex-1 rounded-lg border border-[rgba(0,0,0,0.08)] bg-[#f8f9fa] px-3 text-sm font-mono text-slate-700 outline-none transition-shadow focus:border-[#0a84ff] focus:bg-white focus:ring-2 focus:ring-[#0a84ff]/20 disabled:cursor-default disabled:bg-transparent disabled:border-transparent"
         />
+        {formulaSuggestions.length > 0 && (
+          <div className="absolute left-20 top-full z-50 mt-0.5 w-80 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white shadow-lg overflow-hidden">
+            {formulaSuggestions.map((item, index) => (
+              <button
+                key={item.name}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  insertFormula(item.name);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
+                  index === formulaDropdownIndex ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 font-mono">
+                  {item.name}
+                </span>
+                <span className="truncate text-xs text-slate-500">{item.description}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="ag-theme-quartz flex-1 overflow-hidden">

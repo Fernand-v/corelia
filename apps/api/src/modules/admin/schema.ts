@@ -7,6 +7,7 @@ import {
   adminCreateInternalInviteInputSchema,
   adminCreateTeamInputSchema,
   adminCreateUserInputSchema,
+  adminUpdateFrontendSettingsInputSchema,
   adminExtendInviteInputSchema,
   adminListCodeCatalogsQuerySchema,
   adminOffboardingExecuteInputSchema,
@@ -38,6 +39,7 @@ export const adminSchemas = {
   adminListCodeCatalogsQuerySchema,
   adminCreateCodeCatalogInputSchema,
   adminUpdateCodeCatalogInputSchema,
+  adminUpdateFrontendSettingsInputSchema,
   adminBackfillProjectChannelsInputSchema: z.object({
     dryRun: z.boolean().optional().default(true)
   }),

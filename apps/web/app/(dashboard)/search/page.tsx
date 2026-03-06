@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button, Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
+import { useFrontendSettings } from "@/lib/frontend-settings";
 
 type SearchResultItem = {
   entity: "TAREA" | "PROYECTO" | "MENSAJE" | "PERSONA" | "ARCHIVO";
@@ -33,6 +34,7 @@ const sectionLabel: Record<keyof SearchResult, string> = {
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
+  const { settings: frontendSettings } = useFrontendSettings();
 
   const searchMutation = useMutation({
     mutationFn: async () => {
@@ -48,7 +50,9 @@ export default function SearchPage() {
     <main className="mx-auto w-full max-w-7xl space-y-4">
       <header>
         <h1 className="text-2xl font-semibold text-slate-900">Buscar</h1>
-        <p className="text-sm text-slate-600">Búsqueda global en Corelia</p>
+        <p className="text-sm text-slate-600">
+          Búsqueda global en {frontendSettings.organizationName}
+        </p>
       </header>
 
       <Card className="space-y-3">

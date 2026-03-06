@@ -111,6 +111,7 @@ export const resolveAnnouncementImageCandidates = (input: {
     kind: "IMAGE"
   });
   const fallbackPath = parseAnnouncementAssetToPath(input.value);
-  const candidates = [primary, fallbackPath].filter((entry): entry is string => Boolean(entry));
+  const rawValue = input.value.trim();
+  const candidates = [primary, fallbackPath, rawValue].filter((entry): entry is string => Boolean(entry));
   return [...new Set(candidates)];
 };

@@ -7,11 +7,18 @@ import {
   useEffect,
   useMemo,
   useState,
+  type CSSProperties,
   type MouseEvent as ReactMouseEvent
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ProjectStage, Task } from "@corelia/types";
+import type { ProjectStage, Task, TaskStatus, TaskStatusColors } from "@corelia/types";
 import { apiRequest } from "@/lib/api";
+import {
+  getTaskStatusBadgeStyle,
+  getTaskStatusColor,
+  hexToRgba,
+  useFrontendSettings
+} from "@/lib/frontend-settings";
 import { useSession } from "@/lib/session";
 
 const sora = Sora({
@@ -213,20 +220,27 @@ const formatRelativeEventDate = (iso: string) => {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-const resolveTaskState = (task: Task | undefined, nowMs: number) => {
+const staticChipStyle = (borderColor: string, backgroundColor: string, color: string): CSSProperties => ({
+  borderColor,
+  backgroundColor,
+  color
+});
+
+const resolveTaskState = (task: Task | undefined, nowMs: number, taskStatusColors: TaskStatusColors) => {
   if (!task) {
     return {
       label: "Programada",
-      chipTone: "border-violet-200 bg-violet-50 text-violet-700",
+      chipStyle: staticChipStyle("#c4b5fd", "#ede9fe", "#6d28d9"),
       borderColor: "#8b5cf6"
     };
   }
 
   if (task.status === "COMPLETADA") {
+    const color = getTaskStatusColor("COMPLETADA", taskStatusColors);
     return {
       label: "Completada",
-      chipTone: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      borderColor: "#10b981"
+      chipStyle: getTaskStatusBadgeStyle("COMPLETADA", taskStatusColors),
+      borderColor: color
     };
   }
 
@@ -235,7 +249,7 @@ const resolveTaskState = (task: Task | undefined, nowMs: number) => {
     if (dueMs < nowMs) {
       return {
         label: "Vencida",
-        chipTone: "border-red-200 bg-red-50 text-red-700",
+        chipStyle: staticChipStyle("#fecaca", "#fef2f2", "#b91c1c"),
         borderColor: "#ef4444"
       };
     }
@@ -243,28 +257,35 @@ const resolveTaskState = (task: Task | undefined, nowMs: number) => {
     if (dueMs - nowMs <= DAY_IN_MS) {
       return {
         label: "Por vencer",
-        chipTone: "border-amber-200 bg-amber-50 text-amber-700",
+        chipStyle: staticChipStyle("#fde68a", "#fffbeb", "#92400e"),
         borderColor: "#f59e0b"
       };
     }
   }
 
   if (task.status === "EN_REVISION") {
+    const color = getTaskStatusColor("EN_REVISION", taskStatusColors);
     return {
       label: "En progreso",
-      chipTone: "border-blue-200 bg-blue-50 text-blue-700",
-      borderColor: "#4f6ef7"
+      chipStyle: getTaskStatusBadgeStyle("EN_REVISION", taskStatusColors),
+      borderColor: color
     };
   }
 
+  const pendingColor = getTaskStatusColor("PENDIENTE", taskStatusColors);
   return {
     label: "Pendiente",
-    chipTone: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    borderColor: "#10b981"
+    chipStyle: getTaskStatusBadgeStyle("PENDIENTE", taskStatusColors),
+    borderColor: pendingColor
   };
 };
 
-const eventTone = (event: CalendarApiEvent, task: Task | undefined, nowMs: number) => {
+const eventTone = (
+  event: CalendarApiEvent,
+  task: Task | undefined,
+  nowMs: number,
+  taskStatusColors: TaskStatusColors
+) => {
   if (event.type === "REUNION") {
     return {
       bg: "rgba(79, 110, 247, 0.15)",
@@ -289,7 +310,7 @@ const eventTone = (event: CalendarApiEvent, task: Task | undefined, nowMs: numbe
     };
   }
 
-  const taskState = resolveTaskState(task, nowMs);
+  const taskState = resolveTaskState(task, nowMs, taskStatusColors);
 
   if (taskState.label === "Vencida") {
     return {
@@ -307,10 +328,19 @@ const eventTone = (event: CalendarApiEvent, task: Task | undefined, nowMs: numbe
     };
   }
 
+  if (task?.status) {
+    const statusColor = getTaskStatusColor(task.status as TaskStatus, taskStatusColors);
+    return {
+      bg: hexToRgba(statusColor, 0.16),
+      border: statusColor,
+      text: "#0f172a"
+    };
+  }
+
   return {
-    bg: "rgba(16, 185, 129, 0.16)",
-    border: "#10b981",
-    text: "#065f46"
+    bg: "rgba(100, 116, 139, 0.14)",
+    border: "#64748b",
+    text: "#1e293b"
   };
 };
 
@@ -395,6 +425,8 @@ const CalendarBoardView = ({
   loading,
   errorMessage
 }: CalendarBoardViewProps) => {
+  const { settings: frontendSettings } = useFrontendSettings();
+  const taskStatusColors = frontendSettings.taskStatusColors;
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState<CalendarView>("semana");
   const [selectedDay, setSelectedDay] = useState<Date>(() => normalizeDate(currentWeek[0] ?? new Date()));
@@ -527,7 +559,7 @@ const CalendarBoardView = ({
 
   const gridColumnTemplate = useMemo(() => {
     const dayCount = activeView === "hoy" ? 1 : currentWeek.length;
-    return `64px repeat(${dayCount}, minmax(180px, 1fr))`;
+    return `64px repeat(${dayCount}, minmax(0, 1fr))`;
   }, [activeView, currentWeek.length]);
 
   const openModal = (tab: ModalTab, startDate?: Date) => {
@@ -754,7 +786,7 @@ const CalendarBoardView = ({
 
   return (
     <section className={`${dmSans.className} h-[calc(100vh-6rem)] w-full overflow-hidden bg-[#f0f4f9] p-2 lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-3`}>
-      <aside className={`${mobileSidebarOpen ? "flex" : "hidden"} lg:flex h-full flex-col rounded-2xl border border-[#e2e8f2] bg-white p-3 shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
+      <aside className={`${mobileSidebarOpen ? "flex" : "hidden"} lg:flex h-full flex-col overflow-y-auto rounded-2xl border border-[#e2e8f2] bg-white p-3 shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
@@ -907,7 +939,7 @@ const CalendarBoardView = ({
               <ul className="space-y-2">
                 {upcomingEvents.map((event) => {
                   const task = event.type === "TAREA" ? tasksById.get(event.id) : undefined;
-                  const state = resolveTaskState(task, nowMs);
+                  const state = resolveTaskState(task, nowMs, taskStatusColors);
                   const startsAt = new Date(event.startsAt);
                   const owner = event.userId ? membersById.get(event.userId)?.fullName : null;
 
@@ -921,7 +953,10 @@ const CalendarBoardView = ({
                         <p className="text-xs font-semibold text-slate-700">
                           {startsAt.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                         </p>
-                        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${state.chipTone}`}>
+                        <span
+                          className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                          style={state.chipStyle}
+                        >
                           {state.label}
                         </span>
                       </div>
@@ -1138,7 +1173,7 @@ const CalendarBoardView = ({
                           row.event.userId && membersById.get(row.event.userId)
                             ? membersById.get(row.event.userId)!.fullName
                             : "Sin asignar";
-                        const tone = eventTone(row.event, task, nowMs);
+                        const tone = eventTone(row.event, task, nowMs, taskStatusColors);
 
                         return (
                           <button

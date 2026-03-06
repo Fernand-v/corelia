@@ -1472,3 +1472,12 @@ model MaintenanceMode {
   message   String?
   updatedAt DateTime @updatedAt
 }
+
+model FrontendSettings {
+  id                      Int      @id @default(1)
+  organizationName        String
+  taskStatusColorPending  String
+  taskStatusColorInReview String
+  taskStatusColorCompleted String
+  updatedAt               DateTime @updatedAt
+}

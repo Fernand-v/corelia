@@ -1,10 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AdminAuditReportResponse, AdminOverview, SystemRole } from "@corelia/types";
+import {
+  frontendSettingsDefaults,
+  type AdminAuditReportResponse,
+  type AdminOverview,
+  type FrontendSettings,
+  type SystemRole,
+  type TaskStatusColors
+} from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
 import { apiRequest, getApiBaseUrl, getAuthToken, getPublicApiKey } from "@/lib/api";
+import { useFrontendSettings } from "@/lib/frontend-settings";
 import { useSession } from "@/lib/session";
 import { UiModal } from "@/components/ui-modal";
 
@@ -108,11 +116,10 @@ const ROLE_OPTIONS: SystemRole[] = [
   "ADMINISTRADOR"
 ];
 
-const USER_STATE_OPTIONS: Array<AdminUsersResponse["items"][number]["state"]> = [
-  "ACTIVO",
-  "INACTIVO",
-  "ONBOARDING",
-  "OFFBOARDING"
+const TASK_STATUS_OPTIONS: Array<{ status: keyof TaskStatusColors; label: string }> = [
+  { status: "PENDIENTE", label: "Pendiente" },
+  { status: "EN_REVISION", label: "En revisión" },
+  { status: "COMPLETADA", label: "Completada" }
 ];
 
 const formatDateTime = (value: string) =>
@@ -120,16 +127,6 @@ const formatDateTime = (value: string) =>
     dateStyle: "medium",
     timeStyle: "short"
   });
-
-const statusTone = (state: string) => {
-  if (state === "OFFBOARDING" || state === "INACTIVO") {
-    return "text-red-700 bg-red-50 border-red-200";
-  }
-  if (state === "ONBOARDING") {
-    return "text-amber-700 bg-amber-50 border-amber-200";
-  }
-  return "text-emerald-700 bg-emerald-50 border-emerald-200";
-};
 
 const ActionCard = ({
   title,
@@ -166,11 +163,12 @@ const toIso = (value: string) => {
 
 export const AdminPanelView = () => {
   const session = useSession();
+  const { settings: frontendSettings } = useFrontendSettings();
   const queryClient = useQueryClient();
 
-  const [userSearch, setUserSearch] = useState("");
-  const [userRoleFilter, setUserRoleFilter] = useState<SystemRole | "">("");
-  const [userStateFilter, setUserStateFilter] = useState<
+  const [userSearch] = useState("");
+  const [userRoleFilter] = useState<SystemRole | "">("");
+  const [userStateFilter] = useState<
     AdminUsersResponse["items"][number]["state"] | ""
   >(""
   );
@@ -183,6 +181,9 @@ export const AdminPanelView = () => {
   const [openAccessModal, setOpenAccessModal] = useState(false);
   const [openAuditModal, setOpenAuditModal] = useState(false);
   const [openResetPasswordModal, setOpenResetPasswordModal] = useState(false);
+  const [openVisualSettingsModal, setOpenVisualSettingsModal] = useState(false);
+  const [openRolesPermissionsModal, setOpenRolesPermissionsModal] = useState(false);
+  const [resetPasswordUserSearch, setResetPasswordUserSearch] = useState("");
 
   const [createUserForm, setCreateUserForm] = useState({
     firstName: "",
@@ -247,6 +248,18 @@ export const AdminPanelView = () => {
     pageSize: 50
   });
 
+  const [visualSettingsForm, setVisualSettingsForm] = useState<{
+    organizationName: string;
+    taskStatusColors: TaskStatusColors;
+  }>({
+    organizationName: frontendSettingsDefaults.organizationName,
+    taskStatusColors: {
+      ...frontendSettingsDefaults.taskStatusColors
+    }
+  });
+  const [visualSettingsDirty, setVisualSettingsDirty] = useState(false);
+  const [visualSettingsFeedback, setVisualSettingsFeedback] = useState<string | null>(null);
+
   const usersQuery = useQuery({
     queryKey: ["admin-users", userSearch, userRoleFilter, userStateFilter],
     queryFn: async () => {
@@ -294,6 +307,11 @@ export const AdminPanelView = () => {
     queryFn: () => apiRequest<AdminOverview>("/admin/overview?page=1&pageSize=10")
   });
 
+  const adminFrontendSettingsQuery = useQuery({
+    queryKey: ["admin-frontend-settings"],
+    queryFn: () => apiRequest<FrontendSettings>("/admin/frontend-settings")
+  });
+
   const auditReportQuery = useQuery({
     queryKey: ["admin-audit-report", auditFilters.from, auditFilters.to, auditFilters.page, auditFilters.pageSize],
     queryFn: () => {
@@ -309,6 +327,70 @@ export const AdminPanelView = () => {
       return apiRequest<AdminAuditReportResponse>(`/admin/audit-report?${params.toString()}`);
     },
     enabled: openAuditModal
+  });
+
+  useEffect(() => {
+    if (!adminFrontendSettingsQuery.data) {
+      return;
+    }
+
+    setVisualSettingsForm({
+      organizationName: adminFrontendSettingsQuery.data.organizationName,
+      taskStatusColors: {
+        ...adminFrontendSettingsQuery.data.taskStatusColors
+      }
+    });
+    setVisualSettingsDirty(false);
+  }, [adminFrontendSettingsQuery.data?.updatedAt]);
+
+  const saveVisualSettingsMutation = useMutation({
+    mutationFn: () =>
+      apiRequest<FrontendSettings>("/admin/frontend-settings", {
+        method: "PATCH",
+        body: JSON.stringify({
+          organizationName: visualSettingsForm.organizationName.trim(),
+          taskStatusColors: {
+            PENDIENTE: visualSettingsForm.taskStatusColors.PENDIENTE.trim().toUpperCase(),
+            EN_REVISION: visualSettingsForm.taskStatusColors.EN_REVISION.trim().toUpperCase(),
+            COMPLETADA: visualSettingsForm.taskStatusColors.COMPLETADA.trim().toUpperCase()
+          }
+        })
+      }),
+    onSuccess: async (updated) => {
+      setVisualSettingsForm({
+        organizationName: updated.organizationName,
+        taskStatusColors: {
+          ...updated.taskStatusColors
+        }
+      });
+      setVisualSettingsDirty(false);
+      setVisualSettingsFeedback("Configuración guardada correctamente.");
+      await queryClient.invalidateQueries({ queryKey: ["admin-frontend-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["frontend-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
+      await queryClient.invalidateQueries({ queryKey: ["home-dashboard"] });
+    }
+  });
+
+  const resetVisualSettingsMutation = useMutation({
+    mutationFn: () =>
+      apiRequest<FrontendSettings>("/admin/frontend-settings/reset", {
+        method: "POST"
+      }),
+    onSuccess: async (updated) => {
+      setVisualSettingsForm({
+        organizationName: updated.organizationName,
+        taskStatusColors: {
+          ...updated.taskStatusColors
+        }
+      });
+      setVisualSettingsDirty(false);
+      setVisualSettingsFeedback("Se restauraron los valores por defecto.");
+      await queryClient.invalidateQueries({ queryKey: ["admin-frontend-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["frontend-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
+      await queryClient.invalidateQueries({ queryKey: ["home-dashboard"] });
+    }
   });
 
   const createUserMutation = useMutation({
@@ -333,20 +415,6 @@ export const AdminPanelView = () => {
         teamId: ""
       }));
       setOpenCreateUserModal(false);
-      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
-    }
-  });
-
-  const setUserActiveMutation = useMutation({
-    mutationFn: (input: { userId: string; isActive: boolean }) =>
-      apiRequest(`/admin/users/${input.userId}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          isActive: input.isActive
-        })
-      }),
-    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
     }
@@ -442,17 +510,6 @@ export const AdminPanelView = () => {
     onSuccess: async () => {
       setCreateTeamForm({ name: "", description: "", coordinatorUserId: "" });
       setOpenCreateTeamModal(false);
-      await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
-      await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
-    }
-  });
-
-  const dissolveTeamMutation = useMutation({
-    mutationFn: (teamId: string) =>
-      apiRequest(`/admin/teams/${teamId}`, {
-        method: "DELETE"
-      }),
-    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
     }
@@ -637,12 +694,20 @@ export const AdminPanelView = () => {
   }
 
   const overview = overviewQuery.data;
+  const visualColorRegex = /^#[0-9A-F]{6}$/;
+  const visualSettingsValid =
+    visualSettingsForm.organizationName.trim().length > 0 &&
+    TASK_STATUS_OPTIONS.every(({ status }) =>
+      visualColorRegex.test(visualSettingsForm.taskStatusColors[status].trim().toUpperCase())
+    );
 
   return (
     <div className="space-y-6">
       <Card className="space-y-2">
         <p className="text-xs uppercase tracking-wide text-slate-500">Panel de Administración</p>
-        <h1 className="text-2xl font-semibold text-slate-900">Administración Corelia</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">
+          Administración {frontendSettings.organizationName}
+        </h1>
         <p className="text-sm text-slate-600">Acciones administrativas principales en un solo lugar.</p>
       </Card>
 
@@ -696,235 +761,148 @@ export const AdminPanelView = () => {
             buttonLabel="Abrir"
             onOpen={() => setOpenAuditModal(true)}
           />
-        </div>
-      </Card>
-
-      <Card className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="h-10 min-w-48 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Buscar nombre o email"
-            value={userSearch}
-            onChange={(event) => setUserSearch(event.target.value)}
-          />
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={userRoleFilter}
-            onChange={(event) => setUserRoleFilter(event.target.value as SystemRole | "")}
-          >
-            <option value="">Todos los roles</option>
-            {ROLE_OPTIONS.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={userStateFilter}
-            onChange={(event) =>
-              setUserStateFilter(event.target.value as AdminUsersResponse["items"][number]["state"] | "")
-            }
-          >
-            <option value="">Todos los estados</option>
-            {USER_STATE_OPTIONS.map((state) => (
-              <option key={state} value={state}>
-                {state}
-              </option>
-            ))}
-          </select>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              setUserSearch("");
-              setUserRoleFilter("");
-              setUserStateFilter("");
+          <ActionCard
+            title="Resetear contraseña"
+            description="Busca un usuario y establece una nueva contraseña temporal."
+            buttonLabel="Abrir"
+            onOpen={() => {
+              setAdminPasswordResetFeedback(null);
+              setResetPasswordUserSearch("");
+              setResetPasswordForm({ userId: "", fullName: "", newPassword: "", confirmPassword: "" });
+              setOpenResetPasswordModal(true);
             }}
-          >
-            Limpiar filtros
-          </Button>
+          />
+          <ActionCard
+            title="Configuraciones generales"
+            description="Personaliza nombre de empresa y colores de estados."
+            helper={`Empresa actual: ${visualSettingsForm.organizationName.trim() || frontendSettingsDefaults.organizationName}`}
+            buttonLabel="Configurar"
+            onOpen={() => {
+              setVisualSettingsFeedback(null);
+              setOpenVisualSettingsModal(true);
+            }}
+          />
+          <ActionCard
+            title="Roles y permisos"
+            description="Consulta la matriz completa de permisos por rol."
+            helper={`Roles disponibles: ${rolesQuery.data?.length ?? 0}`}
+            buttonLabel="Ver matriz"
+            onOpen={() => setOpenRolesPermissionsModal(true)}
+          />
         </div>
-
-        {usersQuery.error ? <p className="text-sm text-red-600">{usersQuery.error.message}</p> : null}
-        <ul className="space-y-2">
-          {usersQuery.data?.items.map((user) => (
-            <li key={user.id} className="rounded-xl border border-slate-200 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{user.fullName}</p>
-                  <p className="text-xs text-slate-600">
-                    {user.email} · {user.role} · {user.teamName ?? "Sin equipo"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-lg border px-2 py-0.5 text-xs ${statusTone(user.state)}`}>
-                    {user.state}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-8 px-3 text-xs"
-                    onClick={() => {
-                      setAdminPasswordResetFeedback(null);
-                      setResetPasswordForm({
-                        userId: user.id,
-                        fullName: user.fullName,
-                        newPassword: "",
-                        confirmPassword: ""
-                      });
-                      setOpenResetPasswordModal(true);
-                    }}
-                  >
-                    Restablecer clave
-                  </Button>
-                  <Button
-                    variant={user.state === "INACTIVO" ? "primary" : "ghost"}
-                    className="h-8 px-3 text-xs"
-                    disabled={setUserActiveMutation.isPending}
-                    onClick={() =>
-                      setUserActiveMutation.mutate({
-                        userId: user.id,
-                        isActive: user.state === "INACTIVO"
-                      })
-                    }
-                  >
-                    {user.state === "INACTIVO" ? "Activar" : "Desactivar"}
-                  </Button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-        {adminPasswordResetFeedback ? <p className="text-sm text-emerald-700">{adminPasswordResetFeedback}</p> : null}
       </Card>
 
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Equipos</h2>
-        <ul className="space-y-2">
-          {teamsQuery.data?.items.map((team) => (
-            <li key={team.id} className="rounded-xl border border-slate-200 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{team.name}</p>
-                  <p className="text-xs text-slate-600">
-                    Coordinador: {team.coordinator?.fullName ?? "No asignado"} · Miembros: {team.membersCount}
-                  </p>
+      {(teamsQuery.data?.items.length ?? 0) > 0 ? (
+        <Card className="space-y-4">
+          <h2 className="text-lg font-semibold text-slate-900">Equipos</h2>
+          <ul className="space-y-2">
+            {teamsQuery.data?.items.map((team) => (
+              <li key={team.id} className="rounded-xl border border-slate-200 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{team.name}</p>
+                    <p className="text-xs text-slate-600">
+                      Coordinador: {team.coordinator?.fullName ?? "No asignado"} · Miembros: {team.membersCount}
+                    </p>
+                  </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="danger"
-                  className="h-8 px-3 text-xs"
-                  disabled={dissolveTeamMutation.isPending}
-                  onClick={() => dissolveTeamMutation.mutate(team.id)}
-                >
-                  Disolver
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Card>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
 
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Invitaciones internas</h2>
-        <ul className="space-y-2">
-          {internalInvitesQuery.data?.items.map((invite) => (
-            <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{invite.email}</p>
-                  <p className="text-xs text-slate-600">
-                    {invite.baseRole} · {invite.teamName ?? "Sin equipo"} · expira {formatDateTime(invite.expiresAt)}
-                  </p>
+      {(internalInvitesQuery.data?.items.length ?? 0) > 0 || internalInviteLinkPreview ? (
+        <Card className="space-y-4">
+          <h2 className="text-lg font-semibold text-slate-900">Invitaciones internas</h2>
+          <ul className="space-y-2">
+            {internalInvitesQuery.data?.items.map((invite) => (
+              <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{invite.email}</p>
+                    <p className="text-xs text-slate-600">
+                      {invite.baseRole} · {invite.teamName ?? "Sin equipo"} · expira {formatDateTime(invite.expiresAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-8 px-3 text-xs"
+                      disabled={resendInternalInviteMutation.isPending}
+                      onClick={() => resendInternalInviteMutation.mutate(invite.id)}
+                    >
+                      Reenviar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="h-8 px-3 text-xs"
+                      disabled={
+                        revokeInternalInviteMutation.isPending || Boolean(invite.revokedAt) || Boolean(invite.acceptedAt)
+                      }
+                      onClick={() => revokeInternalInviteMutation.mutate(invite.id)}
+                    >
+                      {invite.revokedAt ? "Revocada" : invite.acceptedAt ? "Aceptada" : "Revocar"}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-8 px-3 text-xs"
-                    disabled={resendInternalInviteMutation.isPending}
-                    onClick={() => resendInternalInviteMutation.mutate(invite.id)}
-                  >
-                    Reenviar
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    className="h-8 px-3 text-xs"
-                    disabled={
-                      revokeInternalInviteMutation.isPending || Boolean(invite.revokedAt) || Boolean(invite.acceptedAt)
-                    }
-                    onClick={() => revokeInternalInviteMutation.mutate(invite.id)}
-                  >
-                    {invite.revokedAt ? "Revocada" : invite.acceptedAt ? "Aceptada" : "Revocar"}
-                  </Button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-        {internalInviteLinkPreview ? (
-          <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-            Enlace interno: {internalInviteLinkPreview}
-          </p>
-        ) : null}
-      </Card>
+              </li>
+            ))}
+          </ul>
+          {internalInviteLinkPreview ? (
+            <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+              Enlace interno: {internalInviteLinkPreview}
+            </p>
+          ) : null}
+        </Card>
+      ) : null}
 
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Invitaciones externas</h2>
-        <ul className="space-y-2">
-          {invitesQuery.data?.items.map((invite) => (
-            <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{invite.email}</p>
-                  <p className="text-xs text-slate-600">
-                    PROYECTO · {invite.resourceId} · expira {formatDateTime(invite.expiresAt)}
-                  </p>
+      {(invitesQuery.data?.items.length ?? 0) > 0 || externalInviteLinkPreview ? (
+        <Card className="space-y-4">
+          <h2 className="text-lg font-semibold text-slate-900">Invitaciones externas</h2>
+          <ul className="space-y-2">
+            {invitesQuery.data?.items.map((invite) => (
+              <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{invite.email}</p>
+                    <p className="text-xs text-slate-600">
+                      PROYECTO · {invite.resourceId} · expira {formatDateTime(invite.expiresAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-8 px-3 text-xs"
+                      disabled={extendInviteMutation.isPending}
+                      onClick={() => extendInviteMutation.mutate(invite.id)}
+                    >
+                      Extender 7 días
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="h-8 px-3 text-xs"
+                      disabled={revokeInviteMutation.isPending || Boolean(invite.revokedAt)}
+                      onClick={() => revokeInviteMutation.mutate(invite.id)}
+                    >
+                      {invite.revokedAt ? "Revocada" : "Revocar"}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-8 px-3 text-xs"
-                    disabled={extendInviteMutation.isPending}
-                    onClick={() => extendInviteMutation.mutate(invite.id)}
-                  >
-                    Extender 7 días
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    className="h-8 px-3 text-xs"
-                    disabled={revokeInviteMutation.isPending || Boolean(invite.revokedAt)}
-                    onClick={() => revokeInviteMutation.mutate(invite.id)}
-                  >
-                    {invite.revokedAt ? "Revocada" : "Revocar"}
-                  </Button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-        {externalInviteLinkPreview ? (
-          <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-            Enlace externo: {externalInviteLinkPreview}
-          </p>
-        ) : null}
-      </Card>
-
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Roles y permisos</h2>
-        <ul className="space-y-2">
-          {rolesQuery.data?.map((item) => (
-            <li key={item.role} className="rounded-xl border border-slate-200 p-3">
-              <p className="text-sm font-medium text-slate-900">{item.role}</p>
-              <p className="text-xs text-slate-600">{item.permissions.join(", ")}</p>
-            </li>
-          ))}
-        </ul>
-      </Card>
+              </li>
+            ))}
+          </ul>
+          {externalInviteLinkPreview ? (
+            <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+              Enlace externo: {externalInviteLinkPreview}
+            </p>
+          ) : null}
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="space-y-2">
@@ -952,6 +930,186 @@ export const AdminPanelView = () => {
       </div>
 
       <UiModal
+        open={openVisualSettingsModal}
+        onClose={() => setOpenVisualSettingsModal(false)}
+        title="Configuraciones generales"
+        widthClassName="max-w-3xl"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setOpenVisualSettingsModal(false)}>
+              Cerrar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={resetVisualSettingsMutation.isPending}
+              onClick={() => {
+                setVisualSettingsFeedback(null);
+                resetVisualSettingsMutation.mutate();
+              }}
+            >
+              {resetVisualSettingsMutation.isPending ? "Restaurando..." : "Restaurar por defecto"}
+            </Button>
+            <Button
+              type="button"
+              disabled={saveVisualSettingsMutation.isPending || !visualSettingsValid || !visualSettingsDirty}
+              onClick={() => {
+                setVisualSettingsFeedback(null);
+                saveVisualSettingsMutation.mutate();
+              }}
+            >
+              {saveVisualSettingsMutation.isPending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-xs text-slate-500">
+          Configura nombre de empresa y colores de estados de tarea sin editar código.
+        </p>
+
+        {adminFrontendSettingsQuery.isLoading ? (
+          <p className="text-sm text-slate-600">Cargando configuración visual...</p>
+        ) : null}
+        {adminFrontendSettingsQuery.error ? (
+          <p className="text-sm text-red-600">{adminFrontendSettingsQuery.error.message}</p>
+        ) : null}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Nombre de empresa</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={visualSettingsForm.organizationName}
+              onChange={(event) => {
+                setVisualSettingsFeedback(null);
+                setVisualSettingsDirty(true);
+                setVisualSettingsForm((prev) => ({
+                  ...prev,
+                  organizationName: event.target.value
+                }));
+              }}
+              placeholder="Nombre de empresa"
+            />
+          </label>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vista previa</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              {visualSettingsForm.organizationName.trim() || frontendSettingsDefaults.organizationName}
+            </p>
+            <p className="text-xs text-slate-600">Nombre aplicado en login, shell, admin y home.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-3">
+          {TASK_STATUS_OPTIONS.map((item) => {
+            const color = visualSettingsForm.taskStatusColors[item.status];
+            return (
+              <div key={item.status} className="rounded-xl border border-slate-200 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="color"
+                    className="h-9 w-11 cursor-pointer rounded border border-slate-300 bg-white p-1"
+                    value={visualColorRegex.test(color) ? color : "#64748B"}
+                    onChange={(event) => {
+                      const nextColor = event.target.value.toUpperCase();
+                      setVisualSettingsFeedback(null);
+                      setVisualSettingsDirty(true);
+                      setVisualSettingsForm((prev) => ({
+                        ...prev,
+                        taskStatusColors: {
+                          ...prev.taskStatusColors,
+                          [item.status]: nextColor
+                        }
+                      }));
+                    }}
+                  />
+                  <input
+                    className="h-9 w-full rounded-md border border-slate-300 px-2 text-xs font-medium uppercase"
+                    value={color}
+                    onChange={(event) => {
+                      const nextColor = event.target.value.toUpperCase();
+                      setVisualSettingsFeedback(null);
+                      setVisualSettingsDirty(true);
+                      setVisualSettingsForm((prev) => ({
+                        ...prev,
+                        taskStatusColors: {
+                          ...prev.taskStatusColors,
+                          [item.status]: nextColor
+                        }
+                      }));
+                    }}
+                  />
+                </div>
+                <div className="mt-2">
+                  <span
+                    className="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                    style={{
+                      borderColor: `${color}66`,
+                      backgroundColor: `${color}26`,
+                      color: "#0F172A"
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {!visualSettingsValid ? (
+          <p className="text-sm text-red-600">Verifica nombre y colores hex válidos (formato #RRGGBB).</p>
+        ) : null}
+        {saveVisualSettingsMutation.error ? (
+          <p className="text-sm text-red-600">{saveVisualSettingsMutation.error.message}</p>
+        ) : null}
+        {resetVisualSettingsMutation.error ? (
+          <p className="text-sm text-red-600">{resetVisualSettingsMutation.error.message}</p>
+        ) : null}
+        {visualSettingsFeedback ? <p className="text-sm text-emerald-700">{visualSettingsFeedback}</p> : null}
+      </UiModal>
+
+      <UiModal
+        open={openRolesPermissionsModal}
+        onClose={() => setOpenRolesPermissionsModal(false)}
+        title="Roles y permisos"
+        widthClassName="max-w-5xl"
+        footer={
+          <Button type="button" variant="ghost" onClick={() => setOpenRolesPermissionsModal(false)}>
+            Cerrar
+          </Button>
+        }
+      >
+        <p className="text-xs text-slate-500">Vista de los permisos asignados a cada rol del sistema.</p>
+        {rolesQuery.isLoading ? <p className="text-sm text-slate-600">Cargando roles...</p> : null}
+        {rolesQuery.error ? <p className="text-sm text-red-600">{rolesQuery.error.message}</p> : null}
+        {(rolesQuery.data?.length ?? 0) === 0 && !rolesQuery.isLoading ? (
+          <p className="text-sm text-slate-600">No hay roles disponibles para mostrar.</p>
+        ) : null}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {rolesQuery.data?.map((item) => (
+            <article key={item.role} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="mb-2 text-sm font-semibold text-slate-900">{item.role}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {item.permissions.map((permission) => (
+                  <span
+                    key={permission}
+                    className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                  >
+                    {permission}
+                  </span>
+                ))}
+                {item.permissions.length === 0 ? (
+                  <span className="text-xs text-slate-400">Sin permisos asignados</span>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      </UiModal>
+
+      <UiModal
         open={openCreateUserModal}
         onClose={() => setOpenCreateUserModal(false)}
         title="Crear usuario"
@@ -972,55 +1130,70 @@ export const AdminPanelView = () => {
           </>
         }
       >
-        <div className="grid gap-2 md:grid-cols-2">
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Nombre"
-            value={createUserForm.firstName}
-            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, firstName: event.target.value }))}
-          />
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Apellido"
-            value={createUserForm.lastName}
-            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, lastName: event.target.value }))}
-          />
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Email"
-            value={createUserForm.email}
-            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, email: event.target.value }))}
-          />
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={createUserForm.baseRole}
-            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, baseRole: event.target.value as SystemRole }))}
-          >
-            {ROLE_OPTIONS.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={createUserForm.teamId}
-            onChange={(event) => setCreateUserForm((prev) => ({ ...prev, teamId: event.target.value }))}
-          >
-            <option value="">Sin equipo</option>
-            {teamsQuery.data?.items.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm text-slate-700">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Nombre</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="Nombre"
+              value={createUserForm.firstName}
+              onChange={(event) => setCreateUserForm((prev) => ({ ...prev, firstName: event.target.value }))}
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Apellido</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="Apellido"
+              value={createUserForm.lastName}
+              onChange={(event) => setCreateUserForm((prev) => ({ ...prev, lastName: event.target.value }))}
+            />
+          </label>
+          <label className="block space-y-1 sm:col-span-2">
+            <span className="text-xs font-medium text-slate-600">Email corporativo</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="usuario@empresa.com"
+              value={createUserForm.email}
+              onChange={(event) => setCreateUserForm((prev) => ({ ...prev, email: event.target.value }))}
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Rol base</span>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={createUserForm.baseRole}
+              onChange={(event) => setCreateUserForm((prev) => ({ ...prev, baseRole: event.target.value as SystemRole }))}
+            >
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Equipo (opcional)</span>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={createUserForm.teamId}
+              onChange={(event) => setCreateUserForm((prev) => ({ ...prev, teamId: event.target.value }))}
+            >
+              <option value="">Sin equipo</option>
+              {teamsQuery.data?.items.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 sm:col-span-2">
             <input
               type="checkbox"
               checked={createUserForm.startOnboarding}
               onChange={(event) => setCreateUserForm((prev) => ({ ...prev, startOnboarding: event.target.checked }))}
             />
-            Iniciar onboarding
+            Iniciar proceso de onboarding
           </label>
         </div>
         {createUserMutation.error ? <p className="text-sm text-red-600">{createUserMutation.error.message}</p> : null}
@@ -1029,7 +1202,7 @@ export const AdminPanelView = () => {
       <UiModal
         open={openResetPasswordModal}
         onClose={() => setOpenResetPasswordModal(false)}
-        title={`Restablecer clave: ${resetPasswordForm.fullName || "Usuario"}`}
+        title="Resetear contraseña"
         footer={
           <>
             <Button type="button" variant="ghost" onClick={() => setOpenResetPasswordModal(false)}>
@@ -1037,8 +1210,12 @@ export const AdminPanelView = () => {
             </Button>
             <Button
               type="button"
-              disabled={adminResetPasswordMutation.isPending}
+              disabled={adminResetPasswordMutation.isPending || !resetPasswordForm.userId}
               onClick={() => {
+                if (!resetPasswordForm.userId) {
+                  setAdminPasswordResetFeedback("Selecciona un usuario.");
+                  return;
+                }
                 if (resetPasswordForm.newPassword.length < 8) {
                   setAdminPasswordResetFeedback("La contraseña debe tener al menos 8 caracteres.");
                   return;
@@ -1054,27 +1231,98 @@ export const AdminPanelView = () => {
                 });
               }}
             >
-              {adminResetPasswordMutation.isPending ? "Guardando..." : "Restablecer"}
+              {adminResetPasswordMutation.isPending ? "Guardando..." : "Resetear"}
             </Button>
           </>
         }
       >
-        <div className="space-y-2">
-          <input
-            type="password"
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Nueva contraseña"
-            value={resetPasswordForm.newPassword}
-            onChange={(event) => setResetPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
-          />
-          <input
-            type="password"
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Confirmar contraseña"
-            value={resetPasswordForm.confirmPassword}
-            onChange={(event) => setResetPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-          />
+        <div className="space-y-3">
+          {!resetPasswordForm.userId ? (
+            <>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">Buscar usuario</span>
+                <input
+                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  placeholder="Nombre o email..."
+                  value={resetPasswordUserSearch}
+                  onChange={(event) => setResetPasswordUserSearch(event.target.value)}
+                />
+              </label>
+              <ul className="max-h-48 space-y-1 overflow-y-auto">
+                {userOptions
+                  .filter((user) => {
+                    const needle = resetPasswordUserSearch.trim().toLowerCase();
+                    if (!needle) return true;
+                    return (
+                      user.fullName.toLowerCase().includes(needle) ||
+                      user.email.toLowerCase().includes(needle)
+                    );
+                  })
+                  .map((user) => (
+                    <li key={user.id}>
+                      <button
+                        type="button"
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        onClick={() =>
+                          setResetPasswordForm((prev) => ({
+                            ...prev,
+                            userId: user.id,
+                            fullName: user.fullName
+                          }))
+                        }
+                      >
+                        <span className="font-medium text-slate-900">{user.fullName}</span>
+                        <span className="ml-2 text-xs text-slate-500">{user.email}</span>
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{resetPasswordForm.fullName}</p>
+                  <p className="text-xs text-slate-500">Usuario seleccionado</p>
+                </div>
+                <button
+                  type="button"
+                  className="text-xs text-slate-400 hover:text-slate-700"
+                  onClick={() =>
+                    setResetPasswordForm((prev) => ({ ...prev, userId: "", fullName: "" }))
+                  }
+                >
+                  Cambiar
+                </button>
+              </div>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">Nueva contraseña</span>
+                <input
+                  type="password"
+                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  placeholder="Mínimo 8 caracteres"
+                  value={resetPasswordForm.newPassword}
+                  onChange={(event) => setResetPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">Confirmar contraseña</span>
+                <input
+                  type="password"
+                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  placeholder="Repite la contraseña"
+                  value={resetPasswordForm.confirmPassword}
+                  onChange={(event) => setResetPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                />
+              </label>
+            </>
+          )}
         </div>
+        {adminPasswordResetFeedback ? (
+          <p className={`text-sm ${adminResetPasswordMutation.isSuccess ? "text-emerald-700" : "text-red-600"}`}>
+            {adminPasswordResetFeedback}
+          </p>
+        ) : null}
         {adminResetPasswordMutation.error ? <p className="text-sm text-red-600">{adminResetPasswordMutation.error.message}</p> : null}
       </UiModal>
 
@@ -1274,38 +1522,47 @@ export const AdminPanelView = () => {
           </>
         }
       >
-        <div className="grid gap-2 md:grid-cols-2">
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Email corporativo"
-            value={internalInviteForm.email}
-            onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, email: event.target.value }))}
-          />
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={internalInviteForm.baseRole}
-            onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, baseRole: event.target.value as SystemRole }))}
-          >
-            {ROLE_OPTIONS.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={internalInviteForm.teamId}
-            onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, teamId: event.target.value }))}
-          >
-            <option value="">Sin equipo</option>
-            {teamsQuery.data?.items.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-          <label className="space-y-1">
-            <span className="block text-xs font-medium text-slate-600">Fecha de expiración</span>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1 sm:col-span-2">
+            <span className="text-xs font-medium text-slate-600">Email corporativo</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="usuario@empresa.com"
+              value={internalInviteForm.email}
+              onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, email: event.target.value }))}
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Rol base</span>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={internalInviteForm.baseRole}
+              onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, baseRole: event.target.value as SystemRole }))}
+            >
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Equipo (opcional)</span>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={internalInviteForm.teamId}
+              onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, teamId: event.target.value }))}
+            >
+              <option value="">Sin equipo</option>
+              {teamsQuery.data?.items.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block space-y-1 sm:col-span-2">
+            <span className="text-xs font-medium text-slate-600">Fecha de expiración</span>
             <input
               className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
               type="datetime-local"
@@ -1390,31 +1647,40 @@ export const AdminPanelView = () => {
           </>
         }
       >
-        <div className="grid gap-2 md:grid-cols-2">
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Nombre del equipo"
-            value={createTeamForm.name}
-            onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, name: event.target.value }))}
-          />
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Descripción"
-            value={createTeamForm.description}
-            onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, description: event.target.value }))}
-          />
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm md:col-span-2"
-            value={createTeamForm.coordinatorUserId}
-            onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, coordinatorUserId: event.target.value }))}
-          >
-            <option value="">Sin coordinador</option>
-            {userOptions.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.fullName}
-              </option>
-            ))}
-          </select>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Nombre del equipo</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="Ej. Equipo Backend"
+              value={createTeamForm.name}
+              onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, name: event.target.value }))}
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Descripción (opcional)</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="Descripción breve"
+              value={createTeamForm.description}
+              onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, description: event.target.value }))}
+            />
+          </label>
+          <label className="block space-y-1 sm:col-span-2">
+            <span className="text-xs font-medium text-slate-600">Coordinador (opcional)</span>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={createTeamForm.coordinatorUserId}
+              onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, coordinatorUserId: event.target.value }))}
+            >
+              <option value="">Sin coordinador</option>
+              {userOptions.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.fullName}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {createTeamMutation.error ? <p className="text-sm text-red-600">{createTeamMutation.error.message}</p> : null}
       </UiModal>
@@ -1469,6 +1735,7 @@ export const AdminPanelView = () => {
           </ul>
         ) : null}
       </UiModal>
+
 
       <UiModal
         open={openAuditModal}

@@ -7,12 +7,14 @@ import type { AuthToken } from "@corelia/types";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import { apiRequest, useAuthStore } from "@/lib/api";
+import { useFrontendSettings } from "@/lib/frontend-settings";
 
 export const ActivateInvitePage = () => {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token") ?? "";
   const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  const { settings: frontendSettings } = useFrontendSettings();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -41,7 +43,7 @@ export const ActivateInvitePage = () => {
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold text-slate-900">Activar cuenta</h1>
           <p className="text-sm text-slate-600">
-            Completa tus datos para activar tu invitación interna en Corelia.
+            Completa tus datos para activar tu invitación interna en {frontendSettings.organizationName}.
           </p>
         </header>
 

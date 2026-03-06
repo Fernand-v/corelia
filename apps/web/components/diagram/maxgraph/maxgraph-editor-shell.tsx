@@ -27,7 +27,12 @@ import { toPng, toSvg } from "html-to-image";
 import { jsPDF } from "jspdf";
 
 import { MaxGraphContextMenu, type MaxGraphContextMenuState } from "@/components/diagram/maxgraph/maxgraph-context-menu";
-import { MaxGraphPalette, loadPaletteSectionState, persistPaletteSectionState } from "@/components/diagram/maxgraph/maxgraph-palette";
+import { UiModal } from "@/components/ui-modal";
+import {
+  MaxGraphPalette,
+  loadPaletteSectionState,
+  persistPaletteSectionState
+} from "@/components/diagram/maxgraph/maxgraph-palette";
 import { MaxGraphPagesTabs } from "@/components/diagram/maxgraph/maxgraph-pages-tabs";
 import {
   MaxGraphPropertiesPanel,
@@ -51,7 +56,7 @@ import type {
   RemoteCursorPresence
 } from "@/components/diagram/maxgraph/types";
 import {
-  getPaletteForKind,
+  getPaletteForAllKinds,
   type EdgeTemplate,
   type ShapeLibrary,
   type ShapeTemplate
@@ -128,6 +133,64 @@ const stringifyValue = (value: unknown): string => {
     return "";
   }
   return String(value);
+};
+
+const areStringListsEqual = (left: string[] = [], right: string[] = []): boolean => {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const areRemotePresenceEqual = (
+  left: RemoteCursorPresence[],
+  right: RemoteCursorPresence[]
+): boolean => {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const a = left[index];
+    const b = right[index];
+
+    if (!a || !b) {
+      return false;
+    }
+
+    if (
+      a.documentId !== b.documentId ||
+      a.pageId !== b.pageId ||
+      a.userId !== b.userId ||
+      a.name !== b.name ||
+      a.color !== b.color
+    ) {
+      return false;
+    }
+
+    const cursorA = a.cursor ?? null;
+    const cursorB = b.cursor ?? null;
+    if (cursorA === null || cursorB === null) {
+      if (cursorA !== cursorB) {
+        return false;
+      }
+    } else if (cursorA.x !== cursorB.x || cursorA.y !== cursorB.y) {
+      return false;
+    }
+
+    if (!areStringListsEqual(a.selectedCellIds, b.selectedCellIds)) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 const parseMeta = (style: Record<string, unknown>): Array<{ key: string; value: string }> => {
@@ -252,11 +315,75 @@ const buildSelectedCellView = (
 
 const applyThemeToGraph = (graph: AbstractGraph, kind: DiagramKind) => {
   const theme = DIAGRAM_THEME_BY_KIND[kind];
-  graph.getStylesheet().putCellStyle("defaultVertex", theme.defaultVertexStyle as any);
-  graph.getStylesheet().putCellStyle("defaultEdge", theme.defaultEdgeStyle as any);
+  graph.getStylesheet().putCellStyle(
+    "defaultVertex",
+    {
+      perimeter: "rectanglePerimeter",
+      ...theme.defaultVertexStyle
+    } as any
+  );
+  graph.getStylesheet().putCellStyle(
+    "defaultEdge",
+    {
+      edgeStyle: "orthogonalEdgeStyle",
+      rounded: 1,
+      entryPerimeter: 1,
+      exitPerimeter: 1,
+      ...theme.defaultEdgeStyle
+    } as any
+  );
 };
 
 const cloneStyle = (style: Record<string, unknown>): Record<string, unknown> => ({ ...style });
+
+const baseConnectorStyle: Record<string, string | number | boolean> = {
+  edgeStyle: "orthogonalEdgeStyle",
+  rounded: 1,
+  entryPerimeter: 1,
+  exitPerimeter: 1
+};
+
+const resolveConnectableVertex = (graph: AbstractGraph, rawCell: Cell | null): Cell | null => {
+  if (!rawCell) {
+    return null;
+  }
+
+  let current: Cell | null = rawCell;
+  const parent = graph.getDefaultParent();
+
+  while (current && current !== parent) {
+    if (current.isVertex() && !current.isEdge()) {
+      return current;
+    }
+    current = current.getParent();
+  }
+
+  return null;
+};
+
+const graphToScreenPoint = (
+  graph: AbstractGraph,
+  point: { x: number; y: number }
+): { x: number; y: number } => {
+  const scale = graph.getView().scale || 1;
+  const translate = graph.getView().translate;
+  return {
+    x: (point.x + translate.x) * scale,
+    y: (point.y + translate.y) * scale
+  };
+};
+
+const screenToGraphPoint = (
+  graph: AbstractGraph,
+  point: { x: number; y: number }
+): { x: number; y: number } => {
+  const scale = graph.getView().scale || 1;
+  const translate = graph.getView().translate;
+  return {
+    x: point.x / scale - translate.x,
+    y: point.y / scale - translate.y
+  };
+};
 
 export const MaxGraphEditorShell = ({
   documentId,
@@ -327,6 +454,7 @@ export const MaxGraphEditorShell = ({
   const [guidesEnabled, setGuidesEnabled] = useState(true);
   const [minimapEnabled, setMinimapEnabled] = useState(true);
   const [zoomPercent, setZoomPercent] = useState(100);
+  const [viewRevision, setViewRevision] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const [search, setSearch] = useState("");
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -336,15 +464,36 @@ export const MaxGraphEditorShell = ({
   const [remoteSelectionBoxes, setRemoteSelectionBoxes] = useState<
     Array<{ id: string; x: number; y: number; width: number; height: number; color: string; name: string }>
   >([]);
+  const remotePresenceRef = useRef<RemoteCursorPresence[]>([]);
 
   const [contextMenu, setContextMenu] = useState<MaxGraphContextMenuState>({ open: false, x: 0, y: 0 });
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+  const [renamePageModal, setRenamePageModal] = useState<{
+    open: boolean;
+    pageId: string;
+    currentName: string;
+    inputValue: string;
+  }>({ open: false, pageId: "", currentName: "", inputValue: "" });
+  const [addPageModal, setAddPageModal] = useState<{
+    open: boolean;
+    inputValue: string;
+  }>({ open: false, inputValue: "" });
 
   const applyingRemoteRef = useRef(false);
   const lastSyncedPayloadRef = useRef("");
   const needsMigrationPersistRef = useRef(initialParsed.migratedFromLegacy);
   const copiedStyleRef = useRef<Record<string, unknown> | null>(null);
+  const selectedEdgeTemplateRef = useRef<EdgeTemplate | null>(null);
+  const activeToolRef = useRef<ActiveTool>("select");
+  const readOnlyRef = useRef(readOnly);
+  const connectSourceCellIdRef = useRef<string | null>(null);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const canvasWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -356,10 +505,7 @@ export const MaxGraphEditorShell = ({
   const outlineRef = useRef<Outline | null>(null);
   const undoManagerRef = useRef<UndoManager | null>(null);
 
-  const allLibraries = useMemo(
-    () => getPaletteForKind(currentKind, remoteLibraries),
-    [currentKind, remoteLibraries]
-  );
+  const allLibraries = useMemo(() => getPaletteForAllKinds(remoteLibraries), [remoteLibraries]);
 
   const shapeTemplateIndex = useMemo(() => {
     const index = new Map<string, ShapeTemplate>();
@@ -383,6 +529,18 @@ export const MaxGraphEditorShell = ({
     }
     return edgeTemplateIndex.get(selectedEdgeTemplateId) ?? edgeTemplateIndex.values().next().value ?? null;
   }, [edgeTemplateIndex, selectedEdgeTemplateId]);
+
+  useEffect(() => {
+    selectedEdgeTemplateRef.current = selectedEdgeTemplate;
+  }, [selectedEdgeTemplate]);
+
+  useEffect(() => {
+    activeToolRef.current = activeTool;
+  }, [activeTool]);
+
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+  }, [readOnly]);
 
   const syncPayload = useCallback(
     (payload: string) => {
@@ -411,9 +569,13 @@ export const MaxGraphEditorShell = ({
       return;
     }
 
+    const activePageId = drawioDocumentRef.current.activePageId;
     const boxes: Array<{ id: string; x: number; y: number; width: number; height: number; color: string; name: string }> = [];
 
-    for (const peer of remotePresence) {
+    for (const peer of remotePresenceRef.current) {
+      if (peer.pageId !== activePageId) {
+        continue;
+      }
       const selectedCellIds = Array.isArray(peer.selectedCellIds) ? peer.selectedCellIds : [];
       selectedCellIds.forEach((cellId) => {
         const cell = graph.getDataModel().getCell(cellId);
@@ -439,6 +601,10 @@ export const MaxGraphEditorShell = ({
     }
 
     setRemoteSelectionBoxes(boxes);
+  }, []);
+
+  useEffect(() => {
+    remotePresenceRef.current = remotePresence;
   }, [remotePresence]);
 
   const commitDocument = useCallback(
@@ -497,6 +663,9 @@ export const MaxGraphEditorShell = ({
       }
 
       setActiveTool(tool);
+      if (tool !== "connect") {
+        connectSourceCellIdRef.current = null;
+      }
       const panningHandler = (graph as any).panningHandler;
 
       if (tool === "pan") {
@@ -636,13 +805,70 @@ export const MaxGraphEditorShell = ({
 
     const viewListener = () => {
       setZoomPercent(Math.round(graph.getView().scale * 100));
+      setViewRevision((current) => current + 1);
       refreshRemoteSelectionBoxes();
+    };
+
+    const clickToConnectListener = (_sender: unknown, event: EventObject) => {
+      if (readOnlyRef.current || activeToolRef.current !== "connect") {
+        return;
+      }
+
+      const clickedCell = event.getProperty("cell") as Cell | null;
+      const cell = resolveConnectableVertex(graph, clickedCell);
+      if (!cell) {
+        connectSourceCellIdRef.current = null;
+        return;
+      }
+
+      const sourceCellId = connectSourceCellIdRef.current;
+      const targetCellId = cell.getId();
+      if (!targetCellId) {
+        connectSourceCellIdRef.current = null;
+        return;
+      }
+
+      if (!sourceCellId || sourceCellId === targetCellId) {
+        connectSourceCellIdRef.current = targetCellId;
+        graph.setSelectionCell(cell);
+        return;
+      }
+
+      const sourceCell = graph.getDataModel().getCell(sourceCellId);
+      if (!sourceCell || sourceCell.isEdge()) {
+        connectSourceCellIdRef.current = targetCellId;
+        graph.setSelectionCell(cell);
+        return;
+      }
+
+      const template = selectedEdgeTemplateRef.current;
+      const edgeParams: {
+        parent: Cell | null;
+        value: string;
+        source: Cell;
+        target: Cell;
+        style: Record<string, string | number | boolean>;
+      } = {
+        parent: graph.getDefaultParent(),
+        value: template?.value ?? "",
+        source: sourceCell,
+        target: cell,
+        style: template?.style ? { ...baseConnectorStyle, ...template.style } : { ...baseConnectorStyle }
+      };
+
+      graph.batchUpdate(() => {
+        graph.insertEdge(edgeParams);
+      });
+
+      connectSourceCellIdRef.current = null;
+      graph.setSelectionCell(cell);
     };
 
     graph.getDataModel().addListener(InternalEvent.CHANGE, modelChangeListener);
     graph.getSelectionModel().addListener(InternalEvent.CHANGE, selectionListener);
     graph.getView().addListener(InternalEvent.SCALE, viewListener);
     graph.getView().addListener(InternalEvent.TRANSLATE, viewListener);
+    graph.addListener(InternalEvent.CLICK, clickToConnectListener);
 
     if (outlineContainerRef.current) {
       outlineRef.current = new Outline(graph, outlineContainerRef.current);
@@ -655,6 +881,9 @@ export const MaxGraphEditorShell = ({
       importGraphModelXml(graph, active.xml);
       applyingRemoteRef.current = false;
     }
+
+    // Populate activeDraft immediately so the save button works on first load
+    syncPayload(serializeMxfile(drawioDocumentRef.current));
 
     refreshSelectedState();
     setZoomPercent(Math.round(graph.getView().scale * 100));
@@ -670,6 +899,7 @@ export const MaxGraphEditorShell = ({
       graph.getDataModel().removeListener(modelChangeListener);
       graph.getSelectionModel().removeListener(selectionListener);
       graph.getView().removeListener(viewListener);
+      graph.removeListener(clickToConnectListener);
 
       outlineRef.current?.destroy();
       outlineRef.current = null;
@@ -807,7 +1037,10 @@ export const MaxGraphEditorShell = ({
     if (!graph || !selectedEdgeTemplate) {
       return;
     }
-    graph.getStylesheet().putCellStyle("defaultEdge", selectedEdgeTemplate.style as any);
+    graph.getStylesheet().putCellStyle(
+      "defaultEdge",
+      { ...baseConnectorStyle, ...selectedEdgeTemplate.style } as any
+    );
   }, [selectedEdgeTemplate]);
 
   useEffect(() => {
@@ -838,7 +1071,7 @@ export const MaxGraphEditorShell = ({
   useEffect(() => {
     const awareness = provider?.awareness;
     if (!awareness) {
-      setRemotePresence([]);
+      setRemotePresence((current) => (current.length === 0 ? current : []));
       return;
     }
 
@@ -852,7 +1085,8 @@ export const MaxGraphEditorShell = ({
 
         peers.push(payload);
       });
-      setRemotePresence(peers);
+      peers.sort((a, b) => a.userId.localeCompare(b.userId) || a.pageId.localeCompare(b.pageId));
+      setRemotePresence((current) => (areRemotePresenceEqual(current, peers) ? current : peers));
     };
 
     refresh();
@@ -865,7 +1099,7 @@ export const MaxGraphEditorShell = ({
 
   useEffect(() => {
     refreshRemoteSelectionBoxes();
-  }, [refreshRemoteSelectionBoxes]);
+  }, [remotePresence, refreshRemoteSelectionBoxes]);
 
   useEffect(() => {
     const graphContainer = graphContainerRef.current;
@@ -873,26 +1107,36 @@ export const MaxGraphEditorShell = ({
       return;
     }
 
-    const onMouseMove = (event: MouseEvent) => {
+    const updateCursor = (clientX: number, clientY: number) => {
+      const graph = graphRef.current;
+      if (!graph) {
+        return;
+      }
       const rect = graphContainer.getBoundingClientRect();
       updateLocalAwareness({
-        cursor: {
-          x: event.clientX - rect.left,
-          y: event.clientY - rect.top
-        }
+        cursor: screenToGraphPoint(graph, {
+          x: clientX - rect.left,
+          y: clientY - rect.top
+        })
       });
     };
 
-    const onMouseLeave = () => {
+    const onPointerMove = (event: PointerEvent) => {
+      updateCursor(event.clientX, event.clientY);
+    };
+
+    const onPointerLeave = () => {
       updateLocalAwareness({ cursor: null });
     };
 
-    graphContainer.addEventListener("mousemove", onMouseMove);
-    graphContainer.addEventListener("mouseleave", onMouseLeave);
+    graphContainer.addEventListener("pointermove", onPointerMove);
+    graphContainer.addEventListener("pointerleave", onPointerLeave);
+    graphContainer.addEventListener("pointercancel", onPointerLeave);
 
     return () => {
-      graphContainer.removeEventListener("mousemove", onMouseMove);
-      graphContainer.removeEventListener("mouseleave", onMouseLeave);
+      graphContainer.removeEventListener("pointermove", onPointerMove);
+      graphContainer.removeEventListener("pointerleave", onPointerLeave);
+      graphContainer.removeEventListener("pointercancel", onPointerLeave);
     };
   }, [updateLocalAwareness]);
 
@@ -1207,31 +1451,38 @@ export const MaxGraphEditorShell = ({
   );
 
   const onAddPage = useCallback(() => {
-    const name = window.prompt("Nombre de la página", `Página ${drawioDocumentRef.current.pages.length + 1}`);
-    if (!name) {
-      return;
-    }
+    const defaultName = `Página ${drawioDocumentRef.current.pages.length + 1}`;
+    setAddPageModal({ open: true, inputValue: defaultName });
+  }, []);
 
-    saveCurrentPageSnapshot();
-    commitDocument(
-      (current) =>
-        addPage(current, {
-          name,
-          xml: createEmptyDrawioDocument(currentKind).pages[0]?.xml ?? ""
-        }),
-      { importActivePage: true }
-    );
-  }, [commitDocument, currentKind, saveCurrentPageSnapshot]);
+  const onAddPageConfirm = useCallback(
+    (name: string) => {
+      if (!name.trim()) return;
+      saveCurrentPageSnapshot();
+      commitDocument(
+        (current) =>
+          addPage(current, {
+            name: name.trim(),
+            xml: createEmptyDrawioDocument(currentKind).pages[0]?.xml ?? ""
+          }),
+        { importActivePage: true }
+      );
+    },
+    [commitDocument, currentKind, saveCurrentPageSnapshot]
+  );
 
   const onRenamePage = useCallback(
     (pageId: string) => {
       const current = drawioDocumentRef.current.pages.find((page) => page.id === pageId);
-      const nextName = window.prompt("Nuevo nombre", current?.name ?? "Página");
-      if (!nextName) {
-        return;
-      }
+      setRenamePageModal({ open: true, pageId, currentName: current?.name ?? "Página", inputValue: current?.name ?? "Página" });
+    },
+    []
+  );
 
-      commitDocument((value) => renamePage(value, pageId, nextName));
+  const onRenamePageConfirm = useCallback(
+    (pageId: string, nextName: string) => {
+      if (!nextName.trim()) return;
+      commitDocument((value) => renamePage(value, pageId, nextName.trim()));
     },
     [commitDocument]
   );
@@ -1250,13 +1501,15 @@ export const MaxGraphEditorShell = ({
         return;
       }
 
-      const shouldDelete = window.confirm("¿Eliminar esta página?");
-      if (!shouldDelete) {
-        return;
-      }
-
-      saveCurrentPageSnapshot();
-      commitDocument((value) => removePage(value, pageId), { importActivePage: true });
+      setConfirmModal({
+        open: true,
+        title: "Eliminar página",
+        message: "¿Eliminar esta página?",
+        onConfirm: () => {
+          saveCurrentPageSnapshot();
+          commitDocument((value) => removePage(value, pageId), { importActivePage: true });
+        }
+      });
     },
     [commitDocument, saveCurrentPageSnapshot]
   );
@@ -1310,20 +1563,10 @@ export const MaxGraphEditorShell = ({
     [readOnly, refreshSelectedState]
   );
 
-  const onImportFileSelected = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) {
-        return;
-      }
+  const pendingImportContentRef = useRef<string | null>(null);
 
-      const content = await file.text();
-      const shouldReplace = window.confirm("El XML importado reemplazará el contenido actual. ¿Continuar?");
-      if (!shouldReplace) {
-        event.target.value = "";
-        return;
-      }
-
+  const applyImportContent = useCallback(
+    (content: string) => {
       const parsed = parseDiagramSource(content, currentKind);
       const normalized = ensureDocumentIntegrity(parsed.document, currentKind);
       drawioDocumentRef.current = normalized;
@@ -1341,10 +1584,34 @@ export const MaxGraphEditorShell = ({
 
       syncPayload(serializeMxfile(normalized));
       refreshSelectedState();
-
-      event.target.value = "";
     },
     [currentKind, refreshSelectedState, syncPayload]
+  );
+
+  const onImportFileSelected = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      const content = await file.text();
+      event.target.value = "";
+      pendingImportContentRef.current = content;
+
+      setConfirmModal({
+        open: true,
+        title: "Importar XML",
+        message: "El XML importado reemplazará el contenido actual. ¿Continuar?",
+        onConfirm: () => {
+          if (pendingImportContentRef.current !== null) {
+            applyImportContent(pendingImportContentRef.current);
+            pendingImportContentRef.current = null;
+          }
+        }
+      });
+    },
+    [applyImportContent]
   );
 
   const exportPng = useCallback(async () => {
@@ -1437,26 +1704,8 @@ export const MaxGraphEditorShell = ({
     document.body.removeChild(textArea);
   }, []);
 
-  const onChangeDiagramKind = useCallback(
+  const applyKindChange = useCallback(
     (nextKind: DiagramKind) => {
-      if (nextKind === currentKind || readOnly) {
-        return;
-      }
-
-      const graph = graphRef.current;
-      const hasContent = graph
-        ? graph.getChildCells(graph.getDefaultParent(), true, true).length > 0
-        : drawioDocumentRef.current.pages.length > 0;
-
-      if (hasContent) {
-        const proceed = window.confirm(
-          `Cambiar a ${nextKind} puede reiniciar el canvas para aplicar librerías y tema. ¿Deseas continuar?`
-        );
-        if (!proceed) {
-          return;
-        }
-      }
-
       setCurrentKind(nextKind);
 
       const nextDocument = createEmptyDrawioDocument(nextKind);
@@ -1476,7 +1725,32 @@ export const MaxGraphEditorShell = ({
       syncPayload(serializeMxfile(nextDocument));
       refreshSelectedState();
     },
-    [currentKind, readOnly, refreshSelectedState, syncPayload]
+    [refreshSelectedState, syncPayload]
+  );
+
+  const onChangeDiagramKind = useCallback(
+    (nextKind: DiagramKind) => {
+      if (nextKind === currentKind || readOnly) {
+        return;
+      }
+
+      const graph = graphRef.current;
+      const hasContent = graph
+        ? graph.getChildCells(graph.getDefaultParent(), true, true).length > 0
+        : drawioDocumentRef.current.pages.length > 0;
+
+      if (hasContent) {
+        setConfirmModal({
+          open: true,
+          title: "Cambiar tipo de diagrama",
+          message: `Cambiar a ${nextKind} puede reiniciar el canvas para aplicar librerías y tema. ¿Deseas continuar?`,
+          onConfirm: () => applyKindChange(nextKind)
+        });
+      } else {
+        applyKindChange(nextKind);
+      }
+    },
+    [applyKindChange, currentKind, readOnly]
   );
 
   const onDeleteSelection = useCallback(() => {
@@ -1744,6 +2018,31 @@ export const MaxGraphEditorShell = ({
     selectedEdgeTemplateId
   };
 
+  const activePageId = drawioDocument.activePageId;
+  const peersInCurrentPage = remotePresence.filter((peer) => peer.pageId === activePageId);
+  const peersInOtherPages = remotePresence.filter((peer) => peer.pageId !== activePageId);
+
+  const renderableRemoteCursors = useMemo(
+    () =>
+      peersInCurrentPage
+        .map((peer) => {
+          if (!peer.cursor) {
+            return null;
+          }
+
+          const graph = graphRef.current;
+          const cursor = graph ? graphToScreenPoint(graph, peer.cursor) : peer.cursor;
+          return {
+            id: `cursor-${peer.userId}`,
+            name: peer.name,
+            color: peer.color,
+            cursor
+          };
+        })
+        .filter((item): item is { id: string; name: string; color: string; cursor: { x: number; y: number } } => Boolean(item)),
+    [peersInCurrentPage, viewRevision]
+  );
+
   return (
     <div ref={rootRef} className="flex h-full min-h-[600px] flex-col rounded-xl border border-[#e2e8f2] bg-white shadow-sm">
       <input
@@ -1754,25 +2053,26 @@ export const MaxGraphEditorShell = ({
         onChange={onImportFileSelected}
       />
 
-      <MaxGraphToolbar
-        state={toolbarState}
-        actions={toolbarActions}
-        diagramKind={currentKind}
-        onChangeDiagramKind={onChangeDiagramKind}
-      />
+      <MaxGraphToolbar state={toolbarState} actions={toolbarActions} />
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_280px]">
-        <MaxGraphPalette
-          viewModel={paletteViewModel}
-          actions={{
-            onSearch: setSearch,
-            toggleSection,
-            insertShape,
-            selectEdgeTemplate: (template) => setSelectedEdgeTemplateId(template.id)
-          }}
-        />
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_280px]">
+        <div className="order-2 lg:order-none lg:col-start-1">
+          <MaxGraphPalette
+            viewModel={paletteViewModel}
+            actions={{
+              onSearch: setSearch,
+              toggleSection,
+              selectDiagramKind: onChangeDiagramKind,
+              insertShape,
+              selectEdgeTemplate: (template) => {
+                setSelectedEdgeTemplateId(template.id);
+                applyToolMode("connect");
+              }
+            }}
+          />
+        </div>
 
-        <div className="flex min-h-0 flex-col">
+        <div className="order-1 flex min-h-0 flex-col lg:order-none lg:col-start-2">
           <div
             ref={canvasWrapperRef}
             className="relative min-h-[520px] flex-1 overflow-hidden"
@@ -1786,6 +2086,33 @@ export const MaxGraphEditorShell = ({
             onClick={() => setContextMenu({ open: false, x: 0, y: 0 })}
           >
             <div ref={graphContainerRef} className="h-full w-full" />
+
+            <div className="pointer-events-none absolute left-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
+              {peersInCurrentPage.map((peer) => (
+                <div
+                  key={`presence-on-page-${peer.userId}`}
+                  className="rounded-md border border-white/70 bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow"
+                >
+                  <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: peer.color }} />
+                  <span className="align-middle">{peer.name}</span>
+                  <span className="ml-1 align-middle text-slate-500">
+                    {Array.isArray(peer.selectedCellIds) && peer.selectedCellIds.length > 0
+                      ? `selecciona ${peer.selectedCellIds.length}`
+                      : "navegando"}
+                  </span>
+                </div>
+              ))}
+              {peersInOtherPages.map((peer) => (
+                <div
+                  key={`presence-other-page-${peer.userId}`}
+                  className="rounded-md border border-amber-200 bg-amber-50/95 px-2 py-1 text-[11px] font-semibold text-amber-700 shadow"
+                >
+                  <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: peer.color }} />
+                  <span className="align-middle">{peer.name}</span>
+                  <span className="ml-1 align-middle text-amber-600">en otra página</span>
+                </div>
+              ))}
+            </div>
 
             <div className="pointer-events-none absolute left-3 bottom-3 z-20 rounded bg-white/85 px-2 py-1 text-xs font-semibold text-slate-700 shadow">
               {zoomPercent}%
@@ -1814,23 +2141,21 @@ export const MaxGraphEditorShell = ({
               />
             ))}
 
-            {remotePresence.map((peer) =>
-              peer.cursor ? (
-                <div
-                  key={`cursor-${peer.userId}`}
-                  className="pointer-events-none absolute z-40"
-                  style={{ left: peer.cursor.x, top: peer.cursor.y }}
+            {renderableRemoteCursors.map((peer) => (
+              <div
+                key={peer.id}
+                className="pointer-events-none absolute z-40"
+                style={{ left: peer.cursor.x, top: peer.cursor.y }}
+              >
+                <div className="h-3.5 w-3.5 rounded-full border-2 border-white shadow" style={{ backgroundColor: peer.color }} />
+                <span
+                  className="ml-1 mt-0.5 inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold text-white shadow"
+                  style={{ backgroundColor: peer.color }}
                 >
-                  <div className="h-3 w-3 rounded-full border-2 border-white" style={{ backgroundColor: peer.color }} />
-                  <span
-                    className="ml-1 mt-0.5 inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold text-white shadow"
-                    style={{ backgroundColor: peer.color }}
-                  >
-                    {peer.name}
-                  </span>
-                </div>
-              ) : null
-            )}
+                  {peer.name}
+                </span>
+              </div>
+            ))}
 
             <MaxGraphContextMenu
               state={contextMenu}
@@ -1938,22 +2263,25 @@ export const MaxGraphEditorShell = ({
           />
         </div>
 
-        <MaxGraphPropertiesPanel
-          diagramKind={currentKind}
-          readOnly={readOnly}
-          selected={selectedCell}
-          onLabelChange={onLabelChange}
-          onStylePatch={onStylePatch}
-          onReplaceStyle={onReplaceStyle}
-          onGeometryPatch={onGeometryPatch}
-          onCenter={onCenterCell}
-          onHighlightConnection={onHighlightConnection}
-          onDeleteConnection={onDeleteConnection}
-          onAddMetadata={onAddMetadata}
-          onUpdateMetadata={onUpdateMetadata}
-          onRemoveMetadata={onRemoveMetadata}
-          onOpenStyleEditor={() => setStyleEditorOpen(true)}
-        />
+        <div className="hidden lg:block lg:col-start-3">
+          <MaxGraphPropertiesPanel
+            diagramKind={currentKind}
+            readOnly={readOnly}
+            selected={selectedCell}
+            onLabelChange={onLabelChange}
+            onStylePatch={onStylePatch}
+            onReplaceStyle={onReplaceStyle}
+            onGeometryPatch={onGeometryPatch}
+            onCenter={onCenterCell}
+            onHighlightConnection={onHighlightConnection}
+            onDeleteConnection={onDeleteConnection}
+            onAddMetadata={onAddMetadata}
+            onUpdateMetadata={onUpdateMetadata}
+            onRemoveMetadata={onRemoveMetadata}
+            onOpenStyleEditor={() => setStyleEditorOpen(true)}
+          />
+        </div>
+
       </div>
 
       <MaxGraphStyleEditorModal
@@ -1983,6 +2311,117 @@ export const MaxGraphEditorShell = ({
         onClose={() => setTemplatesOpen(false)}
         onApply={applyTemplate}
       />
+
+      <UiModal
+        open={confirmModal.open}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+        title={confirmModal.title}
+        footer={
+          <>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              onClick={() => {
+                confirmModal.onConfirm();
+                setConfirmModal((prev) => ({ ...prev, open: false }));
+              }}
+            >
+              Continuar
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-700">{confirmModal.message}</p>
+      </UiModal>
+
+      <UiModal
+        open={renamePageModal.open}
+        onClose={() => setRenamePageModal((prev) => ({ ...prev, open: false }))}
+        title="Renombrar página"
+        footer={
+          <>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              onClick={() => setRenamePageModal((prev) => ({ ...prev, open: false }))}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              onClick={() => {
+                onRenamePageConfirm(renamePageModal.pageId, renamePageModal.inputValue);
+                setRenamePageModal((prev) => ({ ...prev, open: false }));
+              }}
+            >
+              Renombrar
+            </button>
+          </>
+        }
+      >
+        <input
+          type="text"
+          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+          value={renamePageModal.inputValue}
+          onChange={(e) => setRenamePageModal((prev) => ({ ...prev, inputValue: e.target.value }))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onRenamePageConfirm(renamePageModal.pageId, renamePageModal.inputValue);
+              setRenamePageModal((prev) => ({ ...prev, open: false }));
+            }
+          }}
+          autoFocus
+        />
+      </UiModal>
+
+      <UiModal
+        open={addPageModal.open}
+        onClose={() => setAddPageModal((prev) => ({ ...prev, open: false }))}
+        title="Nueva página"
+        footer={
+          <>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              onClick={() => setAddPageModal((prev) => ({ ...prev, open: false }))}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              onClick={() => {
+                onAddPageConfirm(addPageModal.inputValue);
+                setAddPageModal((prev) => ({ ...prev, open: false }));
+              }}
+            >
+              Crear
+            </button>
+          </>
+        }
+      >
+        <input
+          type="text"
+          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+          value={addPageModal.inputValue}
+          onChange={(e) => setAddPageModal((prev) => ({ ...prev, inputValue: e.target.value }))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onAddPageConfirm(addPageModal.inputValue);
+              setAddPageModal((prev) => ({ ...prev, open: false }));
+            }
+          }}
+          autoFocus
+        />
+      </UiModal>
     </div>
   );
 };

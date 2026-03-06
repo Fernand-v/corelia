@@ -14,16 +14,119 @@ const cardClass =
 const edgeCardClass =
   "rounded-lg border border-slate-200 bg-white p-2 text-left transition hover:border-blue-300 hover:bg-blue-50";
 
-const toPreviewStyle = (style: Record<string, string | number | boolean>) => {
+const ShapePreviewSvg = ({ style }: { style: Record<string, string | number | boolean> }) => {
   const fill = (style.fillColor as string | undefined) ?? "#ffffff";
   const stroke = (style.strokeColor as string | undefined) ?? "#64748b";
-  const color = (style.fontColor as string | undefined) ?? "#111827";
+  const shape = style.shape as string | undefined;
+  const rounded = style.rounded;
+  const dashed = style.dashed ? "4 3" : undefined;
 
-  return {
-    background: fill,
-    borderColor: stroke,
-    color
-  };
+  if (shape === "ellipse") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <ellipse cx="40" cy="24" rx="38" ry="22" fill={fill} stroke={stroke} strokeWidth={1.5} strokeDasharray={dashed} />
+      </svg>
+    );
+  }
+  if (shape === "doubleEllipse") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <ellipse cx="40" cy="24" rx="38" ry="22" fill={fill} stroke={stroke} strokeWidth={1.5} />
+        <ellipse cx="40" cy="24" rx="31" ry="15" fill="none" stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+  if (shape === "rhombus") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <polygon points="40,2 78,24 40,46 2,24" fill={fill} stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+  if (shape === "parallelogram") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <polygon points="14,2 78,2 66,46 2,46" fill={fill} stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+  if (shape === "hexagon") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <polygon points="20,2 60,2 78,24 60,46 20,46 2,24" fill={fill} stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+  if (shape === "cylinder") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <rect x="2" y="10" width="76" height="28" fill={fill} stroke="none" />
+        <ellipse cx="40" cy="10" rx="38" ry="8" fill={fill} stroke={stroke} strokeWidth={1.5} />
+        <line x1="2" y1="10" x2="2" y2="38" stroke={stroke} strokeWidth={1.5} />
+        <line x1="78" y1="10" x2="78" y2="38" stroke={stroke} strokeWidth={1.5} />
+        <path d="M2,38 a38,8 0 0,0 76,0" fill={fill} stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+  if (shape === "cloud") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <path d="M16,38 Q4,38 4,28 Q4,18 14,18 Q14,8 24,8 Q30,2 38,6 Q46,0 54,6 Q66,4 70,14 Q78,14 78,24 Q78,38 64,38 Z" fill={fill} stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+  if (shape === "swimlane") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <rect x="2" y="2" width="76" height="44" fill={fill} stroke={stroke} strokeWidth={1.5} strokeDasharray={dashed} />
+        {style.horizontal !== 0
+          ? <line x1="2" y1="14" x2="78" y2="14" stroke={stroke} strokeWidth={1.5} />
+          : <line x1="20" y1="2" x2="20" y2="46" stroke={stroke} strokeWidth={1.5} />
+        }
+      </svg>
+    );
+  }
+  if (shape === "note") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <path d="M2,2 L62,2 L78,18 L78,46 L2,46 Z" fill={fill} stroke={stroke} strokeWidth={1.5} />
+        <path d="M62,2 L62,18 L78,18" fill="none" stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+  if (shape === "umlActor") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <circle cx="40" cy="9" r="7" fill={fill} stroke={stroke} strokeWidth={1.5} />
+        <line x1="40" y1="16" x2="40" y2="34" stroke={stroke} strokeWidth={1.5} />
+        <line x1="26" y1="24" x2="54" y2="24" stroke={stroke} strokeWidth={1.5} />
+        <line x1="40" y1="34" x2="29" y2="46" stroke={stroke} strokeWidth={1.5} />
+        <line x1="40" y1="34" x2="51" y2="46" stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+  if (shape === "line") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <line x1="40" y1="2" x2="40" y2="46" stroke={stroke} strokeWidth={2} strokeDasharray={dashed} />
+      </svg>
+    );
+  }
+  if (shape === "folder") {
+    return (
+      <svg viewBox="0 0 80 48" className="h-10 w-full">
+        <path d="M2,14 L2,46 L78,46 L78,18 L40,18 L32,14 Z" fill={fill} stroke={stroke} strokeWidth={1.5} />
+        <path d="M2,14 L32,14 L40,18" fill="none" stroke={stroke} strokeWidth={1.5} />
+      </svg>
+    );
+  }
+
+  // Default: rectangle with optional rounded corners
+  return (
+    <svg viewBox="0 0 80 48" className="h-10 w-full">
+      <rect x="2" y="2" width="76" height="44" rx={rounded ? "8" : "2"} fill={fill} stroke={stroke} strokeWidth={1.5} strokeDasharray={dashed} />
+    </svg>
+  );
 };
 
 const EdgePreview = ({ template }: { template: EdgeTemplate }) => {
@@ -67,11 +170,8 @@ const ShapeCard = ({
       }}
       onClick={() => onInsert(template)}
     >
-      <div
-        className="mx-auto mb-1 flex h-12 w-20 items-center justify-center overflow-hidden rounded-md border text-[10px] font-semibold shadow-sm"
-        style={toPreviewStyle(template.style)}
-      >
-        {template.label}
+      <div className="mx-auto mb-1 w-20 overflow-hidden rounded-md border border-slate-200 shadow-sm">
+        <ShapePreviewSvg style={template.style} />
       </div>
       <p className="truncate text-center text-[11px] font-semibold text-slate-700">{template.label}</p>
     </button>
