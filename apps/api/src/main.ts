@@ -44,19 +44,20 @@ const ensureSchemaCompatibility = async (
   app: Awaited<ReturnType<typeof createApp>>
 ) => {
   const checks: Array<{ table: string; column: string }> = [
-    { table: "Project", column: "descriptionCode" },
+    { table: "Project", column: "descriptionCatalogId" },
     { table: "ProjectMember", column: "membershipSource" },
     { table: "ProjectStage", column: "code" },
     { table: "ProjectTeamLink", column: "projectId" },
     { table: "Task", column: "stageId" },
     { table: "Task", column: "startDate" },
-    { table: "TaskScheduleHistory", column: "reasonCode" },
+    { table: "TaskScheduleHistory", column: "reasonCatalogId" },
     { table: "Message", column: "kind" },
     { table: "Message", column: "meetingId" },
     { table: "MessageAttachment", column: "minioPath" },
     { table: "ProjectDocumentSpace", column: "projectId" },
     { table: "CollaborativeDocument", column: "yDocName" },
     { table: "CollaborativeDocumentVersion", column: "versionNumber" },
+    { table: "DocumentCollabSession", column: "revision" },
     { table: "FrontendSettings", column: "organizationName" }
   ];
 

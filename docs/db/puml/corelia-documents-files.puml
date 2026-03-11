@@ -1,0 +1,108 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "Folder" as Folder {
+  * id: String
+    name: String
+    scope: FolderScope
+    teamId: String?
+    projectId: String?
+    parentId: String?
+    createdById: String
+    createdAt: DateTime
+    files: FileObject[]
+    collaborativeDocuments: CollaborativeDocument[]
+}
+
+entity "ProjectDocumentSpace" as ProjectDocumentSpace {
+    projectId: String
+    rootFolderId: String
+    textoFolderId: String
+    diagramasFolderId: String
+    tablasFolderId: String
+    whiteboardFolderId: String
+    presentacionesFolderId: String
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "CollaborativeDocument" as CollaborativeDocument {
+  * id: String
+    projectId: String
+    folderId: String
+    type: DocumentType
+    name: String
+    yDocName: String
+    diagramEngine: DiagramEngine?
+    diagramKind: DiagramKind?
+    currentVersion: Int
+    createdById: String
+    deletedAt: DateTime?
+    purgeAt: DateTime?
+    createdAt: DateTime
+    updatedAt: DateTime
+    versions: CollaborativeDocumentVersion[]
+    assets: DocumentAsset[]
+}
+
+entity "CollaborativeDocumentVersion" as CollaborativeDocumentVersion {
+  * id: String
+    documentId: String
+    versionNumber: Int
+    kind: DocumentVersionKind
+    snapshotPath: String
+    snapshotSizeBytes: Int
+    createdById: String
+    createdAt: DateTime
+}
+
+entity "DocumentAsset" as DocumentAsset {
+  * id: String
+    documentId: String
+    createdById: String
+    originalName: String
+    mimeType: String
+    sizeBytes: Int
+    minioPath: String
+    createdAt: DateTime
+}
+
+entity "FileObject" as FileObject {
+  * id: String
+    folderId: String
+    ownerId: String
+    originalName: String
+    mimeType: String
+    sizeBytes: Int
+    minioPath: String
+    deletedAt: DateTime?
+    createdAt: DateTime
+    trashRecord: FileTrash?
+}
+
+entity "FileTrash" as FileTrash {
+  * id: String
+    fileId: String
+    scheduledPurgeAt: DateTime
+    createdAt: DateTime
+}
+
+entity "StorageQuota" as StorageQuota {
+  * id: String
+    userId: String?
+    teamId: String?
+    bytesLimit: BigInt
+    alertThresholdPct: Float
+    createdAt: DateTime
+}
+
+Folder }o--|| Folder : parentId
+CollaborativeDocument }o--|| Folder : folderId
+CollaborativeDocumentVersion }o--|| CollaborativeDocument : documentId
+DocumentAsset }o--|| CollaborativeDocument : documentId
+FileObject }o--|| Folder : folderId
+FileTrash }o--|| FileObject : fileId
+
+@enduml

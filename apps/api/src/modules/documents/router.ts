@@ -19,6 +19,154 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
     return typeof field.value === "string" ? field.value : "";
   };
 
+  // ── Trash ──────────────────────────────────────────────
+
+  app.get(
+    "/trash",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const query = parseWithSchema(
+          documentSchemas.listTrashQuerySchema,
+          request.query ?? {},
+        );
+        const result = await service.listTrash({
+          projectId: query.projectId,
+          userId: request.authUser!.id,
+        });
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  // ── Templates ──────────────────────────────────────────
+
+  app.get(
+    "/templates",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const query = parseWithSchema(
+          documentSchemas.listTemplatesQuerySchema,
+          request.query ?? {},
+        );
+        const result = await service.listTemplates({
+          projectId: query.projectId,
+          type: query.type,
+        });
+        return reply.send(result);
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    "/templates",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "ARCHIVO_SUBIR",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(
+          documentSchemas.createTemplateInputSchema,
+          request.body,
+        );
+        const result = await service.createTemplate({
+          documentId: payload.documentId,
+          name: payload.name,
+          description: payload.description,
+          userId: request.authUser!.id,
+        });
+
+        request.auditEvent = {
+          entityType: "ARCHIVO",
+          entityId: result.id,
+          action: "CREAR",
+          newDataText: {
+            type: "template",
+            name: result.name,
+          },
+        };
+
+        return reply.code(201).send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  // ── Batch operations ───────────────────────────────────
+
+  app.post(
+    "/batch-delete",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "ARCHIVO_SUBIR",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(
+          documentSchemas.batchDocumentIdsSchema,
+          request.body,
+        );
+        const result = await service.batchSoftDelete({
+          documentIds: payload.documentIds,
+          userId: request.authUser!.id,
+        });
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    "/batch-restore",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "ARCHIVO_SUBIR",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(
+          documentSchemas.batchDocumentIdsSchema,
+          request.body,
+        );
+        const result = await service.batchRestore({
+          documentIds: payload.documentIds,
+          userId: request.authUser!.id,
+        });
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
   app.post(
     "/init-folders",
     {
@@ -89,19 +237,28 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
           documentSchemas.createDocumentInputSchema,
           request.body,
         );
-        const created = await service.createDocument({
-          projectId: payload.projectId,
-          userId: request.authUser!.id,
-          type: payload.type,
-          name: payload.name,
-          diagramKind: payload.diagramKind,
-        });
+        const created = payload.templateId
+          ? await service.createDocumentFromTemplate({
+              projectId: payload.projectId,
+              userId: request.authUser!.id,
+              type: payload.type,
+              name: payload.name,
+              templateId: payload.templateId,
+              diagramKind: payload.diagramKind,
+            })
+          : await service.createDocument({
+              projectId: payload.projectId,
+              userId: request.authUser!.id,
+              type: payload.type,
+              name: payload.name,
+              diagramKind: payload.diagramKind,
+            });
 
         request.auditEvent = {
           entityType: "ARCHIVO",
           entityId: created.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             projectId: created.projectId,
             type: created.type,
             name: created.name,
@@ -168,6 +325,198 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
     },
   );
 
+  app.post(
+    "/:documentId/collab-token",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentIdParamsSchema,
+          request.params,
+        );
+        const token = await service.createCollabToken({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+        });
+
+        return reply.send(token);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 404;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    "/:documentId/diagram-session/join",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentDiagramSessionParamsSchema,
+          request.params,
+        );
+        const body = parseWithSchema(
+          documentSchemas.documentDiagramSessionJoinInputSchema,
+          request.body ?? {},
+        );
+
+        const result = await service.joinDiagramSession({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+          clientId: body.clientId,
+        });
+
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    "/:documentId/diagram-session/heartbeat",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentDiagramSessionParamsSchema,
+          request.params,
+        );
+        const body = parseWithSchema(
+          documentSchemas.documentDiagramSessionHeartbeatInputSchema,
+          request.body,
+        );
+
+        const result = await service.heartbeatDiagramSession({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+          sessionId: body.sessionId,
+          clientId: body.clientId,
+        });
+
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    "/:documentId/diagram-session/snapshot",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentDiagramSessionParamsSchema,
+          request.params,
+        );
+        const body = parseWithSchema(
+          documentSchemas.documentDiagramSessionSnapshotInputSchema,
+          request.body,
+        );
+
+        const result = await service.saveDiagramSessionSnapshot({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+          sessionId: body.sessionId,
+          clientId: body.clientId,
+          content: body.content,
+          reason: body.reason,
+          metadata: body.metadata,
+        });
+
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    "/:documentId/diagram-session/leave",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentDiagramSessionParamsSchema,
+          request.params,
+        );
+        const body = parseWithSchema(
+          documentSchemas.documentDiagramSessionLeaveInputSchema,
+          request.body,
+        );
+
+        const result = await service.leaveDiagramSession({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+          sessionId: body.sessionId,
+          clientId: body.clientId,
+        });
+
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.get(
+    "/:documentId/diagram-session/state",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentDiagramSessionParamsSchema,
+          request.params,
+        );
+        const result = await service.getDiagramSessionState({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+        });
+
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
   app.patch(
     "/:documentId",
     {
@@ -196,7 +545,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
           entityType: "ARCHIVO",
           entityId: updated.id,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             name: updated.name,
           },
         };
@@ -232,7 +581,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
           entityType: "ARCHIVO",
           entityId: deleted.id,
           action: "ELIMINAR",
-          reasonCode: "DOCUMENT_SOFT_DELETE",
+          reasonCatalogId: "DOCUMENT_SOFT_DELETE",
           reason: "Documento movido a papelera por 7 días",
         };
 
@@ -402,9 +751,9 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
           entityType: "ARCHIVO",
           entityId: params.documentId,
           action: "ACTUALIZAR",
-          reasonCode: "DOCUMENT_VERSION_SAVE",
+          reasonCatalogId: "DOCUMENT_VERSION_SAVE",
           reason: `Versión ${result.version.versionNumber} guardada`,
-          newData: {
+          newDataText: {
             version: result.version.versionNumber,
             kind: result.version.kind,
           },
@@ -485,9 +834,9 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
           entityType: "ARCHIVO",
           entityId: params.documentId,
           action: "ACTUALIZAR",
-          reasonCode: "DOCUMENT_VERSION_RESTORE",
+          reasonCatalogId: "DOCUMENT_VERSION_RESTORE",
           reason: `Versión restaurada desde ${params.versionId}`,
-          newData: {
+          newDataText: {
             version: result.version.versionNumber,
           },
         };
@@ -525,6 +874,136 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
           cursorLabel: payload.cursorLabel,
         });
 
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  // ── Restore from trash ─────────────────────────────────
+
+  app.post(
+    "/:documentId/restore",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "ARCHIVO_SUBIR",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.restoreDocumentParamsSchema,
+          request.params,
+        );
+        const restored = await service.restoreDocument({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+        });
+
+        request.auditEvent = {
+          entityType: "ARCHIVO",
+          entityId: restored.id,
+          action: "ACTUALIZAR",
+          reasonCatalogId: "DOCUMENT_RESTORE",
+          reason: "Documento restaurado desde papelera",
+        };
+
+        return reply.send(restored);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  // ── Duplicate ──────────────────────────────────────────
+
+  app.post(
+    "/:documentId/duplicate",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "ARCHIVO_SUBIR",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.duplicateDocumentParamsSchema,
+          request.params,
+        );
+        const duplicated = await service.duplicateDocument({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+        });
+
+        request.auditEvent = {
+          entityType: "ARCHIVO",
+          entityId: duplicated.id,
+          action: "CREAR",
+          newDataText: {
+            name: duplicated.name,
+            duplicatedFrom: params.documentId,
+          },
+        };
+
+        return reply.code(201).send(duplicated);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  // ── Favorites ──────────────────────────────────────────
+
+  app.post(
+    "/:documentId/favorite",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentFavoriteParamsSchema,
+          request.params,
+        );
+        const result = await service.toggleFavorite({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+        });
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.delete(
+    "/:documentId/favorite",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentFavoriteParamsSchema,
+          request.params,
+        );
+        const result = await service.removeFavorite({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+        });
         return reply.send(result);
       } catch (error) {
         const status = (error as Error).name === "Forbidden" ? 403 : 400;

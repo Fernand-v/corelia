@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { codeValueSchema, idSchema, timestampSchema } from "./common.js";
-import { systemRoleSchema, taskStatusSchema } from "./enums.js";
+import { taskStatusSchema } from "./enums.js";
+import { roleCodeSchema } from "./rbac.js";
 
 export const taskSchema = z.object({
   id: idSchema,
@@ -11,7 +12,7 @@ export const taskSchema = z.object({
   stageColor: z.string().nullable().optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(4000).nullable(),
-  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: codeValueSchema.nullable().optional(),
   descriptionLabel: z.string().nullable().optional(),
   assigneeId: idSchema.nullable(),
   assigneeName: z.string().nullable().optional(),
@@ -20,7 +21,7 @@ export const taskSchema = z.object({
   status: taskStatusSchema,
   dueDate: z.string().datetime().nullable(),
   blockedReason: z.string().max(500).nullable(),
-  blockedReasonCode: codeValueSchema.nullable().optional(),
+  blockedReasonCatalogId: codeValueSchema.nullable().optional(),
   blockedReasonLabel: z.string().nullable().optional(),
   blockingTaskId: idSchema.nullable(),
   createdById: idSchema,
@@ -34,7 +35,7 @@ export const createTaskInputSchema = z.object({
   stageId: idSchema.optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(4000).optional(),
-  descriptionCode: codeValueSchema.optional(),
+  descriptionCatalogId: codeValueSchema.optional(),
   assigneeId: idSchema.optional(),
   startDate: z.string().datetime().optional(),
   dueDate: z.string().datetime().optional(),
@@ -45,17 +46,17 @@ export const taskStatusTransitionInputSchema = z.object({
   taskId: idSchema,
   status: taskStatusSchema,
   reason: z.string().min(3).max(500),
-  reasonCode: codeValueSchema.optional(),
+  reasonCatalogId: codeValueSchema.optional(),
   blockingTaskId: idSchema.optional(),
   blockedReason: z.string().min(5).max(500).optional(),
-  blockedReasonCode: codeValueSchema.optional()
+  blockedReasonCatalogId: codeValueSchema.optional()
 });
 
 export const taskReassignmentInputSchema = z.object({
   taskId: idSchema,
   newAssigneeId: idSchema,
   reason: z.string().min(5).max(500),
-  reasonCode: codeValueSchema.optional(),
+  reasonCatalogId: codeValueSchema.optional(),
   reopenIfCompleted: z.boolean().default(false)
 });
 
@@ -69,7 +70,7 @@ export const updateTaskScheduleInputSchema = z
     startDate: z.string().datetime().nullable().optional(),
     dueDate: z.string().datetime().nullable().optional(),
     reason: z.string().min(3).max(500),
-    reasonCode: codeValueSchema.optional()
+    reasonCatalogId: codeValueSchema.optional()
   })
   .superRefine((input, ctx) => {
     if (!input.startDate || !input.dueDate) {
@@ -88,13 +89,13 @@ export const updateTaskScheduleInputSchema = z
 export const finalizeAndAdvanceInputSchema = z.object({
   taskId: idSchema,
   reason: z.string().min(3).max(500).optional(),
-  reasonCode: codeValueSchema.optional()
+  reasonCatalogId: codeValueSchema.optional()
 });
 
 export const activateTaskInputSchema = z.object({
   taskId: idSchema,
   reason: z.string().min(3).max(500),
-  reasonCode: codeValueSchema.optional()
+  reasonCatalogId: codeValueSchema.optional()
 });
 
 export const taskScheduleHistoryItemSchema = z.object({
@@ -105,7 +106,7 @@ export const taskScheduleHistoryItemSchema = z.object({
   newStartDate: z.string().datetime().nullable(),
   newDueDate: z.string().datetime().nullable(),
   reason: z.string().min(1),
-  reasonCode: codeValueSchema.nullable().optional(),
+  reasonCatalogId: codeValueSchema.nullable().optional(),
   reasonLabel: z.string().nullable().optional(),
   changedById: idSchema,
   changedByName: z.string().nullable().optional(),
@@ -132,7 +133,7 @@ export const taskProjectMemberAvailabilitySchema = z.object({
   activeTasks: z.number().int().min(0),
   maxActiveTasks: z.number().int().positive(),
   overloaded: z.boolean(),
-  role: systemRoleSchema
+  role: roleCodeSchema
 });
 
 export type Task = z.infer<typeof taskSchema>;

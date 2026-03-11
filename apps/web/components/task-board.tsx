@@ -496,8 +496,8 @@ export const TaskBoard = ({
   const canManageStages = canEditGantt;
   const canManageTaskFlow = activeRole ? taskFlowManagerRoles.has(activeRole) : false;
 
-  const projectTasks = tasksQuery.data ?? [];
-  const allTasks = allTasksQuery.data ?? [];
+  const projectTasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
+  const allTasks = useMemo(() => allTasksQuery.data ?? [], [allTasksQuery.data]);
   const myTasks = filterMyTasks(allTasks, session.data?.id ?? null)
     .filter(isVisibleInMyTasks)
     .sort((a, b) => {
@@ -523,12 +523,21 @@ export const TaskBoard = ({
     });
   }, [projectTasks]);
 
-  const projectMap = new Map((projectsQuery.data ?? []).map((project) => [project.id, project.name]));
+  const projectMap = useMemo(
+    () => new Map((projectsQuery.data ?? []).map((project) => [project.id, project.name])),
+    [projectsQuery.data]
+  );
 
-  const members = membersQuery.data ?? [];
-  const membersById = new Map(members.map((member) => [member.userId, member]));
-  const stages = stagesQuery.data ?? [];
-  const stagesById = new Map(stages.map((stage) => [stage.id, stage]));
+  const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
+  const membersById = useMemo(
+    () => new Map(members.map((member) => [member.userId, member])),
+    [members]
+  );
+  const stages = useMemo(() => stagesQuery.data ?? [], [stagesQuery.data]);
+  const stagesById = useMemo(
+    () => new Map(stages.map((stage) => [stage.id, stage])),
+    [stages]
+  );
 
   const selectedProject = useMemo(
     () => projectsQuery.data?.find((project) => project.id === selectedProjectId) ?? null,

@@ -117,9 +117,9 @@ describe("Degraded mode", () => {
     });
 
     expect(message.id).toBe("msg-1");
-    expect(app.realtime.emitChannelMessage).toHaveBeenCalledWith("c-1", expect.any(Object));
+    expect(app.realtime!.emitChannelMessage).toHaveBeenCalledWith("c-1", expect.any(Object));
     expect(calendar).toHaveLength(1);
-    expect(calendar[0].type).toBe("TAREA");
-    expect(app.media.getHealth()).toMatchObject({ healthy: false });
+    expect(calendar[0]!.type).toBe("TAREA");
+    expect(app.media!.getHealth()).toMatchObject({ healthy: false });
   });
 });

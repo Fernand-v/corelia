@@ -119,8 +119,12 @@ describe("Meetings integration flows", () => {
     });
 
     expect(result.meeting.id).toBe("m-1");
-    expect(app.queues.notifications.add).toHaveBeenCalled();
-    expect(app.realtime.emitMeetingEvent).toHaveBeenCalledWith("m-1", "meeting:created", expect.any(Object));
+    expect(app.queues!.notifications.add).toHaveBeenCalled();
+    expect(app.realtime!.emitMeetingEvent).toHaveBeenCalledWith(
+      "m-1",
+      "meeting:created",
+      expect.any(Object)
+    );
   });
 
   it("creates agreement linked to new task and notifies assignee", async () => {
@@ -176,7 +180,7 @@ describe("Meetings integration flows", () => {
 
     expect(agreement.status).toBe("VINCULADO_TAREA");
     expect(app.prisma.notification.create).toHaveBeenCalled();
-    expect(app.realtime.emitMeetingEvent).toHaveBeenCalledWith(
+    expect(app.realtime!.emitMeetingEvent).toHaveBeenCalledWith(
       "m-1",
       "meeting:agreement",
       expect.any(Object)
@@ -197,7 +201,7 @@ describe("Meetings integration flows", () => {
         id: "m-1",
         mediaRoomId: null
       });
-    app.media.getHealth = vi.fn().mockReturnValue({
+    app.media!.getHealth = vi.fn().mockReturnValue({
       enabled: true,
       healthy: false,
       detail: "worker caido",
@@ -248,7 +252,7 @@ describe("Realtime notifications", () => {
       mentions: ["u-2"]
     });
 
-    expect(app.realtime.emitChannelMessage).toHaveBeenCalledWith("c-1", expect.any(Object));
+    expect(app.realtime!.emitChannelMessage).toHaveBeenCalledWith("c-1", expect.any(Object));
     expect(app.prisma.notification.create).toHaveBeenCalled();
   });
 });

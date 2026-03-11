@@ -12,7 +12,7 @@ const updateTaskScheduleInputSchema = z
     startDate: z.string().datetime().nullable().optional(),
     dueDate: z.string().datetime().nullable().optional(),
     reason: z.string().min(3).max(500),
-    reasonCode: codeValueSchema.optional()
+    reasonCatalogId: codeValueSchema.optional()
   })
   .superRefine((input, ctx) => {
     if (!input.startDate || !input.dueDate) {
@@ -31,13 +31,13 @@ const updateTaskScheduleInputSchema = z
 const finalizeAndAdvanceInputSchema = z.object({
   taskId: z.string().uuid(),
   reason: z.string().min(3).max(500).optional(),
-  reasonCode: codeValueSchema.optional()
+  reasonCatalogId: codeValueSchema.optional()
 });
 
 const activateTaskInputSchema = z.object({
   taskId: z.string().uuid(),
   reason: z.string().min(3).max(500),
-  reasonCode: codeValueSchema.optional()
+  reasonCatalogId: codeValueSchema.optional()
 });
 
 export const taskSchemas = {

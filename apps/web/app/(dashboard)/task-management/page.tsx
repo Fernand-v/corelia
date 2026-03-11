@@ -1,20 +1,27 @@
 import { redirect } from "next/navigation";
 
-export default function TaskManagementPage({
-  searchParams
-}: {
-  searchParams?: { projectId?: string; projectName?: string; teamId?: string };
-}) {
+type TaskManagementPageProps = {
+  searchParams?: Promise<{ projectId?: string | string[]; projectName?: string | string[]; teamId?: string | string[] }>;
+};
+
+const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
+
+export default async function TaskManagementPage({ searchParams }: TaskManagementPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
   const params = new URLSearchParams();
   params.set("tab", "gestion");
-  if (searchParams?.projectId) {
-    params.set("projectId", searchParams.projectId);
+  const projectId = getParam(resolvedSearchParams.projectId);
+  const projectName = getParam(resolvedSearchParams.projectName);
+  const teamId = getParam(resolvedSearchParams.teamId);
+
+  if (projectId) {
+    params.set("projectId", projectId);
   }
-  if (searchParams?.projectName) {
-    params.set("projectName", searchParams.projectName);
+  if (projectName) {
+    params.set("projectName", projectName);
   }
-  if (searchParams?.teamId) {
-    params.set("teamId", searchParams.teamId);
+  if (teamId) {
+    params.set("teamId", teamId);
   }
 
   redirect(`/tasks?${params.toString()}`);

@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Sora } from "next/font/google";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type {
   CollaborativeDocument,
@@ -16,11 +15,9 @@ import { DocumentsEditorDiagram } from "@/components/documents-editor-diagram";
 import { DocumentsEditorTable } from "@/components/documents-editor-table";
 import { DocumentsEditorWhiteboard } from "@/components/documents-editor-whiteboard";
 import { DocumentsEditorPresentation } from "@/components/documents-editor-presentation";
-
-const sora = Sora({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"]
-});
+import { CollaborativeDocumentsModuleV2 } from "@/components/collaborative-documents-module-v2";
+import { exportDiagramV3ToDrawioDocument } from "@/lib/diagram/maxgraph/diagram-collab-v3";
+import { serializeMxfile } from "@/lib/diagram/maxgraph/xml-format";
 
 type DocumentTypeMeta = {
   label: string;
@@ -53,7 +50,7 @@ const DOCUMENT_TYPE_META: Record<DocumentType, DocumentTypeMeta> = {
     placeholder: "ej: Seguimiento de presupuesto Q2"
   },
   WHITEBOARD: {
-    label: "Whiteboard",
+    label: "Pizarra",
     icon: "🎨",
     accent: "#f97316",
     hint: "Pizarra colaborativa en tiempo real",
@@ -100,6 +97,7 @@ type CollaboratorMember = {
 
 const DEFAULT_AUTO_SAVE_INTERVAL_MS = 5 * 60 * 1000;
 const DIAGRAM_AUTO_SAVE_INTERVAL_MS = 30 * 1000;
+const DIAGRAM_USER_CELL_REGEX = /<mxCell\b[^>]*\bid=(['"])(?!0\1|1\1)[^'"]+\1/i;
 
 export type DocumentEditorSyncState = "synced" | "saving" | "reconnecting" | "offline";
 
@@ -134,12 +132,21 @@ export type CollaborativeDocumentsModuleProps = {
     type: DocumentType;
     name: string;
     diagramKind?: DiagramKind;
+    templateId?: string;
   }) => Promise<CollaborativeDocument | null>;
   onOpenDocument: (document: CollaborativeDocument) => void;
   onCloseDocument: () => void;
   onDeleteDocument: (document: CollaborativeDocument) => Promise<void>;
   onRenameDocument: (document: CollaborativeDocument, newName: string) => Promise<void>;
   onSaveVersion: (document: CollaborativeDocument, payload: DocumentSavePayload) => Promise<void>;
+  onDiagramLegacyMigration?: (
+    document: CollaborativeDocument,
+    input: {
+      droppedPageIds: string[];
+      activePageId: string;
+      backupSnapshot: string;
+    }
+  ) => Promise<void> | void;
   onUploadDocumentAsset?: (
     document: CollaborativeDocument,
     file: File
@@ -147,30 +154,18 @@ export type CollaborativeDocumentsModuleProps = {
   onRestoreVersion: (document: CollaborativeDocument, version: CollaborativeDocumentVersion) => Promise<void>;
   onLoadVersions?: (document: CollaborativeDocument) => void;
   onPreviewVersion?: (document: CollaborativeDocument, version: CollaborativeDocumentVersion) => Promise<string | null>;
-};
-
-const formatDateTime = (value: string) => {
-  return new Date(value).toLocaleString("es-ES", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  });
-};
-
-const initialsFromName = (name: string) => {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "??";
-  }
-
-  if (parts.length === 1) {
-    return parts[0]!.slice(0, 2).toUpperCase();
-  }
-
-  return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase();
+  // New features
+  onDuplicateDocument?: (document: CollaborativeDocument) => Promise<void>;
+  onToggleFavorite?: (document: CollaborativeDocument) => Promise<void>;
+  onRestoreFromTrash?: (documentId: string) => Promise<void>;
+  onFetchTrash?: () => void;
+  trashItems?: CollaborativeDocument[];
+  trashLoading?: boolean;
+  onBatchDelete?: (documentIds: string[]) => Promise<void>;
+  onBatchRestore?: (documentIds: string[]) => Promise<void>;
+  onCreateTemplate?: (input: { documentId: string; name: string; description?: string }) => Promise<void>;
+  onFetchTemplates?: () => void;
+  templates?: Array<{ id: string; projectId: string | null; type: DocumentType; name: string; description: string | null }>;
 };
 
 const syncLabelByState: Record<DocumentEditorSyncState, { label: string; tone: string }> = {
@@ -213,10 +208,22 @@ export const CollaborativeDocumentsModule = ({
   onDeleteDocument,
   onRenameDocument,
   onSaveVersion,
+  onDiagramLegacyMigration,
   onUploadDocumentAsset,
   onRestoreVersion,
   onLoadVersions,
-  onPreviewVersion
+  onPreviewVersion,
+  onDuplicateDocument,
+  onToggleFavorite,
+  onRestoreFromTrash,
+  onFetchTrash,
+  trashItems = [],
+  trashLoading = false,
+  onBatchDelete,
+  onBatchRestore,
+  onCreateTemplate,
+  onFetchTemplates,
+  templates = []
 }: CollaborativeDocumentsModuleProps) => {
   const [search, setSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -233,30 +240,40 @@ export const CollaborativeDocumentsModule = ({
   const [editorDrafts, setEditorDrafts] = useState<Record<string, string>>({});
   const [dirtyByDocumentId, setDirtyByDocumentId] = useState<Record<string, boolean>>({});
   const [recentlySavedByDocumentId, setRecentlySavedByDocumentId] = useState<Record<string, boolean>>({});
+  const onSaveVersionRef = useRef(onSaveVersion);
+  const onLoadVersionsRef = useRef(onLoadVersions);
+  const autoSaveInFlightRef = useRef<Record<string, boolean>>({});
+  const lastAutoSaveFingerprintRef = useRef<Record<string, string>>({});
+  const previousConnectionStateRef = useRef(connectionState);
+  const editorDraftsRef = useRef(editorDrafts);
+  const dirtyByDocumentIdRef = useRef(dirtyByDocumentId);
+  const isProviderOfflineRef = useRef(isProviderOffline);
+  const activeDocumentRef = useRef<CollaborativeDocument | null>(activeDocument);
+  const previousActiveDocumentRef = useRef<CollaborativeDocument | null>(activeDocument);
 
-  const query = search.trim().toLowerCase();
+  useEffect(() => {
+    onSaveVersionRef.current = onSaveVersion;
+  }, [onSaveVersion]);
 
-  const filteredDocuments = useMemo(() => {
-    if (!query) {
-      return documents;
-    }
+  useEffect(() => {
+    onLoadVersionsRef.current = onLoadVersions;
+  }, [onLoadVersions]);
 
-    const next = {
-      TEXTO: [] as CollaborativeDocument[],
-      DIAGRAMA: [] as CollaborativeDocument[],
-      TABLA: [] as CollaborativeDocument[],
-      WHITEBOARD: [] as CollaborativeDocument[],
-      PRESENTACION: [] as CollaborativeDocument[]
-    };
+  useEffect(() => {
+    editorDraftsRef.current = editorDrafts;
+  }, [editorDrafts]);
 
-    for (const type of DOCUMENT_TYPE_ORDER) {
-      next[type] = documents[type].filter((document) =>
-        document.name.toLowerCase().includes(query)
-      );
-    }
+  useEffect(() => {
+    dirtyByDocumentIdRef.current = dirtyByDocumentId;
+  }, [dirtyByDocumentId]);
 
-    return next;
-  }, [documents, query]);
+  useEffect(() => {
+    isProviderOfflineRef.current = isProviderOffline;
+  }, [isProviderOffline]);
+
+  useEffect(() => {
+    activeDocumentRef.current = activeDocument;
+  }, [activeDocument]);
 
   const collaboratorsByDocumentId = useMemo(() => {
     return new Map(activeCollaborators.map((entry) => [entry.documentId, entry.collaborators]));
@@ -352,34 +369,184 @@ export const CollaborativeDocumentsModule = ({
     []
   );
 
-  const flushDirtyDraft = useCallback(() => {
-    if (!activeDocument || isProviderOffline) {
+  const getContentFingerprint = useCallback((value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "0";
+    }
+    const head = trimmed.slice(0, 96);
+    const tail = trimmed.slice(-96);
+    return `${trimmed.length}:${head}:${tail}`;
+  }, []);
+
+  const forceSyncDiagramSnapshot = useCallback((documentId: string) => {
+    if (typeof window === "undefined") {
       return;
     }
-
-    const currentPayload = editorDrafts[activeDocument.id]?.trim() ?? "";
-    const isDirty = dirtyByDocumentId[activeDocument.id] ?? false;
-
-    if (!currentPayload || !isDirty) {
-      return;
-    }
-
-    void onSaveVersion(activeDocument, buildSavePayload(activeDocument, currentPayload, "AUTO"))
-      .then(() => {
-        markSavedState(activeDocument.id);
-        onLoadVersions?.(activeDocument);
+    window.dispatchEvent(
+      new CustomEvent("corelia:diagram-force-sync", {
+        detail: { documentId }
       })
-      .catch(() => undefined);
-  }, [
-    activeDocument,
-    buildSavePayload,
-    dirtyByDocumentId,
-    editorDrafts,
-    isProviderOffline,
-    markSavedState,
-    onLoadVersions,
-    onSaveVersion
-  ]);
+    );
+  }, []);
+
+  const requestLiveDiagramSnapshot = useCallback((documentId: string): string => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    let snapshot = "";
+    window.dispatchEvent(
+      new CustomEvent("corelia:diagram-request-snapshot", {
+        detail: {
+          documentId,
+          capture: (payload: string) => {
+            snapshot = payload.trim();
+          }
+        }
+      })
+    );
+    return snapshot;
+  }, []);
+
+  const resolveCurrentDocumentPayload = useCallback(
+    (document: CollaborativeDocument) => {
+      if (document.type === "DIAGRAMA" && yjsProvider?.document) {
+        const liveSnapshot = requestLiveDiagramSnapshot(document.id);
+        if (liveSnapshot && DIAGRAM_USER_CELL_REGEX.test(liveSnapshot)) {
+          return liveSnapshot;
+        }
+
+        forceSyncDiagramSnapshot(document.id);
+        let v3Payload = "";
+        try {
+          const fallbackKind: DiagramKind = document.diagramKind ?? "FLUJO";
+          const yDiagramMap = yjsProvider.document.getMap(`doc:${document.id}:diagram:v3`);
+          v3Payload = serializeMxfile(
+            exportDiagramV3ToDrawioDocument(yDiagramMap, fallbackKind)
+          ).trim();
+          if (v3Payload && DIAGRAM_USER_CELL_REGEX.test(v3Payload)) {
+            return v3Payload;
+          }
+
+          const yPayload = yjsProvider.document
+            .getText(`doc:${document.id}:diagram`)
+            .toString()
+            .trim();
+          if (yPayload && DIAGRAM_USER_CELL_REGEX.test(yPayload)) {
+            return yPayload;
+          }
+
+          // Do NOT return v3Payload/yPayload without user cells — it would
+          // cause an empty version to be persisted on close.
+        } catch {
+          // noop: fallback to local draft
+        }
+      }
+
+      return editorDraftsRef.current[document.id]?.trim() ?? "";
+    },
+    [forceSyncDiagramSnapshot, requestLiveDiagramSnapshot, yjsProvider]
+  );
+
+  const persistAutoVersion = useCallback(
+    async (
+      document: CollaborativeDocument,
+      content: string,
+      source: "interval" | "flush" | "reconnected_autosave"
+    ) => {
+      const payloadContent = content.trim();
+      if (!payloadContent) {
+        return;
+      }
+
+      const fingerprint = getContentFingerprint(payloadContent);
+      if (lastAutoSaveFingerprintRef.current[document.id] === fingerprint) {
+        return;
+      }
+
+      if (autoSaveInFlightRef.current[document.id]) {
+        return;
+      }
+
+      autoSaveInFlightRef.current[document.id] = true;
+      try {
+        await onSaveVersionRef.current(
+          document,
+          buildSavePayload(document, payloadContent, "AUTO")
+        );
+        lastAutoSaveFingerprintRef.current[document.id] = fingerprint;
+        markSavedState(document.id);
+        onLoadVersionsRef.current?.(document);
+        if (source === "reconnected_autosave" && process.env.NODE_ENV !== "test") {
+          console.debug("[maxgraph-collab]", "queue_flush", {
+            documentId: document.id,
+            source
+          });
+        }
+      } catch {
+        // noop: autosave errors are non-blocking for editing UX
+      } finally {
+        autoSaveInFlightRef.current[document.id] = false;
+      }
+    },
+    [buildSavePayload, getContentFingerprint, markSavedState]
+  );
+
+  const flushDocumentIfDirty = useCallback(
+    (document: CollaborativeDocument | null) => {
+      if (!document || isProviderOfflineRef.current) {
+        return;
+      }
+
+      const currentPayload = resolveCurrentDocumentPayload(document);
+      const isDirty = dirtyByDocumentIdRef.current[document.id] ?? false;
+      if (!currentPayload || !isDirty) {
+        if (document.type !== "DIAGRAMA" || !currentPayload) {
+          return;
+        }
+
+        const fingerprint = getContentFingerprint(currentPayload);
+        if (lastAutoSaveFingerprintRef.current[document.id] === fingerprint) {
+          return;
+        }
+      }
+
+      if (!currentPayload) {
+        return;
+      }
+
+      // Safety guard: never persist an empty diagram snapshot.  This prevents
+      // the close-race-condition (provider destroyed before the activeDocument
+      // change effect flushes) from overwriting a valid version with an empty one.
+      if (document.type === "DIAGRAMA" && !DIAGRAM_USER_CELL_REGEX.test(currentPayload)) {
+        return;
+      }
+
+      void persistAutoVersion(document, currentPayload, "flush");
+    },
+    [getContentFingerprint, persistAutoVersion, resolveCurrentDocumentPayload]
+  );
+
+  const flushDirtyDraft = useCallback(() => {
+    flushDocumentIfDirty(activeDocumentRef.current);
+  }, [flushDocumentIfDirty]);
+
+  useEffect(() => {
+    const previous = previousActiveDocumentRef.current;
+    const nextId = activeDocument?.id ?? null;
+
+    if (previous && previous.id !== nextId) {
+      flushDocumentIfDirty(previous);
+    }
+
+    previousActiveDocumentRef.current = activeDocument;
+  }, [activeDocument, flushDocumentIfDirty]);
+
+  useEffect(() => {
+    return () => {
+      flushDocumentIfDirty(previousActiveDocumentRef.current);
+    };
+  }, [flushDocumentIfDirty]);
 
   const handleDraftChange = useCallback(
     (value: string) => {
@@ -453,28 +620,50 @@ export const CollaborativeDocumentsModule = ({
     closeCreateModal();
 
     if (created) {
-      window.open(
-        `/documents-editor?id=${encodeURIComponent(created.id)}&projectId=${encodeURIComponent(project.id)}&projectName=${encodeURIComponent(project.name)}`,
-        "_blank"
-      );
+      onOpenDocument(created);
     }
   };
+
+  const openDocumentInV2 = useCallback(
+    (document: CollaborativeDocument) => {
+      const current = activeDocumentRef.current;
+      if (current && current.id !== document.id) {
+        flushDocumentIfDirty(current);
+      }
+      onOpenDocument(document);
+    },
+    [flushDocumentIfDirty, onOpenDocument]
+  );
+
+  const openDocumentHistoryInV2 = useCallback(
+    (document: CollaborativeDocument) => {
+      const current = activeDocumentRef.current;
+      if (current && current.id !== document.id) {
+        flushDocumentIfDirty(current);
+      }
+      onOpenDocument(document);
+      setVersionPanelOpen(true);
+      onLoadVersions?.(document);
+    },
+    [flushDocumentIfDirty, onLoadVersions, onOpenDocument]
+  );
 
   const saveManualVersion = async () => {
     if (!activeDocument || savingVersion) {
       return;
     }
 
-    const payload = activeDraft.trim();
+    const payload = resolveCurrentDocumentPayload(activeDocument);
     if (!payload) {
       return;
     }
 
     setSavingVersion(true);
     try {
-      await onSaveVersion(activeDocument, buildSavePayload(activeDocument, payload, "MANUAL"));
+      await onSaveVersionRef.current(activeDocument, buildSavePayload(activeDocument, payload, "MANUAL"));
+      lastAutoSaveFingerprintRef.current[activeDocument.id] = getContentFingerprint(payload);
       markSavedState(activeDocument.id);
-      onLoadVersions?.(activeDocument);
+      onLoadVersionsRef.current?.(activeDocument);
     } finally {
       setSavingVersion(false);
     }
@@ -496,12 +685,7 @@ export const CollaborativeDocumentsModule = ({
         return;
       }
 
-      void onSaveVersion(activeDocument, buildSavePayload(activeDocument, currentPayload, "AUTO"))
-        .then(() => {
-          markSavedState(activeDocument.id);
-          onLoadVersions?.(activeDocument);
-        })
-        .catch(() => undefined);
+      void persistAutoVersion(activeDocument, currentPayload, "interval");
     }, intervalMs);
 
     return () => {
@@ -509,13 +693,40 @@ export const CollaborativeDocumentsModule = ({
     };
   }, [
     activeDocument,
-    buildSavePayload,
     dirtyByDocumentId,
     editorDrafts,
     isProviderOffline,
-    markSavedState,
-    onLoadVersions,
-    onSaveVersion
+    persistAutoVersion
+  ]);
+
+  useEffect(() => {
+    const previousState = previousConnectionStateRef.current;
+    previousConnectionStateRef.current = connectionState;
+
+    if (!activeDocument || activeDocument.type !== "DIAGRAMA") {
+      return;
+    }
+    if (isProviderOffline || connectionState !== "connected") {
+      return;
+    }
+    if (previousState === "connected") {
+      return;
+    }
+
+    const currentPayload = editorDrafts[activeDocument.id]?.trim() ?? "";
+    const isDirty = dirtyByDocumentId[activeDocument.id] ?? false;
+    if (!currentPayload || !isDirty) {
+      return;
+    }
+
+    void persistAutoVersion(activeDocument, currentPayload, "reconnected_autosave");
+  }, [
+    activeDocument,
+    connectionState,
+    dirtyByDocumentId,
+    editorDrafts,
+    isProviderOffline,
+    persistAutoVersion
   ]);
 
   useEffect(() => {
@@ -542,7 +753,7 @@ export const CollaborativeDocumentsModule = ({
     };
   }, [activeDocument, flushDirtyDraft]);
 
-  const renderEditorByType = () => {
+  const editorNode = useMemo(() => {
     if (!activeDocument) {
       return null;
     }
@@ -594,8 +805,21 @@ export const CollaborativeDocumentsModule = ({
           documentId={activeDocument.id}
           value={activeDraft}
           readOnly={false}
+          offlineMode="queue"
+          connectionState={connectionState}
           provider={yjsProvider}
           currentUser={currentUser}
+          {...(onDiagramLegacyMigration
+            ? {
+                onLegacyMigration: async (input: {
+                  droppedPageIds: string[];
+                  activePageId: string;
+                  backupSnapshot: string;
+                }) => {
+                  await onDiagramLegacyMigration(activeDocument, input);
+                }
+              }
+            : {})}
           {...diagramProps}
           onChange={handleDraftChange}
         />
@@ -646,385 +870,99 @@ export const CollaborativeDocumentsModule = ({
         onChange={handleDraftChange}
       />
     );
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeDocument?.id,
+    activeDocument?.type,
+    activeDocument?.diagramEngine,
+    activeDocument?.diagramKind,
+    activeDraft,
+    isProviderOffline,
+    yjsProvider,
+    currentUser,
+    members,
+    activeDocumentCollaborators,
+    connectionState,
+    handleDraftChange,
+    onDiagramLegacyMigration,
+    onUploadDocumentAsset
+  ]);
 
-  const explorerView = (
-    <div className="flex h-full flex-col overflow-hidden bg-[#f5f7fa]">
-      <header className="border-b border-[rgba(0,0,0,0.07)] bg-white/90 px-5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.06)] backdrop-blur-sm md:px-7">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium text-slate-400">{project.name} · Documentos</p>
-            <h1 className={`${sora.className} text-xl font-semibold text-slate-900`}>Documentos</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <svg className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar documento…"
-                className="h-9 w-56 rounded-xl border border-[rgba(0,0,0,0.09)] bg-white/80 pl-8 pr-3 text-sm text-slate-700 outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/20"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => openCreateModal()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover active:scale-[0.97]"
-            >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-              Nuevo documento
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex-1 overflow-y-auto px-5 py-5 md:px-7">
-        {loading ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <div
-                key={`doc-skeleton-${index}`}
-                className="h-36 animate-pulse rounded-2xl border border-[#e2e8f2] bg-white"
-              />
-            ))}
-          </div>
-        ) : null}
-
-        {!loading && errorMessage ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <p>{errorMessage}</p>
-            {onRetry ? (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="mt-3 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700"
-              >
-                Reintentar
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {!loading && !errorMessage ? (
-          <div className="space-y-5">
-            {DOCUMENT_TYPE_ORDER.map((type) => {
-              const meta = DOCUMENT_TYPE_META[type];
-              const items = filteredDocuments[type];
-
-              return (
-                <section key={type}>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className="flex h-8 w-8 items-center justify-center rounded-xl text-base shadow-sm"
-                        style={{ backgroundColor: `${meta.accent}18`, border: `1px solid ${meta.accent}30` }}
-                      >
-                        <span aria-hidden>{meta.icon}</span>
-                      </div>
-                      <div>
-                        <h2 className={`${sora.className} text-sm font-semibold text-slate-800`}>
-                          {meta.label}
-                        </h2>
-                        <p className="text-[11px] text-slate-400">{meta.hint}</p>
-                      </div>
-                      <span className="rounded-full border border-[rgba(0,0,0,0.07)] bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500 shadow-sm">
-                        {items.length}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => openCreateModal(type)}
-                      className="inline-flex h-8 items-center gap-1 rounded-xl border border-[rgba(0,0,0,0.09)] bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50 active:scale-[0.97]"
-                    >
-                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                      Nuevo
-                    </button>
-                  </div>
-
-                  {items.length === 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => openCreateModal(type)}
-                      className="flex h-24 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[rgba(0,0,0,0.12)] bg-white/60 text-sm text-slate-400 transition-colors hover:border-accent/40 hover:bg-white/90 hover:text-accent"
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
-                      Crear primer {meta.label.toLowerCase()}
-                    </button>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                      {items.map((document) => {
-                        const liveCollaborators = collaboratorsByDocumentId.get(document.id) ?? [];
-                        const openUrl = `/documents-editor?id=${encodeURIComponent(document.id)}&projectId=${encodeURIComponent(project.id)}&projectName=${encodeURIComponent(project.name)}`;
-                        return (
-                          <article
-                            key={document.id}
-                            className="group relative overflow-hidden rounded-2xl border border-[rgba(0,0,0,0.07)] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)]"
-                          >
-                            <div
-                              className="h-1.5 w-full"
-                              style={{ backgroundColor: meta.accent }}
-                            />
-                            <div className="p-4">
-                              <button
-                                type="button"
-                                onClick={() => window.open(openUrl, "_blank")}
-                                className="w-full text-left"
-                              >
-                                <div className="mb-3 flex items-start justify-between gap-2">
-                                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{document.name}</h3>
-                                  <span className="shrink-0 rounded-full border border-[rgba(0,0,0,0.07)] bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                                    v{document.currentVersion}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-slate-400">
-                                  {formatDateTime(document.updatedAt)}
-                                </p>
-                                {liveCollaborators.length > 0 ? (
-                                  <div className="mt-3 flex items-center gap-2">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-                                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                                      En vivo
-                                    </span>
-                                    <div className="flex -space-x-2">
-                                      {liveCollaborators.slice(0, 4).map((user) => (
-                                        <span
-                                          key={`${document.id}-${user.userId}`}
-                                          title={user.name}
-                                          className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
-                                          style={{ backgroundColor: user.color }}
-                                        >
-                                          {initialsFromName(user.name)}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ) : null}
-                              </button>
-
-                              <div className="mt-3 flex items-center gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                <button
-                                  type="button"
-                                  onClick={() => window.open(openUrl, "_blank")}
-                                  className="flex-1 rounded-lg border border-[rgba(0,0,0,0.09)] bg-white px-2 py-1.5 text-center text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-                                >
-                                  Abrir
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setRenameTarget(document);
-                                    setRenameValue(document.name);
-                                  }}
-                                  className="rounded-lg border border-[rgba(0,0,0,0.09)] bg-white px-2 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
-                                >
-                                  Renombrar
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setDeleteTarget(document)}
-                                  className="rounded-lg border border-red-100 bg-white px-2 py-1.5 text-xs font-semibold text-red-500 shadow-sm transition-colors hover:bg-red-50"
-                                >
-                                  Eliminar
-                                </button>
-                              </div>
-                            </div>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
-    </div>
+  const v2View = (
+    <CollaborativeDocumentsModuleV2
+      project={project}
+      documents={documents}
+      documentTypeMeta={DOCUMENT_TYPE_META}
+      documentTypeOrder={DOCUMENT_TYPE_ORDER}
+      loading={loading}
+      errorMessage={errorMessage}
+      search={search}
+      setSearch={setSearch}
+      collaboratorsByDocumentId={collaboratorsByDocumentId}
+      activeDocument={activeDocument}
+      activeDocumentCollaborators={activeDocumentCollaborators}
+      currentUser={currentUser}
+      connectionState={connectionState}
+      syncLabel={syncLabelByState[syncState]}
+      saveStatusBadge={saveStatusBadge}
+      savingVersion={savingVersion}
+      versionPanelOpen={versionPanelOpen}
+      versions={versions}
+      editorNode={editorNode}
+      onRetry={onRetry ?? (() => {})}
+      onCreateDocument={openCreateModal}
+      onOpenDocument={openDocumentInV2}
+      onRequestDocumentHistory={openDocumentHistoryInV2}
+      onCloseDocument={() => {
+        flushDirtyDraft();
+        // Clear dirty flag synchronously so the activeDocument change effect
+        // does not attempt a redundant flush after the provider is destroyed.
+        const closingId = activeDocumentRef.current?.id;
+        if (closingId) {
+          dirtyByDocumentIdRef.current[closingId] = false;
+          setDirtyByDocumentId((current) => {
+            if (!current[closingId]) return current;
+            return { ...current, [closingId]: false };
+          });
+        }
+        onCloseDocument();
+      }}
+      onRenameDocument={onRenameDocument}
+      onRequestRename={(document) => {
+        setRenameTarget(document);
+        setRenameValue(document.name);
+      }}
+      onRequestDelete={(document) => setDeleteTarget(document)}
+      onSaveVersion={saveManualVersion}
+      onToggleVersionPanel={() => {
+        setVersionPanelOpen((current) => !current);
+        if (!versionPanelOpen && activeDocument) {
+          onLoadVersions?.(activeDocument);
+        }
+      }}
+      onRestoreVersion={onRestoreVersion}
+      onPreviewVersion={onPreviewVersion ?? (async () => "")}
+      onOpenPreview={(title, payload) => {
+        setPreviewTitle(title);
+        setPreviewContent(payload);
+      }}
+      onDuplicateDocument={onDuplicateDocument}
+      onToggleFavorite={onToggleFavorite}
+      onRestoreFromTrash={onRestoreFromTrash}
+      onFetchTrash={onFetchTrash}
+      trashItems={trashItems}
+      trashLoading={trashLoading}
+      onBatchDelete={onBatchDelete}
+      onBatchRestore={onBatchRestore}
+      onCreateTemplate={onCreateTemplate}
+      onFetchTemplates={onFetchTemplates}
+      templates={templates}
+    />
   );
-
-  const editorView = activeDocument ? (
-    <div className="flex h-full flex-col overflow-hidden bg-[#f5f7fa]">
-      <header className="border-b border-[rgba(0,0,0,0.07)] bg-white/95 px-5 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] backdrop-blur-sm md:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={onCloseDocument}
-              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[rgba(0,0,0,0.09)] bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50 active:scale-[0.97]"
-            >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-              Documentos
-            </button>
-            <div className="min-w-0 hidden sm:block">
-              <p className="truncate text-[11px] text-slate-400">
-                {DOCUMENT_TYPE_META[activeDocument.type].label}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setRenameTarget(activeDocument);
-                  setRenameValue(activeDocument.name);
-                }}
-                className={`${sora.className} truncate text-left text-sm font-semibold text-slate-900 hover:text-accent transition-colors`}
-                title="Clic para renombrar"
-              >
-                {activeDocument.name}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                syncLabelByState[syncState].tone
-              }`}
-            >
-              {syncLabelByState[syncState].label}
-            </span>
-            {saveStatusBadge ? (
-              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${saveStatusBadge.tone}`}>
-                {saveStatusBadge.label}
-              </span>
-            ) : null}
-            <span className="rounded-full border border-[rgba(0,0,0,0.09)] bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-              {activeDocumentCollaborators.length > 0
-                ? `${activeDocumentCollaborators.length} colaborando`
-                : "Sin colaboradores en vivo"}
-            </span>
-
-            <div className="flex -space-x-2">
-              {activeDocumentCollaborators.map((user) => (
-                <span
-                  key={`active-doc-${user.userId}`}
-                  title={user.name}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[11px] font-semibold text-white"
-                  style={{ backgroundColor: user.color }}
-                >
-                  {initialsFromName(user.name)}
-                </span>
-              ))}
-              {activeDocumentCollaborators.length === 0 ? (
-                <span
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[11px] font-semibold text-white"
-                  style={{ backgroundColor: currentUser.color }}
-                  title={currentUser.name}
-                >
-                  {initialsFromName(currentUser.name)}
-                </span>
-              ) : null}
-            </div>
-
-            <button
-              type="button"
-              onClick={saveManualVersion}
-              disabled={savingVersion}
-              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[rgba(0,0,0,0.09)] bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.97]"
-            >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              {savingVersion ? "Guardando…" : "Guardar"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setVersionPanelOpen((current) => !current);
-                if (!versionPanelOpen) {
-                  onLoadVersions?.(activeDocument);
-                }
-              }}
-              className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold shadow-sm transition-colors active:scale-[0.97] ${
-                versionPanelOpen
-                  ? "border-accent/30 bg-accent/10 text-accent"
-                  : "border-[rgba(0,0,0,0.09)] bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Historial
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {connectionState === "reconnecting" ? (
-        <div className="border-b border-yellow-200 bg-yellow-50 px-6 py-2 text-xs font-medium text-yellow-800">
-          🟡 Reconectando… El documento se activará en modo colaborativo al restablecer la conexión.
-        </div>
-      ) : null}
-
-      {connectionState === "offline" ? (
-        <div className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-xs font-medium text-amber-800">
-          🔴 Sin conexión — El documento está en modo solo lectura hasta restablecer la conexión.
-        </div>
-      ) : null}
-
-      <div className="flex min-h-0 flex-1">
-        <section className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">{renderEditorByType()}</section>
-
-        {versionPanelOpen ? (
-          <aside className="w-72 shrink-0 border-l border-[rgba(0,0,0,0.07)] bg-white/95 p-4">
-            <header className="mb-3 flex items-center justify-between">
-              <h3 className={`${sora.className} text-xs font-semibold uppercase tracking-wider text-slate-500`}>Historial</h3>
-              <span className="rounded-full border border-[rgba(0,0,0,0.07)] bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">{versions.length}</span>
-            </header>
-            <div className="space-y-2 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 10rem)" }}>
-              {versions.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-[rgba(0,0,0,0.1)] p-4 text-center text-xs text-slate-400">
-                  Sin versiones registradas.
-                </p>
-              ) : (
-                versions.map((version) => (
-                  <article
-                    key={version.id}
-                    className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white p-3 text-xs text-slate-600 shadow-sm"
-                  >
-                    <div className="mb-1.5 flex items-center justify-between gap-2">
-                      <p className="font-semibold text-slate-800">v{version.versionNumber}</p>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          version.kind === "MANUAL"
-                            ? "bg-accent/10 text-accent"
-                            : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {version.kind === "MANUAL" ? "Manual" : "Auto"}
-                      </span>
-                    </div>
-                    <p className="text-slate-400">{formatDateTime(version.createdAt)}</p>
-                    <p className="truncate text-slate-500">{version.createdByName ?? version.createdById}</p>
-                    <div className="mt-2.5 flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => void onRestoreVersion(activeDocument, version)}
-                        className="rounded-lg border border-[rgba(0,0,0,0.09)] bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-100"
-                      >
-                        Restaurar
-                      </button>
-                      {onPreviewVersion ? (
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const preview = await onPreviewVersion(activeDocument, version);
-                            setPreviewTitle(`Preview v${version.versionNumber}`);
-                            setPreviewContent(preview);
-                          }}
-                          className="rounded-lg border border-[rgba(0,0,0,0.09)] bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-100"
-                        >
-                          Ver
-                        </button>
-                      ) : null}
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          </aside>
-        ) : null}
-      </div>
-    </div>
-  ) : null;
 
   return (
     <section className="docs-shell h-full w-full overflow-hidden font-sans">
-      {activeDocument ? editorView : explorerView}
+      {v2View}
 
       <UiModal
         open={createModalOpen}

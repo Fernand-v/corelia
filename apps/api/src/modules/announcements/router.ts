@@ -30,7 +30,7 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
         entityType: "ANUNCIO",
         entityId: announcement.id,
         action: "CREAR",
-        newData: {
+        newDataText: {
           title: announcement.title,
           expiresAt: announcement.expiresAt,
         },
@@ -75,7 +75,7 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
           entityType: "ANUNCIO",
           entityId: deleted.id,
           action: "ELIMINAR",
-          previousData: {
+          previousDataText: {
             title: deleted.title,
             expiresAt: deleted.expiresAt,
           },

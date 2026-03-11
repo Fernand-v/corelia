@@ -15,7 +15,8 @@
     "format": "prettier --check src prisma",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:migrate:status": "prisma migrate status"
+    "prisma:migrate:status": "prisma migrate status",
+    "prisma:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@corelia/types": "workspace:*",
@@ -31,13 +32,15 @@
     "@prisma/client": "^6.1.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.34.0",
-    "fastify": "^5.2.1",
+    "fastify": "^5.8.2",
     "fastify-plugin": "^5.0.1",
     "ioredis": "^5.4.2",
     "mediasoup": "^3.19.17",
     "minio": "^8.0.6",
     "nodemailer": "^7.0.11",
+    "pdfkit": "^0.17.2",
     "socket.io": "^4.8.1",
+    "exceljs": "^4.4.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -45,6 +48,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.2",
     "@types/nodemailer": "^6.4.17",
+    "@types/pdfkit": "^0.17.3",
     "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^9.17.0",
     "prettier": "^3.4.2",

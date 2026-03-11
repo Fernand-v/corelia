@@ -240,17 +240,19 @@ export class MessagingService {
         kind: input.kind,
         content: input.content,
         mentions: validMentions,
-        meetingId: input.meetingId,
-        attachments: input.attachment
+        meetingId: input.meetingId ?? null,
+        ...(input.attachment
           ? {
-              create: {
-                originalName: input.attachment.originalName,
-                mimeType: input.attachment.mimeType,
-                sizeBytes: input.attachment.sizeBytes,
-                minioPath: input.attachment.minioPath
+              attachments: {
+                create: {
+                  originalName: input.attachment.originalName,
+                  mimeType: input.attachment.mimeType,
+                  sizeBytes: input.attachment.sizeBytes,
+                  minioPath: input.attachment.minioPath
+                }
               }
             }
-          : undefined
+          : {})
       },
       include: {
         attachments: true
@@ -264,7 +266,7 @@ export class MessagingService {
         authorId: message.authorId,
         kind: message.kind,
         content: message.content,
-        attachments: message.attachments.map((attachment) => ({
+        attachments: (message.attachments ?? []).map((attachment: { originalName: string }) => ({
           originalName: attachment.originalName
         }))
       },
@@ -369,7 +371,13 @@ export class MessagingService {
       }),
       this.app.prisma.user.findUnique({
         where: { id: userId },
-        select: { baseRole: true }
+        select: {
+          baseRole: {
+            select: {
+              key: true
+            }
+          }
+        }
       })
     ]);
 
@@ -377,7 +385,7 @@ export class MessagingService {
       throw new Error("Proyecto no encontrado");
     }
 
-    const isAdmin = user?.baseRole === "ADMINISTRADOR";
+    const isAdmin = user?.baseRole.key === "ADMINISTRADOR";
     const hasAccess = Boolean(membership) || project.ownerId === userId || isAdmin;
 
     if (!hasAccess) {
@@ -405,9 +413,15 @@ export class MessagingService {
   }) {
     const creator = await this.app.prisma.user.findUnique({
       where: { id: input.creatorId },
-      select: { baseRole: true }
+      select: {
+        baseRole: {
+          select: {
+            key: true
+          }
+        }
+      }
     });
-    const creatorIsAdmin = creator?.baseRole === "ADMINISTRADOR";
+    const creatorIsAdmin = creator?.baseRole.key === "ADMINISTRADOR";
 
     if (input.scope === "PROYECTO") {
       if (!input.projectId) {
@@ -509,8 +523,24 @@ export class MessagingService {
       data: {
         name: input.name,
         scope: input.scope,
-        teamId: input.teamId,
-        projectId: input.projectId,
+        ...(input.teamId
+          ? {
+              team: {
+                connect: {
+                  id: input.teamId
+                }
+              }
+            }
+          : {}),
+        ...(input.projectId
+          ? {
+              project: {
+                connect: {
+                  id: input.projectId
+                }
+              }
+            }
+          : {}),
         members: {
           create: [
             { userId: input.creatorId },

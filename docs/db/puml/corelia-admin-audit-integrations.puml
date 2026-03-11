@@ -1,0 +1,155 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "GuestInvite" as GuestInvite {
+  * id: String
+    email: String
+    tokenHash: String
+    projectId: String?
+    fileId: String?
+    documentId: String?
+    expiresAt: DateTime
+    createdById: String
+    acceptedAt: DateTime?
+    revokedAt: DateTime?
+    createdAt: DateTime
+}
+
+entity "FormRequest" as FormRequest {
+  * id: String
+    requesterId: String
+    type: RequestType
+    payload: String
+    status: RequestStatus
+    approverId: String?
+    comment: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "DecisionNote" as DecisionNote {
+  * id: String
+    title: String
+    description: String
+    descriptionCatalogId: String?
+    authorId: String
+    createdAt: DateTime
+    linkedUserId: String?
+    linkedProjectId: String?
+    linkedTaskId: String?
+    linkedMeetingId: String?
+    linkedMeetingAgreementId: String?
+    linkedMessageId: String?
+    linkedFileId: String?
+    linkedFormRequestId: String?
+    linkedAnnouncementId: String?
+    linkedObjectiveId: String?
+    linkedDecisionId: String?
+    linkedAutomationRuleId: String?
+    linkedExpenseId: String?
+}
+
+entity "AutomationRule" as AutomationRule {
+  * id: String
+    projectId: String
+    name: String
+    event: AutomationEvent
+    action: AutomationAction
+    enabled: Boolean
+    createdById: String
+    createdAt: DateTime
+    config: String?
+}
+
+entity "WebhookEndpoint" as WebhookEndpoint {
+  * id: String
+    url: String
+    event: WebhookEvent
+    secret: String
+    enabled: Boolean
+    createdById: String
+    createdAt: DateTime
+    deliveries: WebhookDelivery[]
+}
+
+entity "WebhookDelivery" as WebhookDelivery {
+  * id: String
+    endpointId: String
+    payload: String
+    statusCode: Int?
+    success: Boolean
+    attemptedAt: DateTime
+}
+
+entity "ImportJob" as ImportJob {
+  * id: String
+    source: ImportSource
+    filename: String
+    startedAt: DateTime
+    finishedAt: DateTime?
+    success: Boolean
+    createdById: String
+    errors: ImportError[]
+}
+
+entity "ImportError" as ImportError {
+  * id: String
+    jobId: String
+    rowNumber: Int
+    field: String
+    message: String
+    createdAt: DateTime
+}
+
+entity "AuditLog" as AuditLog {
+  * id: String
+    targetUserId: String?
+    targetProjectId: String?
+    targetTaskId: String?
+    targetMeetingId: String?
+    targetMeetingAgreementId: String?
+    targetMessageId: String?
+    targetFileId: String?
+    targetFormRequestId: String?
+    targetAnnouncementId: String?
+    targetObjectiveId: String?
+    targetDecisionId: String?
+    targetAutomationRuleId: String?
+    targetExpenseId: String?
+    action: ActionType
+    userId: String?
+    previousDataText: String?
+    newDataText: String?
+    reason: String?
+    reasonCatalogId: String?
+    createdAt: DateTime
+}
+
+entity "MaintenanceMode" as MaintenanceMode {
+  * id: Int
+    enabled: Boolean
+    message: String?
+    updatedAt: DateTime
+}
+
+entity "FrontendSettings" as FrontendSettings {
+  * id: Int
+    organizationName: String
+    taskStatusColorPending: String
+    taskStatusColorInReview: String
+    taskStatusColorCompleted: String
+    updatedAt: DateTime
+}
+
+DecisionNote }o--|| FormRequest : linkedFormRequestId
+DecisionNote }o--|| DecisionNote : linkedDecisionId
+DecisionNote }o--|| AutomationRule : linkedAutomationRuleId
+WebhookDelivery }o--|| WebhookEndpoint : endpointId
+ImportError }o--|| ImportJob : jobId
+AuditLog }o--|| FormRequest : targetFormRequestId
+AuditLog }o--|| DecisionNote : targetDecisionId
+AuditLog }o--|| AutomationRule : targetAutomationRuleId
+
+@enduml

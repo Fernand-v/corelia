@@ -96,9 +96,21 @@ export class ProjectTeamSyncService {
     if (!existing) {
       await input.db.projectMember.create({
         data: {
-          projectId: input.projectId,
-          userId: input.userId,
-          role: SYNC_ROLE,
+          project: {
+            connect: {
+              id: input.projectId
+            }
+          },
+          user: {
+            connect: {
+              id: input.userId
+            }
+          },
+          role: {
+            connect: {
+              key: SYNC_ROLE
+            }
+          },
           membershipSource: "SYNC",
           syncTeamsCount: 1
         }

@@ -7,11 +7,11 @@ import {
   type AdminAuditReportResponse,
   type AdminOverview,
   type FrontendSettings,
-  type SystemRole,
+  type RoleCode,
   type TaskStatusColors
 } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
-import { apiRequest, getApiBaseUrl, getAuthToken, getPublicApiKey } from "@/lib/api";
+import { apiRequest, getApiBaseUrl, getAuthToken } from "@/lib/api";
 import { useFrontendSettings } from "@/lib/frontend-settings";
 import { useSession } from "@/lib/session";
 import { UiModal } from "@/components/ui-modal";
@@ -21,7 +21,7 @@ type AdminUsersResponse = {
     id: string;
     fullName: string;
     email: string;
-    role: SystemRole;
+    role: RoleCode;
     teamId: string | null;
     teamName: string | null;
     state: "ACTIVO" | "INACTIVO" | "ONBOARDING" | "OFFBOARDING";
@@ -49,8 +49,8 @@ type AdminInvitesResponse = {
   items: Array<{
     id: string;
     email: string;
-    resourceType: "PROYECTO" | "ARCHIVO" | "DOCUMENTO";
-    resourceId: string;
+    resourceScopeType: "PROYECTO" | "ARCHIVO" | "DOCUMENTO";
+    resourceScopeId: string;
     expiresAt: string;
     revokedAt: string | null;
     acceptedAt: string | null;
@@ -64,7 +64,7 @@ type AdminInternalInvitesResponse = {
   items: Array<{
     id: string;
     email: string;
-    baseRole: SystemRole;
+    baseRole: RoleCode;
     teamId: string | null;
     teamName: string | null;
     expiresAt: string;
@@ -78,7 +78,7 @@ type AdminInternalInvitesResponse = {
 };
 
 type RolesMatrixItem = {
-  role: SystemRole;
+  role: RoleCode;
   permissions: string[];
 };
 
@@ -92,7 +92,7 @@ type AccessItem = {
 type OffboardingPreview = {
   userId: string;
   activeTasks: Array<{ id: string; title: string; projectId: string; projectName: string }>;
-  leadershipProjects: Array<{ projectId: string; projectName: string; role: SystemRole }>;
+  leadershipProjects: Array<{ projectId: string; projectName: string; role: RoleCode }>;
   ownedDocuments: Array<{ fileId: string; originalName: string }>;
 };
 
@@ -107,7 +107,7 @@ type ProjectItem = {
   name: string;
 };
 
-const ROLE_OPTIONS: SystemRole[] = [
+const ROLE_OPTIONS: RoleCode[] = [
   "COLABORADOR",
   "COORDINADOR_EQUIPO",
   "LIDER_PROYECTO",
@@ -167,7 +167,7 @@ export const AdminPanelView = () => {
   const queryClient = useQueryClient();
 
   const [userSearch] = useState("");
-  const [userRoleFilter] = useState<SystemRole | "">("");
+  const [userRoleFilter] = useState<RoleCode | "">("");
   const [userStateFilter] = useState<
     AdminUsersResponse["items"][number]["state"] | ""
   >(""
@@ -189,7 +189,7 @@ export const AdminPanelView = () => {
     firstName: "",
     lastName: "",
     email: "",
-    baseRole: "COLABORADOR" as SystemRole,
+    baseRole: "COLABORADOR" as RoleCode,
     teamId: "",
     startOnboarding: true
   });
@@ -210,7 +210,7 @@ export const AdminPanelView = () => {
 
   const [inviteForm, setInviteForm] = useState({
     email: "",
-    resourceId: "",
+    resourceScopeId: "",
     expiresAt: ""
   });
 
@@ -218,7 +218,7 @@ export const AdminPanelView = () => {
 
   const [internalInviteForm, setInternalInviteForm] = useState({
     email: "",
-    baseRole: "COLABORADOR" as SystemRole,
+    baseRole: "COLABORADOR" as RoleCode,
     teamId: "",
     expiresAt: ""
   });
@@ -311,6 +311,7 @@ export const AdminPanelView = () => {
     queryKey: ["admin-frontend-settings"],
     queryFn: () => apiRequest<FrontendSettings>("/admin/frontend-settings")
   });
+  const adminFrontendSettings = adminFrontendSettingsQuery.data;
 
   const auditReportQuery = useQuery({
     queryKey: ["admin-audit-report", auditFilters.from, auditFilters.to, auditFilters.page, auditFilters.pageSize],
@@ -330,18 +331,18 @@ export const AdminPanelView = () => {
   });
 
   useEffect(() => {
-    if (!adminFrontendSettingsQuery.data) {
+    if (!adminFrontendSettings) {
       return;
     }
 
     setVisualSettingsForm({
-      organizationName: adminFrontendSettingsQuery.data.organizationName,
+      organizationName: adminFrontendSettings.organizationName,
       taskStatusColors: {
-        ...adminFrontendSettingsQuery.data.taskStatusColors
+        ...adminFrontendSettings.taskStatusColors
       }
     });
     setVisualSettingsDirty(false);
-  }, [adminFrontendSettingsQuery.data?.updatedAt]);
+  }, [adminFrontendSettings]);
 
   const saveVisualSettingsMutation = useMutation({
     mutationFn: () =>
@@ -521,14 +522,14 @@ export const AdminPanelView = () => {
         method: "POST",
         body: JSON.stringify({
           email: inviteForm.email,
-          resourceType: "PROYECTO",
-          resourceId: inviteForm.resourceId,
+          resourceScopeType: "PROYECTO",
+          resourceScopeId: inviteForm.resourceScopeId,
           expiresAt: toIso(inviteForm.expiresAt)
         })
       }),
     onSuccess: async (data) => {
       setExternalInviteLinkPreview(data.linkPreview);
-      setInviteForm({ email: "", resourceId: "", expiresAt: "" });
+      setInviteForm({ email: "", resourceScopeId: "", expiresAt: "" });
       setOpenExternalInviteModal(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-invites"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
@@ -648,10 +649,6 @@ export const AdminPanelView = () => {
     const token = getAuthToken();
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
-    }
-    const apiKey = getPublicApiKey();
-    if (apiKey) {
-      headers.set("x-api-key", apiKey);
     }
 
     const response = await fetch(`${getApiBaseUrl()}/admin/audit-report/export.csv?${params.toString()}`, {
@@ -869,7 +866,7 @@ export const AdminPanelView = () => {
                   <div>
                     <p className="text-sm font-medium text-slate-900">{invite.email}</p>
                     <p className="text-xs text-slate-600">
-                      PROYECTO · {invite.resourceId} · expira {formatDateTime(invite.expiresAt)}
+                      PROYECTO · {invite.resourceScopeId} · expira {formatDateTime(invite.expiresAt)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1163,7 +1160,7 @@ export const AdminPanelView = () => {
             <select
               className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
               value={createUserForm.baseRole}
-              onChange={(event) => setCreateUserForm((prev) => ({ ...prev, baseRole: event.target.value as SystemRole }))}
+              onChange={(event) => setCreateUserForm((prev) => ({ ...prev, baseRole: event.target.value as RoleCode }))}
             >
               {ROLE_OPTIONS.map((role) => (
                 <option key={role} value={role}>
@@ -1522,6 +1519,9 @@ export const AdminPanelView = () => {
           </>
         }
       >
+        <p className="text-xs text-slate-500">
+          Aquí no defines contraseña. La persona invitada la crea al abrir el enlace de activación.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1 sm:col-span-2">
             <span className="text-xs font-medium text-slate-600">Email corporativo</span>
@@ -1537,7 +1537,7 @@ export const AdminPanelView = () => {
             <select
               className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
               value={internalInviteForm.baseRole}
-              onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, baseRole: event.target.value as SystemRole }))}
+              onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, baseRole: event.target.value as RoleCode }))}
             >
               {ROLE_OPTIONS.map((role) => (
                 <option key={role} value={role}>
@@ -1585,7 +1585,7 @@ export const AdminPanelView = () => {
             </Button>
             <Button
               type="button"
-              disabled={createInviteMutation.isPending || !inviteForm.email || !inviteForm.resourceId || !inviteForm.expiresAt}
+              disabled={createInviteMutation.isPending || !inviteForm.email || !inviteForm.resourceScopeId || !inviteForm.expiresAt}
               onClick={() => createInviteMutation.mutate()}
             >
               {createInviteMutation.isPending ? "Generando..." : "Generar enlace"}
@@ -1593,6 +1593,9 @@ export const AdminPanelView = () => {
           </>
         }
       >
+        <p className="text-xs text-slate-500">
+          La invitación externa usa enlace temporal al recurso. No crea cuenta interna ni contraseña.
+        </p>
         <div className="grid gap-2 md:grid-cols-2">
           <input
             className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
@@ -1604,8 +1607,8 @@ export const AdminPanelView = () => {
             <span className="block text-xs font-medium text-slate-600">Proyecto</span>
             <select
               className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-              value={inviteForm.resourceId}
-              onChange={(event) => setInviteForm((prev) => ({ ...prev, resourceId: event.target.value }))}
+              value={inviteForm.resourceScopeId}
+              onChange={(event) => setInviteForm((prev) => ({ ...prev, resourceScopeId: event.target.value }))}
             >
               <option value="">Selecciona un proyecto</option>
               {projectOptions.map((project) => (
@@ -1803,7 +1806,7 @@ export const AdminPanelView = () => {
                   <td className="px-3 py-2 text-slate-700">{item.actorName ?? (item.userId ? item.userId : "Sistema")}</td>
                   <td className="px-3 py-2 text-slate-700">{item.entityType}</td>
                   <td className="px-3 py-2 text-slate-700">{item.action}</td>
-                  <td className="px-3 py-2 text-slate-700">{item.reason ?? item.reasonCode ?? "-"}</td>
+                  <td className="px-3 py-2 text-slate-700">{item.reason ?? item.reasonCatalogId ?? "-"}</td>
                 </tr>
               ))}
               {!auditReportQuery.data || auditReportQuery.data.items.length === 0 ? (

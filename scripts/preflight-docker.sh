@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 COMPOSE_FILE="${COMPOSE_FILE:-${ROOT_DIR}/docker/docker-compose.yml}"
+COMPOSE_DIR="$(cd "$(dirname "${COMPOSE_FILE}")" && pwd)"
 ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
 API_BASE="${API_BASE:-http://localhost:4000/api/v1}"
 COLLAB_URL="${COLLAB_URL:-http://localhost/collab}"
@@ -71,31 +72,87 @@ load_env() {
     set +a
   fi
 
-  POSTGRES_USER="${POSTGRES_USER:-corelia}"
-  POSTGRES_DB="${POSTGRES_DB:-corelia}"
-  API_KEY="${API_KEY:-}"
-  NEXT_PUBLIC_API_KEY="${NEXT_PUBLIC_API_KEY:-}"
-  NEXT_PUBLIC_API_KEY_DOCKER="${NEXT_PUBLIC_API_KEY_DOCKER:-}"
+  POSTGRES_USER="${POSTGRES_USER:-}"
+  POSTGRES_DB="${POSTGRES_DB:-}"
+  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
+  REDIS_PASSWORD="${REDIS_PASSWORD:-}"
+  JWT_ACCESS_SECRET="${JWT_ACCESS_SECRET:-}"
+  JWT_REFRESH_SECRET="${JWT_REFRESH_SECRET:-}"
+  COLLAB_AUTH_SECRET="${COLLAB_AUTH_SECRET:-}"
+  CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-}"
+  MINIO_ROOT_USER="${MINIO_ROOT_USER:-}"
+  MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-}"
+  SMTP_USER="${SMTP_USER:-}"
+  SMTP_PASS="${SMTP_PASS:-}"
+  SMTP_FROM="${SMTP_FROM:-}"
+  NGINX_SSL_CERT_PATH="${NGINX_SSL_CERT_PATH:-}"
+  NGINX_SSL_KEY_PATH="${NGINX_SSL_KEY_PATH:-}"
   AUTO_MIGRATE_ON_START="${AUTO_MIGRATE_ON_START:-}"
 }
 
+check_required_env() {
+  local key="$1"
+  local value="$2"
+  if [[ -z "${value}" ]]; then
+    fail "${key} no está definida en ${ENV_FILE}"
+  else
+    ok "${key} definida"
+  fi
+}
+
+resolve_path() {
+  local raw="$1"
+  if [[ "${raw}" == /* ]]; then
+    echo "${raw}"
+  else
+    local compose_relative="${COMPOSE_DIR}/${raw#./}"
+    if [[ -e "${compose_relative}" ]]; then
+      echo "${compose_relative}"
+      return
+    fi
+
+    echo "${ROOT_DIR}/${raw#./}"
+  fi
+}
+
+check_tls_files() {
+  local cert_path
+  local key_path
+  cert_path="$(resolve_path "${NGINX_SSL_CERT_PATH}")"
+  key_path="$(resolve_path "${NGINX_SSL_KEY_PATH}")"
+
+  if [[ ! -f "${cert_path}" ]]; then
+    fail "No existe archivo TLS de certificado: ${cert_path}"
+  else
+    ok "Certificado TLS disponible (${cert_path})"
+  fi
+
+  if [[ ! -f "${key_path}" ]]; then
+    fail "No existe archivo TLS de clave privada: ${key_path}"
+  else
+    ok "Clave TLS disponible (${key_path})"
+  fi
+}
+
 check_env_consistency() {
-  if [[ -z "${API_KEY}" ]]; then
-    fail "API_KEY no está definida en ${ENV_FILE}"
-  else
-    ok "API_KEY definida"
-  fi
+  check_required_env "POSTGRES_DB" "${POSTGRES_DB}"
+  check_required_env "POSTGRES_USER" "${POSTGRES_USER}"
+  check_required_env "POSTGRES_PASSWORD" "${POSTGRES_PASSWORD}"
+  check_required_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
+  check_required_env "JWT_ACCESS_SECRET" "${JWT_ACCESS_SECRET}"
+  check_required_env "JWT_REFRESH_SECRET" "${JWT_REFRESH_SECRET}"
+  check_required_env "COLLAB_AUTH_SECRET" "${COLLAB_AUTH_SECRET}"
+  check_required_env "MINIO_ROOT_USER" "${MINIO_ROOT_USER}"
+  check_required_env "MINIO_ROOT_PASSWORD" "${MINIO_ROOT_PASSWORD}"
+  check_required_env "SMTP_USER" "${SMTP_USER}"
+  check_required_env "SMTP_PASS" "${SMTP_PASS}"
+  check_required_env "SMTP_FROM" "${SMTP_FROM}"
+  check_required_env "NGINX_SSL_CERT_PATH" "${NGINX_SSL_CERT_PATH}"
+  check_required_env "NGINX_SSL_KEY_PATH" "${NGINX_SSL_KEY_PATH}"
+  check_tls_files
 
-  if [[ -n "${NEXT_PUBLIC_API_KEY}" && -n "${API_KEY}" && "${NEXT_PUBLIC_API_KEY}" != "${API_KEY}" ]]; then
-    fail "NEXT_PUBLIC_API_KEY no coincide con API_KEY"
-  else
-    ok "NEXT_PUBLIC_API_KEY consistente"
-  fi
-
-  if [[ -n "${NEXT_PUBLIC_API_KEY_DOCKER}" && -n "${API_KEY}" && "${NEXT_PUBLIC_API_KEY_DOCKER}" != "${API_KEY}" ]]; then
-    fail "NEXT_PUBLIC_API_KEY_DOCKER no coincide con API_KEY"
-  else
-    ok "NEXT_PUBLIC_API_KEY_DOCKER consistente"
+  if [[ "${CORS_ALLOWED_ORIGINS}" == *"*"* ]]; then
+    warn "CORS_ALLOWED_ORIGINS contiene '*' y no es recomendable en producción."
   fi
 
   if [[ "${AUTO_MIGRATE_ON_START,,}" != "true" ]]; then
@@ -178,7 +235,7 @@ check_collab_websocket_variants() {
   fi
 }
 
-check_api_key_enforcement() {
+check_auth_enforcement() {
   local projects_url="${API_BASE}/projects"
 
   local no_key_file
@@ -189,34 +246,21 @@ check_api_key_enforcement() {
   no_key_body="$(cat "${no_key_file}")"
   rm -f "${no_key_file}"
 
-  if [[ "${no_key_code}" != "401" ]] || ! grep -q "API key inválida o ausente" <<<"${no_key_body}"; then
-    fail "Protección API key falló en /projects sin header (HTTP ${no_key_code})"
+  if [[ "${no_key_code}" != "401" ]] || ! grep -q "Unauthorized" <<<"${no_key_body}"; then
+    fail "Protección JWT/RBAC falló en /projects sin token (HTTP ${no_key_code})"
     return
   fi
 
-  local with_key_file
-  with_key_file="$(mktemp)"
-  local with_key_code
-  with_key_code="$(curl -sS -o "${with_key_file}" -w "%{http_code}" -H "x-api-key: ${API_KEY}" "${projects_url}" || true)"
-  local with_key_body
-  with_key_body="$(cat "${with_key_file}")"
-  rm -f "${with_key_file}"
-
-  if [[ "${with_key_code}" != "401" ]] || ! grep -q "Unauthorized" <<<"${with_key_body}"; then
-    fail "Flujo con API key no es el esperado en /projects (HTTP ${with_key_code}, body=${with_key_body})"
-    return
-  fi
-
-  ok "API key obligatoria validada en endpoints protegidos"
+  ok "Protección JWT/RBAC validada en endpoints protegidos"
 }
 
 check_schema_columns() {
   local checks=(
-    "Project.descriptionCode"
+    "Project.descriptionCatalogId"
     "ProjectStage.code"
     "Task.stageId"
     "Task.startDate"
-    "TaskScheduleHistory.reasonCode"
+    "TaskScheduleHistory.reasonCatalogId"
     "Message.kind"
     "Message.meetingId"
     "MessageAttachment.minioPath"
@@ -291,9 +335,7 @@ main() {
 
   check_api_status
   check_collab_websocket_variants
-  if [[ -n "${API_KEY}" ]]; then
-    check_api_key_enforcement
-  fi
+  check_auth_enforcement
 
   check_migrations
   check_schema_columns

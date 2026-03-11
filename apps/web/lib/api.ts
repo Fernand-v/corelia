@@ -20,7 +20,6 @@ const resolveApiBaseUrl = () => {
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
-const PUBLIC_API_KEY = (process.env.NEXT_PUBLIC_API_KEY ?? "").trim();
 const AUTH_STORAGE_KEY = "corelia_access_token";
 
 interface AuthState {
@@ -66,7 +65,6 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 export const getApiBaseUrl = () => API_BASE_URL;
 export const getAuthToken = () => useAuthStore.getState().accessToken;
-export const getPublicApiKey = () => PUBLIC_API_KEY;
 
 export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const token = useAuthStore.getState().accessToken;
@@ -76,10 +74,6 @@ export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  if (PUBLIC_API_KEY) {
-    headers.set("x-api-key", PUBLIC_API_KEY);
   }
 
   if (hasBody && !isFormData && !headers.has("Content-Type")) {

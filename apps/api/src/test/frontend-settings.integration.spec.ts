@@ -62,7 +62,7 @@ describe("Frontend settings flows", () => {
   it("updates frontend settings with normalized values", async () => {
     const app = createMockApp();
     const actorId = crypto.randomUUID();
-    app.prisma.user.findUnique = vi.fn().mockResolvedValue({ baseRole: "ADMINISTRADOR" });
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({ baseRole: { code: "ADMINISTRADOR" } });
     app.prisma.frontendSettings.upsert = vi.fn().mockResolvedValue(
       createSettingsRow({
         organizationName: "Corilia Labs",
@@ -92,10 +92,39 @@ describe("Frontend settings flows", () => {
     expect(result.taskStatusColors.PENDIENTE).toBe("#AA5500");
   });
 
+  it("hides technical service details in public system status", async () => {
+    const app = createMockApp();
+    const service = new StatusService(app);
+    vi.spyOn(service, "getSystemStatus").mockResolvedValue({
+      now: "2026-03-09T12:00:00.000Z",
+      maintenance: {
+        enabled: false,
+        message: null
+      },
+      services: [
+        {
+          service: "api",
+          status: "up",
+          detail: "internal detail"
+        }
+      ]
+    });
+
+    const result = await service.getPublicSystemStatus();
+
+    expect(result.services).toEqual([
+      {
+        service: "api",
+        status: "up",
+        detail: null
+      }
+    ]);
+  });
+
   it("resets settings to defaults", async () => {
     const app = createMockApp();
     const actorId = crypto.randomUUID();
-    app.prisma.user.findUnique = vi.fn().mockResolvedValue({ baseRole: "ADMINISTRADOR" });
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({ baseRole: { code: "ADMINISTRADOR" } });
     app.prisma.frontendSettings.upsert = vi.fn().mockResolvedValue(createSettingsRow());
 
     const service = new AdminService(app);
@@ -107,7 +136,7 @@ describe("Frontend settings flows", () => {
 
   it("rejects non-admin users when attempting to update settings", async () => {
     const app = createMockApp();
-    app.prisma.user.findUnique = vi.fn().mockResolvedValue({ baseRole: "COLABORADOR" });
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({ baseRole: { code: "COLABORADOR" } });
 
     const service = new AdminService(app);
 

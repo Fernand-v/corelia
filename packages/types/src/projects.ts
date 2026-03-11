@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { colorHexSchema, codeValueSchema, idSchema, timestampSchema } from "./common.js";
-import { projectTemplateSchema, systemRoleSchema } from "./enums.js";
+import { projectTemplateSchema } from "./enums.js";
+import { roleCodeSchema } from "./rbac.js";
 
 export const projectMembershipSourceSchema = z.enum(["MANUAL", "SYNC"]);
 
@@ -8,9 +9,11 @@ export const projectSchema = z.object({
   id: idSchema,
   name: z.string().min(3).max(160),
   description: z.string().max(2000).nullable(),
-  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: codeValueSchema.nullable().optional(),
   template: projectTemplateSchema,
   ownerId: idSchema,
+  startDate: timestampSchema.nullable().optional(),
+  estimatedEndDate: timestampSchema.nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema
 });
@@ -18,7 +21,8 @@ export const projectSchema = z.object({
 export const projectMemberSchema = z.object({
   projectId: idSchema,
   userId: idSchema,
-  role: systemRoleSchema,
+  roleId: idSchema,
+  role: roleCodeSchema,
   membershipSource: projectMembershipSourceSchema.default("MANUAL"),
   syncTeamsCount: z.number().int().min(0).default(0),
   joinedAt: timestampSchema
@@ -37,15 +41,22 @@ export const projectStageSchema = z.object({
 export const createProjectInputSchema = z.object({
   name: z.string().min(3).max(160),
   description: z.string().max(2000).optional(),
-  descriptionCode: codeValueSchema.optional(),
+  descriptionCatalogId: codeValueSchema.optional(),
   template: projectTemplateSchema,
-  memberIds: z.array(idSchema).default([])
+  memberIds: z.array(idSchema).default([]),
+  startDate: timestampSchema.optional(),
+  estimatedEndDate: timestampSchema.optional()
+});
+
+export const updateProjectPlanningInputSchema = z.object({
+  startDate: timestampSchema.nullable().optional(),
+  estimatedEndDate: timestampSchema.nullable().optional()
 });
 
 export const assignProjectRoleInputSchema = z.object({
   projectId: idSchema,
   userId: idSchema,
-  role: systemRoleSchema
+  roleId: idSchema
 });
 
 export const projectIdParamsSchema = z.object({
@@ -57,10 +68,20 @@ export const projectMemberParamsSchema = z.object({
   userId: idSchema
 });
 
-export const upsertProjectMemberInputSchema = z.object({
-  userId: idSchema,
-  role: systemRoleSchema
-});
+export const upsertProjectMemberInputSchema = z
+  .object({
+    userId: idSchema,
+    roleId: idSchema.optional(),
+    role: roleCodeSchema.optional()
+  })
+  .superRefine((input, ctx) => {
+    if (!input.roleId && !input.role) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Debes enviar roleId o role"
+      });
+    }
+  });
 
 export const createProjectStageInputSchema = z.object({
   name: z.string().min(1).max(120),

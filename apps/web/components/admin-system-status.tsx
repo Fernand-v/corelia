@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card } from "@corelia/ui";
 import { UiModal } from "@/components/ui-modal";
-import { apiRequest, getPublicApiKey, useAuthStore } from "@/lib/api";
+import { apiRequest, useAuthStore } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
 type SystemService = {
@@ -93,8 +93,7 @@ const updateMaintenance = async (input: {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${input.token}`,
-      "x-api-key": getPublicApiKey()
+      Authorization: `Bearer ${input.token}`
     },
     body: JSON.stringify({
       enabled: input.enabled,

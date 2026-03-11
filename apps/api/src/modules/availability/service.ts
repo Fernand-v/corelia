@@ -16,7 +16,7 @@ export class AvailabilityService {
         type: input.type,
         startAt: new Date(input.startAt),
         endAt: new Date(input.endAt),
-        note: input.note
+        note: input.note ?? null
       }
     });
   }

@@ -2,6 +2,40 @@
 
 This repository uses a single `docker/docker-compose.yml` for local runtime.
 
+## Required secret and TLS variables
+
+Docker now requires sensitive values to be defined in `.env` (no insecure defaults).
+At minimum define:
+
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- `REDIS_PASSWORD`
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
+- `COLLAB_AUTH_SECRET`
+- `CORS_ALLOWED_ORIGINS` (lista de orígenes permitidos en producción)
+- `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
+- `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- `NGINX_SSL_CERT_PATH`, `NGINX_SSL_KEY_PATH`
+
+## Local TLS certificate generation
+
+Generate local self-signed certs outside tracked runtime secrets:
+
+```bash
+mkdir -p docker/nginx/certs-local
+openssl req -x509 -nodes -newkey rsa:2048 \
+  -keyout docker/nginx/certs-local/corelia.key \
+  -out docker/nginx/certs-local/corelia.crt \
+  -days 365 \
+  -subj "/CN=localhost"
+```
+
+Then set in `.env`:
+
+```bash
+NGINX_SSL_CERT_PATH=./nginx/certs-local/corelia.crt
+NGINX_SSL_KEY_PATH=./nginx/certs-local/corelia.key
+```
+
 ## Recommended commands
 
 Build only API and Web:

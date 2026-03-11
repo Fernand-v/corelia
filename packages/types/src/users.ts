@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { codeValueSchema, contactSchema, idSchema, timestampSchema, windowScheduleSchema } from "./common.js";
-import { systemRoleSchema } from "./enums.js";
+import { systemRoleCodeSchema } from "./rbac.js";
 
 export const userPresenceStatusSchema = z.enum(["EN_LINEA", "DESCONECTADO", "EN_REUNION"]);
 
@@ -9,7 +9,7 @@ export const userSchema = z.object({
   email: z.string().email(),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
-  baseRole: systemRoleSchema,
+  baseRole: systemRoleCodeSchema,
   isActive: z.boolean(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema
@@ -20,13 +20,13 @@ export const createUserInputSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   password: z.string().min(8).max(128),
-  baseRole: systemRoleSchema.default("COLABORADOR")
+  baseRole: systemRoleCodeSchema.default("COLABORADOR")
 });
 
 export const personDirectoryProfileSchema = z.object({
   userId: idSchema,
   fullName: z.string().min(1),
-  activeRole: systemRoleSchema,
+  activeRole: systemRoleCodeSchema,
   presence: userPresenceStatusSchema.default("DESCONECTADO"),
   teamName: z.string().nullable(),
   schedule: windowScheduleSchema.nullable(),
@@ -71,14 +71,14 @@ export const offboardingInputSchema = z.object({
   userId: idSchema,
   transferToUserId: idSchema,
   reason: z.string().min(5).max(500),
-  reasonCode: codeValueSchema.optional(),
+  reasonCatalogId: codeValueSchema.optional(),
   archiveHistory: z.boolean().default(true)
 });
 
 export const guestInviteInputSchema = z.object({
   email: z.string().email(),
-  resourceType: z.enum(["PROYECTO", "ARCHIVO", "DOCUMENTO"]),
-  resourceId: idSchema,
+  resourceScopeType: z.enum(["PROYECTO", "ARCHIVO", "DOCUMENTO"]),
+  resourceScopeId: idSchema,
   expiresAt: timestampSchema,
   permissions: z.array(z.enum(["LECTURA"])).min(1)
 });

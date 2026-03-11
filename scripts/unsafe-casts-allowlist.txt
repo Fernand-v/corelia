@@ -1,0 +1,16 @@
+apps/api/src/modules/admin/router.ts:1135:          newDataText: result as unknown as Record<string, unknown>
+apps/api/src/modules/admin/router.ts:545:          newDataText: payload as unknown as Record<string, unknown>
+apps/api/src/modules/admin/router.ts:615:          newDataText: payload as unknown as Record<string, unknown>
+apps/api/src/modules/admin/router.ts:790:          newDataText: payload as unknown as Record<string, unknown>
+apps/api/src/modules/admin/router.ts:95:          newDataText: payload as unknown as Record<string, unknown>
+apps/api/src/modules/admin/service.ts:131:    const valid = CODE_CATALOG_FIELDS[domain].includes(field as never);
+apps/api/src/modules/admin/service.ts:2712:      ...(input.field ? { field: input.field as never } : {}),
+apps/api/src/modules/admin/service.ts:2816:      field: input.field as never,
+apps/api/src/modules/decisions/service.ts:56:        ...(input.linkedEntityType ? { linkedEntityType: input.linkedEntityType as never } : {}),
+apps/api/src/modules/identity/router.ts:143:          newDataText: checklist as unknown as Record<string, unknown>
+apps/api/src/modules/meetings/service.ts:375:        content: input.content as never
+apps/api/src/plugins/audit.ts:17:        previousDataText: request.auditEvent.previousDataText as never,
+apps/api/src/plugins/audit.ts:18:        newDataText: request.auditEvent.newDataText as never,
+apps/web/components/task-board.tsx:1075:                                          event as unknown as ReactPointerEvent<HTMLDivElement>,
+apps/web/components/task-board.tsx:1092:                                          event as unknown as ReactPointerEvent<HTMLDivElement>,
+apps/workers/src/jobs/webhook.worker.ts:46:            payload: payload as never,

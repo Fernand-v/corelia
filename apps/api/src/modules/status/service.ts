@@ -9,6 +9,19 @@ export class StatusService {
     return getFrontendSettingsConfig(this.app.prisma);
   }
 
+  async getPublicSystemStatus() {
+    const status = await this.getSystemStatus();
+    return {
+      now: status.now,
+      maintenance: status.maintenance,
+      services: status.services.map((service) => ({
+        service: service.service,
+        status: service.status,
+        detail: null
+      }))
+    };
+  }
+
   async getSystemStatus() {
     const services: Array<{
       service: "api" | "postgres" | "redis" | "storage" | "media";

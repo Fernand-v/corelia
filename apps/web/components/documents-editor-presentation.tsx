@@ -13,6 +13,8 @@ import {
   YAxis
 } from "recharts";
 import * as Y from "yjs";
+import { UiModal } from "@/components/ui-modal";
+import { getApiBaseUrl } from "@/lib/api";
 
 type ChartPoint = {
   label: string;
@@ -60,6 +62,66 @@ type BlockUpdate = {
 };
 
 const DEFAULT_BACKGROUND = "#ffffff";
+const DOCUMENT_ASSET_PATH_PATTERN = /^\/(?:api\/v1\/)?documents\/assets\/content\?/i;
+
+const normalizeDocumentAssetPath = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^\/documents\/assets\/content\?/i.test(trimmed)) {
+    return `/api/v1${trimmed}`;
+  }
+
+  if (/^documents\/assets\/content\?/i.test(trimmed)) {
+    return `/api/v1/${trimmed}`;
+  }
+
+  if (/^api\/v1\/documents\/assets\/content\?/i.test(trimmed)) {
+    return `/${trimmed}`;
+  }
+
+  return trimmed;
+};
+
+const resolveDocumentAssetUrl = (value: string, apiBase: string) => {
+  const normalizedValue = normalizeDocumentAssetPath(value);
+  if (!normalizedValue) {
+    return "";
+  }
+
+  if (/^blob:/i.test(normalizedValue) || /^data:/i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (/^https?:\/\//i.test(normalizedValue)) {
+    try {
+      const parsed = new URL(normalizedValue);
+      if (/^\/documents\/assets\/content$/i.test(parsed.pathname)) {
+        parsed.pathname = `/api/v1${parsed.pathname}`;
+      }
+      return parsed.toString();
+    } catch {
+      return normalizedValue;
+    }
+  }
+
+  if (!normalizedValue.startsWith("/")) {
+    return normalizedValue;
+  }
+
+  if (!DOCUMENT_ASSET_PATH_PATTERN.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+    const apiOrigin = apiBase.replace(/\/api\/v1\/?$/i, "");
+    return `${apiOrigin}${normalizedValue}`;
+  }
+
+  return normalizedValue;
+};
 
 const buildChartSeed = (): ChartPoint[] => [
   { label: "A", value: 10 },
@@ -388,7 +450,10 @@ const imageUrlToDataUrl = async (url: string): Promise<string> => {
   });
 };
 
-const renderSlideBlocks = (slide: Slide) => {
+const renderSlideBlocks = (
+  slide: Slide,
+  resolveImageUrl: (value: string) => string
+) => {
   return slide.blocks.map((block) => {
     if (block.type === "text") {
       return (
@@ -400,9 +465,10 @@ const renderSlideBlocks = (slide: Slide) => {
 
     if (block.type === "image") {
       return block.url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Editor uses blob/data URLs and remote slide assets that are not compatible with next/image optimization.
         <img
           key={block.id}
-          src={block.url}
+          src={resolveImageUrl(block.url)}
           alt="Imagen de diapositiva"
           className="max-h-[280px] w-full rounded-lg border border-slate-200 object-contain"
         />
@@ -470,10 +536,14 @@ export const DocumentsEditorPresentation = ({
   const [presentIndex, setPresentIndex] = useState(0);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadTargetBlockId, setUploadTargetBlockId] = useState<string | null>(null);
+  const [urlTargetBlockId, setUrlTargetBlockId] = useState<string | null>(null);
+  const [imageUrlModalOpen, setImageUrlModalOpen] = useState(false);
+  const [imageUrlValue, setImageUrlValue] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [cursorHidden, setCursorHidden] = useState(false);
   const [slideTransition, setSlideTransition] = useState<"none" | "entering">("none");
+  const apiBase = getApiBaseUrl();
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const lastSerializedRef = useRef("");
@@ -482,6 +552,10 @@ export const DocumentsEditorPresentation = ({
   const activeSlide = state.slides.find((slide) => slide.id === state.activeSlideId) ?? state.slides[0] ?? null;
   const presentSlide = state.slides[presentIndex] ?? state.slides[0] ?? null;
   const selectedBlock = activeSlide?.blocks.find((b) => b.id === selectedBlockId) ?? null;
+  const resolveImageUrl = useCallback(
+    (value: string) => resolveDocumentAssetUrl(value, apiBase),
+    [apiBase]
+  );
 
   const writeStateToY = useCallback(
     (nextState: PresentationState) => {
@@ -863,8 +937,44 @@ export const DocumentsEditorPresentation = ({
       return;
     }
 
+    if (!onUploadImage) {
+      const currentBlock = activeSlide?.blocks.find(
+        (block): block is ImageBlock => block.id === blockId && block.type === "image"
+      );
+      setUrlTargetBlockId(blockId);
+      setImageUrlValue(currentBlock?.url ?? "");
+      setImageUrlModalOpen(true);
+      return;
+    }
+
     setUploadTargetBlockId(blockId);
     uploadInputRef.current?.click();
+  };
+
+  const openImageUrlModal = (blockId: string, currentUrl = "") => {
+    if (readOnly) {
+      return;
+    }
+
+    setUrlTargetBlockId(blockId);
+    setImageUrlValue(currentUrl);
+    setImageUrlModalOpen(true);
+  };
+
+  const submitImageUrl = () => {
+    if (readOnly || !urlTargetBlockId) {
+      return;
+    }
+
+    const nextValue = normalizeDocumentAssetPath(imageUrlValue);
+    if (!nextValue) {
+      return;
+    }
+
+    updateBlock(urlTargetBlockId, { url: nextValue });
+    setImageUrlModalOpen(false);
+    setImageUrlValue("");
+    setUrlTargetBlockId(null);
   };
 
   const handleUploadImage = async (file: File | null) => {
@@ -873,12 +983,8 @@ export const DocumentsEditorPresentation = ({
     }
 
     if (!onUploadImage) {
-      const manualUrl = window.prompt("URL de imagen");
-      if (manualUrl) {
-        updateBlock(uploadTargetBlockId, {
-          url: manualUrl
-        });
-      }
+      openImageUrlModal(uploadTargetBlockId);
+      setUploadTargetBlockId(null);
       return;
     }
 
@@ -890,7 +996,7 @@ export const DocumentsEditorPresentation = ({
       }
 
       updateBlock(uploadTargetBlockId, {
-        url: uploaded.url
+        url: normalizeDocumentAssetPath(uploaded.url)
       });
     } finally {
       setUploadingImage(false);
@@ -934,7 +1040,7 @@ export const DocumentsEditorPresentation = ({
 
         if (block.type === "image" && block.url) {
           try {
-            const dataUrl = await imageUrlToDataUrl(block.url);
+            const dataUrl = await imageUrlToDataUrl(resolveImageUrl(block.url));
             const imageWidth = pageWidth - 84;
             const imageHeight = Math.min(220, pageHeight - cursorY - 40);
             pdf.addImage(dataUrl, "PNG", 42, cursorY, imageWidth, imageHeight, undefined, "FAST");
@@ -1027,8 +1133,9 @@ export const DocumentsEditorPresentation = ({
             </button>
           )}
           {block.url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Editor uses blob/data URLs and remote slide assets that are not compatible with next/image optimization.
             <img
-              src={block.url}
+              src={resolveImageUrl(block.url)}
               alt="Imagen de diapositiva"
               className="max-h-[280px] w-full rounded-lg object-contain"
             />
@@ -1254,9 +1361,17 @@ export const DocumentsEditorPresentation = ({
                           value={selectedBlock.url}
                           readOnly={readOnly}
                           onChange={(e) => updateBlock(selectedBlock.id, { url: e.target.value })}
-                          placeholder="https://..."
+                          placeholder="https://... o /api/v1/documents/assets/content?token=..."
                           className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none focus:border-blue-400"
                         />
+                        <button
+                          type="button"
+                          disabled={readOnly}
+                          onClick={() => openImageUrlModal(selectedBlock.id, selectedBlock.url)}
+                          className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          Usar URL
+                        </button>
                         <button
                           type="button"
                           disabled={readOnly || uploadingImage}
@@ -1320,7 +1435,7 @@ export const DocumentsEditorPresentation = ({
               <div className="flex h-full flex-col p-10">
                 <h2 className="mb-6 text-4xl font-bold text-slate-900">{presentSlide.title}</h2>
                 <div className="flex-1 space-y-4 overflow-hidden">
-                  {renderSlideBlocks(presentSlide)}
+                  {renderSlideBlocks(presentSlide, resolveImageUrl)}
                 </div>
               </div>
             </div>
@@ -1377,6 +1492,55 @@ export const DocumentsEditorPresentation = ({
           </div>
         </div>
       ) : null}
+
+      <UiModal
+        open={imageUrlModalOpen}
+        onClose={() => {
+          setImageUrlModalOpen(false);
+          setUrlTargetBlockId(null);
+        }}
+        title="Insertar imagen por URL"
+      >
+        <div className="space-y-2">
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">URL de imagen</label>
+          <input
+            autoFocus
+            value={imageUrlValue}
+            onChange={(event) => setImageUrlValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                submitImageUrl();
+              }
+            }}
+            placeholder="https://... o /api/v1/documents/assets/content?token=..."
+            className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
+          />
+          <p className="text-xs text-slate-500">
+            Puedes pegar una URL externa o una URL interna de archivo del módulo Documentos.
+          </p>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setImageUrlModalOpen(false);
+              setUrlTargetBlockId(null);
+            }}
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={submitImageUrl}
+            disabled={!imageUrlValue.trim()}
+            className="rounded-lg border border-blue-200 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Insertar
+          </button>
+        </div>
+      </UiModal>
     </>
   );
 };

@@ -5,8 +5,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "baseUrl": ".",
-    "strict": false,
-    "exactOptionalPropertyTypes": false,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
     "paths": {
       "@/*": ["src/*"]
     },

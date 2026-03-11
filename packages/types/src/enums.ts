@@ -1,14 +1,5 @@
 import { z } from "zod";
 
-export const systemRoleSchema = z.enum([
-  "ADMINISTRADOR",
-  "LIDER_PROYECTO",
-  "COORDINADOR_EQUIPO",
-  "COLABORADOR",
-  "OBSERVADOR",
-  "INVITADO_EXTERNO"
-]);
-
 export const taskStatusSchema = z.enum([
   "PENDIENTE",
   "EN_REVISION",
@@ -61,8 +52,11 @@ export const entityTypeSchema = z.enum([
   "ANUNCIO",
   "OBJETIVO",
   "DECISION",
-  "AUTOMATIZACION"
+  "AUTOMATIZACION",
+  "GASTO"
 ]);
+
+export const expenseStatusSchema = z.enum(["PENDIENTE", "APROBADO", "RECHAZADO"]);
 
 export const actionTypeSchema = z.enum([
   "LOGIN",
@@ -124,7 +118,6 @@ export const calendarEventTypeSchema = z.enum([
 
 export const externalCalendarProviderSchema = z.enum(["GOOGLE", "MICROSOFT"]);
 
-export type SystemRole = z.infer<typeof systemRoleSchema>;
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 export type ProjectTemplate = z.infer<typeof projectTemplateSchema>;
 export type AvailabilityType = z.infer<typeof availabilityTypeSchema>;
@@ -145,3 +138,4 @@ export type CalendarScope = z.infer<typeof calendarScopeSchema>;
 export type CalendarView = z.infer<typeof calendarViewSchema>;
 export type CalendarEventType = z.infer<typeof calendarEventTypeSchema>;
 export type ExternalCalendarProvider = z.infer<typeof externalCalendarProviderSchema>;
+export type ExpenseStatus = z.infer<typeof expenseStatusSchema>;

@@ -1,12 +1,15 @@
 import { MeetingCallRoom } from "@/components/meeting-call-room";
 
-export default function CallPage({
-  searchParams
-}: {
-  searchParams?: { meetingId?: string; projectId?: string };
-}) {
-  const meetingId = searchParams?.meetingId ?? "";
-  const projectId = searchParams?.projectId ?? "";
+type CallPageProps = {
+  searchParams?: Promise<{ meetingId?: string | string[]; projectId?: string | string[] }>;
+};
+
+const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
+
+export default async function CallPage({ searchParams }: CallPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const meetingId = getParam(resolvedSearchParams.meetingId);
+  const projectId = getParam(resolvedSearchParams.projectId);
 
   if (!meetingId) {
     return (

@@ -1,12 +1,14 @@
 import { CalendarBoard } from "@/components/calendar-board";
 import { ProjectContextRequired } from "@/components/project-context-required";
 
-export default function CalendarPage({
-  searchParams
-}: {
-  searchParams?: { projectId?: string };
-}) {
-  const projectId = searchParams?.projectId ?? "";
+type CalendarPageProps = {
+  searchParams?: Promise<{ projectId?: string | string[] }>;
+};
+
+export default async function CalendarPage({ searchParams }: CalendarPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const rawProjectId = resolvedSearchParams.projectId;
+  const projectId = Array.isArray(rawProjectId) ? (rawProjectId[0] ?? "") : (rawProjectId ?? "");
 
   if (!projectId) {
     return (

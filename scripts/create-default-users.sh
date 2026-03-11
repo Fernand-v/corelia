@@ -2,29 +2,15 @@
 set -euo pipefail
 
 API_BASE="${API_BASE:-http://localhost:4000/api/v1}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-API_KEY="${API_KEY:-}"
-
-if [[ -z "${API_KEY}" && -f "${ROOT_DIR}/.env" ]]; then
-  API_KEY="$(grep -E '^API_KEY=' "${ROOT_DIR}/.env" | tail -n1 | cut -d'=' -f2- | tr -d '\r' || true)"
-fi
-
-if [[ -z "${API_KEY}" ]]; then
-  echo "ERROR: API_KEY no está definida. Exporta API_KEY o configúrala en .env"
-  exit 1
-fi
 
 create_user() {
   local email="$1"
   local first_name="$2"
   local last_name="$3"
-  local password="$4"
-  local base_role="$5"
 
   local payload
   payload=$(cat <<JSON
-{"email":"${email}","firstName":"${first_name}","lastName":"${last_name}","password":"${password}","baseRole":"${base_role}"}
+{"email":"${email}","firstName":"${first_name}","lastName":"${last_name}","message":"Solicitud inicial de bootstrap"}
 JSON
 )
 
@@ -34,9 +20,8 @@ JSON
   local status
   status=$(
     curl -sS -o "${response_file}" -w "%{http_code}" \
-      -X POST "${API_BASE}/auth/register" \
+      -X POST "${API_BASE}/auth/register-request" \
       -H "Content-Type: application/json" \
-      -H "x-api-key: ${API_KEY}" \
       --data "${payload}" || true
   )
 
@@ -45,25 +30,24 @@ JSON
   rm -f "${response_file}"
 
   if [[ "${status}" == "201" ]]; then
-    echo "OK: usuario creado -> ${email}"
+    echo "OK: solicitud de registro creada -> ${email}"
     return 0
   fi
 
-  if [[ "${status}" == "400" ]] && grep -qi "El email ya existe" <<<"${body}"; then
-    echo "SKIP: usuario ya existe -> ${email}"
+  if [[ "${status}" == "400" ]] && (grep -qi "ya existe" <<<"${body}" || grep -qi "pendiente" <<<"${body}"); then
+    echo "SKIP: solicitud existente o email en uso -> ${email}"
     return 0
   fi
 
-  echo "ERROR: no se pudo crear ${email} (HTTP ${status})"
+  echo "ERROR: no se pudo crear solicitud para ${email} (HTTP ${status})"
   echo "Detalle: ${body}"
   return 1
 }
 
 echo "API_BASE=${API_BASE}"
-echo "API_KEY=***"
-echo "Creando usuarios por defecto..."
+echo "Generando solicitudes de registro por defecto..."
 
-create_user "admin2@corelia.local" "Admin2" "Corelia" "Corelia2026Secure" "ADMINISTRADOR"
-create_user "admin@corelia.local" "Admin" "Corelia" "Admin12345!" "ADMINISTRADOR"
+create_user "admin2@corelia.local" "Admin2" "Corelia"
+create_user "admin@corelia.local" "Admin" "Corelia"
 
-echo "Proceso finalizado."
+echo "Proceso finalizado. Un administrador debe aprobar las solicitudes."

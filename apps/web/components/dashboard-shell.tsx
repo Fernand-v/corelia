@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { SystemRole } from "@corelia/types";
+import type { Permission, RoleCode } from "@corelia/types";
 import type { Route } from "next";
 import { useAuthStore } from "@/lib/api";
 import { useSession, useSessionMembershipSummary } from "@/lib/session";
@@ -20,14 +20,21 @@ import {
 type NavItem = {
   label: string;
   href: string;
-  roles: SystemRole[];
+  roles: RoleCode[];
+  requiredAnyPermissions?: Permission[];
   disabled?: boolean;
   phase?: string;
   contextual?: boolean;
   requiresProjectContext?: boolean;
 };
 
-const ALL_ROLES: SystemRole[] = [
+type DashboardContext = {
+  projectId: string | null;
+  projectName: string | null;
+  teamId: string | null;
+};
+
+const ALL_ROLES: RoleCode[] = [
   "ADMINISTRADOR",
   "LIDER_PROYECTO",
   "COORDINADOR_EQUIPO",
@@ -36,7 +43,7 @@ const ALL_ROLES: SystemRole[] = [
   "INVITADO_EXTERNO"
 ];
 
-const INTERNAL_ROLES: SystemRole[] = [
+const INTERNAL_ROLES: RoleCode[] = [
   "ADMINISTRADOR",
   "LIDER_PROYECTO",
   "COORDINADOR_EQUIPO",
@@ -44,7 +51,7 @@ const INTERNAL_ROLES: SystemRole[] = [
   "OBSERVADOR"
 ];
 
-const WORK_ROLES: SystemRole[] = [
+const WORK_ROLES: RoleCode[] = [
   "ADMINISTRADOR",
   "LIDER_PROYECTO",
   "COORDINADOR_EQUIPO",
@@ -57,6 +64,14 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Mis Proyectos", href: "/projects", roles: WORK_ROLES, contextual: true },
   { label: "Anuncios", href: "/announcements", roles: ALL_ROLES },
   { label: "Mis Tareas", href: "/tasks", roles: WORK_ROLES, contextual: true },
+  { label: "Reportes", href: "/reports", roles: WORK_ROLES },
+  {
+    label: "Presupuesto",
+    href: "/projects/:projectId/budget",
+    roles: WORK_ROLES,
+    requiresProjectContext: true,
+    requiredAnyPermissions: ["PRESUPUESTO_LEER", "PRESUPUESTO_GESTIONAR"]
+  },
   { label: "Calendario", href: "/calendar", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
   { label: "Reuniones", href: "/meetings", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
   { label: "Archivos", href: "/files", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
@@ -66,13 +81,6 @@ const NAV_ITEMS: NavItem[] = [
     roles: WORK_ROLES,
     contextual: true,
     requiresProjectContext: true
-  },
-  {
-    label: "Wiki",
-    href: "/wiki",
-    roles: INTERNAL_ROLES,
-    disabled: true,
-    phase: "Fase 2B"
   },
   { label: "Solicitudes", href: "/requests", roles: WORK_ROLES },
   { label: "Notificaciones", href: "/notifications", roles: ALL_ROLES },
@@ -85,7 +93,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { label: "Estado del Sistema", href: "/admin/system", roles: ["ADMINISTRADOR"] }
 ];
 
-const roleLabel: Record<SystemRole, string> = {
+const roleLabel: Record<RoleCode, string> = {
   ADMINISTRADOR: "Administrador",
   LIDER_PROYECTO: "Líder de Proyecto",
   COORDINADOR_EQUIPO: "Coordinador de Equipo",
@@ -113,7 +121,39 @@ const formatContextLabel = (
   return "Global";
 };
 
-const includesRole = (item: NavItem, role: SystemRole) => item.roles.includes(role);
+const includesRole = (item: NavItem, role: RoleCode) => item.roles.includes(role);
+
+const hasRequiredPermission = (item: NavItem, permissions: Permission[]) => {
+  if (!item.requiredAnyPermissions || item.requiredAnyPermissions.length === 0) {
+    return true;
+  }
+
+  return item.requiredAnyPermissions.some((permission) => permissions.includes(permission));
+};
+
+const resolveNavHref = (item: NavItem, dashboardContext: DashboardContext) => {
+  if (item.href.includes(":projectId")) {
+    if (!dashboardContext.projectId) {
+      return null;
+    }
+
+    return item.href.replace(":projectId", dashboardContext.projectId);
+  }
+
+  if (item.contextual) {
+    return withDashboardContext(item.href, dashboardContext);
+  }
+
+  return item.href;
+};
+
+const isNavItemActive = (item: NavItem, pathname: string, resolvedHref: string) => {
+  if (item.href.includes(":projectId")) {
+    return pathname === resolvedHref.split("?")[0];
+  }
+
+  return pathname === item.href;
+};
 
 export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
@@ -231,6 +271,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
       return [];
     }
 
+    const activePermissions = session.data?.permissions ?? [];
     const hasProjectContext = Boolean(dashboardContext.projectId);
 
     return NAV_ITEMS.filter((item) => {
@@ -244,7 +285,8 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         item.href !== "/projects" &&
         item.href !== "/messaging" &&
         item.href !== "/announcements" &&
-        item.href !== "/tasks"
+        item.href !== "/tasks" &&
+        item.href !== "/reports"
       ) {
         return false;
       }
@@ -253,9 +295,13 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
 
+      if (!hasRequiredPermission(item, activePermissions)) {
+        return false;
+      }
+
       return true;
     });
-  }, [activeRole, dashboardContext.projectId]);
+  }, [activeRole, dashboardContext.projectId, session.data?.permissions]);
 
   const adminItems = useMemo(() => {
     if (!activeRole) {
@@ -309,7 +355,12 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
         <nav className="space-y-0.5">
           {visibleItems.map((item) => {
-            const isActive = pathname === item.href;
+            const href = resolveNavHref(item, dashboardContext);
+            if (!href) {
+              return null;
+            }
+
+            const isActive = isNavItemActive(item, pathname, href);
 
             if (item.disabled) {
               return (
@@ -322,8 +373,6 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
                 </div>
               );
             }
-
-            const href = item.contextual ? withDashboardContext(item.href, dashboardContext) : item.href;
 
             return (
               <Link
@@ -483,8 +532,12 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
           {/* Nav móvil */}
           <nav className="mt-3 flex gap-1.5 overflow-x-auto pb-0.5 lg:hidden">
             {visibleItems.filter((item) => !item.disabled).map((item) => {
-              const isActive = pathname === item.href;
-              const href = item.contextual ? withDashboardContext(item.href, dashboardContext) : item.href;
+              const href = resolveNavHref(item, dashboardContext);
+              if (!href) {
+                return null;
+              }
+
+              const isActive = isNavItemActive(item, pathname, href);
 
               return (
                 <Link

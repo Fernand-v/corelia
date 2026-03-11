@@ -59,7 +59,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: created.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             email: created.email,
             role: created.baseRole
           }
@@ -90,7 +90,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: params.id,
           action: "ACTUALIZAR",
-          newData: payload as unknown as Record<string, unknown>
+          newDataText: payload as unknown as Record<string, unknown>
         };
 
         return reply.send(updated);
@@ -137,9 +137,95 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityId: payload.userId,
           action: "ACTUALIZAR",
           reason: payload.reason,
-          newData: {
+          newDataText: {
             primaryTransferToUserId: payload.primaryTransferToUserId,
             result
+          }
+        };
+
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/signup-requests",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        const query = parseWithSchema(adminSchemas.adminSignupRequestsQuerySchema, request.query ?? {});
+        return reply.send(
+          await service.listSignupRequests(request.authUser!.id, {
+            status: query.status
+          })
+        );
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/signup-requests/:id/approve",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(idParamsSchema, request.params);
+        const payload = parseWithSchema(adminSchemas.adminApproveSignupRequestInputSchema, request.body ?? {});
+        const result = await service.approveSignupRequest(request.authUser!.id, params.id, payload);
+
+        request.auditEvent = {
+          entityType: "USUARIO",
+          entityId: params.id,
+          action: "ACTUALIZAR",
+          reasonCatalogId: "SIGNUP_REQUEST_APPROVE",
+          newDataText: {
+            status: result.status,
+            inviteId: result.inviteId
+          }
+        };
+
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/signup-requests/:id/reject",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(idParamsSchema, request.params);
+        const payload = parseWithSchema(adminSchemas.adminRejectSignupRequestInputSchema, request.body);
+        const result = await service.rejectSignupRequest(request.authUser!.id, params.id, payload.reason);
+
+        request.auditEvent = {
+          entityType: "USUARIO",
+          entityId: params.id,
+          action: "ACTUALIZAR",
+          reasonCatalogId: "SIGNUP_REQUEST_REJECT",
+          reason: payload.reason,
+          newDataText: {
+            status: result.status
           }
         };
 
@@ -185,7 +271,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: invite.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             email: invite.email,
             role: invite.baseRole,
             teamId: invite.teamId
@@ -216,7 +302,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: params.id,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             revokedAt: result.revokedAt
           }
         };
@@ -250,7 +336,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: params.id,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             expiresAt: result.expiresAt
           }
         };
@@ -297,10 +383,10 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: invite.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             email: invite.email,
-            resourceType: invite.resourceType,
-            resourceId: invite.resourceId
+            resourceScopeType: invite.resourceScopeType,
+            resourceScopeId: invite.resourceScopeId
           }
         };
 
@@ -328,7 +414,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: params.id,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             revokedAt: result.revokedAt
           }
         };
@@ -358,7 +444,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: params.id,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             expiresAt: result.expiresAt
           }
         };
@@ -405,7 +491,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: team.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             name: team.name
           }
         };
@@ -454,7 +540,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: params.id,
           action: "ACTUALIZAR",
-          newData: payload as unknown as Record<string, unknown>
+          newDataText: payload as unknown as Record<string, unknown>
         };
 
         return reply.send(result);
@@ -524,7 +610,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "AUTOMATIZACION",
           entityId: FRONTEND_SETTINGS_ENTITY_ID,
           action: "ACTUALIZAR",
-          newData: payload as unknown as Record<string, unknown>
+          newDataText: payload as unknown as Record<string, unknown>
         };
 
         return reply.send(updated);
@@ -550,9 +636,9 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "AUTOMATIZACION",
           entityId: FRONTEND_SETTINGS_ENTITY_ID,
           action: "ACTUALIZAR",
-          reasonCode: "FRONTEND_SETTINGS_RESET",
+          reasonCatalogId: "FRONTEND_SETTINGS_RESET",
           reason: "Restauración de configuración visual por defecto",
-          newData: {
+          newDataText: {
             reset: true
           }
         };
@@ -613,10 +699,217 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
   );
 
   app.get(
+    "/roles",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        return reply.send(await service.listRoles(request.authUser!.id));
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/roles/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(adminSchemas.adminRoleIdParamsSchema, request.params);
+        return reply.send(await service.getRole(request.authUser!.id, params.id));
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/roles",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(adminSchemas.adminCreateRoleInputSchema, request.body);
+        const role = await service.createRole(request.authUser!.id, payload);
+
+        request.auditEvent = {
+          entityType: "USUARIO",
+          entityId: role.id,
+          action: "CREAR",
+          newDataText: {
+            roleId: role.id,
+            role: role.code,
+            displayName: role.displayName
+          }
+        };
+
+        return reply.code(201).send(role);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.patch(
+    "/roles/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(adminSchemas.adminRoleIdParamsSchema, request.params);
+        const payload = parseWithSchema(adminSchemas.adminUpdateRoleInputSchema, request.body);
+        const role = await service.updateRole(request.authUser!.id, params.id, payload);
+
+        request.auditEvent = {
+          entityType: "USUARIO",
+          entityId: role.id,
+          action: "ACTUALIZAR",
+          newDataText: payload as unknown as Record<string, unknown>
+        };
+
+        return reply.send(role);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.put(
+    "/roles/:id/permissions",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(adminSchemas.adminRoleIdParamsSchema, request.params);
+        const payload = parseWithSchema(adminSchemas.adminReplaceRolePermissionsInputSchema, request.body);
+        const role = await service.replaceRolePermissions(
+          request.authUser!.id,
+          params.id,
+          payload.permissionCodes
+        );
+
+        request.auditEvent = {
+          entityType: "USUARIO",
+          entityId: params.id,
+          action: "CAMBIO_PERMISO",
+          newDataText: {
+            permissionCodes: payload.permissionCodes
+          }
+        };
+
+        return reply.send(role);
+      } catch (error) {
+        const status =
+          (error as Error).name === "Forbidden"
+            ? 403
+            : (error as Error).name === "Conflict"
+              ? 409
+              : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.delete(
+    "/roles/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(adminSchemas.adminRoleIdParamsSchema, request.params);
+        const result = await service.deleteRole(request.authUser!.id, params.id);
+
+        request.auditEvent = {
+          entityType: "USUARIO",
+          entityId: params.id,
+          action: "ELIMINAR"
+        };
+
+        return reply.send(result);
+      } catch (error) {
+        const status =
+          (error as Error).name === "Forbidden"
+            ? 403
+            : (error as Error).name === "Conflict"
+              ? 409
+              : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/permissions",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        return reply.send(await service.listPermissions(request.authUser!.id));
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/permission-categories",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        return reply.send(await service.listPermissionCategories(request.authUser!.id));
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
     "/roles-matrix",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -682,7 +975,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "AUTOMATIZACION",
           entityId: created.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             domain: payload.domain,
             field: payload.field,
             code: payload.code
@@ -719,7 +1012,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "AUTOMATIZACION",
           entityId: params.id,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             domain: params.domain,
             ...payload
           }
@@ -749,7 +1042,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "AUTOMATIZACION",
           entityId: params.id,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             domain: params.domain,
             isActive: false
           }
@@ -804,7 +1097,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         reply.header("Content-Type", "text/csv; charset=utf-8");
         reply.header(
           "Content-Disposition",
-          `attachment; filename=\"audit-report-${result.from.slice(0, 10)}-${result.to.slice(0, 10)}.csv\"`
+          `attachment; filename="audit-report-${result.from.slice(0, 10)}-${result.to.slice(0, 10)}.csv"`
         );
         return reply.send(result.csv);
       } catch (error) {
@@ -833,11 +1126,11 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           entityType: "AUTOMATIZACION",
           entityId: "22222222-2222-4222-8222-222222222222",
           action: "ACTUALIZAR",
-          reasonCode: "PROJECT_GENERAL_CHANNELS_BACKFILL",
+          reasonCatalogId: "PROJECT_GENERAL_CHANNELS_BACKFILL",
           reason: payload.dryRun
             ? "Simulación de backfill de canales generales por proyecto"
             : "Backfill de canales generales por proyecto",
-          newData: result as unknown as Record<string, unknown>
+          newDataText: result as unknown as Record<string, unknown>
         };
 
         return reply.send(result);

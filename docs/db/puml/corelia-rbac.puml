@@ -1,0 +1,112 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "PermissionCategory" as PermissionCategory {
+  * id: String
+    code: Int
+    key: String
+    displayName: String
+    description: String?
+    sortOrder: Int
+    createdAt: DateTime
+    updatedAt: DateTime
+    permissions: Permission[]
+}
+
+entity "Permission" as Permission {
+  * id: String
+    code: Int
+    key: String
+    displayName: String
+    description: String?
+    categoryId: String
+    createdAt: DateTime
+    updatedAt: DateTime
+    rolePermissions: RolePermission[]
+}
+
+entity "Role" as Role {
+  * id: String
+    code: Int
+    key: String
+    displayName: String
+    description: String?
+    isSystem: Boolean
+    scope: RoleScope
+    rank: Int
+    createdAt: DateTime
+    updatedAt: DateTime
+    rolePermissions: RolePermission[]
+}
+
+entity "RolePermission" as RolePermission {
+    roleId: String
+    permissionId: String
+    createdAt: DateTime
+}
+
+entity "User" as User {
+  * id: String
+    email: String
+    passwordHash: String
+    firstName: String
+    lastName: String
+    baseRoleId: String
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+    deactivatedAt: DateTime?
+    teamMemberships: TeamMember[]
+    projectMemberships: ProjectMember[]
+    personProfile: PersonProfile?
+    availabilityBlocks: AvailabilityBlock[]
+    workSchedule: WorkSchedule?
+    timeEntries: TimeEntry[]
+    channelMemberships: ChannelMember[]
+    messages: Message[]
+    meetingParticipants: MeetingParticipant[]
+    externalCalendarConnections: ExternalCalendarConnection[]
+    notificationPreferences: NotificationPreference[]
+    notifications: Notification[]
+    announcementsAudience: AnnouncementUser[]
+    refreshTokens: RefreshToken[]
+    auditLogs: AuditLog[]
+}
+
+entity "ProjectMember" as ProjectMember {
+  * id: String
+    projectId: String
+    userId: String
+    roleId: String
+    membershipSource: ProjectMembershipSource
+    syncTeamsCount: Int
+    joinedAt: DateTime
+}
+
+entity "InternalInvite" as InternalInvite {
+  * id: String
+    email: String
+    tokenHash: String
+    baseRoleId: String
+    teamId: String?
+    expiresAt: DateTime
+    createdById: String
+    acceptedAt: DateTime?
+    revokedAt: DateTime?
+    createdAt: DateTime
+    resentAt: DateTime?
+    signupRequest: SignupRequest?
+}
+
+Permission }o--|| PermissionCategory : categoryId
+RolePermission }o--|| Role : roleId
+RolePermission }o--|| Permission : permissionId
+User }o--|| Role : baseRoleId
+ProjectMember }o--|| User : userId
+ProjectMember }o--|| Role : roleId
+InternalInvite }o--|| User : createdById
+InternalInvite }o--|| Role : baseRoleId
+
+@enduml

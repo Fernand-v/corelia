@@ -15,7 +15,10 @@ export class MeetingsService {
 
   constructor(private readonly app: FastifyInstance) {}
 
-  private normalizeLegacyCode(input: { code?: string | null; text?: string | null }) {
+  private normalizeLegacyCode(input: {
+    code?: string | null | undefined;
+    text?: string | null | undefined;
+  }) {
     if (input.code?.trim()) {
       return input.code.trim();
     }
@@ -84,7 +87,11 @@ export class MeetingsService {
           projectId: meeting.projectId,
           userId,
           role: {
-            in: ["LIDER_PROYECTO", "ADMINISTRADOR"]
+            is: {
+              key: {
+                in: ["LIDER_PROYECTO", "ADMINISTRADOR"]
+              }
+            }
           }
         },
         select: { id: true }
@@ -98,7 +105,11 @@ export class MeetingsService {
     const isAdmin = await this.app.prisma.user.findFirst({
       where: {
         id: userId,
-        baseRole: "ADMINISTRADOR"
+        baseRole: {
+          is: {
+            key: "ADMINISTRADOR"
+          }
+        }
       },
       select: { id: true }
     });
@@ -220,7 +231,7 @@ export class MeetingsService {
   async createMeeting(input: {
     title: string;
     description?: string;
-    descriptionCode?: string;
+    descriptionCatalogId?: string;
     projectId?: string;
     teamId?: string;
     startsAt: string;
@@ -231,8 +242,8 @@ export class MeetingsService {
   }) {
     await this.assertContextAccess({
       userId: input.createdById,
-      projectId: input.projectId,
-      teamId: input.teamId
+      ...(input.projectId ? { projectId: input.projectId } : {}),
+      ...(input.teamId ? { teamId: input.teamId } : {})
     });
 
     const startsAt = new Date(input.startsAt);
@@ -243,13 +254,13 @@ export class MeetingsService {
     const meeting = await this.app.prisma.meeting.create({
       data: {
         title: input.title,
-        description: input.description,
-        descriptionCode: this.normalizeLegacyCode({
-          code: input.descriptionCode,
+        description: input.description ?? null,
+        descriptionCatalogId: this.normalizeLegacyCode({
+          code: input.descriptionCatalogId,
           text: input.description
         }),
-        projectId: input.projectId,
-        teamId: input.teamId,
+        projectId: input.projectId ?? null,
+        teamId: input.teamId ?? null,
         startsAt,
         endsAt,
         createdById: input.createdById,
@@ -316,7 +327,11 @@ export class MeetingsService {
               members: {
                 some: {
                   userId: input.userId,
-                  role: "LIDER_PROYECTO"
+                role: {
+                  is: {
+                    key: "LIDER_PROYECTO"
+                  }
+                }
                 }
               }
             }
@@ -373,13 +388,13 @@ export class MeetingsService {
     userId: string;
     title: string;
     description?: string;
-    descriptionCode?: string;
+    descriptionCatalogId?: string;
     existingTaskId?: string;
     createTask?: {
       projectId: string;
       title: string;
       description?: string;
-      descriptionCode?: string;
+      descriptionCatalogId?: string;
       assigneeId?: string;
       dueDate?: string;
     };
@@ -409,12 +424,12 @@ export class MeetingsService {
         data: {
           projectId: input.createTask.projectId,
           title: input.createTask.title,
-          description: input.createTask.description,
-          descriptionCode: this.normalizeLegacyCode({
-            code: input.createTask.descriptionCode,
+          description: input.createTask.description ?? null,
+          descriptionCatalogId: this.normalizeLegacyCode({
+            code: input.createTask.descriptionCatalogId,
             text: input.createTask.description
           }),
-          assigneeId: input.createTask.assigneeId,
+          assigneeId: input.createTask.assigneeId ?? null,
           dueDate: input.createTask.dueDate ? new Date(input.createTask.dueDate) : null,
           createdById: input.userId,
           status: "PENDIENTE"
@@ -459,9 +474,9 @@ export class MeetingsService {
       data: {
         meetingId: input.meetingId,
         title: input.title,
-        description: input.description,
-        descriptionCode: this.normalizeLegacyCode({
-          code: input.descriptionCode,
+        description: input.description ?? null,
+        descriptionCatalogId: this.normalizeLegacyCode({
+          code: input.descriptionCatalogId,
           text: input.description
         }),
         authorId: input.userId,

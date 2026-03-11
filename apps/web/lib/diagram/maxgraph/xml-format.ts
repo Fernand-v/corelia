@@ -40,10 +40,80 @@ const unescapeXml = (value: string): string =>
     .replaceAll("&lt;", "<")
     .replaceAll("&amp;", "&");
 
+/**
+ * maxGraph serializes geometry with underscore-prefixed attributes (_x, _y,
+ * _width, _height) and styles as <Object as="style" .../> child elements.
+ * Convert both to classic mxGraph inline format.
+ */
+export const normalizeMaxGraphAttributes = (xml: string): string => {
+  let result = xml;
+
+  // 1. Convert _x, _y, _width, _height → x, y, width, height on geometry tags
+  result = result.replace(/\b_x="/g, 'x="');
+  result = result.replace(/\b_y="/g, 'y="');
+  result = result.replace(/\b_width="/g, 'width="');
+  result = result.replace(/\b_height="/g, 'height="');
+
+  // 2. Convert <Object ... as="style" .../> child elements → inline style="..." attribute
+  result = result.replace(
+    /<mxCell\b([^>]*?)>([\s\S]*?)<\/mxCell>/gi,
+    (_fullMatch, cellAttrs: string, cellBody: string) => {
+      const styleObjRegex = /<Object\b([^>]*?)\bas="style"([^>]*?)\s*\/>/i;
+      const styleMatch = cellBody.match(styleObjRegex);
+      if (!styleMatch) {
+        return `<mxCell${cellAttrs}>${cellBody}</mxCell>`;
+      }
+
+      // Extract style key-value pairs from Object attributes
+      const allObjAttrs = `${styleMatch[1] ?? ""} ${styleMatch[2] ?? ""}`.trim();
+      const pairs: string[] = [];
+      const attrRegex = /([\w-]+)="([^"]*)"/g;
+      let m: RegExpExecArray | null = attrRegex.exec(allObjAttrs);
+      while (m) {
+        if (m[1] !== "as") {
+          pairs.push(`${m[1]}=${m[2]}`);
+        }
+        m = attrRegex.exec(allObjAttrs);
+      }
+
+      // Remove the <Object as="style" .../> from body
+      const cleanBody = cellBody.replace(styleObjRegex, "").trim();
+
+      // Build new cell attributes with inline style
+      let newAttrs = cellAttrs;
+      if (pairs.length > 0 && !/\bstyle="/.test(cellAttrs)) {
+        newAttrs = `${cellAttrs} style="${pairs.join(";")}"`;
+      }
+
+      if (!cleanBody) {
+        return `<mxCell${newAttrs}/>`;
+      }
+      return `<mxCell${newAttrs}>${cleanBody}</mxCell>`;
+    }
+  );
+
+  return result;
+};
+
 const normalizeGraphModelXml = (raw: string): string => {
   const trimmed = raw.trim();
   if (trimmed.includes("<mxGraphModel")) {
-    return trimmed;
+    return normalizeMaxGraphAttributes(trimmed);
+  }
+
+  // maxGraph (v0.10+) uses <GraphDataModel> instead of <mxGraphModel>.
+  // Convert to classic mxGraph tag names so all downstream regex parsers work.
+  if (trimmed.includes("<GraphDataModel")) {
+    const converted = trimmed
+      .replace(/<GraphDataModel\b/g, "<mxGraphModel")
+      .replace(/<\/GraphDataModel>/g, "</mxGraphModel>")
+      .replace(/<Cell\b/g, "<mxCell")
+      .replace(/<\/Cell>/g, "</mxCell>")
+      .replace(/<Geometry\b/g, "<mxGeometry")
+      .replace(/<\/Geometry>/g, "</mxGeometry>")
+      .replace(/<Point\b/g, "<mxPoint")
+      .replace(/<\/Point>/g, "</mxPoint>");
+    return normalizeMaxGraphAttributes(converted);
   }
 
   return createEmptyGraphModelXml();
@@ -66,7 +136,7 @@ const decodeBase64Binary = (input: string): Uint8Array => {
 const decodeMaybeCompressedDiagram = (raw: string): string => {
   const trimmed = raw.trim();
 
-  if (trimmed.startsWith("<mxGraphModel")) {
+  if (trimmed.startsWith("<mxGraphModel") || trimmed.startsWith("<GraphDataModel")) {
     return trimmed;
   }
 
@@ -74,7 +144,7 @@ const decodeMaybeCompressedDiagram = (raw: string): string => {
     const bytes = decodeBase64Binary(trimmed);
     const inflated = pako.inflateRaw(bytes, { to: "string" }) as string;
     const decoded = decodeURIComponent(inflated);
-    if (decoded.includes("<mxGraphModel")) {
+    if (decoded.includes("<mxGraphModel") || decoded.includes("<GraphDataModel")) {
       return decoded;
     }
   } catch {
@@ -146,7 +216,7 @@ export const detectDiagramInputKind = (raw: string): DiagramInputKind => {
     return "mxfile";
   }
 
-  if (normalized.startsWith("<mxGraphModel")) {
+  if (normalized.startsWith("<mxGraphModel") || normalized.startsWith("<GraphDataModel")) {
     return "mxgraphmodel";
   }
 

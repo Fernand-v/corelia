@@ -1,8 +1,23 @@
 import type { FastifyInstance } from "fastify";
-import type { SystemRole } from "@corelia/types";
+import type { RoleCode } from "@corelia/types";
 import { ProjectTeamSyncService } from "./team-sync-service.js";
 
-const projectManagerRoles = new Set<SystemRole>([
+const resolveRoleKey = (
+  role: { key?: string | null; code?: string | number | null } | null | undefined
+): string | undefined => {
+  if (!role) {
+    return undefined;
+  }
+  if (typeof role.key === "string") {
+    return role.key;
+  }
+  if (typeof role.code === "string") {
+    return role.code;
+  }
+  return undefined;
+};
+
+const projectManagerRoles = new Set<RoleCode>([
   "ADMINISTRADOR",
   "LIDER_PROYECTO",
   "COORDINADOR_EQUIPO"
@@ -22,7 +37,10 @@ export class ProjectService {
     return error;
   }
 
-  private normalizeLegacyCode(input: { code?: string | null; text?: string | null }) {
+  private normalizeLegacyCode(input: {
+    code?: string | null | undefined;
+    text?: string | null | undefined;
+  }) {
     if (input.code?.trim()) {
       return input.code.trim();
     }
@@ -34,15 +52,15 @@ export class ProjectService {
     return null;
   }
 
-  private toStageNumber(code: string): number {
-    const parsed = Number.parseInt(code, 10);
+  private toStageNumber(code: number): number {
+    const parsed = Number(code);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
   }
 
   private mapStageForClient(stage: {
     id: string;
     projectId: string;
-    code: string;
+    code: number;
     name: string;
     color: string;
     createdAt: Date;
@@ -58,22 +76,36 @@ export class ProjectService {
     const [user, membership] = await Promise.all([
       this.app.prisma.user.findUnique({
         where: { id: actorId },
-        select: { baseRole: true }
+        select: {
+          baseRole: {
+            select: {
+              key: true,
+              code: true
+            }
+          }
+        }
       }),
       this.app.prisma.projectMember.findFirst({
         where: {
           projectId,
           userId: actorId
         },
-        select: { role: true }
+        select: {
+          role: {
+            select: {
+              key: true,
+              code: true
+            }
+          }
+        }
       })
     ]);
 
-    if (user?.baseRole === "ADMINISTRADOR") {
+    if (resolveRoleKey(user?.baseRole) === "ADMINISTRADOR") {
       return;
     }
 
-    if (membership?.role === "LIDER_PROYECTO") {
+    if (resolveRoleKey(membership?.role) === "LIDER_PROYECTO") {
       return;
     }
 
@@ -126,7 +158,14 @@ export class ProjectService {
     const [actor, project, membership] = await Promise.all([
       this.app.prisma.user.findUnique({
         where: { id: actorId },
-        select: { baseRole: true }
+        select: {
+          baseRole: {
+            select: {
+              key: true,
+              code: true
+            }
+          }
+        }
       }),
       this.app.prisma.project.findUnique({
         where: { id: projectId },
@@ -142,7 +181,12 @@ export class ProjectService {
           userId: actorId
         },
         select: {
-          role: true
+          role: {
+            select: {
+              key: true,
+              code: true
+            }
+          }
         }
       })
     ]);
@@ -151,7 +195,7 @@ export class ProjectService {
       throw new Error("Proyecto no encontrado");
     }
 
-    if (actor?.baseRole === "ADMINISTRADOR") {
+    if (resolveRoleKey(actor?.baseRole) === "ADMINISTRADOR") {
       return project;
     }
 
@@ -163,7 +207,8 @@ export class ProjectService {
     }
 
     if (requireManage) {
-      const canManage = isOwner || (membership ? projectManagerRoles.has(membership.role as SystemRole) : false);
+      const membershipRole = resolveRoleKey(membership?.role) as RoleCode | undefined;
+      const canManage = isOwner || (membershipRole ? projectManagerRoles.has(membershipRole) : false);
       if (!canManage) {
         throw this.forbidden("No tienes permisos para gestionar miembros del proyecto");
       }
@@ -175,40 +220,63 @@ export class ProjectService {
   async createProject(input: {
     name: string;
     description?: string;
-    descriptionCode?: string;
+    descriptionCatalogId?: string;
     template: "SOFTWARE" | "CONTENIDO" | "OPERACIONES";
     ownerId: string;
     memberIds: string[];
+    startDate?: string;
+    estimatedEndDate?: string;
   }) {
     return this.app.prisma.$transaction(async (tx) => {
+      const [leaderRole, collaboratorRole] = await Promise.all([
+        tx.role.findUnique({
+          where: { key: "LIDER_PROYECTO" },
+          select: { id: true }
+        }),
+        tx.role.findUnique({
+          where: { key: "COLABORADOR" },
+          select: { id: true }
+        })
+      ]);
+      if (!leaderRole || !collaboratorRole) {
+        throw new Error("Roles base no configurados");
+      }
+
       const project = await tx.project.create({
         data: {
           name: input.name,
-          description: input.description,
-          descriptionCode: this.normalizeLegacyCode({
-            code: input.descriptionCode,
+          description: input.description ?? null,
+          descriptionCatalogId: this.normalizeLegacyCode({
+            code: input.descriptionCatalogId,
             text: input.description
           }),
           template: input.template,
           ownerId: input.ownerId,
-          members: {
-            create: [
-              {
-                userId: input.ownerId,
-                role: "LIDER_PROYECTO"
-              },
-              ...input.memberIds
-                .filter((id) => id !== input.ownerId)
-                .map((memberId) => ({
-                  userId: memberId,
-                  role: "COLABORADOR" as const
-                }))
-            ]
-          }
-        },
-        include: {
-          members: true
+          startDate: input.startDate ? new Date(input.startDate) : null,
+          estimatedEndDate: input.estimatedEndDate ? new Date(input.estimatedEndDate) : null
         }
+      });
+
+      await tx.projectMember.createMany({
+        data: [
+          {
+            projectId: project.id,
+            userId: input.ownerId,
+            roleId: leaderRole.id,
+            membershipSource: "MANUAL",
+            syncTeamsCount: 0
+          },
+          ...input.memberIds
+            .filter((id) => id !== input.ownerId)
+            .map((memberId) => ({
+              projectId: project.id,
+              userId: memberId,
+              roleId: collaboratorRole.id,
+              membershipSource: "MANUAL" as const,
+              syncTeamsCount: 0
+            }))
+        ],
+        skipDuplicates: true
       });
 
       const channelMemberIds = [...new Set([input.ownerId, ...input.memberIds])];
@@ -227,13 +295,40 @@ export class ProjectService {
     });
   }
 
+  async updateProjectPlanning(
+    actorId: string,
+    projectId: string,
+    input: { startDate?: string | null; estimatedEndDate?: string | null }
+  ) {
+    await this.ensureProjectScope(actorId, projectId, true);
+
+    return this.app.prisma.project.update({
+      where: { id: projectId },
+      data: {
+        ...(input.startDate !== undefined
+          ? { startDate: input.startDate ? new Date(input.startDate) : null }
+          : {}),
+        ...(input.estimatedEndDate !== undefined
+          ? { estimatedEndDate: input.estimatedEndDate ? new Date(input.estimatedEndDate) : null }
+          : {})
+      }
+    });
+  }
+
   async listProjects(userId: string) {
     const actor = await this.app.prisma.user.findUnique({
       where: { id: userId },
-      select: { baseRole: true }
+      select: {
+        baseRole: {
+          select: {
+            key: true,
+            code: true
+          }
+        }
+      }
     });
 
-    if (actor?.baseRole === "ADMINISTRADOR") {
+    if (resolveRoleKey(actor?.baseRole) === "ADMINISTRADOR") {
       return this.app.prisma.project.findMany({
         include: {
           members: true
@@ -259,6 +354,13 @@ export class ProjectService {
         projectId
       },
       include: {
+        role: {
+          select: {
+            id: true,
+            key: true,
+            code: true
+          }
+        },
         user: {
           select: {
             id: true,
@@ -280,7 +382,8 @@ export class ProjectService {
         userId: member.userId,
         fullName: `${member.user.firstName} ${member.user.lastName}`.trim(),
         email: member.user.email,
-        role: member.role,
+        roleId: member.role.id,
+        role: resolveRoleKey(member.role) ?? null,
         joinedAt: member.joinedAt.toISOString()
       }))
     };
@@ -289,13 +392,7 @@ export class ProjectService {
   async assignRole(input: {
     projectId: string;
     userId: string;
-    role:
-      | "ADMINISTRADOR"
-      | "LIDER_PROYECTO"
-      | "COORDINADOR_EQUIPO"
-      | "COLABORADOR"
-      | "OBSERVADOR"
-      | "INVITADO_EXTERNO";
+    roleId: string;
   }) {
     const member = await this.app.prisma.projectMember.upsert({
       where: {
@@ -305,16 +402,41 @@ export class ProjectService {
         }
       },
       update: {
-        role: input.role,
+        role: {
+          connect: {
+            id: input.roleId
+          }
+        },
         membershipSource: "MANUAL",
         syncTeamsCount: 0
       },
       create: {
-        projectId: input.projectId,
-        userId: input.userId,
-        role: input.role,
+        project: {
+          connect: {
+            id: input.projectId
+          }
+        },
+        user: {
+          connect: {
+            id: input.userId
+          }
+        },
+        role: {
+          connect: {
+            id: input.roleId
+          }
+        },
         membershipSource: "MANUAL",
         syncTeamsCount: 0
+      },
+      include: {
+        role: {
+          select: {
+            id: true,
+            key: true,
+            code: true
+          }
+        }
       }
     });
 
@@ -324,7 +446,11 @@ export class ProjectService {
       action: "ADD"
     });
 
-    return member;
+    return {
+      ...member,
+      roleId: member.role.id,
+      role: resolveRoleKey(member.role) ?? null
+    };
   }
 
   async addProjectMember(
@@ -332,13 +458,7 @@ export class ProjectService {
     input: {
       projectId: string;
       userId: string;
-      role:
-        | "ADMINISTRADOR"
-        | "LIDER_PROYECTO"
-        | "COORDINADOR_EQUIPO"
-        | "COLABORADOR"
-        | "OBSERVADOR"
-        | "INVITADO_EXTERNO";
+      roleId: string;
     }
   ) {
     await this.ensureProjectScope(actorId, input.projectId, true);
@@ -432,11 +552,7 @@ export class ProjectService {
     });
 
     const nextStageNumber = existingStages.reduce((max, stage) => {
-      const parsed = Number.parseInt(stage.code, 10);
-      if (!Number.isFinite(parsed)) {
-        return max;
-      }
-      return Math.max(max, parsed);
+      return Math.max(max, stage.code);
     }, 0) + 1;
 
     const nextOrder = existingStages.reduce((max, stage) => Math.max(max, stage.order), -1) + 1;
@@ -444,7 +560,7 @@ export class ProjectService {
     const created = await this.app.prisma.projectStage.create({
       data: {
         projectId: input.projectId,
-        code: String(nextStageNumber),
+        code: nextStageNumber,
         name: input.name,
         color: input.color ?? "#4F7CFF",
         order: nextOrder

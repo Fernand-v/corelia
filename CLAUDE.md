@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Corelia is a monorepo for an intranet/project management platform. It uses **pnpm workspaces** and **Turborepo** to orchestrate four apps and three shared packages.
+Corelia is a monorepo for an intranet/project management platform. It uses **pnpm workspaces** (pnpm 9.12.3) and **Turborepo** to orchestrate four apps and three shared packages. Requires **Node ≥ 20**.
 
 **Apps:**
 - `apps/api` — Fastify 5 REST API (TypeScript, ESM)
@@ -72,17 +72,17 @@ cd docker && docker compose -f docker-compose.staging.yml up -d
 
 ### API (`apps/api/src`)
 
-The API follows a **plugin + module** pattern:
+The API follows a **plugin + module** pattern (ESM-only, `"type": "module"`):
 
 - **`app.ts`** — Assembles the Fastify app: registers plugins, then mounts routers
-- **`plugins/`** — Fastify plugins that decorate the app instance: `prisma`, `redis`, `auth` (JWT), `rbac`, `socket` (Socket.IO), `media` (mediasoup WebRTC), `storage` (MinIO), `queues` (BullMQ), `audit`, `maintenance`
-- **`modules/<name>/`** — Each module has `router.ts` (Fastify route handlers), `service.ts` (business logic), `schema.ts` (Zod validation)
+- **`plugins/`** — Fastify plugins registered in dependency order: security → prisma → redis → storage → queues → auth → socket → media → rbac → maintenance → audit
+- **`modules/<name>/`** — Each module has `router.ts` (Fastify route handlers), `service.ts` (business logic), `schema.ts` (Zod validation). Current modules: `status`, `auth`, `identity`, `projects`, `tasks`, `availability`, `time`, `messaging`, `notifications`, `announcements`, `forms`, `files`, `documents`, `search`, `decisions`, `automations`, `objectives`, `integrations`, `imports`, `audit`, `meetings`, `calendar`, `home`, `admin`, `reports`
 - **`lib/`** — Stateless utilities: `rbac.ts` (role/permission definitions), `http.ts`, `tokens.ts`, `password.ts`, etc.
 - **`config/env.ts`** — All env vars are validated with Zod at startup; the app exits if any required var is missing
 
-**RBAC:** Six roles (`INVITADO_EXTERNO` → `ADMINISTRADOR`) with Spanish-named permissions defined in `lib/rbac.ts`. Routes declare `requiredPermission` in their route config; the `rbacPlugin` enforces it per-request. Within a project context, the user's project membership role is used; outside a project, their base role applies.
+**RBAC:** Six roles (`INVITADO_EXTERNO` → `OBSERVADOR` → `COLABORADOR` → `COORDINADOR_EQUIPO` → `LIDER_PROYECTO` → `ADMINISTRADOR`) with Spanish-named permissions defined in `lib/rbac.ts`. Routes declare `requiredPermission` in their route config; the `rbacPlugin` enforces it per-request. Within a project context, the user's project membership role is used; outside a project, their base role applies.
 
-**Auth:** JWT access tokens (default 15 min) + opaque refresh tokens stored in Postgres. Both tokens required in `x-api-key` header (public key) + `Authorization: Bearer` header (user token).
+**Auth:** JWT access tokens (default 15 min) + opaque refresh tokens stored in Postgres. Protected endpoints require `Authorization: Bearer` plus RBAC permission checks.
 
 **Realtime:** Socket.IO mounted at `/ws/socket.io`. mediasoup handles WebRTC video calls.
 
@@ -122,3 +122,7 @@ Simple Hocuspocus server (`server.js`) that broadcasts Y.js CRDT updates. The we
 - The `@corelia/types` package is the single source of truth for shared types — both API and web import from it
 - Prisma schema lives at `apps/api/prisma/schema.prisma`; `AUTO_MIGRATE_ON_START=true` runs `prisma migrate deploy` on API boot
 - Tests use Vitest with mocked Prisma/app instances (no real DB required for unit tests)
+- API test files live in `apps/api/src/test/**/*.spec.ts`; web tests match `**/*.spec.ts`
+- API coverage thresholds: 70% lines/statements/functions, 60% branches
+- The Prisma schema uses Spanish enum values throughout (e.g., `PENDIENTE`, `COMPLETADA`, `VACACIONES`)
+- Turbo caches `build`, `test`, `typecheck`; `dev` and `format` are not cached

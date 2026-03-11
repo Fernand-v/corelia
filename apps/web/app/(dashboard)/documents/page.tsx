@@ -1,13 +1,16 @@
 import { DocumentsBoard } from "@/components/documents-board";
 import { ProjectContextRequired } from "@/components/project-context-required";
 
-export default function DocumentsPage({
-  searchParams
-}: {
-  searchParams?: { projectId?: string; projectName?: string; teamId?: string };
-}) {
-  const projectId = searchParams?.projectId ?? "";
-  const projectName = searchParams?.projectName ?? "";
+type DocumentsPageProps = {
+  searchParams?: Promise<{ projectId?: string | string[]; projectName?: string | string[]; teamId?: string | string[] }>;
+};
+
+const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
+
+export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const projectId = getParam(resolvedSearchParams.projectId);
+  const projectName = getParam(resolvedSearchParams.projectName);
 
   if (!projectId) {
     return (

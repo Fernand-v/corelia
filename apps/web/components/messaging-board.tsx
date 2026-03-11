@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Channel, Message, MessagingConversationsResponse } from "@corelia/types";
-import { apiRequest, getApiBaseUrl, getAuthToken, getPublicApiKey, useAuthStore } from "@/lib/api";
+import { apiRequest, getApiBaseUrl, getAuthToken, useAuthStore } from "@/lib/api";
 import { getRealtimeSocket, disconnectRealtimeSocket } from "@/lib/realtime";
 import { useSession } from "@/lib/session";
 import { MessagingModule } from "@/components/messaging-module";
@@ -33,10 +33,8 @@ const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
 
 const downloadAttachment = async (attachmentId: string, fileName: string) => {
   const token = getAuthToken();
-  const apiKey = getPublicApiKey();
   const headers = new Headers();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (apiKey) headers.set("x-api-key", apiKey);
 
   const response = await fetch(
     `${getApiBaseUrl()}/messaging/attachments/${encodeURIComponent(attachmentId)}/content?mode=attachment`,

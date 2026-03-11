@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 

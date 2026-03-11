@@ -5,7 +5,10 @@ export class ObjectiveService {
 
   constructor(private readonly app: FastifyInstance) {}
 
-  private normalizeLegacyCode(input: { code?: string | null; text?: string | null }) {
+  private normalizeLegacyCode(input: {
+    code?: string | null | undefined;
+    text?: string | null | undefined;
+  }) {
     if (input.code?.trim()) {
       return input.code.trim();
     }
@@ -23,7 +26,7 @@ export class ObjectiveService {
     projectId?: string | null;
     title: string;
     description?: string | null;
-    descriptionCode?: string;
+    descriptionCatalogId?: string;
     ownerId: string;
     targetDate: string;
     progressPct: number;
@@ -31,12 +34,12 @@ export class ObjectiveService {
     return this.app.prisma.objective.create({
       data: {
         scope: input.scope,
-        teamId: input.teamId,
-        projectId: input.projectId,
+        teamId: input.teamId ?? null,
+        projectId: input.projectId ?? null,
         title: input.title,
-        description: input.description,
-        descriptionCode: this.normalizeLegacyCode({
-          code: input.descriptionCode,
+        description: input.description ?? null,
+        descriptionCatalogId: this.normalizeLegacyCode({
+          code: input.descriptionCatalogId,
           text: input.description ?? null
         }),
         ownerId: input.ownerId,

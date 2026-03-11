@@ -35,12 +35,44 @@ import { meetingsRouter } from "./modules/meetings/router.js";
 import { calendarRouter } from "./modules/calendar/router.js";
 import { homeRouter } from "./modules/home/router.js";
 import { adminRouter } from "./modules/admin/router.js";
+import { reportsRouter } from "./modules/reports/router.js";
+import { expensesRouter } from "./modules/expenses/router.js";
 
 export const createApp = async (): Promise<FastifyInstance> => {
   const app = Fastify({
     logger: {
       level: process.env.NODE_ENV === "production" ? "info" : "debug"
     }
+  });
+
+  app.setErrorHandler((error, _request, reply) => {
+    const knownError = error as Error & {
+      statusCode?: number;
+      validation?: unknown;
+      code?: string;
+    };
+    const prismaCode = typeof knownError.code === "string" ? knownError.code : null;
+
+    const isValidationError =
+      knownError.name === "ValidationError" ||
+      knownError.name === "ZodError" ||
+      Boolean(knownError.validation);
+
+    const statusCode = isValidationError
+      ? 400
+      : prismaCode === "P2025"
+        ? 404
+        : prismaCode === "P2002" || knownError.name === "Conflict"
+          ? 409
+      : typeof knownError.statusCode === "number" &&
+          knownError.statusCode >= 400 &&
+          knownError.statusCode <= 599
+        ? knownError.statusCode
+        : 500;
+
+    return reply.code(statusCode).send({
+      message: knownError.message
+    });
   });
 
   await app.register(securityPlugin);
@@ -95,14 +127,8 @@ export const createApp = async (): Promise<FastifyInstance> => {
   await app.register(calendarRouter, { prefix: "/api/v1/calendar" });
   await app.register(homeRouter, { prefix: "/api/v1/home" });
   await app.register(adminRouter, { prefix: "/api/v1/admin" });
-
-  app.setErrorHandler((error, _request, reply) => {
-    const knownError = error as Error;
-    const statusCode = knownError.name === "ValidationError" ? 400 : 500;
-    return reply.code(statusCode).send({
-      message: knownError.message
-    });
-  });
+  await app.register(reportsRouter, { prefix: "/api/v1/reports" });
+  await app.register(expensesRouter, { prefix: "/api/v1" });
 
   return app;
 };

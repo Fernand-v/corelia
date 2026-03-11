@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-03-10T11:52:17.082Z",
+  "project": {
+    "id": "a0980fc0-5e2d-41af-b652-2ffe08804ac1",
+    "name": "Proyecto Demo Orion"
+  },
+  "team": {
+    "id": "a838953a-3c0c-4577-ac52-17bdd3431b83",
+    "name": "Equipo Demo Plataforma"
+  },
+  "channels": {
+    "projectChannelId": "cf80bf5f-12bd-4bec-b8c6-30e359d8da07",
+    "teamChannelId": "162fd59c-b6e9-4b1e-a4db-1ff065d0b825"
+  },
+  "meeting": {
+    "id": "95380d01-8d1e-42f7-8ecc-5c4dba02fbfd",
+    "title": "Sync semanal Proyecto Orion"
+  },
+  "documents": {
+    "textDocumentId": "5b2e07eb-2995-4d24-a7ee-13dad531c66f",
+    "diagramDocumentId": "4ac882ab-762a-4706-b755-4415472568b5"
+  },
+  "expenses": {
+    "approvedExpenseId": "314bd99e-97c6-45b8-93e3-90033e30177a",
+    "pendingExpenseId": "dfdb3c87-c8a5-4334-852c-3c7f93b11b58"
+  },
+  "objective": {
+    "id": "bead5cc3-88dc-4415-a623-49365dc80d64",
+    "title": "Reducir incidencias de despliegue"
+  },
+  "users": [
+    {
+      "email": "demo.admin@corelia.local",
+      "role": "ADMINISTRADOR",
+      "password": "Demo123!@#"
+    },
+    {
+      "email": "demo.lider@corelia.local",
+      "role": "LIDER_PROYECTO",
+      "password": "Demo123!@#"
+    },
+    {
+      "email": "demo.coordinador@corelia.local",
+      "role": "COORDINADOR_EQUIPO",
+      "password": "Demo123!@#"
+    },
+    {
+      "email": "demo.dev1@corelia.local",
+      "role": "COLABORADOR",
+      "password": "Demo123!@#"
+    },
+    {
+      "email": "demo.dev2@corelia.local",
+      "role": "COLABORADOR",
+      "password": "Demo123!@#"
+    }
+  ]
+}

@@ -17,6 +17,8 @@ type ProjectItem = {
   description: string | null;
   template: string;
   ownerId: string;
+  startDate: string | null;
+  estimatedEndDate: string | null;
   createdAt: string;
 };
 
@@ -27,7 +29,8 @@ const resourceCards = [
   { label: "Reuniones", href: "/meetings", description: "Agenda y videollamadas del proyecto" },
   { label: "Calendario", href: "/calendar", description: "Vista semanal y agenda por hora" },
   { label: "Archivos", href: "/files", description: "Documentación del proyecto" },
-  { label: "Ver cambios", href: "/changes", description: "Historial reciente de carpetas y archivos" }
+  { label: "Ver cambios", href: "/changes", description: "Historial reciente de carpetas y archivos" },
+  { label: "Presupuesto", href: "/budget", description: "Partidas, gastos y resumen financiero", isProjectRoute: true }
 ];
 
 export default function ProjectsPage() {
@@ -42,6 +45,8 @@ export default function ProjectsPage() {
   const [newProjectDescription, setNewProjectDescription] = useState("");
   const [newProjectTemplate, setNewProjectTemplate] = useState<ProjectTemplate>("SOFTWARE");
   const [createError, setCreateError] = useState<string | null>(null);
+  const [newProjectStartDate, setNewProjectStartDate] = useState("");
+  const [newProjectEndDate, setNewProjectEndDate] = useState("");
 
   const projectsQuery = useQuery({
     queryKey: ["projects"],
@@ -66,7 +71,9 @@ export default function ProjectsPage() {
           name,
           description: newProjectDescription.trim() || undefined,
           template: newProjectTemplate,
-          memberIds: []
+          memberIds: [],
+          startDate: newProjectStartDate ? `${newProjectStartDate}T00:00:00.000Z` : undefined,
+          estimatedEndDate: newProjectEndDate ? `${newProjectEndDate}T00:00:00.000Z` : undefined
         })
       });
     },
@@ -75,6 +82,8 @@ export default function ProjectsPage() {
       setNewProjectName("");
       setNewProjectDescription("");
       setNewProjectTemplate("SOFTWARE");
+      setNewProjectStartDate("");
+      setNewProjectEndDate("");
       setNewProjectModalOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       selectProject(project.id);
@@ -161,15 +170,28 @@ export default function ProjectsPage() {
           <div className="space-y-1">
             <p className="text-sm font-semibold text-slate-900">{selectedProject.name}</p>
             <p className="text-sm text-slate-600">{selectedProject.description || "Sin descripción"}</p>
+            {selectedProject.startDate || selectedProject.estimatedEndDate ? (
+              <p className="text-xs text-slate-500">
+                {selectedProject.startDate
+                  ? `Inicio: ${new Date(selectedProject.startDate).toLocaleDateString("es-ES", { dateStyle: "medium" })}`
+                  : null}
+                {selectedProject.startDate && selectedProject.estimatedEndDate ? " · " : null}
+                {selectedProject.estimatedEndDate
+                  ? `Fin estimado: ${new Date(selectedProject.estimatedEndDate).toLocaleDateString("es-ES", { dateStyle: "medium" })}`
+                  : null}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {resourceCards.map((resource) => {
-              const href = withDashboardContext(resource.href, {
-                projectId: selectedProject.id,
-                projectName: selectedProject.name,
-                teamId: params.get("teamId")
-              });
+              const href = "isProjectRoute" in resource && resource.isProjectRoute
+                ? `/projects/${selectedProject.id}${resource.href}`
+                : withDashboardContext(resource.href, {
+                    projectId: selectedProject.id,
+                    projectName: selectedProject.name,
+                    teamId: params.get("teamId")
+                  });
               return (
                 <Link
                   key={resource.href}
@@ -234,6 +256,27 @@ export default function ProjectsPage() {
               <option value="OPERACIONES">OPERACIONES</option>
             </select>
           </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-1">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Fecha inicio (opcional)</span>
+              <input
+                type="date"
+                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                value={newProjectStartDate}
+                onChange={(event) => setNewProjectStartDate(event.target.value)}
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Fin estimado (opcional)</span>
+              <input
+                type="date"
+                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                value={newProjectEndDate}
+                onChange={(event) => setNewProjectEndDate(event.target.value)}
+              />
+            </label>
+          </div>
 
           <label className="block space-y-1">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-500">

@@ -1,4 +1,31 @@
-import js from "@eslint/js";
-import nextPlugin from "eslint-config-next";
+import nextPlugin from "@next/eslint-plugin-next";
+import tsParser from "@typescript-eslint/parser";
+import reactHooks from "eslint-plugin-react-hooks";
 
-export default [js.configs.recommended, ...nextPlugin];
+export default [
+  {
+    ignores: [".next/**", "dist/**", "coverage/**", "node_modules/**", "tsconfig.tsbuildinfo"]
+  },
+  {
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: {
+          jsx: true
+        }
+      }
+    },
+    plugins: {
+      "@next/next": nextPlugin,
+      "react-hooks": reactHooks
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+      "react-hooks/exhaustive-deps": "warn"
+    }
+  }
+];

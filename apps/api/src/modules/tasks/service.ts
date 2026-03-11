@@ -1,12 +1,27 @@
 import type { FastifyInstance } from "fastify";
-import type { SystemRole, TaskStatus } from "@corelia/types";
+import type { RoleCode, TaskStatus } from "@corelia/types";
 import { canReassign, canReopenCompletedTask } from "../../lib/rbac.js";
 import { createAndDispatchNotification } from "../../lib/notifications.js";
 import { attachTraceContext } from "../../lib/tracing.js";
 
+const resolveRoleKey = (
+  role: { key?: string | null; code?: string | number | null } | null | undefined
+): string | undefined => {
+  if (!role) {
+    return undefined;
+  }
+  if (typeof role.key === "string") {
+    return role.key;
+  }
+  if (typeof role.code === "string") {
+    return role.code;
+  }
+  return undefined;
+};
+
 export class TaskService {
   private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
-  private static readonly MANAGER_ROLES: SystemRole[] = [
+  private static readonly MANAGER_ROLES: RoleCode[] = [
     "ADMINISTRADOR",
     "LIDER_PROYECTO",
     "COORDINADOR_EQUIPO"
@@ -14,13 +29,13 @@ export class TaskService {
 
   constructor(private readonly app: FastifyInstance) {}
 
-  private isManagerRole(role: SystemRole): boolean {
+  private isManagerRole(role: RoleCode): boolean {
     return TaskService.MANAGER_ROLES.includes(role);
   }
 
   private normalizeLegacyCode(input: {
-    code?: string | null;
-    text?: string | null;
+    code?: string | null | undefined;
+    text?: string | null | undefined;
   }): string | null {
     if (input.code?.trim()) {
       return input.code.trim();
@@ -34,25 +49,27 @@ export class TaskService {
   }
 
   private async resolveTaskCodeLabels(entries: Array<{ field: string; code: string | null | undefined }>) {
-    const uniqueCodes = [...new Set(entries.map((entry) => entry.code).filter((code): code is string => Boolean(code)))];
+    const uniqueCodes = [
+      ...new Set(entries.map((entry) => entry.code).filter((code): code is string => Boolean(code)))
+    ];
     if (uniqueCodes.length === 0) {
       return new Map<string, string>();
     }
 
     const catalogs = await this.app.prisma.taskCodeCatalog.findMany({
       where: {
-        code: { in: uniqueCodes }
+        key: { in: uniqueCodes }
       },
       select: {
         field: true,
-        code: true,
+        key: true,
         label: true
       }
     });
 
     const labels = new Map<string, string>();
     for (const catalog of catalogs) {
-      labels.set(`${catalog.field}:${catalog.code}`, catalog.label);
+      labels.set(`${catalog.field}:${catalog.key}`, catalog.label);
     }
 
     for (const entry of entries) {
@@ -75,7 +92,11 @@ export class TaskService {
     const admin = await this.app.prisma.user.findFirst({
       where: {
         id: userId,
-        baseRole: "ADMINISTRADOR"
+        baseRole: {
+          is: {
+            key: "ADMINISTRADOR"
+          }
+        }
       },
       select: { id: true }
     });
@@ -131,8 +152,8 @@ export class TaskService {
 
     const labels = await this.resolveTaskCodeLabels(
       tasks.flatMap((task) => [
-        { field: "TASK_DESCRIPTION", code: task.descriptionCode },
-        { field: "TASK_BLOCKED_REASON", code: task.blockedReasonCode }
+        { field: "TASK_DESCRIPTION", code: task.descriptionCatalogId },
+        { field: "TASK_BLOCKED_REASON", code: task.blockedReasonCatalogId }
       ])
     );
 
@@ -141,11 +162,11 @@ export class TaskService {
       stageCode: task.stage?.code ?? null,
       stageName: task.stage?.name ?? null,
       stageColor: task.stage?.color ?? null,
-      descriptionLabel: task.descriptionCode
-        ? labels.get(`TASK_DESCRIPTION:${task.descriptionCode}`) ?? task.descriptionCode
+      descriptionLabel: task.descriptionCatalogId
+        ? labels.get(`TASK_DESCRIPTION:${task.descriptionCatalogId}`) ?? task.descriptionCatalogId
         : null,
-      blockedReasonLabel: task.blockedReasonCode
-        ? labels.get(`TASK_BLOCKED_REASON:${task.blockedReasonCode}`) ?? task.blockedReasonCode
+      blockedReasonLabel: task.blockedReasonCatalogId
+        ? labels.get(`TASK_BLOCKED_REASON:${task.blockedReasonCatalogId}`) ?? task.blockedReasonCatalogId
         : null,
       createdByName: `${task.createdBy.firstName} ${task.createdBy.lastName}`.trim(),
       assigneeName: task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}`.trim() : null
@@ -168,7 +189,11 @@ export class TaskService {
       this.app.prisma.user.findFirst({
         where: {
           id: userId,
-          baseRole: "ADMINISTRADOR"
+          baseRole: {
+            is: {
+              key: "ADMINISTRADOR"
+            }
+          }
         },
         select: { id: true }
       })
@@ -188,6 +213,12 @@ export class TaskService {
         projectId
       },
       include: {
+        role: {
+          select: {
+            key: true,
+            code: true
+          }
+        },
         user: {
           select: {
             id: true,
@@ -276,7 +307,7 @@ export class TaskService {
         activeTasks,
         maxActiveTasks,
         overloaded: maxActiveTasks > 0 ? activeTasks >= maxActiveTasks : false,
-        role: member.role
+        role: resolveRoleKey(member.role) ?? "INVITADO_EXTERNO"
       };
     });
   }
@@ -350,7 +381,7 @@ export class TaskService {
     currentAssigneeId: string | null;
     newAssigneeId: string;
     requestedById: string;
-    activeRole: SystemRole;
+    activeRole: RoleCode;
     projectContextId?: string | null;
   }) {
     if (input.activeRole === "ADMINISTRADOR") {
@@ -366,10 +397,17 @@ export class TaskService {
         projectId: input.taskProjectId,
         userId: input.requestedById
       },
-      select: { role: true }
+      select: {
+        role: {
+          select: {
+            key: true,
+            code: true
+          }
+        }
+      }
     });
 
-    if (!member || member.role !== input.activeRole) {
+    if (!member || resolveRoleKey(member.role) !== input.activeRole) {
       throw this.forbidden("No tienes permisos sobre este proyecto para reasignar");
     }
 
@@ -465,7 +503,7 @@ export class TaskService {
     stageId?: string;
     title: string;
     description?: string;
-    descriptionCode?: string;
+    descriptionCatalogId?: string;
     assigneeId?: string;
     startDate?: string;
     dueDate?: string;
@@ -504,14 +542,14 @@ export class TaskService {
     const task = await this.app.prisma.task.create({
       data: {
         projectId: input.projectId,
-        stageId: input.stageId,
+        stageId: input.stageId ?? null,
         title: input.title,
-        description: input.description,
-        descriptionCode: this.normalizeLegacyCode({
-          code: input.descriptionCode,
+        description: input.description ?? null,
+        descriptionCatalogId: this.normalizeLegacyCode({
+          code: input.descriptionCatalogId,
           text: input.description
         }),
-        assigneeId: input.assigneeId,
+        assigneeId: input.assigneeId ?? null,
         startDate: parsedStartDate,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
         status: input.status,
@@ -597,46 +635,46 @@ export class TaskService {
     }
 
     const labels = await this.resolveTaskCodeLabels([
-      { field: "TASK_DESCRIPTION", code: task.descriptionCode },
-      { field: "TASK_BLOCKED_REASON", code: task.blockedReasonCode },
+      { field: "TASK_DESCRIPTION", code: task.descriptionCatalogId },
+      { field: "TASK_BLOCKED_REASON", code: task.blockedReasonCatalogId },
       ...(task.statusHistory ?? []).map((entry) => ({
         field: "TASK_STATUS_REASON",
-        code: entry.reasonCode
+        code: entry.reasonCatalogId
       })),
       ...(task.reassignments ?? []).map((entry) => ({
         field: "TASK_REASSIGN_REASON",
-        code: entry.reasonCode
+        code: entry.reasonCatalogId
       })),
       ...(task.scheduleHistory ?? []).map((entry) => ({
         field: "TASK_SCHEDULE_REASON",
-        code: entry.reasonCode
+        code: entry.reasonCatalogId
       }))
     ]);
 
     return {
       ...task,
-      descriptionLabel: task.descriptionCode
-        ? labels.get(`TASK_DESCRIPTION:${task.descriptionCode}`) ?? task.descriptionCode
+      descriptionLabel: task.descriptionCatalogId
+        ? labels.get(`TASK_DESCRIPTION:${task.descriptionCatalogId}`) ?? task.descriptionCatalogId
         : null,
-      blockedReasonLabel: task.blockedReasonCode
-        ? labels.get(`TASK_BLOCKED_REASON:${task.blockedReasonCode}`) ?? task.blockedReasonCode
+      blockedReasonLabel: task.blockedReasonCatalogId
+        ? labels.get(`TASK_BLOCKED_REASON:${task.blockedReasonCatalogId}`) ?? task.blockedReasonCatalogId
         : null,
       statusHistory: (task.statusHistory ?? []).map((entry) => ({
         ...entry,
-        reasonLabel: entry.reasonCode
-          ? labels.get(`TASK_STATUS_REASON:${entry.reasonCode}`) ?? entry.reasonCode
+        reasonLabel: entry.reasonCatalogId
+          ? labels.get(`TASK_STATUS_REASON:${entry.reasonCatalogId}`) ?? entry.reasonCatalogId
           : null
       })),
       reassignments: (task.reassignments ?? []).map((entry) => ({
         ...entry,
-        reasonLabel: entry.reasonCode
-          ? labels.get(`TASK_REASSIGN_REASON:${entry.reasonCode}`) ?? entry.reasonCode
+        reasonLabel: entry.reasonCatalogId
+          ? labels.get(`TASK_REASSIGN_REASON:${entry.reasonCatalogId}`) ?? entry.reasonCatalogId
           : null
       })),
       scheduleHistory: (task.scheduleHistory ?? []).map((entry) => ({
         ...entry,
-        reasonLabel: entry.reasonCode
-          ? labels.get(`TASK_SCHEDULE_REASON:${entry.reasonCode}`) ?? entry.reasonCode
+        reasonLabel: entry.reasonCatalogId
+          ? labels.get(`TASK_SCHEDULE_REASON:${entry.reasonCatalogId}`) ?? entry.reasonCatalogId
           : null
       }))
     };
@@ -646,12 +684,12 @@ export class TaskService {
     taskId: string;
     status: TaskStatus;
     reason: string;
-    reasonCode?: string;
+    reasonCatalogId?: string;
     blockingTaskId?: string;
     blockedReason?: string;
-    blockedReasonCode?: string;
+    blockedReasonCatalogId?: string;
     changedById: string;
-    activeRole: SystemRole;
+    activeRole: RoleCode;
   }) {
     const task = await this.app.prisma.task.findUnique({ where: { id: input.taskId } });
     if (!task) {
@@ -687,7 +725,7 @@ export class TaskService {
             : null,
         blockingTaskId: null,
         blockedReason: null,
-        blockedReasonCode: null,
+        blockedReasonCatalogId: null,
         completedAt: input.status === "COMPLETADA" ? now : null
       }
     });
@@ -698,8 +736,8 @@ export class TaskService {
         fromStatus: task.status,
         toStatus: input.status,
         reason: input.reason,
-        reasonCode: this.normalizeLegacyCode({
-          code: input.reasonCode,
+        reasonCatalogId: this.normalizeLegacyCode({
+          code: input.reasonCatalogId,
           text: input.reason
         }),
         changedById: input.changedById
@@ -780,7 +818,7 @@ export class TaskService {
     startDate?: string | null;
     dueDate?: string | null;
     reason: string;
-    reasonCode?: string;
+    reasonCatalogId?: string;
     changedById: string;
   }) {
     const task = await this.app.prisma.task.findUnique({
@@ -816,8 +854,8 @@ export class TaskService {
           newStartDate: startDate,
           newDueDate: dueDate,
           reason: input.reason,
-          reasonCode: this.normalizeLegacyCode({
-            code: input.reasonCode,
+          reasonCatalogId: this.normalizeLegacyCode({
+            code: input.reasonCatalogId,
             text: input.reason
           }),
           changedById: input.changedById
@@ -831,9 +869,9 @@ export class TaskService {
   async activateTask(input: {
     taskId: string;
     reason: string;
-    reasonCode?: string;
+    reasonCatalogId?: string;
     changedById: string;
-    activeRole: SystemRole;
+    activeRole: RoleCode;
   }) {
     if (!this.isManagerRole(input.activeRole)) {
       throw this.forbidden("Solo administrador, líder o coordinador pueden activar tareas manualmente");
@@ -868,8 +906,8 @@ export class TaskService {
         fromStatus: task.status,
         toStatus: "PENDIENTE",
         reason: input.reason,
-        reasonCode: this.normalizeLegacyCode({
-          code: input.reasonCode,
+        reasonCatalogId: this.normalizeLegacyCode({
+          code: input.reasonCatalogId,
           text: input.reason
         }),
         changedById: input.changedById
@@ -879,7 +917,11 @@ export class TaskService {
     const leaders = await this.app.prisma.projectMember.findMany({
       where: {
         projectId: task.projectId,
-        role: "LIDER_PROYECTO"
+        role: {
+          is: {
+            key: "LIDER_PROYECTO"
+          }
+        }
       },
       select: { userId: true }
     });
@@ -904,9 +946,9 @@ export class TaskService {
   async finalizeAndAdvance(input: {
     taskId: string;
     reason?: string;
-    reasonCode?: string;
+    reasonCatalogId?: string;
     changedById: string;
-    activeRole: SystemRole;
+    activeRole: RoleCode;
   }) {
     const task = await this.app.prisma.task.findUnique({
       where: { id: input.taskId }
@@ -928,8 +970,8 @@ export class TaskService {
     };
 
     const reason = input.reason?.trim() || "Finalización desde Mis Tareas";
-    const reasonCode = this.normalizeLegacyCode({
-      code: input.reasonCode,
+    const reasonCatalogId = this.normalizeLegacyCode({
+      code: input.reasonCatalogId,
       text: reason
     });
 
@@ -955,7 +997,7 @@ export class TaskService {
             fromStatus: task.status,
             toStatus: "COMPLETADA",
             reason,
-            reasonCode,
+            reasonCatalogId,
             changedById: input.changedById
           }
         });
@@ -1010,7 +1052,7 @@ export class TaskService {
             fromStatus: "PENDIENTE",
             toStatus: "PENDIENTE",
             reason: "Avance automático por finalización de tarea previa",
-            reasonCode: "AUTO_ADVANCE",
+            reasonCatalogId: "AUTO_ADVANCE",
             changedById: input.changedById
           }
         });
@@ -1027,7 +1069,11 @@ export class TaskService {
       const leaders = await this.app.prisma.projectMember.findMany({
         where: {
           projectId: nextTask.projectId,
-          role: "LIDER_PROYECTO"
+          role: {
+            is: {
+              key: "LIDER_PROYECTO"
+            }
+          }
         },
         select: { userId: true }
       });
@@ -1059,10 +1105,10 @@ export class TaskService {
     taskId: string;
     newAssigneeId: string;
     reason: string;
-    reasonCode?: string;
+    reasonCatalogId?: string;
     reopenIfCompleted: boolean;
     requestedById: string;
-    activeRole: SystemRole;
+    activeRole: RoleCode;
     projectContextId?: string | null;
   }) {
     if (!canReassign(input.activeRole)) {
@@ -1080,7 +1126,9 @@ export class TaskService {
       newAssigneeId: input.newAssigneeId,
       requestedById: input.requestedById,
       activeRole: input.activeRole,
-      projectContextId: input.projectContextId
+      ...(input.projectContextId !== undefined
+        ? { projectContextId: input.projectContextId }
+        : {})
     });
 
     if (task.status === "COMPLETADA") {
@@ -1118,8 +1166,8 @@ export class TaskService {
           previousAssigneeId: task.assigneeId,
           newAssigneeId: input.newAssigneeId,
           reason: input.reason,
-          reasonCode: this.normalizeLegacyCode({
-            code: input.reasonCode,
+          reasonCatalogId: this.normalizeLegacyCode({
+            code: input.reasonCatalogId,
             text: input.reason
           }),
           reassignedById: input.requestedById
@@ -1133,7 +1181,7 @@ export class TaskService {
             fromStatus: "COMPLETADA",
             toStatus: "PENDIENTE",
             reason: "Reapertura autorizada para reasignación",
-            reasonCode: "REOPEN_REASSIGN",
+            reasonCatalogId: "REOPEN_REASSIGN",
             changedById: input.requestedById
           }
         });
@@ -1145,7 +1193,11 @@ export class TaskService {
     const leaders = await this.app.prisma.projectMember.findMany({
       where: {
         projectId: task.projectId,
-        role: "LIDER_PROYECTO"
+        role: {
+          is: {
+            key: "LIDER_PROYECTO"
+          }
+        }
       },
       select: { userId: true }
     });

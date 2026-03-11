@@ -37,7 +37,11 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
             email: payload.email,
             firstName: payload.firstName,
             lastName: payload.lastName,
-            baseRole: payload.baseRole,
+            baseRole: {
+              connect: {
+                key: payload.baseRole
+              }
+            },
             passwordHash: await hashPassword(payload.password)
           }
         });
@@ -46,10 +50,11 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: user.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             id: user.id,
             email: user.email,
-            baseRole: user.baseRole
+            baseRoleId: user.baseRoleId,
+            baseRole: payload.baseRole
           }
         };
 
@@ -58,7 +63,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          baseRole: user.baseRole
+          baseRoleId: user.baseRoleId,
+          baseRole: payload.baseRole
         });
       } catch (error) {
         return reply.code(400).send({ message: (error as Error).message });
@@ -122,7 +128,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
         );
         const checklist = await service.createOnboardingChecklist({
           name: payload.name,
-          items: payload.items.map((item) => ({
+          items: payload.items.map((item: (typeof payload.items)[number]) => ({
             key: item.key,
             label: item.label,
             required: item.required,
@@ -134,7 +140,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: checklist.id,
           action: "CREAR",
-          newData: checklist as unknown as Record<string, unknown>
+          newDataText: checklist as unknown as Record<string, unknown>
         };
 
         return reply.code(201).send(checklist);
@@ -160,7 +166,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: run.userId,
           action: "ACTUALIZAR",
-          newData: { onboardingRunId: run.id }
+          newDataText: { onboardingRunId: run.id }
         };
         return reply.code(201).send(run);
       } catch (error) {
@@ -206,7 +212,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
           entityId: payload.userId,
           action: "ACTUALIZAR",
           reason: payload.reason,
-          newData: {
+          newDataText: {
             transferToUserId: payload.transferToUserId,
             archived: payload.archiveHistory
           }
@@ -232,8 +238,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
         const payload = parseWithSchema(identitySchemas.guestInviteInputSchema, request.body);
         const invite = await service.createGuestInvite({
           email: payload.email,
-          resourceType: payload.resourceType,
-          resourceId: payload.resourceId,
+          resourceScopeType: payload.resourceScopeType,
+          resourceScopeId: payload.resourceScopeId,
           expiresAt: payload.expiresAt,
           createdById: request.authUser!.id
         });
@@ -242,9 +248,13 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: invite.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             email: invite.email,
-            resourceType: invite.resourceType,
+            resourceScopeType: invite.projectId
+              ? "PROYECTO"
+              : invite.fileId
+                ? "ARCHIVO"
+                : "DOCUMENTO",
             expiresAt: invite.expiresAt.toISOString()
           }
         };
@@ -252,8 +262,12 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
         return reply.code(201).send({
           id: invite.id,
           email: invite.email,
-          resourceType: invite.resourceType,
-          resourceId: invite.resourceId,
+          resourceScopeType: invite.projectId
+            ? "PROYECTO"
+            : invite.fileId
+              ? "ARCHIVO"
+              : "DOCUMENTO",
+          resourceScopeId: invite.projectId ?? invite.fileId ?? invite.documentId ?? "",
           expiresAt: invite.expiresAt
         });
       } catch (error) {

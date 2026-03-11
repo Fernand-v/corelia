@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { AuthMembershipSummary, SystemRole } from "@corelia/types";
+import type { AuthMembershipSummary, Permission, RoleCode } from "@corelia/types";
 import { apiRequest, useAuthStore } from "@/lib/api";
 
 export interface SessionUser {
@@ -10,9 +10,10 @@ export interface SessionUser {
   email: string;
   firstName: string;
   lastName: string;
-  baseRole: SystemRole;
+  baseRole: RoleCode;
   isActive: boolean;
-  activeRole: SystemRole;
+  activeRole: RoleCode;
+  permissions: Permission[];
 }
 
 export interface SessionMembershipSummary extends AuthMembershipSummary {}

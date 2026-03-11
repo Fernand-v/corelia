@@ -1,14 +1,15 @@
 import { z } from "zod";
 import { codeValueSchema, idSchema, paginationSchema, timestampSchema, windowScheduleSchema } from "./common.js";
-import { permissionSchema } from "./rbac.js";
-import { requestStatusSchema, systemRoleSchema } from "./enums.js";
+import { signupRequestStatusSchema } from "./auth.js";
+import { requestStatusSchema } from "./enums.js";
+import { permissionSchema, roleCodeSchema, systemRoleCodeSchema } from "./rbac.js";
 import { serviceHealthSchema } from "./status.js";
 
 export const adminUserStateSchema = z.enum(["ACTIVO", "INACTIVO", "ONBOARDING", "OFFBOARDING"]);
 
 export const adminUsersQuerySchema = z.object({
   search: z.string().trim().min(1).max(120).optional(),
-  role: systemRoleSchema.optional(),
+  role: systemRoleCodeSchema.optional(),
   teamId: idSchema.optional(),
   state: adminUserStateSchema.optional()
 });
@@ -17,7 +18,7 @@ export const adminUserListItemSchema = z.object({
   id: idSchema,
   fullName: z.string().min(1),
   email: z.string().email(),
-  role: systemRoleSchema,
+  role: systemRoleCodeSchema,
   teamId: idSchema.nullable(),
   teamName: z.string().nullable(),
   state: adminUserStateSchema,
@@ -35,7 +36,7 @@ export const adminCreateUserInputSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   password: z.string().min(8).max(128).optional(),
-  baseRole: systemRoleSchema,
+  baseRole: systemRoleCodeSchema,
   teamId: idSchema.optional(),
   workSchedule: windowScheduleSchema.optional(),
   startOnboarding: z.boolean().default(false),
@@ -46,7 +47,7 @@ export const adminUpdateUserInputSchema = z.object({
   firstName: z.string().min(1).max(100).optional(),
   lastName: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
-  baseRole: systemRoleSchema.optional(),
+  baseRole: systemRoleCodeSchema.optional(),
   teamId: idSchema.nullable().optional(),
   isActive: z.boolean().optional(),
   workSchedule: windowScheduleSchema.optional()
@@ -70,7 +71,7 @@ export const adminOffboardingPreviewSchema = z.object({
     z.object({
       projectId: idSchema,
       projectName: z.string().min(1),
-      role: systemRoleSchema
+      role: roleCodeSchema
     })
   ),
   ownedDocuments: z.array(
@@ -95,7 +96,7 @@ export const adminOffboardingExecuteInputSchema = z.object({
   leadershipTransfers: z.array(
     z.object({
       projectId: idSchema,
-      role: systemRoleSchema,
+      role: roleCodeSchema,
       toUserId: idSchema
     })
   ),
@@ -109,16 +110,16 @@ export const adminOffboardingExecuteInputSchema = z.object({
 
 export const adminCreateExternalInviteInputSchema = z.object({
   email: z.string().email(),
-  resourceType: z.enum(["PROYECTO", "ARCHIVO", "DOCUMENTO"]),
-  resourceId: idSchema,
+  resourceScopeType: z.enum(["PROYECTO", "ARCHIVO", "DOCUMENTO"]),
+  resourceScopeId: idSchema,
   expiresAt: timestampSchema
 });
 
 export const adminExternalInviteItemSchema = z.object({
   id: idSchema,
   email: z.string().email(),
-  resourceType: z.enum(["PROYECTO", "ARCHIVO", "DOCUMENTO"]),
-  resourceId: idSchema,
+  resourceScopeType: z.enum(["PROYECTO", "ARCHIVO", "DOCUMENTO"]),
+  resourceScopeId: idSchema,
   expiresAt: timestampSchema,
   revokedAt: timestampSchema.nullable(),
   acceptedAt: timestampSchema.nullable(),
@@ -137,7 +138,7 @@ export const adminExtendInviteInputSchema = z.object({
 
 export const adminCreateInternalInviteInputSchema = z.object({
   email: z.string().email(),
-  baseRole: systemRoleSchema,
+  baseRole: systemRoleCodeSchema,
   teamId: idSchema.optional(),
   expiresAt: timestampSchema
 });
@@ -145,7 +146,7 @@ export const adminCreateInternalInviteInputSchema = z.object({
 export const adminInternalInviteItemSchema = z.object({
   id: idSchema,
   email: z.string().email(),
-  baseRole: systemRoleSchema,
+  baseRole: systemRoleCodeSchema,
   teamId: idSchema.nullable(),
   teamName: z.string().nullable(),
   expiresAt: timestampSchema,
@@ -165,11 +166,45 @@ export const adminResendInternalInviteInputSchema = z.object({
   expiresAt: timestampSchema.optional()
 });
 
+export const adminSignupRequestsQuerySchema = z.object({
+  status: signupRequestStatusSchema.optional()
+});
+
+export const adminSignupRequestItemSchema = z.object({
+  id: idSchema,
+  email: z.string().email(),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  message: z.string().nullable(),
+  status: signupRequestStatusSchema,
+  requestedAt: timestampSchema,
+  reviewedAt: timestampSchema.nullable(),
+  reviewedById: idSchema.nullable(),
+  reviewedByName: z.string().nullable(),
+  decisionNote: z.string().nullable(),
+  inviteId: idSchema.nullable()
+});
+
+export const adminSignupRequestListSchema = z.object({
+  items: z.array(adminSignupRequestItemSchema),
+  total: z.number().int().min(0)
+});
+
+export const adminApproveSignupRequestInputSchema = z.object({
+  baseRole: systemRoleCodeSchema.default("COLABORADOR"),
+  teamId: idSchema.optional(),
+  expiresAt: timestampSchema.optional()
+});
+
+export const adminRejectSignupRequestInputSchema = z.object({
+  reason: z.string().trim().min(5).max(500)
+});
+
 export const adminTeamListItemSchema = z.object({
   id: idSchema,
   name: z.string().min(1),
   description: z.string().nullable(),
-  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: codeValueSchema.nullable().optional(),
   descriptionLabel: z.string().nullable().optional(),
   coordinator: z
     .object({
@@ -189,7 +224,7 @@ export const adminTeamsListSchema = z.object({
 export const adminCreateTeamInputSchema = z.object({
   name: z.string().min(2).max(120),
   description: z.string().max(400).optional(),
-  descriptionCode: codeValueSchema.optional(),
+  descriptionCatalogId: codeValueSchema.optional(),
   coordinatorUserId: idSchema.optional(),
   memberIds: z.array(idSchema).default([])
 });
@@ -197,7 +232,7 @@ export const adminCreateTeamInputSchema = z.object({
 export const adminUpdateTeamInputSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   description: z.string().max(400).nullable().optional(),
-  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: codeValueSchema.nullable().optional(),
   coordinatorUserId: idSchema.nullable().optional(),
   memberIds: z.array(idSchema).optional()
 });
@@ -248,7 +283,7 @@ export const adminUpdateCodeCatalogInputSchema = z.object({
 });
 
 export const adminRolePermissionSchema = z.object({
-  role: systemRoleSchema,
+  role: roleCodeSchema,
   permissions: z.array(permissionSchema)
 });
 
@@ -308,7 +343,7 @@ export const adminAuditReportItemSchema = z.object({
   action: z.string().min(1),
   entityId: z.string().nullable(),
   reason: z.string().nullable(),
-  reasonCode: z.string().nullable(),
+  reasonCatalogId: z.string().nullable(),
   userId: idSchema.nullable(),
   actorName: z.string().nullable(),
   createdAt: timestampSchema

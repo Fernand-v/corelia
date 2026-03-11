@@ -68,7 +68,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
           entityType: "TAREA",
           entityId: result.task.id,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             dueDate: result.task.dueDate,
             warnings: result.warnings
           }

@@ -513,13 +513,14 @@ export class CalendarService {
         refresh_token?: string;
         expires_in?: number;
       };
+      const expiresAt = payload.expires_in
+        ? new Date(Date.now() + payload.expires_in * 1000).toISOString()
+        : null;
 
       return {
         accessToken: payload.access_token,
-        refreshToken: payload.refresh_token,
-        expiresAt: payload.expires_in
-          ? new Date(Date.now() + payload.expires_in * 1000).toISOString()
-          : undefined
+        ...(payload.refresh_token ? { refreshToken: payload.refresh_token } : {}),
+        ...(expiresAt ? { expiresAt } : {})
       };
     }
 
@@ -546,13 +547,14 @@ export class CalendarService {
       refresh_token?: string;
       expires_in?: number;
     };
+    const expiresAt = payload.expires_in
+      ? new Date(Date.now() + payload.expires_in * 1000).toISOString()
+      : null;
 
     return {
       accessToken: payload.access_token,
-      refreshToken: payload.refresh_token,
-      expiresAt: payload.expires_in
-        ? new Date(Date.now() + payload.expires_in * 1000).toISOString()
-        : undefined
+      ...(payload.refresh_token ? { refreshToken: payload.refresh_token } : {}),
+      ...(expiresAt ? { expiresAt } : {})
     };
   }
 
@@ -764,8 +766,8 @@ export class CalendarService {
             title: event.title,
             startsAt: new Date(event.startsAt),
             endsAt: new Date(event.endsAt),
-            projectId: event.projectId,
-            teamId: event.teamId
+            projectId: event.projectId ?? null,
+            teamId: event.teamId ?? null
           },
           create: {
             connectionId: connection.id,
@@ -773,8 +775,8 @@ export class CalendarService {
             title: event.title,
             startsAt: new Date(event.startsAt),
             endsAt: new Date(event.endsAt),
-            projectId: event.projectId,
-            teamId: event.teamId
+            projectId: event.projectId ?? null,
+            teamId: event.teamId ?? null
           }
         })
       )

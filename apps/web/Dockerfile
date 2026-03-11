@@ -25,10 +25,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --filter @corelia/web... --store-dir /pnpm/store
 
 FROM deps AS builder
-ARG NEXT_PUBLIC_API_KEY=""
 ARG NEXT_PUBLIC_HOCUSPOCUS_URL=""
 ARG NEXT_PUBLIC_DOCS_DEBUG="false"
-ENV NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
 ENV NEXT_PUBLIC_HOCUSPOCUS_URL=${NEXT_PUBLIC_HOCUSPOCUS_URL}
 ENV NEXT_PUBLIC_DOCS_DEBUG=${NEXT_PUBLIC_DOCS_DEBUG}
 COPY . .

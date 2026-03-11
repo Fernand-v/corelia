@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { SystemRole } from "@corelia/types";
+import type { RoleCode } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
 import { UiModal } from "@/components/ui-modal";
 import { apiRequest } from "@/lib/api";
@@ -13,7 +13,7 @@ type AdminUsersResponse = {
     id: string;
     fullName: string;
     email: string;
-    role: SystemRole;
+    role: RoleCode;
   }>;
   total: number;
 };
@@ -45,7 +45,7 @@ type TeamDetail = {
     userId: string;
     fullName: string;
     email: string;
-    baseRole: SystemRole;
+    baseRole: RoleCode;
   }>;
 };
 
@@ -133,7 +133,7 @@ export const AdminTeamsView = () => {
     }
   });
 
-  const userOptions = usersQuery.data?.items ?? [];
+  const userOptions = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data?.items]);
   const filteredUsers = useMemo(() => {
     const needle = memberSearch.trim().toLowerCase();
     if (!needle) {

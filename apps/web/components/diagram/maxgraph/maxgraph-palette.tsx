@@ -159,13 +159,16 @@ const ShapeCard = ({
       disabled={readOnly}
       draggable={!readOnly}
       onDragStart={(event) => {
+        const payload = JSON.stringify({
+          templateId: template.id,
+          kind: "shape"
+        });
         event.dataTransfer.setData(
           "application/corelia-maxgraph-template",
-          JSON.stringify({
-            templateId: template.id,
-            kind: "shape"
-          })
+          payload
         );
+        // Safari compatibility: preserve a plain-text payload alongside custom MIME type.
+        event.dataTransfer.setData("text/plain", `corelia-maxgraph-template:${payload}`);
         event.dataTransfer.effectAllowed = "copy";
       }}
       onClick={() => onInsert(template)}
@@ -253,7 +256,7 @@ export const MaxGraphPalette = ({
   }, [search, viewModel.libraries]);
 
   return (
-    <aside className="flex h-full min-h-[560px] w-full flex-col overflow-hidden border-r border-[#e2e8f2] bg-white xl:w-[260px]">
+    <aside className="flex h-full min-h-0 w-full flex-col overflow-hidden border-r border-[#e2e8f2] bg-white xl:w-[260px]">
       <div className="border-b border-[#e2e8f2] p-3">
         <p className="text-[11px] uppercase tracking-wide text-slate-500">Paleta de Shapes</p>
         <input

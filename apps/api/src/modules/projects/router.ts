@@ -27,7 +27,7 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
           entityType: "PROYECTO",
           entityId: project.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             name: project.name,
             template: project.template
           }
@@ -114,9 +114,9 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
           entityType: "PROYECTO",
           entityId: params.projectId,
           action: "ACTUALIZAR",
-          reasonCode: "PROJECT_TEAM_LINK",
+          reasonCatalogId: "PROJECT_TEAM_LINK",
           reason: "Vinculación de equipo a proyecto",
-          newData: {
+          newDataText: {
             teamId: payload.teamId,
             syncedCreated: result.syncedCreated,
             syncedUpdated: result.syncedUpdated
@@ -151,9 +151,9 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
           entityType: "PROYECTO",
           entityId: params.projectId,
           action: "ACTUALIZAR",
-          reasonCode: "PROJECT_TEAM_UNLINK",
+          reasonCatalogId: "PROJECT_TEAM_UNLINK",
           reason: "Desvinculación de equipo de proyecto",
-          newData: {
+          newDataText: {
             teamId: params.teamId,
             removedMembers: result.removedMembers
           }
@@ -253,6 +253,42 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
     }
   );
 
+  app.patch(
+    "/:projectId/planning",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(projectSchemas.projectIdParamsSchema, request.params);
+        const payload = parseWithSchema(projectSchemas.updateProjectPlanningInputSchema, request.body);
+        const project = await service.updateProjectPlanning(
+          request.authUser!.id,
+          params.projectId,
+          payload
+        );
+
+        request.auditEvent = {
+          entityType: "PROYECTO",
+          entityId: params.projectId,
+          action: "ACTUALIZAR",
+          newDataText: {
+            startDate: project.startDate?.toISOString() ?? null,
+            estimatedEndDate: project.estimatedEndDate?.toISOString() ?? null
+          }
+        };
+
+        return reply.send(project);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
   app.post(
     "/assign-role",
     {
@@ -270,9 +306,10 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
           entityType: "PROYECTO",
           entityId: payload.projectId,
           action: "CAMBIO_ROL",
-          newData: {
+          newDataText: {
             userId: payload.userId,
-            role: payload.role
+            roleId: payload.roleId,
+            role: (member as { role?: string }).role ?? null
           }
         };
 
@@ -295,19 +332,43 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       try {
         const params = parseWithSchema(projectSchemas.projectIdParamsSchema, request.params);
         const payload = parseWithSchema(projectSchemas.upsertProjectMemberInputSchema, request.body);
+        let resolvedRoleId = payload.roleId;
+
+        if (!resolvedRoleId && payload.role) {
+          const role = await app.prisma.role.findFirst({
+            where: {
+              OR: [{ key: payload.role }, { code: payload.role }]
+            },
+            select: {
+              id: true
+            }
+          });
+
+          if (!role) {
+            return reply.code(400).send({ message: "Rol inválido para asignación en proyecto" });
+          }
+
+          resolvedRoleId = role.id;
+        }
+
+        if (!resolvedRoleId) {
+          return reply.code(400).send({ message: "Debes enviar roleId o role" });
+        }
+
         const member = await service.addProjectMember(request.authUser!.id, {
           projectId: params.projectId,
           userId: payload.userId,
-          role: payload.role
+          roleId: resolvedRoleId
         });
 
         request.auditEvent = {
           entityType: "PROYECTO",
           entityId: params.projectId,
           action: "CAMBIO_ROL",
-          newData: {
+          newDataText: {
             userId: payload.userId,
-            role: payload.role
+            roleId: resolvedRoleId,
+            role: (member as { role?: string }).role ?? null
           }
         };
 
@@ -340,7 +401,7 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
           entityType: "PROYECTO",
           entityId: params.projectId,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             removedUserId: params.userId
           }
         };

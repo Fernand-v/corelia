@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { idSchema } from "./common.js";
-import { projectTemplateSchema, systemRoleSchema } from "./enums.js";
+import { projectTemplateSchema } from "./enums.js";
+import { roleCodeSchema } from "./rbac.js";
 
 const passwordSchema = z.string().min(8).max(128);
 
@@ -46,12 +47,28 @@ export const adminResetPasswordInputSchema = z.object({
   newPassword: passwordSchema
 });
 
+export const signupRequestStatusSchema = z.enum(["PENDIENTE", "APROBADA", "RECHAZADA"]);
+
+export const registerRequestInputSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  message: z.string().trim().min(5).max(500).optional()
+});
+
+export const registerRequestResponseSchema = z.object({
+  id: idSchema,
+  status: signupRequestStatusSchema,
+  submittedAt: z.string().datetime()
+});
+
 export const authProjectMembershipSummarySchema = z.object({
   id: idSchema,
   name: z.string().min(1).max(160),
   template: projectTemplateSchema,
   isOwner: z.boolean(),
-  role: systemRoleSchema.nullable(),
+  roleId: idSchema.nullable(),
+  role: roleCodeSchema.nullable(),
   joinedAt: z.string().datetime().nullable()
 });
 
@@ -74,3 +91,5 @@ export type AuthToken = z.infer<typeof authTokenSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;
 export type AdminResetPasswordInput = z.infer<typeof adminResetPasswordInputSchema>;
 export type AuthMembershipSummary = z.infer<typeof authMembershipSummarySchema>;
+export type SignupRequestStatus = z.infer<typeof signupRequestStatusSchema>;
+export type RegisterRequestInput = z.infer<typeof registerRequestInputSchema>;

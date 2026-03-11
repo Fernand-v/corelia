@@ -23,11 +23,24 @@ const createMockApp = () => {
         create: vi.fn(),
         update: vi.fn()
       },
+      project: {
+        findMany: vi.fn().mockResolvedValue([])
+      },
+      projectMember: {
+        findMany: vi.fn().mockResolvedValue([])
+      },
+      teamMember: {
+        findMany: vi.fn().mockResolvedValue([])
+      },
       refreshToken: {
         create: vi.fn(),
         findFirst: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn()
+      },
+      signupRequest: {
+        findFirst: vi.fn(),
+        create: vi.fn()
       }
     },
     jwt: {
@@ -61,6 +74,61 @@ describe("Auth integration flows", () => {
 
     expect(result.accessToken).toBe("access-token");
     expect(result.refreshToken.length).toBeGreaterThan(20);
+  });
+
+  it("creates signup requests with normalized data", async () => {
+    const app = createMockApp();
+    app.prisma.user.findFirst = vi.fn().mockResolvedValue(null);
+    app.prisma.signupRequest.findFirst = vi.fn().mockResolvedValue(null);
+    app.prisma.signupRequest.create = vi.fn().mockResolvedValue({
+      id: crypto.randomUUID(),
+      status: "PENDIENTE",
+      requestedAt: new Date("2026-03-09T12:00:00.000Z")
+    });
+
+    const service = new AuthService(app);
+    const result = await service.createSignupRequest({
+      email: "  NUEVO@CORELIA.local ",
+      firstName: "  Ana ",
+      lastName: " Pérez  ",
+      message: "  Me interesa colaborar  "
+    });
+
+    expect(app.prisma.signupRequest.create).toHaveBeenCalledWith({
+      data: {
+        email: "nuevo@corelia.local",
+        firstName: "Ana",
+        lastName: "Pérez",
+        message: "Me interesa colaborar"
+      },
+      select: {
+        id: true,
+        status: true,
+        requestedAt: true
+      }
+    });
+    expect(result.status).toBe("PENDIENTE");
+    expect(result.submittedAt).toBe("2026-03-09T12:00:00.000Z");
+  });
+
+  it("rejects duplicate pending signup requests", async () => {
+    const app = createMockApp();
+    app.prisma.user.findFirst = vi.fn().mockResolvedValue(null);
+    app.prisma.signupRequest.findFirst = vi.fn().mockResolvedValue({
+      id: crypto.randomUUID()
+    });
+
+    const service = new AuthService(app);
+
+    await expect(
+      service.createSignupRequest({
+        email: "user@corelia.local",
+        firstName: "User",
+        lastName: "Corelia"
+      })
+    ).rejects.toThrowError("Ya existe una solicitud pendiente para este email");
+
+    expect(app.prisma.signupRequest.create).not.toHaveBeenCalled();
   });
 
   it("normalizes login email before querying users", async () => {
@@ -122,6 +190,17 @@ describe("Auth integration flows", () => {
     expect(app.prisma.refreshToken.update).toHaveBeenCalledTimes(1);
   });
 
+  it("logout returns null when refresh token does not exist", async () => {
+    const app = createMockApp();
+    app.prisma.refreshToken.findFirst = vi.fn().mockResolvedValue(null);
+
+    const service = new AuthService(app);
+    const result = await service.logout({ refreshToken: "missing-token" });
+
+    expect(result).toBeNull();
+    expect(app.prisma.refreshToken.update).not.toHaveBeenCalled();
+  });
+
   it("changes password and revokes active refresh tokens", async () => {
     const app = createMockApp();
     const userId = crypto.randomUUID();
@@ -173,7 +252,7 @@ describe("Auth integration flows", () => {
 
     app.prisma.user.findUnique = vi
       .fn()
-      .mockResolvedValueOnce({ baseRole: "ADMINISTRADOR" })
+      .mockResolvedValueOnce({ baseRole: { code: "ADMINISTRADOR" } })
       .mockResolvedValueOnce({ id: targetUserId });
     app.prisma.user.update = vi.fn().mockResolvedValue({ id: targetUserId });
     app.prisma.refreshToken.updateMany = vi.fn().mockResolvedValue({ count: 1 });
@@ -187,5 +266,74 @@ describe("Auth integration flows", () => {
     expect(result.userId).toBe(targetUserId);
     expect(app.prisma.user.update).toHaveBeenCalledTimes(1);
     expect(app.prisma.refreshToken.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns aggregated membership summary for owned and joined projects", async () => {
+    const app = createMockApp();
+    const userId = crypto.randomUUID();
+    const ownedProjectId = crypto.randomUUID();
+    const joinedProjectId = crypto.randomUUID();
+
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({ id: userId });
+    app.prisma.project.findMany = vi.fn().mockResolvedValue([
+      { id: ownedProjectId, name: "Proyecto Alpha", template: "SOFTWARE" }
+    ]);
+    app.prisma.projectMember.findMany = vi.fn().mockResolvedValue([
+      {
+        role: {
+          id: crypto.randomUUID(),
+          code: "COLABORADOR"
+        },
+        joinedAt: new Date("2026-03-01T10:00:00.000Z"),
+        project: {
+          id: joinedProjectId,
+          name: "Proyecto Beta",
+          template: "CONTENIDO",
+          ownerId: crypto.randomUUID()
+        }
+      },
+      {
+        role: {
+          id: crypto.randomUUID(),
+          code: "OBSERVADOR"
+        },
+        joinedAt: new Date("2026-03-02T10:00:00.000Z"),
+        project: {
+          id: ownedProjectId,
+          name: "Proyecto Alpha",
+          template: "SOFTWARE",
+          ownerId: userId
+        }
+      }
+    ]);
+    app.prisma.teamMember.findMany = vi.fn().mockResolvedValue([
+      {
+        createdAt: new Date("2026-03-03T10:00:00.000Z"),
+        team: {
+          id: crypto.randomUUID(),
+          name: "Equipo Núcleo",
+          description: "Core team"
+        }
+      }
+    ]);
+
+    const service = new AuthService(app);
+    const summary = await service.getMembershipSummary(userId);
+
+    expect(summary.userId).toBe(userId);
+    expect(summary.projects).toHaveLength(2);
+    expect(summary.projects.find((project) => project.id === ownedProjectId)?.isOwner).toBe(true);
+    expect(summary.projects.find((project) => project.id === joinedProjectId)?.role).toBe("COLABORADOR");
+    expect(summary.teams).toHaveLength(1);
+    expect(summary.teams[0]?.name).toBe("Equipo Núcleo");
+  });
+
+  it("fails membership summary when user does not exist", async () => {
+    const app = createMockApp();
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue(null);
+
+    const service = new AuthService(app);
+
+    await expect(service.getMembershipSummary(crypto.randomUUID())).rejects.toThrowError("Usuario no encontrado");
   });
 });

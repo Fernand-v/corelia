@@ -6,6 +6,7 @@ import {
   createEmptyDrawioDocument,
   detectDiagramInputKind,
   ensureDocumentIntegrity,
+  normalizeMaxGraphAttributes,
   parseMxfile,
   serializeMxfile,
   wrapGraphModelAsMxfile,
@@ -52,9 +53,30 @@ export const parseDiagramSource = (raw: string, fallbackKind: DiagramKind): Pars
   };
 };
 
+/**
+ * maxGraph (v0.10+) exports XML with its own tag names (GraphDataModel, Cell,
+ * Geometry, Point) instead of the classic mxGraph names (mxGraphModel, mxCell,
+ * mxGeometry, mxPoint).  All downstream XML processing (regex-based parsers in
+ * xml-format.ts & diagram-collab-v3.ts) expects the classic mxGraph names, so
+ * we normalise the output here.
+ */
+const toMxGraphXml = (xml: string): string => {
+  const tagConverted = xml
+    .replace(/<GraphDataModel\b/g, "<mxGraphModel")
+    .replace(/<\/GraphDataModel>/g, "</mxGraphModel>")
+    .replace(/<Cell\b/g, "<mxCell")
+    .replace(/<\/Cell>/g, "</mxCell>")
+    .replace(/<Geometry\b/g, "<mxGeometry")
+    .replace(/<\/Geometry>/g, "</mxGeometry>")
+    .replace(/<Point\b/g, "<mxPoint")
+    .replace(/<\/Point>/g, "</mxPoint>");
+  return normalizeMaxGraphAttributes(tagConverted);
+};
+
 export const exportGraphModelXml = (graph: AbstractGraph): string => {
   const serializer = new ModelXmlSerializer(graph.getDataModel());
-  return serializer.export({ pretty: true });
+  const raw = serializer.export({ pretty: true });
+  return toMxGraphXml(raw);
 };
 
 export const importGraphModelXml = (graph: AbstractGraph, xml: string): void => {

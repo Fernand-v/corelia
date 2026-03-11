@@ -1,7 +1,102 @@
 import fp from "fastify-plugin";
-import { type Permission, type SystemRole } from "@corelia/types";
+import type { FastifyInstance } from "fastify";
+import { type Permission } from "@corelia/types";
 import { getProjectIdFromRequest } from "../lib/http.js";
-import { getPermissionsForRole } from "../lib/rbac.js";
+import { isAdminRole } from "../lib/rbac.js";
+
+type CachedRoleContext = {
+  roleId: string;
+  role: string;
+  rank: number;
+  permissions: Permission[];
+};
+
+const ROLE_CACHE_TTL_SECONDS = 300;
+
+const buildRoleCacheKey = (roleId: string) => `rbac:role:${roleId}:v1`;
+
+const parseCachedRoleContext = (raw: string | null): CachedRoleContext | null => {
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as CachedRoleContext;
+    if (
+      typeof parsed.roleId !== "string" ||
+      typeof parsed.role !== "string" ||
+      typeof parsed.rank !== "number" ||
+      !Array.isArray(parsed.permissions)
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const loadRoleContext = async (
+  app: FastifyInstance,
+  roleId: string
+): Promise<CachedRoleContext> => {
+  const cacheKey = buildRoleCacheKey(roleId);
+  const cached = parseCachedRoleContext(await app.redis.get(cacheKey));
+
+  if (cached) {
+    return cached;
+  }
+
+  const role = await app.prisma.role.findUnique({
+    where: { id: roleId },
+    select: {
+      id: true,
+      key: true,
+      rank: true,
+      rolePermissions: {
+        select: {
+          permission: {
+            select: {
+              key: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!role) {
+    throw new Error("Rol no encontrado");
+  }
+
+  const payload: CachedRoleContext = {
+    roleId: role.id,
+    role: role.key,
+    rank: role.rank,
+    permissions: role.rolePermissions.map((entry) => entry.permission.key as Permission)
+  };
+
+  await app.redis.set(cacheKey, JSON.stringify(payload), "EX", ROLE_CACHE_TTL_SECONDS);
+
+  return payload;
+};
+
+const getGuestRole = async (app: FastifyInstance) => {
+  const guestRole = await app.prisma.role.findUnique({
+    where: {
+      key: "INVITADO_EXTERNO"
+    },
+    select: {
+      id: true
+    }
+  });
+
+  if (!guestRole) {
+    throw new Error("Rol base INVITADO_EXTERNO no configurado");
+  }
+
+  return guestRole;
+};
 
 export const rbacPlugin = fp(async (app) => {
   app.addHook("preHandler", async (request, reply) => {
@@ -14,47 +109,55 @@ export const rbacPlugin = fp(async (app) => {
     }
 
     const projectId = getProjectIdFromRequest(request);
-    let activeRole: SystemRole;
+
+    const user = await app.prisma.user.findUnique({
+      where: { id: request.authUser.id },
+      select: {
+        baseRoleId: true,
+        baseRole: {
+          select: {
+            key: true
+          }
+        }
+      }
+    });
+
+    const guestRole = await getGuestRole(app);
+
+    let activeRoleId = user?.baseRoleId ?? guestRole.id;
 
     if (projectId) {
-      const [membership, user] = await Promise.all([
-        app.prisma.projectMember.findFirst({
-          where: {
-            projectId,
-            userId: request.authUser.id
-          }
-        }),
-        app.prisma.user.findUnique({
-          where: { id: request.authUser.id },
-          select: { baseRole: true }
-        })
-      ]);
-
-      if (user?.baseRole === "ADMINISTRADOR") {
-        activeRole = "ADMINISTRADOR";
-      } else {
-        activeRole = membership?.role ?? "INVITADO_EXTERNO";
-      }
-    } else {
-      const user = await app.prisma.user.findUnique({
+      const membership = await app.prisma.projectMember.findFirst({
         where: {
-          id: request.authUser.id
+          projectId,
+          userId: request.authUser.id
         },
-        select: { baseRole: true }
+        select: {
+          roleId: true
+        }
       });
 
-      activeRole = user?.baseRole ?? "INVITADO_EXTERNO";
+      if (membership?.roleId) {
+        activeRoleId = membership.roleId;
+      } else {
+        activeRoleId = guestRole.id;
+      }
+
+      if (isAdminRole(user?.baseRole.key)) {
+        activeRoleId = user!.baseRoleId;
+      }
     }
 
-    const permissions = getPermissionsForRole(activeRole);
+    const roleContext = await loadRoleContext(app, activeRoleId);
 
     request.accessContext = {
       projectId: projectId ?? null,
-      activeRole,
-      permissions
+      activeRoleId: roleContext.roleId,
+      activeRole: roleContext.role,
+      permissions: roleContext.permissions
     };
 
-    if (config?.requiredPermission && !permissions.includes(config.requiredPermission)) {
+    if (config?.requiredPermission && !roleContext.permissions.includes(config.requiredPermission)) {
       return reply.code(403).send({ message: "Forbidden" });
     }
   });

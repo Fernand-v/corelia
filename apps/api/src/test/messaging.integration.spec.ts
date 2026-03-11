@@ -84,7 +84,7 @@ describe("MessagingService", () => {
 
     expect(message.id).toBe("m-1");
     expect(app.prisma.message.create).toHaveBeenCalledTimes(1);
-    expect(app.realtime.emitChannelMessage).toHaveBeenCalledWith("c-1", expect.any(Object));
+    expect(app.realtime!.emitChannelMessage).toHaveBeenCalledWith("c-1", expect.any(Object));
   });
 
   it("rejects empty messages after trim", async () => {

@@ -1,5 +1,4 @@
 import type { FastifyPluginAsync } from "fastify";
-import { createUserInputSchema } from "@corelia/types";
 import { AuthService } from "./service.js";
 import { authSchemas } from "./schema.js";
 import { parseWithSchema } from "../../lib/validate.js";
@@ -15,17 +14,40 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         skipMaintenance: true
       }
     },
+    async (_request, reply) =>
+      reply.code(410).send({
+        message: "El registro directo está deshabilitado. Envía una solicitud en /api/v1/auth/register-request."
+      })
+  );
+
+  app.post(
+    "/register-request",
+    {
+      config: {
+        requiresAuth: false,
+        skipMaintenance: true,
+        rateLimit: {
+          max: 5,
+          timeWindow: "1 minute"
+        }
+      }
+    },
     async (request, reply) => {
       try {
-        const payload = parseWithSchema(createUserInputSchema, request.body);
-        const user = await service.register(payload);
+        const payload = parseWithSchema(authSchemas.registerRequestInputSchema, request.body);
+        const created = await service.createSignupRequest(payload);
         request.auditEvent = {
           entityType: "USUARIO",
-          entityId: user.id,
+          entityId: created.id,
           action: "CREAR",
-          newData: user
+          reasonCatalogId: "SIGNUP_REQUEST",
+          newDataText: {
+            email: payload.email,
+            firstName: payload.firstName,
+            lastName: payload.lastName
+          }
         };
-        return reply.code(201).send(user);
+        return reply.code(201).send(created);
       } catch (error) {
         return reply.code(400).send({ message: (error as Error).message });
       }
@@ -65,7 +87,11 @@ export const authRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: false,
-        skipMaintenance: true
+        skipMaintenance: true,
+        rateLimit: {
+          max: 5,
+          timeWindow: "1 minute"
+        }
       }
     },
     async (request, reply) => {
@@ -76,7 +102,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: tokens.userId,
           action: "CREAR",
-          newData: {
+          newDataText: {
             source: "INTERNAL_INVITE_ACTIVATION"
           }
         };
@@ -92,7 +118,11 @@ export const authRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: false,
-        skipMaintenance: true
+        skipMaintenance: true,
+        rateLimit: {
+          max: 20,
+          timeWindow: "5 minutes"
+        }
       }
     },
     async (request, reply) => {
@@ -147,9 +177,9 @@ export const authRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: request.authUser!.id,
           action: "ACTUALIZAR",
-          reasonCode: "PASSWORD_CHANGE",
+          reasonCatalogId: "PASSWORD_CHANGE",
           reason: "Cambio de contraseña desde perfil",
-          newData: {
+          newDataText: {
             passwordChanged: true,
             source: "PROFILE_MODAL"
           }
@@ -178,7 +208,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
           entityType: "USUARIO",
           entityId: payload.userId,
           action: "ACTUALIZAR",
-          newData: {
+          newDataText: {
             passwordResetBy: request.authUser!.id
           }
         };
@@ -222,7 +252,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
     },
     async (request, reply) => {
       const user = await app.prisma.user.findUnique({
-        where: { id: request.authUser?.id },
+        where: { id: request.authUser!.id },
         select: {
           id: true,
           email: true,
@@ -239,7 +269,8 @@ export const authRouter: FastifyPluginAsync = async (app) => {
 
       return reply.send({
         ...user,
-        activeRole: request.accessContext?.activeRole
+        activeRole: request.accessContext?.activeRole,
+        permissions: request.accessContext?.permissions ?? []
       });
     }
   );

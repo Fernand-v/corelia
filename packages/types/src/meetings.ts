@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { codeValueSchema, idSchema, timestampSchema } from "./common.js";
-import {
-  meetingAgreementStatusSchema,
-  meetingStatusSchema,
-  systemRoleSchema
-} from "./enums.js";
+import { meetingAgreementStatusSchema, meetingStatusSchema } from "./enums.js";
+import { roleCodeSchema } from "./rbac.js";
 
 export const meetingAgendaItemSchema = z.object({
   id: idSchema,
@@ -18,7 +15,7 @@ export const meetingParticipantSchema = z.object({
   id: idSchema,
   meetingId: idSchema,
   userId: idSchema,
-  role: systemRoleSchema.nullable(),
+  role: roleCodeSchema.nullable(),
   muted: z.boolean(),
   cameraOn: z.boolean(),
   screenSharing: z.boolean(),
@@ -42,7 +39,7 @@ export const meetingAgreementSchema = z.object({
   meetingId: idSchema,
   title: z.string().min(3).max(200),
   description: z.string().max(2000).nullable(),
-  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: codeValueSchema.nullable().optional(),
   descriptionLabel: z.string().nullable().optional(),
   status: meetingAgreementStatusSchema,
   authorId: idSchema,
@@ -56,7 +53,7 @@ export const meetingSchema = z.object({
   id: idSchema,
   title: z.string().min(3).max(200),
   description: z.string().max(2000).nullable(),
-  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: codeValueSchema.nullable().optional(),
   descriptionLabel: z.string().nullable().optional(),
   projectId: idSchema.nullable(),
   teamId: idSchema.nullable(),
@@ -73,7 +70,7 @@ export const createMeetingInputSchema = z
   .object({
     title: z.string().min(3).max(200),
     description: z.string().max(2000).optional(),
-    descriptionCode: codeValueSchema.optional(),
+    descriptionCatalogId: codeValueSchema.optional(),
     projectId: idSchema.optional(),
     teamId: idSchema.optional(),
     startsAt: timestampSchema,
@@ -105,14 +102,14 @@ export const createMeetingAgreementInputSchema = z.object({
   meetingId: idSchema,
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
-  descriptionCode: codeValueSchema.optional(),
+  descriptionCatalogId: codeValueSchema.optional(),
   existingTaskId: idSchema.optional(),
   createTask: z
     .object({
       projectId: idSchema,
       title: z.string().min(3).max(200),
       description: z.string().max(4000).optional(),
-      descriptionCode: codeValueSchema.optional(),
+      descriptionCatalogId: codeValueSchema.optional(),
       assigneeId: idSchema.optional(),
       dueDate: timestampSchema.optional()
     })

@@ -6,7 +6,9 @@ const createMockApp = () =>
     prisma: {
       user: {
         findUnique: vi.fn().mockResolvedValue({
-          baseRole: "ADMINISTRADOR"
+          baseRole: {
+            code: "ADMINISTRADOR"
+          }
         })
       },
       project: {
@@ -20,13 +22,18 @@ const createMockApp = () =>
       },
       projectMember: {
         findFirst: vi.fn().mockResolvedValue({
-          role: "LIDER_PROYECTO"
+          role: {
+            code: "LIDER_PROYECTO"
+          }
         }),
         findMany: vi.fn().mockResolvedValue([]),
         upsert: vi.fn().mockResolvedValue({
           projectId: "p-1",
           userId: "u-2",
-          role: "COLABORADOR"
+          role: {
+            id: "role-collaborator",
+            code: "COLABORADOR"
+          }
         }),
         deleteMany: vi.fn().mockResolvedValue({
           count: 1
@@ -55,12 +62,13 @@ describe("ProjectService member management", () => {
     const member = await service.addProjectMember("u-admin", {
       projectId: "p-1",
       userId: "u-2",
-      role: "COLABORADOR"
+      roleId: "role-collaborator"
     });
 
     expect(member).toMatchObject({
       projectId: "p-1",
       userId: "u-2",
+      roleId: "role-collaborator",
       role: "COLABORADOR"
     });
     expect(app.prisma.projectMember.upsert).toHaveBeenCalledTimes(1);
@@ -108,7 +116,10 @@ describe("ProjectService member management", () => {
     app.prisma.projectMember.findMany = vi.fn().mockResolvedValue([
       {
         userId: "u-2",
-        role: "COLABORADOR",
+        role: {
+          id: "role-collaborator",
+          code: "COLABORADOR"
+        },
         joinedAt: new Date("2026-02-20T10:00:00.000Z"),
         user: {
           id: "u-2",
@@ -127,6 +138,7 @@ describe("ProjectService member management", () => {
       userId: "u-2",
       fullName: "María López",
       email: "maria@corelia.local",
+      roleId: "role-collaborator",
       role: "COLABORADOR"
     });
   });
@@ -148,7 +160,9 @@ describe("ProjectService member management", () => {
   it("lists only owned/member projects for non-admin users", async () => {
     const app = createMockApp();
     app.prisma.user.findUnique = vi.fn().mockResolvedValue({
-      baseRole: "COLABORADOR"
+      baseRole: {
+        code: "COLABORADOR"
+      }
     });
     app.prisma.project.findMany = vi.fn().mockResolvedValue([]);
     const service = new ProjectService(app);

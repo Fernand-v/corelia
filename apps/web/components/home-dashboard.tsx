@@ -657,7 +657,7 @@ export const HomeDashboardView = () => {
               {blocks.sharedResources.map((resource) => (
                 <li key={resource.id} className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
                   <p className="text-sm font-medium text-slate-900">
-                    {resource.resourceType} · {resource.resourceId.slice(0, 8)}
+                    {resource.resourceScopeType} · {resource.resourceScopeId.slice(0, 8)}
                   </p>
                   <p className="text-xs text-slate-600">Expira: {formatDateTime(resource.expiresAt)}</p>
                   {resource.contactName ? (

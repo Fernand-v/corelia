@@ -1,57 +1,34 @@
 "use client";
 
 import {
-  useCallback,
+  memo,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
-  type DragEvent,
   type KeyboardEvent as ReactKeyboardEvent
 } from "react";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
 import type { DiagramKind } from "@corelia/types";
-import {
-  Clipboard,
-  Graph,
-  InternalEvent,
-  Outline,
-  UndoManager,
-  type AbstractGraph,
-  type Cell,
-  type EventObject
-} from "@maxgraph/core";
-import { toPng, toSvg } from "html-to-image";
-import { jsPDF } from "jspdf";
+import type { AbstractGraph, Outline, UndoManager } from "@maxgraph/core";
 
 import { MaxGraphContextMenu, type MaxGraphContextMenuState } from "@/components/diagram/maxgraph/maxgraph-context-menu";
 import { UiModal } from "@/components/ui-modal";
-import {
-  MaxGraphPalette,
-  loadPaletteSectionState,
-  persistPaletteSectionState
-} from "@/components/diagram/maxgraph/maxgraph-palette";
+import { MaxGraphPalette } from "@/components/diagram/maxgraph/maxgraph-palette";
 import { MaxGraphPagesTabs } from "@/components/diagram/maxgraph/maxgraph-pages-tabs";
 import {
   MaxGraphPropertiesPanel,
   type SelectedCellView
 } from "@/components/diagram/maxgraph/maxgraph-properties-panel";
-import {
-  MaxGraphStyleEditorModal,
-  styleObjectToString
-} from "@/components/diagram/maxgraph/maxgraph-style-editor-modal";
-import {
-  MaxGraphTemplatesModal,
-  type DiagramTemplatePreset
-} from "@/components/diagram/maxgraph/maxgraph-templates-modal";
+import { MaxGraphStyleEditorModal } from "@/components/diagram/maxgraph/maxgraph-style-editor-modal";
+import { MaxGraphTemplatesModal } from "@/components/diagram/maxgraph/maxgraph-templates-modal";
 import { MaxGraphToolbar } from "@/components/diagram/maxgraph/maxgraph-toolbar";
 import type {
   ActiveTool,
   CanvasMode,
-  GraphToolbarActions,
-  GraphToolbarState,
+  DiagramOfflineMode,
+  DiagramSyncLifecycle,
   GridMode,
   RemoteCursorPresence
 } from "@/components/diagram/maxgraph/types";
@@ -61,337 +38,32 @@ import {
   type ShapeLibrary,
   type ShapeTemplate
 } from "@/lib/diagram/maxgraph/palette-catalog";
-import {
-  fitGraph,
-  getViewportCenter,
-  insertShapeTemplate,
-  moveCellToCenter,
-  resetView,
-  zoomToPercent
-} from "@/lib/diagram/maxgraph/shape-factory";
-import { loadRemoteStencilLibraries } from "@/lib/diagram/maxgraph/stencil-loader";
 import { DIAGRAM_THEME_BY_KIND } from "@/lib/diagram/maxgraph/themes";
 import {
   createEmptyDrawioDocument,
-  ensureDocumentIntegrity,
   serializeMxfile,
   type DrawioDocument
 } from "@/lib/diagram/maxgraph/xml-format";
+import { getActivePage } from "@/lib/diagram/maxgraph/xml-pages";
 import {
-  addPage,
-  duplicatePage,
-  getActivePage,
-  removePage,
-  renamePage,
-  setActivePage,
-  updatePageXml
-} from "@/lib/diagram/maxgraph/xml-pages";
-import {
-  exportGraphModelXml,
-  importGraphModelXml,
-  parseDiagramSource
-} from "@/lib/diagram/maxgraph/xml-serializer";
+  backgroundByMode,
+  buildSelectedCellView,
+  graphToScreenPoint
+} from "@/components/diagram/maxgraph/maxgraph-editor-shell-utils";
+import { useMaxGraphEditorRuntime } from "@/components/diagram/maxgraph/maxgraph-editor-runtime";
+import { useMaxGraphEditorHandlers } from "@/components/diagram/maxgraph/maxgraph-editor-handlers";
+import { useMaxGraphEditorToolbar } from "@/components/diagram/maxgraph/maxgraph-editor-toolbar-hook";
 
-const AWARENESS_KEY = "diagram-maxgraph-presence";
-
-const backgroundByMode = (
-  canvasMode: CanvasMode,
-  gridMode: GridMode,
-  kind: DiagramKind
-): React.CSSProperties => {
-  const theme = DIAGRAM_THEME_BY_KIND[kind];
-
-  if (gridMode === "none") {
-    return {
-      background: canvasMode === "light" ? theme.canvasBackgroundLight : theme.canvasBackgroundDark
-    };
-  }
-
-  if (gridMode === "lines") {
-    const color = canvasMode === "light" ? theme.gridColorLight : theme.gridColorDark;
-    return {
-      backgroundColor:
-        canvasMode === "light" ? theme.canvasBackgroundLight : theme.canvasBackgroundDark,
-      backgroundImage: `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`,
-      backgroundSize: "16px 16px"
-    };
-  }
-
-  const color = canvasMode === "light" ? theme.gridColorLight : theme.gridColorDark;
-  return {
-    backgroundColor: canvasMode === "light" ? theme.canvasBackgroundLight : theme.canvasBackgroundDark,
-    backgroundImage: `radial-gradient(circle, ${color} 1px, transparent 1px)`,
-    backgroundSize: "16px 16px"
-  };
-};
-
-const stringifyValue = (value: unknown): string => {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (value === null || value === undefined) {
-    return "";
-  }
-  return String(value);
-};
-
-const areStringListsEqual = (left: string[] = [], right: string[] = []): boolean => {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  for (let index = 0; index < left.length; index += 1) {
-    if (left[index] !== right[index]) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
-const areRemotePresenceEqual = (
-  left: RemoteCursorPresence[],
-  right: RemoteCursorPresence[]
-): boolean => {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  for (let index = 0; index < left.length; index += 1) {
-    const a = left[index];
-    const b = right[index];
-
-    if (!a || !b) {
-      return false;
-    }
-
-    if (
-      a.documentId !== b.documentId ||
-      a.pageId !== b.pageId ||
-      a.userId !== b.userId ||
-      a.name !== b.name ||
-      a.color !== b.color
-    ) {
-      return false;
-    }
-
-    const cursorA = a.cursor ?? null;
-    const cursorB = b.cursor ?? null;
-    if (cursorA === null || cursorB === null) {
-      if (cursorA !== cursorB) {
-        return false;
-      }
-    } else if (cursorA.x !== cursorB.x || cursorA.y !== cursorB.y) {
-      return false;
-    }
-
-    if (!areStringListsEqual(a.selectedCellIds, b.selectedCellIds)) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
-const parseMeta = (style: Record<string, unknown>): Array<{ key: string; value: string }> => {
-  const raw = style.meta;
-  if (typeof raw !== "string" || raw.trim().length === 0) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(decodeURIComponent(raw)) as Array<{ key: string; value: string }>;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.filter((item) => typeof item.key === "string").map((item) => ({
-      key: item.key,
-      value: typeof item.value === "string" ? item.value : ""
-    }));
-  } catch {
-    return [];
-  }
-};
-
-const encodeMeta = (items: Array<{ key: string; value: string }>): string =>
-  encodeURIComponent(JSON.stringify(items.filter((item) => item.key.trim().length > 0)));
-
-const toStyleRecord = (style: unknown): Record<string, unknown> => {
-  if (!style || typeof style !== "object") {
-    return {};
-  }
-
-  return { ...(style as Record<string, unknown>) };
-};
-
-const buildSelectedCellView = (
-  graph: AbstractGraph | null,
-  document: DrawioDocument
-): SelectedCellView => {
-  if (!graph) {
-    return {
-      type: "none",
-      id: null,
-      label: "",
-      style: {},
-      geometry: null,
-      connections: [],
-      metadata: [],
-      diagramInfo: {
-        totalCells: 0,
-        totalVertices: 0,
-        totalEdges: 0,
-        pageName: getActivePage(document)?.name ?? ""
-      }
-    };
-  }
-
-  const parent = graph.getDefaultParent();
-  const vertices = graph.getChildVertices(parent);
-  const edges = graph.getChildEdges(parent);
-  const selectedCell = graph.getSelectionCell();
-
-  if (!selectedCell) {
-    return {
-      type: "none",
-      id: null,
-      label: "",
-      style: {},
-      geometry: null,
-      connections: [],
-      metadata: [],
-      diagramInfo: {
-        totalCells: vertices.length + edges.length,
-        totalVertices: vertices.length,
-        totalEdges: edges.length,
-        pageName: getActivePage(document)?.name ?? ""
-      }
-    };
-  }
-
-  const style = toStyleRecord(selectedCell.getStyle());
-  const geometry = selectedCell.getGeometry();
-  const label = stringifyValue(selectedCell.getValue());
-
-  const connections = selectedCell.isVertex()
-    ? [
-        ...graph.getIncomingEdges(selectedCell, null).map((edge) => ({
-          id: edge.getId() ?? "",
-          label: stringifyValue(edge.getValue()) || edge.getId() || "edge",
-          direction: "in" as const
-        })),
-        ...graph.getOutgoingEdges(selectedCell, null).map((edge) => ({
-          id: edge.getId() ?? "",
-          label: stringifyValue(edge.getValue()) || edge.getId() || "edge",
-          direction: "out" as const
-        }))
-      ]
-    : [];
-
-  return {
-    type: selectedCell.isEdge() ? "edge" : "vertex",
-    id: selectedCell.getId(),
-    label,
-    style,
-    geometry: geometry
-      ? {
-          x: geometry.x ?? 0,
-          y: geometry.y ?? 0,
-          width: geometry.width ?? 0,
-          height: geometry.height ?? 0
-        }
-      : null,
-    connections,
-    metadata: parseMeta(style),
-    diagramInfo: {
-      totalCells: vertices.length + edges.length,
-      totalVertices: vertices.length,
-      totalEdges: edges.length,
-      pageName: getActivePage(document)?.name ?? ""
-    }
-  };
-};
-
-const applyThemeToGraph = (graph: AbstractGraph, kind: DiagramKind) => {
-  const theme = DIAGRAM_THEME_BY_KIND[kind];
-  graph.getStylesheet().putCellStyle(
-    "defaultVertex",
-    {
-      perimeter: "rectanglePerimeter",
-      ...theme.defaultVertexStyle
-    } as any
-  );
-  graph.getStylesheet().putCellStyle(
-    "defaultEdge",
-    {
-      edgeStyle: "orthogonalEdgeStyle",
-      rounded: 1,
-      entryPerimeter: 1,
-      exitPerimeter: 1,
-      ...theme.defaultEdgeStyle
-    } as any
-  );
-};
-
-const cloneStyle = (style: Record<string, unknown>): Record<string, unknown> => ({ ...style });
-
-const baseConnectorStyle: Record<string, string | number | boolean> = {
-  edgeStyle: "orthogonalEdgeStyle",
-  rounded: 1,
-  entryPerimeter: 1,
-  exitPerimeter: 1
-};
-
-const resolveConnectableVertex = (graph: AbstractGraph, rawCell: Cell | null): Cell | null => {
-  if (!rawCell) {
-    return null;
-  }
-
-  let current: Cell | null = rawCell;
-  const parent = graph.getDefaultParent();
-
-  while (current && current !== parent) {
-    if (current.isVertex() && !current.isEdge()) {
-      return current;
-    }
-    current = current.getParent();
-  }
-
-  return null;
-};
-
-const graphToScreenPoint = (
-  graph: AbstractGraph,
-  point: { x: number; y: number }
-): { x: number; y: number } => {
-  const scale = graph.getView().scale || 1;
-  const translate = graph.getView().translate;
-  return {
-    x: (point.x + translate.x) * scale,
-    y: (point.y + translate.y) * scale
-  };
-};
-
-const screenToGraphPoint = (
-  graph: AbstractGraph,
-  point: { x: number; y: number }
-): { x: number; y: number } => {
-  const scale = graph.getView().scale || 1;
-  const translate = graph.getView().translate;
-  return {
-    x: point.x / scale - translate.x,
-    y: point.y / scale - translate.y
-  };
-};
-
-export const MaxGraphEditorShell = ({
+export const MaxGraphEditorShell = memo(({
   documentId,
   value,
   readOnly,
   provider,
   currentUser,
   diagramKind,
+  offlineMode = "readonly",
+  connectionState = "connected",
+  onLegacyMigration,
   onChange
 }: {
   documentId: string;
@@ -404,6 +76,13 @@ export const MaxGraphEditorShell = ({
     color: string;
   };
   diagramKind?: DiagramKind | null;
+  offlineMode?: DiagramOfflineMode;
+  connectionState?: "connected" | "reconnecting" | "offline";
+  onLegacyMigration?: (input: {
+    droppedPageIds: string[];
+    activePageId: string;
+    backupSnapshot: string;
+  }) => void | Promise<void>;
   onChange: (value: string) => void;
 }) => {
   const fallbackKind = diagramKind ?? "FLUJO";
@@ -415,20 +94,35 @@ export const MaxGraphEditorShell = ({
 
   const yDoc = provider?.document ?? fallbackDocRef.current;
   const yText = useMemo(() => yDoc.getText(`doc:${documentId}:diagram`), [documentId, yDoc]);
-
-  const initialPayload = value.trim() || yText.toString().trim();
-  const initialParsed = useMemo(
-    () => parseDiagramSource(initialPayload, fallbackKind),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+  const yDiagramMap = useMemo(() => yDoc.getMap(`doc:${documentId}:diagram:v3`), [documentId, yDoc]);
+  const canonicalPageId = useMemo(
+    () => `p-${documentId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "main"}`,
+    [documentId]
   );
+
+  const initialDocumentRef = useRef<DrawioDocument | null>(null);
+  if (!initialDocumentRef.current) {
+    const seed = createEmptyDrawioDocument(fallbackKind);
+    const seedPage = seed.pages[0];
+    initialDocumentRef.current = {
+      ...seed,
+      activePageId: canonicalPageId,
+      pages: [
+        {
+          id: canonicalPageId,
+          name: seedPage?.name ?? "Diagrama",
+          xml: seedPage?.xml ?? ""
+        }
+      ]
+    };
+  }
 
   const [currentKind, setCurrentKind] = useState<DiagramKind>(fallbackKind);
   const [drawioDocument, setDrawioDocument] = useState<DrawioDocument>(
-    ensureDocumentIntegrity(initialParsed.document, fallbackKind)
+    initialDocumentRef.current
   );
   const drawioDocumentRef = useRef<DrawioDocument>(
-    ensureDocumentIntegrity(initialParsed.document, fallbackKind)
+    initialDocumentRef.current
   );
 
   const [selectedCell, setSelectedCell] = useState<SelectedCellView>(() => ({
@@ -452,7 +146,7 @@ export const MaxGraphEditorShell = ({
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [guidesEnabled, setGuidesEnabled] = useState(true);
-  const [minimapEnabled, setMinimapEnabled] = useState(true);
+  const [minimapEnabled, setMinimapEnabled] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
   const [viewRevision, setViewRevision] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
@@ -469,6 +163,7 @@ export const MaxGraphEditorShell = ({
   const [contextMenu, setContextMenu] = useState<MaxGraphContextMenuState>({ open: false, x: 0, y: 0 });
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<"none" | "palette" | "properties">("none");
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     title: string;
@@ -485,10 +180,13 @@ export const MaxGraphEditorShell = ({
     open: boolean;
     inputValue: string;
   }>({ open: false, inputValue: "" });
+  const [runtimeSyncLifecycle, setRuntimeSyncLifecycle] = useState<"bootstrap" | "live">(
+    provider ? "bootstrap" : "live"
+  );
 
   const applyingRemoteRef = useRef(false);
   const lastSyncedPayloadRef = useRef("");
-  const needsMigrationPersistRef = useRef(initialParsed.migratedFromLegacy);
+  const needsMigrationPersistRef = useRef(false);
   const copiedStyleRef = useRef<Record<string, unknown> | null>(null);
   const selectedEdgeTemplateRef = useRef<EdgeTemplate | null>(null);
   const activeToolRef = useRef<ActiveTool>("select");
@@ -539,1253 +237,181 @@ export const MaxGraphEditorShell = ({
   }, [activeTool]);
 
   useEffect(() => {
-    readOnlyRef.current = readOnly;
-  }, [readOnly]);
-
-  const syncPayload = useCallback(
-    (payload: string) => {
-      lastSyncedPayloadRef.current = payload;
-      onChange(payload);
-      applyingRemoteRef.current = true;
-      yText.delete(0, yText.length);
-      yText.insert(0, payload);
-      applyingRemoteRef.current = false;
-    },
-    [onChange, yText]
-  );
-
-  const refreshSelectedState = useCallback(() => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    setSelectedCell(buildSelectedCellView(graph, drawioDocumentRef.current));
-  }, []);
-
-  const refreshRemoteSelectionBoxes = useCallback(() => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    const activePageId = drawioDocumentRef.current.activePageId;
-    const boxes: Array<{ id: string; x: number; y: number; width: number; height: number; color: string; name: string }> = [];
-
-    for (const peer of remotePresenceRef.current) {
-      if (peer.pageId !== activePageId) {
-        continue;
-      }
-      const selectedCellIds = Array.isArray(peer.selectedCellIds) ? peer.selectedCellIds : [];
-      selectedCellIds.forEach((cellId) => {
-        const cell = graph.getDataModel().getCell(cellId);
-        if (!cell) {
-          return;
-        }
-
-        const state = graph.getView().getState(cell);
-        if (!state) {
-          return;
-        }
-
-        boxes.push({
-          id: `${peer.userId}:${cellId}`,
-          x: state.x,
-          y: state.y,
-          width: Math.max(0, state.width),
-          height: Math.max(0, state.height),
-          color: peer.color,
-          name: peer.name
-        });
-      });
-    }
-
-    setRemoteSelectionBoxes(boxes);
-  }, []);
+    setRuntimeSyncLifecycle(provider ? "bootstrap" : "live");
+  }, [documentId, provider]);
 
   useEffect(() => {
-    remotePresenceRef.current = remotePresence;
-  }, [remotePresence]);
-
-  const commitDocument = useCallback(
-    (
-      updater: (current: DrawioDocument) => DrawioDocument,
-      options?: {
-        sync?: boolean;
-        importActivePage?: boolean;
-      }
-    ) => {
-      const sync = options?.sync !== false;
-      const importActivePage = options?.importActivePage === true;
-
-      const next = ensureDocumentIntegrity(updater(drawioDocumentRef.current), currentKind);
-      drawioDocumentRef.current = next;
-      setDrawioDocument(next);
-
-      if (importActivePage && graphRef.current) {
-        const active = getActivePage(next);
-        if (active) {
-          applyingRemoteRef.current = true;
-          importGraphModelXml(graphRef.current, active.xml);
-          applyingRemoteRef.current = false;
-          refreshSelectedState();
-        }
-      }
-
-      if (sync) {
-        syncPayload(serializeMxfile(next));
-      }
-    },
-    [currentKind, refreshSelectedState, syncPayload]
-  );
-
-  const saveCurrentPageSnapshot = useCallback(() => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    const activePage = getActivePage(drawioDocumentRef.current);
-    if (!activePage) {
-      return;
-    }
-
-    const modelXml = exportGraphModelXml(graph);
-    drawioDocumentRef.current = updatePageXml(drawioDocumentRef.current, activePage.id, modelXml);
-    setDrawioDocument(drawioDocumentRef.current);
-  }, []);
-
-  const applyToolMode = useCallback(
-    (tool: ActiveTool) => {
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-
-      setActiveTool(tool);
-      if (tool !== "connect") {
-        connectSourceCellIdRef.current = null;
-      }
-      const panningHandler = (graph as any).panningHandler;
-
-      if (tool === "pan") {
-        graph.setPanning(true);
-        if (panningHandler) {
-          panningHandler.useLeftButtonForPanning = true;
-          panningHandler.panningEnabled = true;
-        }
-        return;
-      }
-
-      if (tool === "connect") {
-        graph.setConnectable(!readOnly);
-        if (panningHandler) {
-          panningHandler.useLeftButtonForPanning = false;
-        }
-        return;
-      }
-
-      if (tool === "text") {
-        if (panningHandler) {
-          panningHandler.useLeftButtonForPanning = false;
-        }
-        return;
-      }
-
-      if (panningHandler) {
-        panningHandler.useLeftButtonForPanning = false;
-      }
-    },
-    [readOnly]
-  );
-
-  const updateLocalAwareness = useCallback(
-    (patch: Partial<RemoteCursorPresence>) => {
-      const awareness = provider?.awareness;
-      if (!awareness || !currentUser.id) {
-        return;
-      }
-
-      const previous = (awareness.getLocalState()?.[AWARENESS_KEY] as RemoteCursorPresence | undefined) ?? {
-        documentId,
-        pageId: drawioDocumentRef.current.activePageId,
-        userId: currentUser.id,
-        name: currentUser.name,
-        color: currentUser.color
-      };
-
-      awareness.setLocalStateField(AWARENESS_KEY, {
-        ...previous,
-        documentId,
-        pageId: drawioDocumentRef.current.activePageId,
-        userId: currentUser.id,
-        name: currentUser.name,
-        color: currentUser.color,
-        ...patch
-      });
-    },
-    [currentUser.color, currentUser.id, currentUser.name, documentId, provider?.awareness]
-  );
-
-  useEffect(() => {
-    if (!yText.toString() && value.trim()) {
-      yText.insert(0, value);
-    }
-  }, [value, yText]);
-
-  useEffect(() => {
-    const graphContainer = graphContainerRef.current;
-    if (!graphContainer || graphRef.current) {
-      return;
-    }
-
-    const graph = new Graph(graphContainer);
-    graphRef.current = graph;
-
-    applyThemeToGraph(graph, currentKind);
-
-    graph.setConnectable(!readOnly);
-    graph.setMultigraph(false);
-    graph.setAllowDanglingEdges(false);
-    graph.setEdgeLabelsMovable(true);
-    graph.setVertexLabelsMovable(false);
-    graph.setCellsEditable(!readOnly);
-    graph.setTooltips(true);
-    graph.setPanning(true);
-    graph.setAutoSizeCells(true);
-    graph.gridSize = 16;
-    graph.setGridEnabled(true);
-
-    const graphHandler = (graph as any).graphHandler;
-    if (graphHandler) {
-      graphHandler.guidesEnabled = true;
-    }
-
-    const undoManager = new UndoManager(200);
-    undoManagerRef.current = undoManager;
-
-    const undoListener = (_sender: unknown, evt: EventObject) => {
-      const edit = evt.getProperty("edit");
-      if (edit) {
-        undoManager.undoableEditHappened(edit);
-      }
-    };
-
-    graph.getDataModel().addListener(InternalEvent.UNDO, undoListener);
-    graph.getView().addListener(InternalEvent.UNDO, undoListener);
-
-    const modelChangeListener = () => {
-      if (applyingRemoteRef.current) {
-        return;
-      }
-
-      const activePage = getActivePage(drawioDocumentRef.current);
-      if (!activePage) {
-        return;
-      }
-
-      const modelXml = exportGraphModelXml(graph);
-      const updated = updatePageXml(drawioDocumentRef.current, activePage.id, modelXml);
-      drawioDocumentRef.current = updated;
-      setDrawioDocument(updated);
-      syncPayload(serializeMxfile(updated));
-      refreshSelectedState();
-      refreshRemoteSelectionBoxes();
-    };
-
-    const selectionListener = () => {
-      refreshSelectedState();
-      const selectedIds = graph
-        .getSelectionCells()
-        .map((cell) => cell.getId())
-        .filter((value): value is string => Boolean(value));
-      updateLocalAwareness({ selectedCellIds: selectedIds });
-      refreshRemoteSelectionBoxes();
-    };
-
-    const viewListener = () => {
-      setZoomPercent(Math.round(graph.getView().scale * 100));
-      setViewRevision((current) => current + 1);
-      refreshRemoteSelectionBoxes();
-    };
-
-    const clickToConnectListener = (_sender: unknown, event: EventObject) => {
-      if (readOnlyRef.current || activeToolRef.current !== "connect") {
-        return;
-      }
-
-      const clickedCell = event.getProperty("cell") as Cell | null;
-      const cell = resolveConnectableVertex(graph, clickedCell);
-      if (!cell) {
-        connectSourceCellIdRef.current = null;
-        return;
-      }
-
-      const sourceCellId = connectSourceCellIdRef.current;
-      const targetCellId = cell.getId();
-      if (!targetCellId) {
-        connectSourceCellIdRef.current = null;
-        return;
-      }
-
-      if (!sourceCellId || sourceCellId === targetCellId) {
-        connectSourceCellIdRef.current = targetCellId;
-        graph.setSelectionCell(cell);
-        return;
-      }
-
-      const sourceCell = graph.getDataModel().getCell(sourceCellId);
-      if (!sourceCell || sourceCell.isEdge()) {
-        connectSourceCellIdRef.current = targetCellId;
-        graph.setSelectionCell(cell);
-        return;
-      }
-
-      const template = selectedEdgeTemplateRef.current;
-      const edgeParams: {
-        parent: Cell | null;
-        value: string;
-        source: Cell;
-        target: Cell;
-        style: Record<string, string | number | boolean>;
-      } = {
-        parent: graph.getDefaultParent(),
-        value: template?.value ?? "",
-        source: sourceCell,
-        target: cell,
-        style: template?.style ? { ...baseConnectorStyle, ...template.style } : { ...baseConnectorStyle }
-      };
-
-      graph.batchUpdate(() => {
-        graph.insertEdge(edgeParams);
-      });
-
-      connectSourceCellIdRef.current = null;
-      graph.setSelectionCell(cell);
-    };
-
-    graph.getDataModel().addListener(InternalEvent.CHANGE, modelChangeListener);
-    graph.getSelectionModel().addListener(InternalEvent.CHANGE, selectionListener);
-    graph.getView().addListener(InternalEvent.SCALE, viewListener);
-    graph.getView().addListener(InternalEvent.TRANSLATE, viewListener);
-    graph.addListener(InternalEvent.CLICK, clickToConnectListener);
-
-    if (outlineContainerRef.current) {
-      outlineRef.current = new Outline(graph, outlineContainerRef.current);
-      outlineRef.current.updateOnPan = true;
-    }
-
-    const active = getActivePage(drawioDocumentRef.current);
-    if (active) {
-      applyingRemoteRef.current = true;
-      importGraphModelXml(graph, active.xml);
-      applyingRemoteRef.current = false;
-    }
-
-    // Populate activeDraft immediately so the save button works on first load
-    syncPayload(serializeMxfile(drawioDocumentRef.current));
-
-    refreshSelectedState();
-    setZoomPercent(Math.round(graph.getView().scale * 100));
-
-    if (needsMigrationPersistRef.current) {
-      needsMigrationPersistRef.current = false;
-      syncPayload(serializeMxfile(drawioDocumentRef.current));
-    }
-
-    return () => {
-      graph.getDataModel().removeListener(undoListener);
-      graph.getView().removeListener(undoListener);
-      graph.getDataModel().removeListener(modelChangeListener);
-      graph.getSelectionModel().removeListener(selectionListener);
-      graph.getView().removeListener(viewListener);
-      graph.removeListener(clickToConnectListener);
-
-      outlineRef.current?.destroy();
-      outlineRef.current = null;
-
-      graph.destroy();
-      graphRef.current = null;
-    };
-  }, [
-    currentKind,
-    readOnly,
-    refreshRemoteSelectionBoxes,
-    refreshSelectedState,
-    syncPayload,
-    updateLocalAwareness
-  ]);
-
-  useEffect(() => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    graph.setCellsEditable(!readOnly);
-    graph.setConnectable(!readOnly);
-  }, [readOnly]);
-
-  useEffect(() => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    applyThemeToGraph(graph, currentKind);
-  }, [currentKind]);
-
-  useEffect(() => {
-    const syncFromY = () => {
-      if (applyingRemoteRef.current) {
-        return;
-      }
-
-      const payload = yText.toString().trim();
-      if (!payload || payload === lastSyncedPayloadRef.current) {
-        return;
-      }
-
-      const parsed = parseDiagramSource(payload, currentKind);
-      const normalized = ensureDocumentIntegrity(parsed.document, currentKind);
-
-      lastSyncedPayloadRef.current = payload;
-      drawioDocumentRef.current = normalized;
-      setDrawioDocument(normalized);
-
-      const graph = graphRef.current;
-      if (graph) {
-        const active = getActivePage(normalized);
-        if (active) {
-          applyingRemoteRef.current = true;
-          importGraphModelXml(graph, active.xml);
-          applyingRemoteRef.current = false;
-        }
-        refreshSelectedState();
-      }
-    };
-
-    yText.observe(syncFromY);
-    return () => {
-      yText.unobserve(syncFromY);
-    };
-  }, [currentKind, refreshSelectedState, yText]);
-
-  useEffect(() => {
-    const payload = value.trim();
-    if (!payload || payload === lastSyncedPayloadRef.current || provider) {
-      return;
-    }
-
-    const parsed = parseDiagramSource(payload, currentKind);
-    const normalized = ensureDocumentIntegrity(parsed.document, currentKind);
-    lastSyncedPayloadRef.current = payload;
-    drawioDocumentRef.current = normalized;
-    setDrawioDocument(normalized);
-
-    const graph = graphRef.current;
-    if (graph) {
-      const active = getActivePage(normalized);
-      if (active) {
-        applyingRemoteRef.current = true;
-        importGraphModelXml(graph, active.xml);
-        applyingRemoteRef.current = false;
-      }
-      refreshSelectedState();
-    }
-  }, [currentKind, provider, refreshSelectedState, value]);
-
-  useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-
-    void loadRemoteStencilLibraries(currentKind, controller.signal).then((libraries) => {
-      if (!active) {
-        return;
-      }
-      setRemoteLibraries(libraries);
-    });
-
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [currentKind]);
-
-  useEffect(() => {
-    const next: Record<string, boolean> = {};
-    allLibraries.forEach((library) => {
-      const sectionId = `${library.section}:${library.id}`;
-      next[sectionId] = loadPaletteSectionState(sectionId);
-    });
-    setCollapsedSections(next);
-  }, [allLibraries]);
-
-  useEffect(() => {
-    setSelectedEdgeTemplateId((current) => {
-      if (current && edgeTemplateIndex.has(current)) {
-        return current;
-      }
-
-      const first = edgeTemplateIndex.values().next().value;
-      return first?.id ?? null;
-    });
-  }, [edgeTemplateIndex]);
-
-  useEffect(() => {
-    const graph = graphRef.current;
-    if (!graph || !selectedEdgeTemplate) {
-      return;
-    }
-    graph.getStylesheet().putCellStyle(
-      "defaultEdge",
-      { ...baseConnectorStyle, ...selectedEdgeTemplate.style } as any
-    );
-  }, [selectedEdgeTemplate]);
-
-  useEffect(() => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    graph.setGridEnabled(snapEnabled);
-  }, [snapEnabled]);
-
-  useEffect(() => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    const graphHandler = (graph as any).graphHandler;
-    if (graphHandler) {
-      graphHandler.guidesEnabled = guidesEnabled;
-    }
-  }, [guidesEnabled]);
-
-  useEffect(() => {
-    outlineRef.current?.setEnabled(minimapEnabled);
-  }, [minimapEnabled]);
-
-  useEffect(() => {
-    const awareness = provider?.awareness;
-    if (!awareness) {
-      setRemotePresence((current) => (current.length === 0 ? current : []));
-      return;
-    }
-
-    const refresh = () => {
-      const peers: RemoteCursorPresence[] = [];
-      awareness.getStates().forEach((state: any) => {
-        const payload = state?.[AWARENESS_KEY] as RemoteCursorPresence | undefined;
-        if (!payload || payload.documentId !== documentId || payload.userId === currentUser.id) {
-          return;
-        }
-
-        peers.push(payload);
-      });
-      peers.sort((a, b) => a.userId.localeCompare(b.userId) || a.pageId.localeCompare(b.pageId));
-      setRemotePresence((current) => (areRemotePresenceEqual(current, peers) ? current : peers));
-    };
-
-    refresh();
-    awareness.on("change", refresh);
-
-    return () => {
-      awareness.off("change", refresh);
-    };
-  }, [currentUser.id, documentId, provider?.awareness]);
-
-  useEffect(() => {
-    refreshRemoteSelectionBoxes();
-  }, [remotePresence, refreshRemoteSelectionBoxes]);
-
-  useEffect(() => {
-    const graphContainer = graphContainerRef.current;
-    if (!graphContainer) {
-      return;
-    }
-
-    const updateCursor = (clientX: number, clientY: number) => {
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-      const rect = graphContainer.getBoundingClientRect();
-      updateLocalAwareness({
-        cursor: screenToGraphPoint(graph, {
-          x: clientX - rect.left,
-          y: clientY - rect.top
-        })
-      });
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      updateCursor(event.clientX, event.clientY);
-    };
-
-    const onPointerLeave = () => {
-      updateLocalAwareness({ cursor: null });
-    };
-
-    graphContainer.addEventListener("pointermove", onPointerMove);
-    graphContainer.addEventListener("pointerleave", onPointerLeave);
-    graphContainer.addEventListener("pointercancel", onPointerLeave);
-
-    return () => {
-      graphContainer.removeEventListener("pointermove", onPointerMove);
-      graphContainer.removeEventListener("pointerleave", onPointerLeave);
-      graphContainer.removeEventListener("pointercancel", onPointerLeave);
-    };
-  }, [updateLocalAwareness]);
-
-  useEffect(() => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    const onContextMenu = (event: MouseEvent) => {
-      event.preventDefault();
-
-      const rect = graphContainerRef.current?.getBoundingClientRect();
-      if (!rect) {
-        return;
-      }
-
-      const pt = graph.getPointForEvent(event);
-      const cell = graph.getCellAt(pt.x, pt.y);
-      if (cell) {
-        graph.setSelectionCell(cell);
-      }
-
-      setContextMenu({
-        open: true,
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      });
-    };
-
-    const container = graphContainerRef.current;
-    if (!container) {
-      return;
-    }
-
-    container.addEventListener("contextmenu", onContextMenu);
-    return () => {
-      container.removeEventListener("contextmenu", onContextMenu);
-    };
-  }, []);
-
-  const toggleSection = useCallback((sectionId: string) => {
-    setCollapsedSections((current) => {
-      const next = !current[sectionId];
-      persistPaletteSectionState(sectionId, next);
-      return {
-        ...current,
-        [sectionId]: next
-      };
-    });
-  }, []);
-
-  const insertShape = useCallback(
-    (template: ShapeTemplate) => {
-      if (readOnly) {
-        return;
-      }
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-
-      insertShapeTemplate(graph, template, {
-        container: graphContainerRef.current
-      });
-
-      refreshSelectedState();
-    },
-    [readOnly, refreshSelectedState]
-  );
-
-  const onCanvasDrop = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      if (readOnly) {
-        return;
-      }
-
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-
-      const payloadRaw = event.dataTransfer.getData("application/corelia-maxgraph-template");
-      if (!payloadRaw) {
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(payloadRaw) as { templateId: string; kind: "shape" };
-        const template = shapeTemplateIndex.get(parsed.templateId);
-        if (!template) {
-          return;
-        }
-
-        insertShapeTemplate(graph, template, {
-          screenPoint: {
-            x: event.clientX - (graphContainerRef.current?.getBoundingClientRect().left ?? 0),
-            y: event.clientY - (graphContainerRef.current?.getBoundingClientRect().top ?? 0)
-          }
-        });
-      } catch {
-        return;
-      }
-
-      refreshSelectedState();
-    },
-    [readOnly, refreshSelectedState, shapeTemplateIndex]
-  );
-
-  const onDoubleClickCanvas = useCallback(() => {
-    if (readOnly || activeTool !== "text") {
-      return;
-    }
-
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    const center = graphContainerRef.current
-      ? getViewportCenter(graph, graphContainerRef.current)
-      : { x: 120, y: 120 };
-
-    graph.batchUpdate(() => {
-      graph.insertVertex({
-        parent: graph.getDefaultParent(),
-        value: "Texto",
-        position: [center.x - 80, center.y - 20],
-        size: [160, 40],
-        style: {
-          rounded: 1,
-          fillColor: "#ffffff",
-          strokeColor: "#94a3b8",
-          whiteSpace: "wrap",
-          fontSize: 14,
-          fontFamily: "DM Sans"
-        } as any
-      });
-    });
-
-    refreshSelectedState();
-  }, [activeTool, readOnly, refreshSelectedState]);
-
-  const withSelectedCell = useCallback(
-    <T,>(fn: (graph: AbstractGraph, cell: Cell) => T): T | null => {
-      const graph = graphRef.current;
-      if (!graph) {
-        return null;
-      }
-
-      const cell = graph.getSelectionCell();
-      if (!cell) {
-        return null;
-      }
-
-      return fn(graph, cell);
-    },
-    []
-  );
-
-  const onLabelChange = useCallback(
-    (nextValue: string) => {
-      if (readOnly) {
-        return;
-      }
-
-      withSelectedCell((graph, cell) => {
-        graph.batchUpdate(() => {
-          graph.getDataModel().setValue(cell, nextValue);
-        });
-      });
-    },
-    [readOnly, withSelectedCell]
-  );
-
-  const onStylePatch = useCallback(
-    (patch: Record<string, string | number | boolean>) => {
-      if (readOnly) {
-        return;
-      }
-
-      withSelectedCell((graph, cell) => {
-        Object.entries(patch).forEach(([key, value]) => {
-          graph.setCellStyles(key as any, value as any, [cell]);
-        });
-      });
-    },
-    [readOnly, withSelectedCell]
-  );
-
-  const onReplaceStyle = useCallback(
-    (style: Record<string, string>) => {
-      if (readOnly) {
-        return;
-      }
-
-      withSelectedCell((graph, cell) => {
-        graph.batchUpdate(() => {
-          graph.getDataModel().setStyle(cell, style as any);
-        });
-      });
-
-      setStyleEditorOpen(false);
-    },
-    [readOnly, withSelectedCell]
-  );
-
-  const onGeometryPatch = useCallback(
-    (patch: Partial<{ x: number; y: number; width: number; height: number }>) => {
-      if (readOnly) {
-        return;
-      }
-
-      withSelectedCell((graph, cell) => {
-        const geometry = cell.getGeometry();
-        if (!geometry) {
-          return;
-        }
-
-        const next = geometry.clone();
-        if (typeof patch.x === "number") {
-          next.x = graph.snap(patch.x);
-        }
-        if (typeof patch.y === "number") {
-          next.y = graph.snap(patch.y);
-        }
-        if (typeof patch.width === "number") {
-          next.width = Math.max(10, patch.width);
-        }
-        if (typeof patch.height === "number") {
-          next.height = Math.max(10, patch.height);
-        }
-
-        graph.batchUpdate(() => {
-          graph.getDataModel().setGeometry(cell, next);
-        });
-      });
-    },
-    [readOnly, withSelectedCell]
-  );
-
-  const onCenterCell = useCallback(() => {
-    if (readOnly) {
-      return;
-    }
-
-    withSelectedCell((graph, cell) => {
-      if (!graphContainerRef.current) {
-        return;
-      }
-      moveCellToCenter(graph, cell, graphContainerRef.current);
-    });
-  }, [readOnly, withSelectedCell]);
-
-  const onHighlightConnection = useCallback((edgeId: string) => {
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
-
-    const edge = graph.getDataModel().getCell(edgeId);
-    if (!edge) {
-      return;
-    }
-
-    graph.setSelectionCell(edge);
-  }, []);
-
-  const onDeleteConnection = useCallback(
-    (edgeId: string) => {
-      if (readOnly) {
-        return;
-      }
-
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-
-      const edge = graph.getDataModel().getCell(edgeId);
-      if (!edge) {
-        return;
-      }
-
-      graph.removeCells([edge]);
-    },
-    [readOnly]
-  );
-
-  const onAddMetadata = useCallback(() => {
-    const metadata = [...selectedCell.metadata, { key: "", value: "" }];
-    onStylePatch({ meta: encodeMeta(metadata) });
-  }, [onStylePatch, selectedCell.metadata]);
-
-  const onUpdateMetadata = useCallback(
-    (index: number, patch: Partial<{ key: string; value: string }>) => {
-      const metadata = selectedCell.metadata.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, ...patch } : item
-      );
-      onStylePatch({ meta: encodeMeta(metadata) });
-    },
-    [onStylePatch, selectedCell.metadata]
-  );
-
-  const onRemoveMetadata = useCallback(
-    (index: number) => {
-      const metadata = selectedCell.metadata.filter((_, itemIndex) => itemIndex !== index);
-      onStylePatch({ meta: encodeMeta(metadata) });
-    },
-    [onStylePatch, selectedCell.metadata]
-  );
-
-  const onAddPage = useCallback(() => {
-    const defaultName = `Página ${drawioDocumentRef.current.pages.length + 1}`;
-    setAddPageModal({ open: true, inputValue: defaultName });
-  }, []);
-
-  const onAddPageConfirm = useCallback(
-    (name: string) => {
-      if (!name.trim()) return;
-      saveCurrentPageSnapshot();
-      commitDocument(
-        (current) =>
-          addPage(current, {
-            name: name.trim(),
-            xml: createEmptyDrawioDocument(currentKind).pages[0]?.xml ?? ""
-          }),
-        { importActivePage: true }
-      );
-    },
-    [commitDocument, currentKind, saveCurrentPageSnapshot]
-  );
-
-  const onRenamePage = useCallback(
-    (pageId: string) => {
-      const current = drawioDocumentRef.current.pages.find((page) => page.id === pageId);
-      setRenamePageModal({ open: true, pageId, currentName: current?.name ?? "Página", inputValue: current?.name ?? "Página" });
-    },
-    []
-  );
-
-  const onRenamePageConfirm = useCallback(
-    (pageId: string, nextName: string) => {
-      if (!nextName.trim()) return;
-      commitDocument((value) => renamePage(value, pageId, nextName.trim()));
-    },
-    [commitDocument]
-  );
-
-  const onDuplicatePage = useCallback(
-    (pageId: string) => {
-      saveCurrentPageSnapshot();
-      commitDocument((value) => duplicatePage(value, pageId), { importActivePage: true });
-    },
-    [commitDocument, saveCurrentPageSnapshot]
-  );
-
-  const onRemovePage = useCallback(
-    (pageId: string) => {
-      if (drawioDocumentRef.current.pages.length <= 1) {
-        return;
-      }
-
-      setConfirmModal({
-        open: true,
-        title: "Eliminar página",
-        message: "¿Eliminar esta página?",
-        onConfirm: () => {
-          saveCurrentPageSnapshot();
-          commitDocument((value) => removePage(value, pageId), { importActivePage: true });
-        }
-      });
-    },
-    [commitDocument, saveCurrentPageSnapshot]
-  );
-
-  const onSetActivePage = useCallback(
-    (pageId: string) => {
-      if (drawioDocumentRef.current.activePageId === pageId) {
-        return;
-      }
-
-      saveCurrentPageSnapshot();
-      commitDocument((value) => setActivePage(value, pageId), { importActivePage: true });
-      updateLocalAwareness({ pageId });
-    },
-    [commitDocument, saveCurrentPageSnapshot, updateLocalAwareness]
-  );
-
-  const applyTemplate = useCallback(
-    (template: DiagramTemplatePreset, mode: "replace" | "append") => {
-      if (readOnly) {
-        return;
-      }
-
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-
-      graph.batchUpdate(() => {
-        if (mode === "replace") {
-          const cells = graph.getChildCells(graph.getDefaultParent(), true, true);
-          if (cells.length > 0) {
-            graph.removeCells(cells);
-          }
-        }
-
-        template.nodes.forEach((node) => {
-          graph.insertVertex({
-            parent: graph.getDefaultParent(),
-            value: node.value,
-            position: [node.x, node.y],
-            size: [node.width, node.height],
-            style: node.style as any
-          });
-        });
-      });
-
-      setTemplatesOpen(false);
-      refreshSelectedState();
-    },
-    [readOnly, refreshSelectedState]
-  );
-
-  const pendingImportContentRef = useRef<string | null>(null);
-
-  const applyImportContent = useCallback(
-    (content: string) => {
-      const parsed = parseDiagramSource(content, currentKind);
-      const normalized = ensureDocumentIntegrity(parsed.document, currentKind);
-      drawioDocumentRef.current = normalized;
-      setDrawioDocument(normalized);
-
-      const graph = graphRef.current;
-      if (graph) {
-        const active = getActivePage(normalized);
-        if (active) {
-          applyingRemoteRef.current = true;
-          importGraphModelXml(graph, active.xml);
-          applyingRemoteRef.current = false;
-        }
-      }
-
-      syncPayload(serializeMxfile(normalized));
-      refreshSelectedState();
-    },
-    [currentKind, refreshSelectedState, syncPayload]
-  );
-
-  const onImportFileSelected = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) {
-        return;
-      }
-
-      const content = await file.text();
-      event.target.value = "";
-      pendingImportContentRef.current = content;
-
-      setConfirmModal({
-        open: true,
-        title: "Importar XML",
-        message: "El XML importado reemplazará el contenido actual. ¿Continuar?",
-        onConfirm: () => {
-          if (pendingImportContentRef.current !== null) {
-            applyImportContent(pendingImportContentRef.current);
-            pendingImportContentRef.current = null;
-          }
-        }
-      });
-    },
-    [applyImportContent]
-  );
-
-  const exportPng = useCallback(async () => {
-    if (!canvasWrapperRef.current) {
-      return;
-    }
-
-    const dataUrl = await toPng(canvasWrapperRef.current, {
-      cacheBust: true,
-      pixelRatio: 2,
-      backgroundColor:
-        canvasMode === "light"
-          ? DIAGRAM_THEME_BY_KIND[currentKind].canvasBackgroundLight
-          : DIAGRAM_THEME_BY_KIND[currentKind].canvasBackgroundDark
-    });
-
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = `${documentId}.png`;
-    link.click();
-  }, [canvasMode, currentKind, documentId]);
-
-  const exportSvg = useCallback(async () => {
-    if (!canvasWrapperRef.current) {
-      return;
-    }
-
-    const dataUrl = await toSvg(canvasWrapperRef.current, {
-      cacheBust: true,
-      backgroundColor:
-        canvasMode === "light"
-          ? DIAGRAM_THEME_BY_KIND[currentKind].canvasBackgroundLight
-          : DIAGRAM_THEME_BY_KIND[currentKind].canvasBackgroundDark
-    });
-
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = `${documentId}.svg`;
-    link.click();
-  }, [canvasMode, currentKind, documentId]);
-
-  const exportPdf = useCallback(async () => {
-    if (!canvasWrapperRef.current) {
-      return;
-    }
-
-    const dataUrl = await toPng(canvasWrapperRef.current, {
-      cacheBust: true,
-      pixelRatio: 2,
-      backgroundColor:
-        canvasMode === "light"
-          ? DIAGRAM_THEME_BY_KIND[currentKind].canvasBackgroundLight
-          : DIAGRAM_THEME_BY_KIND[currentKind].canvasBackgroundDark
-    });
-
-    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    pdf.addImage(dataUrl, "PNG", 16, 16, pageWidth - 32, pageHeight - 32, undefined, "FAST");
-    pdf.save(`${documentId}.pdf`);
-  }, [canvasMode, currentKind, documentId]);
-
-  const exportXml = useCallback(() => {
-    const xml = serializeMxfile(drawioDocumentRef.current);
-    const blob = new Blob([xml], { type: "application/xml" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${documentId}.drawio`;
-    link.click();
-
-    URL.revokeObjectURL(url);
+    setMobilePanel("none");
   }, [documentId]);
 
-  const copyShareLink = useCallback(async () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("diagramPage", drawioDocumentRef.current.activePageId);
-
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(url.toString());
-      return;
+  const diagramSyncLifecycle: DiagramSyncLifecycle = useMemo(() => {
+    if (connectionState === "reconnecting") {
+      return "reconnecting";
     }
 
-    const textArea = document.createElement("textarea");
-    textArea.value = url.toString();
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textArea);
-  }, []);
+    if (connectionState === "offline" && offlineMode === "queue") {
+      return "offline_queue";
+    }
 
-  const applyKindChange = useCallback(
-    (nextKind: DiagramKind) => {
-      setCurrentKind(nextKind);
+    if (runtimeSyncLifecycle === "bootstrap") {
+      return "bootstrap";
+    }
 
-      const nextDocument = createEmptyDrawioDocument(nextKind);
-      drawioDocumentRef.current = nextDocument;
-      setDrawioDocument(nextDocument);
+    return "live";
+  }, [connectionState, offlineMode, runtimeSyncLifecycle]);
 
-      const graphInstance = graphRef.current;
-      if (graphInstance) {
-        const active = getActivePage(nextDocument);
-        if (active) {
-          applyingRemoteRef.current = true;
-          importGraphModelXml(graphInstance, active.xml);
-          applyingRemoteRef.current = false;
-        }
-      }
+  const effectiveReadOnly = readOnly || runtimeSyncLifecycle === "bootstrap";
+  const singlePageMode = true;
 
-      syncPayload(serializeMxfile(nextDocument));
-      refreshSelectedState();
-    },
-    [refreshSelectedState, syncPayload]
-  );
+  useEffect(() => {
+    readOnlyRef.current = effectiveReadOnly;
+  }, [effectiveReadOnly]);
 
-  const onChangeDiagramKind = useCallback(
-    (nextKind: DiagramKind) => {
-      if (nextKind === currentKind || readOnly) {
+  const {
+    syncPayload,
+    refreshSelectedState,
+    commitDocument,
+    saveCurrentPageSnapshot,
+    applyToolMode,
+    updateLocalAwareness
+  } = useMaxGraphEditorRuntime({
+    documentId,
+    value,
+    readOnly: effectiveReadOnly,
+    currentKind,
+    currentUser,
+    provider,
+    yText,
+    yDiagramMap,
+    onChange,
+    drawioDocumentRef,
+    setDrawioDocument,
+    graphRef,
+    outlineRef,
+    undoManagerRef,
+    graphContainerRef,
+    outlineContainerRef,
+    activeToolRef,
+    readOnlyRef,
+    selectedEdgeTemplateRef,
+    connectSourceCellIdRef,
+    applyingRemoteRef,
+    lastSyncedPayloadRef,
+    needsMigrationPersistRef,
+    remotePresence,
+    remotePresenceRef,
+    setRemotePresence,
+    setRemoteSelectionBoxes,
+    allLibraries,
+    edgeTemplateIndex,
+    selectedEdgeTemplate,
+    setSelectedCell,
+    setZoomPercent,
+    setViewRevision,
+    setRemoteLibraries,
+    setCollapsedSections,
+    setSelectedEdgeTemplateId,
+    setContextMenu,
+    setActiveTool,
+    snapEnabled,
+    guidesEnabled,
+    minimapEnabled,
+    ...(onLegacyMigration ? { onLegacyMigration } : {}),
+    onSyncLifecycleChange: setRuntimeSyncLifecycle
+  });
+
+  useEffect(() => {
+    const onForceSync = (event: Event) => {
+      const custom = event as CustomEvent<{ documentId?: string }>;
+      if (custom.detail?.documentId !== documentId) {
         return;
       }
+      saveCurrentPageSnapshot();
+    };
 
-      const graph = graphRef.current;
-      const hasContent = graph
-        ? graph.getChildCells(graph.getDefaultParent(), true, true).length > 0
-        : drawioDocumentRef.current.pages.length > 0;
-
-      if (hasContent) {
-        setConfirmModal({
-          open: true,
-          title: "Cambiar tipo de diagrama",
-          message: `Cambiar a ${nextKind} puede reiniciar el canvas para aplicar librerías y tema. ¿Deseas continuar?`,
-          onConfirm: () => applyKindChange(nextKind)
-        });
-      } else {
-        applyKindChange(nextKind);
+    const onRequestSnapshot = (event: Event) => {
+      const custom = event as CustomEvent<{
+        documentId?: string;
+        capture?: (payload: string) => void;
+      }>;
+      if (custom.detail?.documentId !== documentId) {
+        return;
       }
-    },
-    [applyKindChange, currentKind, readOnly]
-  );
+      if (typeof custom.detail.capture !== "function") {
+        return;
+      }
+      saveCurrentPageSnapshot();
+      custom.detail.capture(serializeMxfile(drawioDocumentRef.current).trim());
+    };
 
-  const onDeleteSelection = useCallback(() => {
-    if (readOnly) {
-      return;
-    }
+    window.addEventListener("corelia:diagram-force-sync", onForceSync as EventListener);
+    window.addEventListener("corelia:diagram-request-snapshot", onRequestSnapshot as EventListener);
+    return () => {
+      window.removeEventListener("corelia:diagram-force-sync", onForceSync as EventListener);
+      window.removeEventListener("corelia:diagram-request-snapshot", onRequestSnapshot as EventListener);
+    };
+  }, [documentId, drawioDocumentRef, saveCurrentPageSnapshot]);
 
-    const graph = graphRef.current;
-    if (!graph) {
-      return;
-    }
+  const handlers = useMaxGraphEditorHandlers({
+    documentId,
+    currentKind,
+    readOnly: effectiveReadOnly,
+    activeTool,
+    selectedCell,
+    drawioDocumentRef,
+    graphRef,
+    graphContainerRef,
+    canvasWrapperRef,
+    rootRef,
+    applyingRemoteRef,
+    copiedStyleRef,
+    shapeTemplateIndex,
+    setAddPageModal,
+    setRenamePageModal,
+    setConfirmModal,
+    setTemplatesOpen,
+    setStyleEditorOpen,
+    setContextMenu,
+    setCurrentKind,
+    setDrawioDocument,
+    setFullscreen,
+    setCollapsedSections,
+    canvasMode,
+    refreshSelectedState,
+    syncPayload,
+    commitDocument,
+    saveCurrentPageSnapshot,
+    updateLocalAwareness
+  });
 
-    const selection = graph.getSelectionCells();
-    if (selection.length === 0) {
-      return;
-    }
-
-    graph.removeCells(selection);
-    setContextMenu({ open: false, x: 0, y: 0 });
-  }, [readOnly]);
-
-  const toggleFullscreen = useCallback(() => {
-    if (!rootRef.current) {
-      return;
-    }
-
-    if (!document.fullscreenElement) {
-      void rootRef.current.requestFullscreen();
-      setFullscreen(true);
-      return;
-    }
-
-    void document.exitFullscreen();
-    setFullscreen(false);
-  }, []);
+  const { toolbarState, toolbarActions } = useMaxGraphEditorToolbar({
+    activeTool,
+    zoomPercent,
+    canvasMode,
+    gridMode,
+    snapEnabled,
+    guidesEnabled,
+    minimapEnabled,
+    fullscreen,
+    readOnly: effectiveReadOnly,
+    setCanvasMode,
+    setGridMode,
+    setSnapEnabled,
+    setGuidesEnabled,
+    setMinimapEnabled,
+    setTemplatesOpen,
+    graphRef,
+    undoManagerRef,
+    fileInputRef,
+    applyToolMode,
+    toggleFullscreen: handlers.toggleFullscreen,
+    onDeleteSelection: handlers.onDeleteSelection,
+    exportPng: handlers.exportPng,
+    exportSvg: handlers.exportSvg,
+    exportPdf: handlers.exportPdf,
+    exportXml: handlers.exportXml,
+    copyShareLink: handlers.copyShareLink
+  });
 
   useEffect(() => {
     const onFullScreenChange = () => {
@@ -1798,233 +424,33 @@ export const MaxGraphEditorShell = ({
     };
   }, []);
 
-  const toolbarState: GraphToolbarState = {
-    activeTool,
-    zoomPercent,
-    canvasMode,
-    gridMode,
-    snapEnabled,
-    guidesEnabled,
-    minimapEnabled,
-    fullscreen,
-    canUndo: undoManagerRef.current?.canUndo() ?? false,
-    canRedo: undoManagerRef.current?.canRedo() ?? false,
-    readOnly
-  };
-
-  const toolbarActions: GraphToolbarActions = {
-    setTool: applyToolMode,
-    zoomIn: () => graphRef.current?.zoomIn(),
-    zoomOut: () => graphRef.current?.zoomOut(),
-    zoomToPercent: (percent) => {
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-      zoomToPercent(graph, percent);
-    },
-    fit: () => {
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-      fitGraph(graph);
-    },
-    resetZoom: () => {
-      const graph = graphRef.current;
-      if (!graph) {
-        return;
-      }
-      resetView(graph);
-    },
-    toggleCanvasMode: () => setCanvasMode((current) => (current === "light" ? "dark" : "light")),
-    setGridMode,
-    toggleSnap: () => setSnapEnabled((current) => !current),
-    toggleGuides: () => setGuidesEnabled((current) => !current),
-    toggleMinimap: () => setMinimapEnabled((current) => !current),
-    toggleFullscreen,
-    undo: () => undoManagerRef.current?.undo(),
-    redo: () => undoManagerRef.current?.redo(),
-    cut: () => {
-      const graph = graphRef.current;
-      if (graph && !readOnly) {
-        Clipboard.cut(graph);
-      }
-    },
-    copy: () => {
-      const graph = graphRef.current;
-      if (graph) {
-        Clipboard.copy(graph);
-      }
-    },
-    paste: () => {
-      const graph = graphRef.current;
-      if (graph && !readOnly) {
-        Clipboard.paste(graph);
-      }
-    },
-    duplicate: () => {
-      const graph = graphRef.current;
-      if (!graph || readOnly) {
-        return;
-      }
-
-      const copied = Clipboard.copy(graph);
-      if (!copied || copied.length === 0) {
-        return;
-      }
-
-      Clipboard.paste(graph);
-    },
-    removeSelection: onDeleteSelection,
-    selectAll: () => graphRef.current?.selectAll(graphRef.current.getDefaultParent(), true),
-    groupSelection: () => {
-      const graph = graphRef.current;
-      if (!graph || readOnly) {
-        return;
-      }
-      graph.groupCells(undefined as any, 12, graph.getSelectionCells());
-    },
-    ungroupSelection: () => {
-      const graph = graphRef.current;
-      if (!graph || readOnly) {
-        return;
-      }
-      graph.ungroupCells(graph.getSelectionCells());
-    },
-    openTemplates: () => setTemplatesOpen(true),
-    openImportDialog: () => fileInputRef.current?.click(),
-    exportPng,
-    exportSvg,
-    exportPdf,
-    exportXml,
-    copyShareLink
-  };
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const isEditable =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        Boolean(target?.isContentEditable);
-
-      if (isEditable) {
-        return;
-      }
-
-      const ctrl = event.ctrlKey || event.metaKey;
-      const key = event.key.toLowerCase();
-
-      if (ctrl && key === "z") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          toolbarActions.redo();
-        } else {
-          toolbarActions.undo();
-        }
-        return;
-      }
-
-      if (ctrl && key === "y") {
-        event.preventDefault();
-        toolbarActions.redo();
-        return;
-      }
-
-      if (ctrl && key === "x") {
-        event.preventDefault();
-        toolbarActions.cut();
-        return;
-      }
-
-      if (ctrl && key === "c") {
-        event.preventDefault();
-        toolbarActions.copy();
-        return;
-      }
-
-      if (ctrl && key === "v") {
-        event.preventDefault();
-        toolbarActions.paste();
-        return;
-      }
-
-      if (ctrl && key === "a") {
-        event.preventDefault();
-        toolbarActions.selectAll();
-        return;
-      }
-
-      if (ctrl && key === "d") {
-        event.preventDefault();
-        toolbarActions.duplicate();
-        return;
-      }
-
-      if (ctrl && key === "g") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          toolbarActions.ungroupSelection();
-        } else {
-          toolbarActions.groupSelection();
-        }
-        return;
-      }
-
-      if (event.key === "Delete" || event.key === "Backspace") {
-        event.preventDefault();
-        toolbarActions.removeSelection();
-        return;
-      }
-
-      if (event.key === "Escape") {
-        toolbarActions.setTool("select");
-        return;
-      }
-
-      if (key === "s") {
-        toolbarActions.setTool("select");
-        return;
-      }
-
-      if (key === "h" || event.code === "Space") {
-        toolbarActions.setTool("pan");
-        return;
-      }
-
-      if (key === "c") {
-        toolbarActions.setTool("connect");
-        return;
-      }
-
-      if (key === "t") {
-        toolbarActions.setTool("text");
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [toolbarActions]);
-
   const paletteViewModel = {
     kind: currentKind,
     libraries: allLibraries,
     search,
     collapsed: collapsedSections,
-    readOnly,
+    readOnly: effectiveReadOnly,
     selectedEdgeTemplateId
   };
 
   const activePageId = drawioDocument.activePageId;
-  const peersInCurrentPage = remotePresence.filter((peer) => peer.pageId === activePageId);
-  const peersInOtherPages = remotePresence.filter((peer) => peer.pageId !== activePageId);
+  const peersInCurrentPage = useMemo(
+    () => (singlePageMode
+      ? remotePresence
+      : remotePresence.filter((peer) => peer.pageId === activePageId)),
+    [remotePresence, activePageId, singlePageMode]
+  );
+  const peersInOtherPages = useMemo(
+    () => (singlePageMode
+      ? []
+      : remotePresence.filter((peer) => peer.pageId !== activePageId)),
+    [remotePresence, activePageId, singlePageMode]
+  );
 
   const renderableRemoteCursors = useMemo(
-    () =>
-      peersInCurrentPage
+    () => {
+      void viewRevision;
+      return peersInCurrentPage
         .map((peer) => {
           if (!peer.cursor) {
             return null;
@@ -2039,31 +465,60 @@ export const MaxGraphEditorShell = ({
             cursor
           };
         })
-        .filter((item): item is { id: string; name: string; color: string; cursor: { x: number; y: number } } => Boolean(item)),
-    [peersInCurrentPage, viewRevision]
+        .filter((item): item is { id: string; name: string; color: string; cursor: { x: number; y: number } } => Boolean(item));
+    },
+    [graphRef, peersInCurrentPage, viewRevision]
   );
 
   return (
-    <div ref={rootRef} className="flex h-full min-h-[600px] flex-col rounded-xl border border-[#e2e8f2] bg-white shadow-sm">
+    <div ref={rootRef} className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[#e2e8f2] bg-white shadow-sm">
       <input
         ref={fileInputRef}
         type="file"
         accept=".drawio,.xml,text/xml,application/xml"
         className="hidden"
-        onChange={onImportFileSelected}
+        onChange={handlers.onImportFileSelected}
       />
 
       <MaxGraphToolbar state={toolbarState} actions={toolbarActions} />
 
+      <div className="flex items-center justify-between gap-2 border-b border-[#e2e8f2] bg-slate-50 px-2 py-1.5 lg:hidden">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMobilePanel("palette")}
+            className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700"
+          >
+            Paleta
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobilePanel("properties")}
+            className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700"
+          >
+            Propiedades
+          </button>
+        </div>
+        <span className="rounded-md bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+          {diagramSyncLifecycle === "bootstrap"
+            ? "bootstrap"
+            : diagramSyncLifecycle === "reconnecting"
+              ? "reconnecting"
+              : diagramSyncLifecycle === "offline_queue"
+                ? "offline queue"
+                : "live"}
+        </span>
+      </div>
+
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_280px]">
-        <div className="order-2 lg:order-none lg:col-start-1">
+        <div className="hidden min-h-0 lg:col-start-1 lg:block">
           <MaxGraphPalette
             viewModel={paletteViewModel}
             actions={{
               onSearch: setSearch,
-              toggleSection,
-              selectDiagramKind: onChangeDiagramKind,
-              insertShape,
+              toggleSection: handlers.toggleSection,
+              selectDiagramKind: handlers.onChangeDiagramKind,
+              insertShape: handlers.insertShape,
               selectEdgeTemplate: (template) => {
                 setSelectedEdgeTemplateId(template.id);
                 applyToolMode("connect");
@@ -2075,14 +530,14 @@ export const MaxGraphEditorShell = ({
         <div className="order-1 flex min-h-0 flex-col lg:order-none lg:col-start-2">
           <div
             ref={canvasWrapperRef}
-            className="relative min-h-[520px] flex-1 overflow-hidden"
+            className="relative min-h-0 flex-1 overflow-hidden"
             style={backgroundByMode(canvasMode, gridMode, currentKind)}
-            onDrop={onCanvasDrop}
+            onDrop={handlers.onCanvasDrop}
             onDragOver={(event) => {
               event.preventDefault();
               event.dataTransfer.dropEffect = "copy";
             }}
-            onDoubleClick={onDoubleClickCanvas}
+            onDoubleClick={handlers.onDoubleClickCanvas}
             onClick={() => setContextMenu({ open: false, x: 0, y: 0 })}
           >
             <div ref={graphContainerRef} className="h-full w-full" />
@@ -2121,7 +576,7 @@ export const MaxGraphEditorShell = ({
             {minimapEnabled ? (
               <div
                 ref={outlineContainerRef}
-                className="absolute right-3 bottom-3 z-20 h-[150px] w-[200px] overflow-hidden rounded-lg border border-slate-300 bg-white/80 shadow-lg backdrop-blur"
+                className="absolute right-2 bottom-14 z-20 hidden h-[120px] w-[160px] overflow-hidden rounded-lg border border-slate-300 bg-white/80 shadow-lg backdrop-blur md:block lg:bottom-3 lg:h-[150px] lg:w-[200px]"
               />
             ) : null}
 
@@ -2161,134 +616,119 @@ export const MaxGraphEditorShell = ({
               state={contextMenu}
               onClose={() => setContextMenu({ open: false, x: 0, y: 0 })}
               onEditStyle={() => setStyleEditorOpen(true)}
-              onEditData={() => {
-                // focus metadata section indirectly by opening style editor for now
-                setStyleEditorOpen(true);
-              }}
-              onSelectConnected={() => {
-                const graph = graphRef.current;
-                if (!graph) {
-                  return;
-                }
-                const selected = graph.getSelectionCell();
-                if (!selected) {
-                  return;
-                }
-                if (selected.isEdge()) {
-                  return;
-                }
-                const edges = graph.getEdges(selected, null, true, true, true, true);
-                graph.setSelectionCells([selected, ...edges]);
-              }}
-              onSelectSameType={() => {
-                const graph = graphRef.current;
-                if (!graph) {
-                  return;
-                }
-                const selected = graph.getSelectionCell();
-                if (!selected) {
-                  return;
-                }
-
-                const style = styleObjectToString(toStyleRecord(selected.getStyle()));
-                const cells = graph
-                  .getChildCells(graph.getDefaultParent(), true, true)
-                  .filter((cell) => styleObjectToString(toStyleRecord(cell.getStyle())) === style);
-
-                graph.setSelectionCells(cells);
-              }}
+              onEditData={() => setStyleEditorOpen(true)}
+              onSelectConnected={handlers.onContextSelectConnected}
+              onSelectSameType={handlers.onContextSelectSameType}
               onGroup={() => toolbarActions.groupSelection()}
-              onBringToFront={() => {
-                const graph = graphRef.current;
-                if (!graph || readOnly) {
-                  return;
-                }
-                graph.orderCells(false, graph.getSelectionCells());
-              }}
-              onSendToBack={() => {
-                const graph = graphRef.current;
-                if (!graph || readOnly) {
-                  return;
-                }
-                graph.orderCells(true, graph.getSelectionCells());
-              }}
-              onLockToggle={() => {
-                const graph = graphRef.current;
-                if (!graph || readOnly) {
-                  return;
-                }
-
-                const selected = graph.getSelectionCell();
-                if (!selected) {
-                  return;
-                }
-
-                const style = toStyleRecord(selected.getStyle());
-                const nextLocked = String(style.locked ?? "0") !== "1";
-                graph.setCellStyles("locked" as any, nextLocked ? 1 : 0, [selected]);
-              }}
-              onCopyStyle={() => {
-                const graph = graphRef.current;
-                const selected = graph?.getSelectionCell();
-                if (!selected) {
-                  return;
-                }
-                copiedStyleRef.current = cloneStyle(toStyleRecord(selected.getStyle()));
-              }}
-              onPasteStyle={() => {
-                if (readOnly) {
-                  return;
-                }
-                const graph = graphRef.current;
-                const selected = graph?.getSelectionCell();
-                if (!graph || !selected || !copiedStyleRef.current) {
-                  return;
-                }
-                graph.batchUpdate(() => {
-                  graph.getDataModel().setStyle(selected, copiedStyleRef.current as any);
-                });
-              }}
-              onDelete={onDeleteSelection}
+              onBringToFront={handlers.onContextBringToFront}
+              onSendToBack={handlers.onContextSendToBack}
+              onLockToggle={handlers.onContextLockToggle}
+              onCopyStyle={handlers.onContextCopyStyle}
+              onPasteStyle={handlers.onContextPasteStyle}
+              onDelete={handlers.onDeleteSelection}
             />
           </div>
 
           <MaxGraphPagesTabs
             document={drawioDocument}
-            readOnly={readOnly}
-            onAdd={onAddPage}
-            onRename={onRenamePage}
-            onDuplicate={onDuplicatePage}
-            onRemove={onRemovePage}
-            onSetActive={onSetActivePage}
+            readOnly={effectiveReadOnly || singlePageMode}
+            onAdd={handlers.onAddPage}
+            onRename={handlers.onRenamePage}
+            onDuplicate={handlers.onDuplicatePage}
+            onRemove={handlers.onRemovePage}
+            onSetActive={handlers.onSetActivePage}
           />
         </div>
 
-        <div className="hidden lg:block lg:col-start-3">
+        <div className="hidden min-h-0 lg:col-start-3 lg:block">
           <MaxGraphPropertiesPanel
             diagramKind={currentKind}
-            readOnly={readOnly}
+            readOnly={effectiveReadOnly}
             selected={selectedCell}
-            onLabelChange={onLabelChange}
-            onStylePatch={onStylePatch}
-            onReplaceStyle={onReplaceStyle}
-            onGeometryPatch={onGeometryPatch}
-            onCenter={onCenterCell}
-            onHighlightConnection={onHighlightConnection}
-            onDeleteConnection={onDeleteConnection}
-            onAddMetadata={onAddMetadata}
-            onUpdateMetadata={onUpdateMetadata}
-            onRemoveMetadata={onRemoveMetadata}
+            onLabelChange={handlers.onLabelChange}
+            onStylePatch={handlers.onStylePatch}
+            onReplaceStyle={handlers.onReplaceStyle}
+            onGeometryPatch={handlers.onGeometryPatch}
+            onCenter={handlers.onCenterCell}
+            onHighlightConnection={handlers.onHighlightConnection}
+            onDeleteConnection={handlers.onDeleteConnection}
+            onAddMetadata={handlers.onAddMetadata}
+            onUpdateMetadata={handlers.onUpdateMetadata}
+            onRemoveMetadata={handlers.onRemoveMetadata}
             onOpenStyleEditor={() => setStyleEditorOpen(true)}
           />
         </div>
-
       </div>
+
+      {mobilePanel !== "none" ? (
+        <div className="absolute inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/35"
+            aria-label="Cerrar panel"
+            onClick={() => setMobilePanel("none")}
+          />
+          <div
+            className={`absolute top-0 bottom-0 z-10 w-[min(92vw,360px)] overflow-hidden bg-white shadow-xl ${
+              mobilePanel === "palette" ? "left-0 border-r border-[#e2e8f2]" : "right-0 border-l border-[#e2e8f2]"
+            }`}
+          >
+            <div className="flex items-center justify-between border-b border-[#e2e8f2] px-3 py-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {mobilePanel === "palette" ? "Paleta" : "Propiedades"}
+              </p>
+              <button
+                type="button"
+                className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700"
+                onClick={() => setMobilePanel("none")}
+              >
+                Cerrar
+              </button>
+            </div>
+            <div className="h-[calc(100%-45px)]">
+              {mobilePanel === "palette" ? (
+                <MaxGraphPalette
+                  viewModel={paletteViewModel}
+                  actions={{
+                    onSearch: setSearch,
+                    toggleSection: handlers.toggleSection,
+                    selectDiagramKind: handlers.onChangeDiagramKind,
+                    insertShape: handlers.insertShape,
+                    selectEdgeTemplate: (template) => {
+                      setSelectedEdgeTemplateId(template.id);
+                      applyToolMode("connect");
+                      setMobilePanel("none");
+                    }
+                  }}
+                />
+              ) : (
+                <MaxGraphPropertiesPanel
+                  diagramKind={currentKind}
+                  readOnly={effectiveReadOnly}
+                  selected={selectedCell}
+                  onLabelChange={handlers.onLabelChange}
+                  onStylePatch={handlers.onStylePatch}
+                  onReplaceStyle={handlers.onReplaceStyle}
+                  onGeometryPatch={handlers.onGeometryPatch}
+                  onCenter={handlers.onCenterCell}
+                  onHighlightConnection={handlers.onHighlightConnection}
+                  onDeleteConnection={handlers.onDeleteConnection}
+                  onAddMetadata={handlers.onAddMetadata}
+                  onUpdateMetadata={handlers.onUpdateMetadata}
+                  onRemoveMetadata={handlers.onRemoveMetadata}
+                  onOpenStyleEditor={() => setStyleEditorOpen(true)}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <MaxGraphStyleEditorModal
         open={styleEditorOpen}
         style={selectedCell.style}
         onClose={() => setStyleEditorOpen(false)}
-        onApply={onReplaceStyle}
+        onApply={handlers.onReplaceStyle}
         onReset={() => {
           const graph = graphRef.current;
           const selected = graph?.getSelectionCell();
@@ -2309,7 +749,7 @@ export const MaxGraphEditorShell = ({
         open={templatesOpen}
         kind={currentKind}
         onClose={() => setTemplatesOpen(false)}
-        onApply={applyTemplate}
+        onApply={handlers.applyTemplate}
       />
 
       <UiModal
@@ -2358,7 +798,7 @@ export const MaxGraphEditorShell = ({
               type="button"
               className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               onClick={() => {
-                onRenamePageConfirm(renamePageModal.pageId, renamePageModal.inputValue);
+                handlers.onRenamePageConfirm(renamePageModal.pageId, renamePageModal.inputValue);
                 setRenamePageModal((prev) => ({ ...prev, open: false }));
               }}
             >
@@ -2372,9 +812,9 @@ export const MaxGraphEditorShell = ({
           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
           value={renamePageModal.inputValue}
           onChange={(e) => setRenamePageModal((prev) => ({ ...prev, inputValue: e.target.value }))}
-          onKeyDown={(e) => {
+          onKeyDown={(e: ReactKeyboardEvent<HTMLInputElement>) => {
             if (e.key === "Enter") {
-              onRenamePageConfirm(renamePageModal.pageId, renamePageModal.inputValue);
+              handlers.onRenamePageConfirm(renamePageModal.pageId, renamePageModal.inputValue);
               setRenamePageModal((prev) => ({ ...prev, open: false }));
             }
           }}
@@ -2399,7 +839,7 @@ export const MaxGraphEditorShell = ({
               type="button"
               className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               onClick={() => {
-                onAddPageConfirm(addPageModal.inputValue);
+                handlers.onAddPageConfirm(addPageModal.inputValue);
                 setAddPageModal((prev) => ({ ...prev, open: false }));
               }}
             >
@@ -2413,9 +853,9 @@ export const MaxGraphEditorShell = ({
           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
           value={addPageModal.inputValue}
           onChange={(e) => setAddPageModal((prev) => ({ ...prev, inputValue: e.target.value }))}
-          onKeyDown={(e) => {
+          onKeyDown={(e: ReactKeyboardEvent<HTMLInputElement>) => {
             if (e.key === "Enter") {
-              onAddPageConfirm(addPageModal.inputValue);
+              handlers.onAddPageConfirm(addPageModal.inputValue);
               setAddPageModal((prev) => ({ ...prev, open: false }));
             }
           }}
@@ -2424,4 +864,4 @@ export const MaxGraphEditorShell = ({
       </UiModal>
     </div>
   );
-};
+});

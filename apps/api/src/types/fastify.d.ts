@@ -1,4 +1,4 @@
-import type { ActionType, EntityType, Permission, SystemRole } from "@corelia/types";
+import type { ActionType, EntityType, Permission, RoleCode } from "@corelia/types";
 import type { PrismaClient } from "@prisma/client";
 import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
@@ -50,17 +50,18 @@ declare module "fastify" {
     };
     accessContext?: {
       projectId: string | null;
-      activeRole: SystemRole;
+      activeRoleId: string;
+      activeRole: RoleCode;
       permissions: Permission[];
     };
     auditEvent?: {
       entityType: EntityType;
       entityId: string;
       action: ActionType;
-      previousData?: Record<string, unknown> | null;
-      newData?: Record<string, unknown> | null;
+      previousDataText?: Record<string, unknown> | null;
+      newDataText?: Record<string, unknown> | null;
       reason?: string;
-      reasonCode?: string;
+      reasonCatalogId?: string;
     };
   }
 

@@ -1,6 +1,21 @@
 import type { FastifyInstance } from "fastify";
 import { getMostRestrictiveRole, getPermissionsForRole } from "../../lib/rbac.js";
 
+const resolveRoleKey = (
+  role: { key?: string | null; code?: string | number | null } | null | undefined
+): string | undefined => {
+  if (!role) {
+    return undefined;
+  }
+  if (typeof role.key === "string") {
+    return role.key;
+  }
+  if (typeof role.code === "string") {
+    return role.code;
+  }
+  return undefined;
+};
+
 export class IdentityService {
   private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
   private static readonly PRESENCE_ONLINE_KEY_PREFIX = "presence:online:";
@@ -19,11 +34,30 @@ export class IdentityService {
       };
     }
 
-    const redisPipeline = this.app.redis.pipeline();
-    for (const userId of uniqueUserIds) {
-      redisPipeline.scard(this.presenceKey(userId));
+    const redisClient = (this.app as {
+      redis?: {
+        pipeline?: () => {
+          scard: (key: string) => void;
+          exec: () => Promise<Array<[unknown, unknown]> | null>;
+        };
+        scard?: (key: string) => Promise<number | string | null>;
+      };
+    }).redis;
+
+    let redisResult: Array<[unknown, unknown]> | null = null;
+
+    if (redisClient?.pipeline) {
+      const redisPipeline = redisClient.pipeline();
+      for (const userId of uniqueUserIds) {
+        redisPipeline.scard(this.presenceKey(userId));
+      }
+      redisResult = await redisPipeline.exec();
+    } else if (redisClient?.scard) {
+      const values = await Promise.all(
+        uniqueUserIds.map(async (userId) => redisClient.scard?.(this.presenceKey(userId)) ?? 0)
+      );
+      redisResult = values.map((value) => [null, value] as [null, number | string | null]);
     }
-    const redisResult = await redisPipeline.exec();
 
     const onlineSet = new Set<string>();
     if (redisResult) {
@@ -42,20 +76,28 @@ export class IdentityService {
       }
     }
 
-    const inMeetingRows = await this.app.prisma.meetingParticipant.findMany({
-      where: {
-        userId: { in: uniqueUserIds },
-        joinedAt: { not: null },
-        leftAt: null,
-        meeting: {
-          status: "EN_CURSO"
-        }
-      },
-      select: {
-        userId: true
-      },
-      distinct: ["userId"]
-    });
+    const meetingParticipantModel = (this.app.prisma as {
+      meetingParticipant?: {
+        findMany?: (args: unknown) => Promise<Array<{ userId: string }>>;
+      };
+    }).meetingParticipant;
+
+    const inMeetingRows = meetingParticipantModel?.findMany
+      ? await meetingParticipantModel.findMany({
+          where: {
+            userId: { in: uniqueUserIds },
+            joinedAt: { not: null },
+            leftAt: null,
+            meeting: {
+              status: "EN_CURSO"
+            }
+          },
+          select: {
+            userId: true
+          },
+          distinct: ["userId"]
+        })
+      : [];
     const inMeetingSet = new Set(inMeetingRows.map((row) => row.userId));
 
     return {
@@ -70,7 +112,10 @@ export class IdentityService {
     };
   }
 
-  private normalizeLegacyCode(input: { code?: string | null; text?: string | null }) {
+  private normalizeLegacyCode(input: {
+    code?: string | null | undefined;
+    text?: string | null | undefined;
+  }) {
     if (input.code?.trim()) {
       return input.code.trim();
     }
@@ -83,42 +128,105 @@ export class IdentityService {
   }
 
   async resolveActiveRole(userId: string, projectId?: string) {
+    const guestRole = await this.app.prisma.role.findUnique({
+      where: {
+        key: "INVITADO_EXTERNO"
+      },
+      select: {
+        id: true,
+        key: true,
+        code: true
+      }
+    });
+
+    if (!guestRole) {
+      throw new Error("Rol INVITADO_EXTERNO no configurado");
+    }
+
     if (projectId) {
       const membership = await this.app.prisma.projectMember.findFirst({
         where: { projectId, userId },
-        select: { role: true }
+        select: {
+          role: {
+            select: {
+              id: true,
+              key: true,
+              code: true
+            }
+          }
+        }
       });
 
-      const role = membership?.role ?? "INVITADO_EXTERNO";
+      const role = membership?.role ?? guestRole;
+      const roleKey = resolveRoleKey(role) ?? "INVITADO_EXTERNO";
       return {
         userId,
         projectId,
-        role,
-        permissions: getPermissionsForRole(role)
+        roleId: role.id,
+        role: roleKey,
+        permissions: getPermissionsForRole(roleKey)
       };
     }
 
     const memberships = await this.app.prisma.projectMember.findMany({
       where: { userId },
-      select: { role: true }
+      select: {
+        role: {
+          select: {
+            id: true,
+            key: true,
+            code: true
+          }
+        }
+      }
     });
     const user = await this.app.prisma.user.findUnique({
       where: { id: userId },
-      select: { baseRole: true }
+      select: {
+        baseRole: {
+          select: {
+            id: true,
+            key: true,
+            code: true
+          }
+        }
+      }
     });
 
-    const roles = memberships.map((m) => m.role);
+    const roles = memberships
+      .map((m) => resolveRoleKey(m.role))
+      .filter((role): role is string => Boolean(role));
     if (user?.baseRole) {
-      roles.push(user.baseRole);
+      const baseRoleKey = resolveRoleKey(user.baseRole);
+      if (baseRoleKey) {
+        roles.push(baseRoleKey);
+      }
     }
 
     const role = getMostRestrictiveRole(roles.length ? roles : ["INVITADO_EXTERNO"]);
+    const resolvedRole =
+      memberships.find((membership) => resolveRoleKey(membership.role) === role)?.role ??
+      (resolveRoleKey(user?.baseRole) === role ? user?.baseRole ?? null : null) ??
+      (await this.app.prisma.role.findUnique({
+        where: {
+          key: role
+        },
+        select: {
+          id: true,
+          key: true,
+          code: true
+        }
+      })) ??
+      guestRole;
+
+    const resolvedRoleKey = resolveRoleKey(resolvedRole) ?? "INVITADO_EXTERNO";
 
     return {
       userId,
       projectId: null,
-      role,
-      permissions: getPermissionsForRole(role)
+      roleId: resolvedRole.id,
+      role: resolvedRoleKey,
+      permissions: getPermissionsForRole(resolvedRoleKey)
     };
   }
 
@@ -206,7 +314,7 @@ export class IdentityService {
     userId: string;
     transferToUserId: string;
     reason: string;
-    reasonCode?: string;
+    reasonCatalogId?: string;
     archiveHistory: boolean;
   }) {
     if (input.userId === input.transferToUserId) {
@@ -239,8 +347,8 @@ export class IdentityService {
           userId: input.userId,
           transferToUserId: input.transferToUserId,
           reason: input.reason,
-          reasonCode: this.normalizeLegacyCode({
-            code: input.reasonCode,
+          reasonCatalogId: this.normalizeLegacyCode({
+            code: input.reasonCatalogId,
             text: input.reason
           }),
           archivedAt: input.archiveHistory ? new Date() : null
@@ -253,8 +361,8 @@ export class IdentityService {
 
   async createGuestInvite(input: {
     email: string;
-    resourceType: "PROYECTO" | "ARCHIVO" | "DOCUMENTO";
-    resourceId: string;
+    resourceScopeType: "PROYECTO" | "ARCHIVO" | "DOCUMENTO";
+    resourceScopeId: string;
     expiresAt: string;
     createdById: string;
   }) {
@@ -264,8 +372,9 @@ export class IdentityService {
     return this.app.prisma.guestInvite.create({
       data: {
         email: input.email,
-        resourceType: input.resourceType,
-        resourceId: input.resourceId,
+        projectId: input.resourceScopeType === "PROYECTO" ? input.resourceScopeId : null,
+        fileId: input.resourceScopeType === "ARCHIVO" ? input.resourceScopeId : null,
+        documentId: input.resourceScopeType === "DOCUMENTO" ? input.resourceScopeId : null,
         expiresAt: new Date(input.expiresAt),
         tokenHash,
         createdById: input.createdById
@@ -277,6 +386,12 @@ export class IdentityService {
     const users = await this.app.prisma.user.findMany({
       where: { isActive: true },
       include: {
+        baseRole: {
+          select: {
+            key: true,
+            code: true
+          }
+        },
         personProfile: true,
         teamMemberships: {
           include: {
@@ -297,7 +412,7 @@ export class IdentityService {
       return {
         userId: user.id,
         fullName: `${user.firstName} ${user.lastName}`,
-        activeRole: user.baseRole,
+        activeRole: resolveRoleKey(user.baseRole) ?? "INVITADO_EXTERNO",
         presence: presenceByUserId.get(user.id) ?? "DESCONECTADO",
         teamName: team,
         schedule: user.workSchedule
@@ -321,10 +436,17 @@ export class IdentityService {
   async listTeamsForUser(userId: string) {
     const user = await this.app.prisma.user.findUnique({
       where: { id: userId },
-      select: { baseRole: true }
+      select: {
+        baseRole: {
+          select: {
+            key: true,
+            code: true
+          }
+        }
+      }
     });
 
-    if (user?.baseRole === "ADMINISTRADOR") {
+    if (resolveRoleKey(user?.baseRole) === "ADMINISTRADOR") {
       const teams = await this.app.prisma.team.findMany({
         select: {
           id: true,

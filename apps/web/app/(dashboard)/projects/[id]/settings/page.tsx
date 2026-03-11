@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { SystemRole } from "@corelia/types";
+import type { RoleCode } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
 import { UiModal } from "@/components/ui-modal";
 import { apiRequest } from "@/lib/api";
@@ -15,7 +15,7 @@ type ProjectMembersResponse = {
     userId: string;
     fullName: string;
     email: string;
-    role: SystemRole;
+    role: RoleCode;
     joinedAt: string;
   }>;
 };
@@ -23,7 +23,7 @@ type ProjectMembersResponse = {
 type DirectoryProfile = {
   userId: string;
   fullName: string;
-  activeRole: SystemRole;
+  activeRole: RoleCode;
   teamName: string | null;
   contact: {
     email: string;
@@ -50,7 +50,7 @@ type LinkedTeamsResponse = {
   }>;
 };
 
-const roleOptions: SystemRole[] = [
+const roleOptions: RoleCode[] = [
   "LIDER_PROYECTO",
   "COORDINADOR_EQUIPO",
   "COLABORADOR",
@@ -61,9 +61,11 @@ const roleOptions: SystemRole[] = [
 export default function ProjectSettingsPage() {
   const params = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [memberModalError, setMemberModalError] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
-  const [selectedRole, setSelectedRole] = useState<SystemRole>("COLABORADOR");
+  const [selectedRole, setSelectedRole] = useState<RoleCode>("COLABORADOR");
   const [teamModalOpen, setTeamModalOpen] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [teamLinkError, setTeamLinkError] = useState<string | null>(null);
@@ -102,11 +104,20 @@ export default function ProjectSettingsPage() {
           role: selectedRole
         })
       }),
+    onMutate: () => {
+      setMemberModalError(null);
+    },
     onSuccess: async () => {
+      setMemberModalOpen(false);
+      setMemberModalError(null);
+      setUserSearch("");
       setSelectedUserId("");
       setSelectedRole("COLABORADOR");
       await queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (error) => {
+      setMemberModalError(error.message);
     }
   });
 
@@ -156,7 +167,10 @@ export default function ProjectSettingsPage() {
     }
   });
 
-  const memberIds = new Set((membersQuery.data?.members ?? []).map((member) => member.userId));
+  const memberIds = useMemo(
+    () => new Set((membersQuery.data?.members ?? []).map((member) => member.userId)),
+    [membersQuery.data?.members]
+  );
 
   const candidateUsers = useMemo(() => {
     const users = directoryQuery.data ?? [];
@@ -182,6 +196,16 @@ export default function ProjectSettingsPage() {
     const linkedIds = new Set((linkedTeamsQuery.data?.items ?? []).map((item) => item.teamId));
     return (teamsQuery.data?.items ?? []).filter((team) => !linkedIds.has(team.id));
   }, [linkedTeamsQuery.data?.items, teamsQuery.data?.items]);
+
+  const defaultCandidateUserId = useMemo(() => {
+    const users = directoryQuery.data ?? [];
+    return users.find((user) => !memberIds.has(user.userId))?.userId ?? "";
+  }, [directoryQuery.data, memberIds]);
+
+  const selectedUser = useMemo(
+    () => (directoryQuery.data ?? []).find((user) => user.userId === selectedUserId) ?? null,
+    [directoryQuery.data, selectedUserId]
+  );
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-4 px-4 py-8 md:px-6">
@@ -277,50 +301,129 @@ export default function ProjectSettingsPage() {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">Agregar miembro</h2>
-        <div className="grid gap-2 md:grid-cols-3">
-          <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            placeholder="Buscar por nombre"
-            value={userSearch}
-            onChange={(event) => setUserSearch(event.target.value)}
-          />
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={selectedUserId}
-            onChange={(event) => setSelectedUserId(event.target.value)}
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-slate-900">Agregar miembro</h2>
+          <Button
+            type="button"
+            className="h-8 px-3 text-xs"
+            onClick={() => {
+              setUserSearch("");
+              setMemberModalError(null);
+              setSelectedRole("COLABORADOR");
+              setSelectedUserId(defaultCandidateUserId);
+              setMemberModalOpen(true);
+            }}
           >
-            <option value="">Seleccionar usuario</option>
-            {candidateUsers.map((user) => (
-              <option key={user.userId} value={user.userId}>
-                {user.fullName} · {user.contact.email}
-              </option>
-            ))}
-          </select>
-          <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
-            value={selectedRole}
-            onChange={(event) => setSelectedRole(event.target.value as SystemRole)}
-          >
-            {roleOptions.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
+            Abrir selector
+          </Button>
         </div>
-
-        <Button
-          type="button"
-          disabled={addMemberMutation.isPending || !selectedUserId}
-          onClick={() => addMemberMutation.mutate()}
-        >
-          {addMemberMutation.isPending ? "Agregando..." : "Agregar miembro"}
-        </Button>
-
+        <p className="text-sm text-slate-600">
+          Usa el modal para buscar rápidamente al colaborador y asignar su cargo.
+        </p>
         {addMemberMutation.error ? <p className="text-sm text-red-600">{addMemberMutation.error.message}</p> : null}
         {removeMemberMutation.error ? <p className="text-sm text-red-600">{removeMemberMutation.error.message}</p> : null}
       </Card>
+
+      <UiModal
+        open={memberModalOpen}
+        onClose={() => {
+          if (!addMemberMutation.isPending) {
+            setMemberModalOpen(false);
+          }
+        }}
+        title="Agregar miembro al proyecto"
+        widthClassName="max-w-2xl"
+      >
+        <div className="space-y-3">
+          <label className="block space-y-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Buscar colaborador</span>
+            <input
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              placeholder="Nombre o correo"
+              value={userSearch}
+              onChange={(event) => setUserSearch(event.target.value)}
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Cargo en proyecto</span>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={selectedRole}
+              onChange={(event) => setSelectedRole(event.target.value as RoleCode)}
+            >
+              {roleOptions.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <p className="text-xs text-slate-500">Resultados: {candidateUsers.length}</p>
+
+          <div className="max-h-72 overflow-y-auto rounded-xl border border-slate-200">
+            {candidateUsers.length === 0 ? (
+              <p className="p-3 text-sm text-slate-600">No hay usuarios disponibles para agregar con este filtro.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {candidateUsers.map((user) => {
+                  const isSelected = selectedUserId === user.userId;
+                  return (
+                    <li key={user.userId}>
+                      <button
+                        type="button"
+                        className={`w-full p-3 text-left transition ${
+                          isSelected ? "bg-blue-50" : "hover:bg-slate-50"
+                        }`}
+                        onClick={() => setSelectedUserId(user.userId)}
+                      >
+                        <p className="text-sm font-medium text-slate-900">{user.fullName}</p>
+                        <p className="text-xs text-slate-600">
+                          {user.contact.email}
+                          {user.teamName ? ` · ${user.teamName}` : " · Sin equipo"}
+                        </p>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          {selectedUser ? (
+            <p className="text-xs text-slate-600">
+              Seleccionado: {selectedUser.fullName} · {selectedUser.contact.email}
+            </p>
+          ) : null}
+
+          {memberModalError ? <p className="text-xs text-red-600">{memberModalError}</p> : null}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setMemberModalOpen(false)}
+            disabled={addMemberMutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            disabled={addMemberMutation.isPending || !selectedUserId}
+            onClick={() => {
+              if (!selectedUserId) {
+                setMemberModalError("Selecciona un colaborador para continuar");
+                return;
+              }
+              addMemberMutation.mutate();
+            }}
+          >
+            {addMemberMutation.isPending ? "Agregando..." : "Agregar miembro"}
+          </Button>
+        </div>
+      </UiModal>
 
       <UiModal
         open={teamModalOpen}

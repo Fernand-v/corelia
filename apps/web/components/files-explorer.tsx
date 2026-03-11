@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest, getApiBaseUrl, getAuthToken, getPublicApiKey } from "@/lib/api";
+import { apiRequest, getApiBaseUrl, getAuthToken } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { withDashboardContext } from "@/lib/context";
 import { FilesModule } from "@/components/files-module";
@@ -221,8 +221,7 @@ export const FilesExplorer = ({
       {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
-          "x-api-key": getPublicApiKey()
+          Authorization: `Bearer ${token}`
         }
       }
     );
@@ -283,8 +282,8 @@ export const FilesExplorer = ({
   };
 
   const currentFolder = explorerQuery.data?.currentFolder ?? null;
-  const folders = explorerQuery.data?.folders ?? [];
-  const files = explorerQuery.data?.files ?? [];
+  const folders = useMemo(() => explorerQuery.data?.folders ?? [], [explorerQuery.data?.folders]);
+  const files = useMemo(() => explorerQuery.data?.files ?? [], [explorerQuery.data?.files]);
 
   const mappedFiles = useMemo<ExplorerFileItem[]>(() => {
     return files.map((file) => ({

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { idSchema, timestampSchema } from "./common.js";
-import { systemRoleSchema, taskStatusSchema } from "./enums.js";
+import { taskStatusSchema } from "./enums.js";
+import { roleCodeSchema } from "./rbac.js";
 import { announcementContentSchema } from "./announcements.js";
 
 export const homeQuickActionSchema = z.object({
@@ -162,15 +163,15 @@ export const homeOperationalSummaryBlockSchema = z.object({
 
 export const homeSharedResourceSchema = z.object({
   id: idSchema,
-  resourceType: z.enum(["PROYECTO", "ARCHIVO", "DOCUMENTO"]),
-  resourceId: idSchema,
+  resourceScopeType: z.enum(["PROYECTO", "ARCHIVO", "DOCUMENTO"]),
+  resourceScopeId: idSchema,
   expiresAt: timestampSchema,
   contactName: z.string().min(1).nullable()
 });
 
 export const homeDashboardSchema = z.object({
   generatedAt: timestampSchema,
-  role: systemRoleSchema,
+  role: roleCodeSchema,
   organizationName: z.string().min(1),
   activeContext: z.object({
     type: z.enum(["GLOBAL", "PROYECTO", "EQUIPO", "EXTERNO"]),

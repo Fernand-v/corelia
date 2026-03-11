@@ -1,0 +1,145 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "Channel" as Channel {
+  * id: String
+    name: String
+    scope: ChannelScope
+    teamId: String?
+    projectId: String?
+    createdAt: DateTime
+    members: ChannelMember[]
+    messages: Message[]
+}
+
+entity "ChannelMember" as ChannelMember {
+  * id: String
+    channelId: String
+    userId: String
+    joinedAt: DateTime
+}
+
+entity "Message" as Message {
+  * id: String
+    channelId: String
+    authorId: String
+    kind: MessageKind
+    content: String
+    mentions: String[]
+    meetingId: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+    attachments: MessageAttachment[]
+}
+
+entity "MessageAttachment" as MessageAttachment {
+  * id: String
+    messageId: String
+    originalName: String
+    mimeType: String
+    sizeBytes: Int
+    minioPath: String
+    createdAt: DateTime
+}
+
+entity "Meeting" as Meeting {
+  * id: String
+    title: String
+    description: String?
+    descriptionCatalogId: String?
+    projectId: String?
+    teamId: String?
+    startsAt: DateTime
+    endsAt: DateTime
+    createdById: String
+    status: MeetingStatus
+    mediaRoomId: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+    participants: MeetingParticipant[]
+    agendaItems: MeetingAgendaItem[]
+    notes: MeetingNote[]
+    agreements: MeetingAgreement[]
+    messages: Message[]
+}
+
+entity "MeetingParticipant" as MeetingParticipant {
+  * id: String
+    meetingId: String
+    userId: String
+    roleId: String?
+    muted: Boolean
+    cameraOn: Boolean
+    screenSharing: Boolean
+    speaking: Boolean
+    joinedAt: DateTime?
+    leftAt: DateTime?
+    createdAt: DateTime
+}
+
+entity "MeetingAgendaItem" as MeetingAgendaItem {
+  * id: String
+    meetingId: String
+    text: String
+    order: Int
+    createdAt: DateTime
+}
+
+entity "MeetingNote" as MeetingNote {
+  * id: String
+    meetingId: String
+    authorId: String
+    content: String
+    metadata: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "MeetingAgreement" as MeetingAgreement {
+  * id: String
+    meetingId: String
+    title: String
+    description: String?
+    descriptionCatalogId: String?
+    status: MeetingAgreementStatus
+    authorId: String
+    taskId: String?
+    createdTask: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "NotificationPreference" as NotificationPreference {
+  * id: String
+    userId: String
+    event: NotificationEvent
+    channel: NotificationChannel
+    frequency: NotificationFrequency
+    enabled: Boolean
+}
+
+entity "Notification" as Notification {
+  * id: String
+    userId: String
+    event: NotificationEvent
+    channel: NotificationChannel
+    title: String
+    body: String
+    sentAt: DateTime?
+    deliveredAt: DateTime?
+    readAt: DateTime?
+    createdAt: DateTime
+}
+
+ChannelMember }o--|| Channel : channelId
+Message }o--|| Channel : channelId
+Message }o--|| Meeting : meetingId
+MessageAttachment }o--|| Message : messageId
+MeetingParticipant }o--|| Meeting : meetingId
+MeetingAgendaItem }o--|| Meeting : meetingId
+MeetingNote }o--|| Meeting : meetingId
+MeetingAgreement }o--|| Meeting : meetingId
+
+@enduml

@@ -20,8 +20,12 @@ Corelia requiere un núcleo operativo on-premise con stack único TypeScript, co
 3. El costo operativo queda controlado para entorno on-premise de un único nodo en Fase 1.
 4. La auditoría queda normalizada para eventos críticos, facilitando cumplimiento y trazabilidad.
 
-## Riesgos de seguridad aceptados temporalmente (2026-02-27)
-1. `next@14.2.35` reporta `GHSA-h25m-26qc-wcjf` (DoS en escenarios de React Server Components inseguros), corregido aguas arriba recién en `next>=15.0.8`.
-2. Se mantiene `Next.js 14` por restricción de stack de Fase 1 y compatibilidad del proyecto; migrar a `Next.js 15` se agenda para Fase 2 con plan de regresión UI/API.
-3. `GHSA-5j98-mcp5-4vw2` aparece vía `eslint-config-next` (dependencia de lint), sin impacto en runtime de negocio.
-4. Mitigaciones aplicadas: rate limiting en API auth, proxy Nginx con hardening, endpoint público limitado a `/status`, y actualización inmediata de dependencias runtime críticas (`next` parcheada dentro de rama 14 y `nodemailer` 7.0.11).
+## Estado de seguridad runtime (actualizado 2026-03-09)
+1. Se cerró el riesgo temporal de `next@14.2.35` (`GHSA-h25m-26qc-wcjf`) al migrar a `next@15.5.10` y actualizar el stack de lint web a plugin de Next 15.
+2. Se retiró `xlsx` del runtime de API por advisories abiertos sin parche efectivo en la rama usada, migrando exportación ejecutiva a `exceljs`.
+3. Se actualizaron dependencias runtime críticas (`jspdf`, `fastify`) y se aplicaron `pnpm.overrides` transitorios con trazabilidad explícita:
+   - `tar@7.5.11`
+   - `dompurify@3.3.2`
+   - `nanoid@5.1.6`
+   - `mermaid@11.13.0`
+4. No quedan excepciones críticas/altas abiertas en runtime al cierre de esta actualización (2026-03-09). Revisión periódica acordada: ejecutar `pnpm security:audit` por PR y seguimiento mensual de seguridad el día 9 de cada mes.

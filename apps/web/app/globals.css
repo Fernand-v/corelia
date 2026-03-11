@@ -192,6 +192,67 @@ body {
   .word-page { padding: 32px 24px; min-height: auto; }
 }
 
+.word-page .ProseMirror .tableWrapper {
+  overflow-x: auto;
+  margin: 14px 0;
+}
+
+.word-page .ProseMirror {
+  position: relative;
+}
+
+.word-page .ProseMirror > *:not(.word-image-free) {
+  position: relative;
+  z-index: 6;
+}
+
+.word-page .ProseMirror .word-image-node {
+  max-width: 100%;
+}
+
+.word-page .ProseMirror .word-image-node img {
+  margin: 0;
+}
+
+.word-page .ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #ffffff;
+}
+
+.word-page .ProseMirror th,
+.word-page .ProseMirror td {
+  min-width: 120px;
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
+  position: relative;
+  vertical-align: top;
+  text-align: left;
+}
+
+.word-page .ProseMirror th {
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.word-page .ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(59, 130, 246, 0.16);
+}
+
+.word-page .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px 0;
+  border-radius: 8px;
+}
+
 .dashboard-content h1,
 .dashboard-content h2,
 .dashboard-content h1 + p,

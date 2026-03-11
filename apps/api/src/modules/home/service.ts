@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { HomeDashboard, SystemRole, TaskStatus } from "@corelia/types";
+import type { HomeDashboard, RoleCode, TaskStatus } from "@corelia/types";
 import { getFrontendSettings } from "../../lib/frontend-settings.js";
 import { StatusService } from "../status/service.js";
 import { parseAnnouncementBody } from "../announcements/content.js";
@@ -44,7 +44,7 @@ const extractNotificationPath = (body: string): string | null => {
 export class HomeService {
   constructor(private readonly app: FastifyInstance) {}
 
-  private getQuickActions(role: SystemRole, organizationName: string): HomeDashboard["quickActions"] {
+  private getQuickActions(role: RoleCode, organizationName: string): HomeDashboard["quickActions"] {
     const base = [
       { key: "buscar", label: `Buscar en ${organizationName}`, path: "/search", intent: "SEARCH" as const }
     ];
@@ -118,7 +118,7 @@ export class HomeService {
   }
 
   private async getActiveContext(input: {
-    role: SystemRole;
+    role: RoleCode;
     projectId?: string;
     teamId?: string;
   }): Promise<HomeDashboard["activeContext"]> {
@@ -680,7 +680,21 @@ export class HomeService {
   > {
     const leadProjects = await this.app.prisma.project.findMany({
       where: {
-        OR: [{ ownerId: userId }, { members: { some: { userId, role: "LIDER_PROYECTO" } } }]
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: {
+                userId,
+                role: {
+                  is: {
+                    key: "LIDER_PROYECTO"
+                  }
+                }
+              }
+            }
+          }
+        ]
       },
       select: {
         id: true,
@@ -958,13 +972,21 @@ export class HomeService {
       }
     });
 
-    const sharedResources = invites.map((invite) => ({
-      id: invite.id,
-      resourceType: invite.resourceType,
-      resourceId: invite.resourceId,
-      expiresAt: invite.expiresAt.toISOString(),
-      contactName: `${invite.createdBy.firstName} ${invite.createdBy.lastName}`.trim()
-    }));
+    const sharedResources = invites.map((invite) => {
+      const resourceScopeType: "PROYECTO" | "ARCHIVO" | "DOCUMENTO" = invite.projectId
+        ? "PROYECTO"
+        : invite.fileId
+          ? "ARCHIVO"
+          : "DOCUMENTO";
+
+      return {
+        id: invite.id,
+        resourceScopeType,
+        resourceScopeId: invite.projectId ?? invite.fileId ?? invite.documentId ?? "",
+        expiresAt: invite.expiresAt.toISOString(),
+        contactName: `${invite.createdBy.firstName} ${invite.createdBy.lastName}`.trim()
+      };
+    });
 
     const firstExpiration = invites[0]?.expiresAt;
     const firstContact = invites[0]
@@ -983,7 +1005,7 @@ export class HomeService {
 
   async getDashboard(input: {
     userId: string;
-    role: SystemRole;
+    role: RoleCode;
     projectId?: string;
     teamId?: string;
   }): Promise<HomeDashboard> {
@@ -1007,8 +1029,8 @@ export class HomeService {
     const [activeContext, unreadNotificationCount] = await Promise.all([
       this.getActiveContext({
         role: input.role,
-        projectId: input.projectId,
-        teamId: input.teamId
+        ...(input.projectId ? { projectId: input.projectId } : {}),
+        ...(input.teamId ? { teamId: input.teamId } : {})
       }),
       this.app.prisma.notification.count({
         where: {

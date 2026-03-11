@@ -259,9 +259,9 @@ export class FileService {
       data: {
         name: input.name,
         scope: input.scope,
-        teamId: input.teamId,
-        projectId: input.projectId,
-        parentId: input.parentId,
+        teamId: input.teamId ?? null,
+        projectId: input.projectId ?? null,
+        parentId: input.parentId ?? null,
         createdById: input.createdById
       }
     });
@@ -475,20 +475,18 @@ export class FileService {
     bytesLimit: bigint;
     alertThresholdPct: number;
   }) {
+    const isUserScope = input.scopeType === "USUARIO";
     return this.app.prisma.storageQuota.upsert({
       where: {
-        scopeType_scopeId: {
-          scopeType: input.scopeType,
-          scopeId: input.scopeId
-        }
+        ...(isUserScope ? { userId: input.scopeId } : { teamId: input.scopeId })
       },
       update: {
         bytesLimit: input.bytesLimit,
         alertThresholdPct: input.alertThresholdPct
       },
       create: {
-        scopeType: input.scopeType,
-        scopeId: input.scopeId,
+        userId: isUserScope ? input.scopeId : null,
+        teamId: isUserScope ? null : input.scopeId,
         bytesLimit: input.bytesLimit,
         alertThresholdPct: input.alertThresholdPct
       }
@@ -522,17 +520,14 @@ export class FileService {
     });
 
     const ownerQuota = await this.app.prisma.storageQuota.findUnique({
-        where: {
-          scopeType_scopeId: {
-            scopeType: "USUARIO",
-            scopeId: project.ownerId
-          }
-        },
-        select: {
-          bytesLimit: true,
-          alertThresholdPct: true
-        }
-      });
+      where: {
+        userId: project.ownerId
+      },
+      select: {
+        bytesLimit: true,
+        alertThresholdPct: true
+      }
+    });
 
     const resolvedQuota = ownerQuota;
     const usageBytes = usageAggregate._sum.sizeBytes ?? 0;

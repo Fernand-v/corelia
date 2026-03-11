@@ -66,7 +66,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           entityId: payload.taskId,
           action: "CAMBIO_ESTADO_TAREA",
           reason: payload.reason,
-          newData: {
+          newDataText: {
             completedTaskId: result.completedTask.id,
             nextTaskId: result.nextTask?.id ?? null
           }
@@ -101,7 +101,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           entityType: "TAREA",
           entityId: task.id,
           action: "CREAR",
-          newData: {
+          newDataText: {
             title: task.title,
             projectId: task.projectId,
             assigneeId: task.assigneeId
@@ -150,7 +150,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           startDate: payload.startDate,
           dueDate: payload.dueDate,
           reason: payload.reason,
-          reasonCode: payload.reasonCode,
+          reasonCatalogId: payload.reasonCatalogId,
           changedById: request.authUser!.id
         });
 
@@ -159,7 +159,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           entityId: params.taskId,
           action: "ACTUALIZAR",
           reason: payload.reason,
-          newData: {
+          newDataText: {
             startDate: task.startDate,
             dueDate: task.dueDate
           }
@@ -187,7 +187,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         const task = await service.activateTask({
           taskId: payload.taskId,
           reason: payload.reason,
-          reasonCode: payload.reasonCode,
+          reasonCatalogId: payload.reasonCatalogId,
           changedById: request.authUser!.id,
           activeRole: request.accessContext!.activeRole
         });
@@ -197,7 +197,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           entityId: payload.taskId,
           action: "CAMBIO_ESTADO_TAREA",
           reason: payload.reason,
-          newData: {
+          newDataText: {
             status: task.status,
             activatedManually: true
           }
@@ -233,7 +233,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           entityId: payload.taskId,
           action: "CAMBIO_ESTADO_TAREA",
           reason: payload.reason,
-          newData: {
+          newDataText: {
             status: payload.status,
             blockingTaskId: payload.blockingTaskId,
             blockedReason: payload.blockedReason
@@ -271,7 +271,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           entityId: payload.taskId,
           action: "REASIGNAR_TAREA",
           reason: payload.reason,
-          newData: {
+          newDataText: {
             newAssigneeId: payload.newAssigneeId,
             reopenIfCompleted: payload.reopenIfCompleted
           }

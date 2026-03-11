@@ -9,7 +9,7 @@ export class TimeService {
         taskId: input.taskId,
         userId: input.userId,
         minutes: input.minutes,
-        note: input.note
+        note: input.note ?? null
       }
     });
   }

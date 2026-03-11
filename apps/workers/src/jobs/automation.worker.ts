@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { connection, notificationsQueue } from "../lib/queues.js";
 import { runJobWithTrace } from "../lib/tracing.js";
+import { buildAuditTargetCreateData } from "../lib/audit-target.js";
 
 const prisma = new PrismaClient();
 const PENDING_ACTIVATION_SCAN_INTERVAL_MS = 60_000;
@@ -30,6 +31,19 @@ const resolveTaskStatus = (value: unknown): TaskStatus => {
   }
 
   return "EN_REVISION";
+};
+
+const parseConfig = (raw: string | null): Record<string, unknown> => {
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 };
 
 const activatePendingTasksLifecycle = async () => {
@@ -96,7 +110,7 @@ const activatePendingTasksLifecycle = async () => {
         fromStatus: "PENDIENTE",
         toStatus: "PENDIENTE",
         reason: "Activación automática por fecha de inicio o tarea previa completada",
-        reasonCode: "AUTO_PENDING_ACTIVATION",
+        reasonCatalogId: "AUTO_PENDING_ACTIVATION",
         changedById: task.createdById,
         changedAt: activatedAt
       }
@@ -105,7 +119,9 @@ const activatePendingTasksLifecycle = async () => {
     const leaders = await prisma.projectMember.findMany({
       where: {
         projectId: task.projectId,
-        role: "LIDER_PROYECTO"
+        role: {
+          key: "LIDER_PROYECTO"
+        }
       },
       select: {
         userId: true
@@ -179,8 +195,10 @@ export const automationWorker = new Worker(
         });
 
         for (const rule of rules) {
+          const ruleConfig = parseConfig(rule.config);
+
           if (rule.action === "ENVIAR_NOTIFICACION") {
-            const userId = firstString((rule.config as Record<string, unknown>).userId, context.userId);
+            const userId = firstString(ruleConfig.userId, context.userId);
             if (userId) {
               const notification = await prisma.notification.create({
                 data: {
@@ -202,17 +220,16 @@ export const automationWorker = new Worker(
           if (rule.action === "CREAR_AUDITORIA") {
             await prisma.auditLog.create({
               data: {
-                entityType: "AUTOMATIZACION",
-                entityId: rule.id,
+                ...buildAuditTargetCreateData("AUTOMATIZACION", rule.id),
                 action: "ACTUALIZAR",
-                newData: context as never
+                newDataText: JSON.stringify(context)
               }
             });
           }
 
           if (rule.action === "CAMBIAR_ESTADO_TAREA") {
-            const taskId = firstString((rule.config as Record<string, unknown>).taskId, context.taskId);
-            const status = resolveTaskStatus((rule.config as Record<string, unknown>).status);
+            const taskId = firstString(ruleConfig.taskId, context.taskId);
+            const status = resolveTaskStatus(ruleConfig.status);
             if (taskId) {
               await prisma.task.update({
                 where: { id: taskId },

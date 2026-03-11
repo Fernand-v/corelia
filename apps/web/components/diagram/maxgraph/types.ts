@@ -6,6 +6,8 @@ import type { DrawioDocument } from "@/lib/diagram/maxgraph/xml-format";
 export type CanvasMode = "light" | "dark";
 export type GridMode = "dots" | "lines" | "none";
 export type ActiveTool = "select" | "pan" | "connect" | "text";
+export type DiagramOfflineMode = "readonly" | "queue";
+export type DiagramSyncLifecycle = "bootstrap" | "live" | "reconnecting" | "offline_queue";
 
 export type RemoteCursorPresence = {
   documentId: string;
@@ -13,6 +15,7 @@ export type RemoteCursorPresence = {
   userId: string;
   name: string;
   color: string;
+  updatedAt: number;
   cursor?: {
     x: number;
     y: number;

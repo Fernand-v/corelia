@@ -928,9 +928,9 @@ const CalendarBoardView = ({
           </button>
         </div>
 
-        <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-2xl border border-[#e2e8f2] bg-white p-3">
+        <div className="mt-3 min-h-[18rem] flex-1 overflow-hidden rounded-2xl border border-[#e2e8f2] bg-white p-3">
           <h3 className={`${sora.className} mb-2 text-sm font-semibold text-slate-900`}>Próximos eventos</h3>
-          <div className="h-full overflow-y-auto pr-1">
+          <div className="h-full max-h-[36rem] overflow-y-auto pr-1">
             {upcomingEvents.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-500">
                 Sin eventos próximos.

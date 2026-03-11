@@ -110,7 +110,7 @@ main() {
   apply_sql_migrations_if_needed
   wait_for_api
 
-  echo "Creando usuarios por defecto..."
+  echo "Creando solicitudes de registro por defecto..."
   API_BASE="${API_BASE}" "${SCRIPT_DIR}/create-default-users.sh"
   echo "Bootstrap completado."
 }

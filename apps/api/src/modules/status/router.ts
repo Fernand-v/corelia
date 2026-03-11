@@ -15,7 +15,7 @@ export const statusRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async () => {
-      return service.getSystemStatus();
+      return service.getPublicSystemStatus();
     }
   );
 
@@ -49,15 +49,15 @@ export const statusRouter: FastifyPluginAsync = async (app) => {
           entityType: "AUTOMATIZACION",
           entityId: String(result.id),
           action: "ACTUALIZAR",
-          reasonCode: "MAINTENANCE_TOGGLE",
+          reasonCatalogId: "MAINTENANCE_TOGGLE",
           reason: payload.enabled
             ? "Activación de modo mantenimiento"
             : "Desactivación de modo mantenimiento",
-          previousData: {
+          previousDataText: {
             enabled: currentStatus.maintenance.enabled,
             message: currentStatus.maintenance.message
           },
-          newData: {
+          newDataText: {
             enabled: result.enabled,
             message: result.message
           }

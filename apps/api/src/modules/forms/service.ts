@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import type { Prisma } from "@prisma/client";
 import { attachTraceContext } from "../../lib/tracing.js";
 
 export class FormService {
@@ -61,7 +60,7 @@ export class FormService {
       data: {
         requesterId: input.requesterId,
         type: input.type,
-        payload: input.payload as Prisma.InputJsonValue
+        payload: JSON.stringify(input.payload)
       }
     });
   }
@@ -102,7 +101,14 @@ export class FormService {
       }
     );
 
-    const payload = resolved.payload as Prisma.JsonObject;
+    let payload: Record<string, unknown> = {};
+    if (typeof resolved.payload === "string") {
+      try {
+        payload = JSON.parse(resolved.payload) as Record<string, unknown>;
+      } catch {
+        payload = {};
+      }
+    }
     const projectId = typeof payload.projectId === "string" ? payload.projectId : undefined;
     if (projectId && this.app.queues) {
       await this.app.queues.automations.add(

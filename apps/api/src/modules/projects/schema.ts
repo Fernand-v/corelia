@@ -8,7 +8,8 @@ import {
   projectTeamParamsSchema,
   stageIdParamsSchema,
   updateProjectStageInputSchema,
-  upsertProjectMemberInputSchema
+  upsertProjectMemberInputSchema,
+  updateProjectPlanningInputSchema
 } from "@corelia/types";
 
 export const projectSchemas = {
@@ -21,5 +22,6 @@ export const projectSchemas = {
   upsertProjectMemberInputSchema,
   createProjectStageInputSchema,
   updateProjectStageInputSchema,
-  stageIdParamsSchema
+  stageIdParamsSchema,
+  updateProjectPlanningInputSchema
 };

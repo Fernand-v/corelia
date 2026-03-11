@@ -3,6 +3,21 @@ import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { createOpaqueToken, hashOpaqueToken } from "../../lib/tokens.js";
 import { env } from "../../config/env.js";
 
+const resolveRoleKey = (
+  role: { key?: string | null; code?: string | number | null } | null | undefined
+): string | undefined => {
+  if (!role) {
+    return undefined;
+  }
+  if (typeof role.key === "string") {
+    return role.key;
+  }
+  if (typeof role.code === "string") {
+    return role.code;
+  }
+  return undefined;
+};
+
 export class AuthService {
   constructor(private readonly app: FastifyInstance) {}
 
@@ -19,10 +34,20 @@ export class AuthService {
   private async assertAdmin(actorId: string): Promise<void> {
     const actor = await this.app.prisma.user.findUnique({
       where: { id: actorId },
-      select: { baseRole: true }
+      select: {
+        baseRole: {
+          select: {
+            key: true
+          }
+        }
+      }
     });
 
-    if (!actor || actor.baseRole !== "ADMINISTRADOR") {
+    const actorRoleCode =
+      (actor?.baseRole as { code?: string; key?: string } | undefined)?.code ??
+      (actor?.baseRole as { code?: string; key?: string } | undefined)?.key;
+
+    if (!actor || actorRoleCode !== "ADMINISTRADOR") {
       throw this.forbidden("Solo administradores pueden restablecer contraseñas");
     }
   }
@@ -82,7 +107,11 @@ export class AuthService {
         email,
         firstName: input.firstName,
         lastName: input.lastName,
-        baseRole: input.baseRole,
+        baseRole: {
+          connect: {
+            key: input.baseRole
+          }
+        },
         passwordHash
       }
     });
@@ -92,7 +121,74 @@ export class AuthService {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      baseRole: user.baseRole
+      baseRoleId: user.baseRoleId,
+      baseRole: input.baseRole
+    };
+  }
+
+  async createSignupRequest(input: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    message?: string;
+  }) {
+    const email = this.normalizeEmail(input.email);
+    const firstName = input.firstName.trim();
+    const lastName = input.lastName.trim();
+    const message = input.message?.trim();
+
+    const [existingUser, existingRequest] = await Promise.all([
+      this.app.prisma.user.findFirst({
+        where: {
+          email: {
+            equals: email,
+            mode: "insensitive"
+          }
+        },
+        select: {
+          id: true
+        }
+      }),
+      this.app.prisma.signupRequest.findFirst({
+        where: {
+          email: {
+            equals: email,
+            mode: "insensitive"
+          },
+          status: "PENDIENTE"
+        },
+        select: {
+          id: true
+        }
+      })
+    ]);
+
+    if (existingUser) {
+      throw new Error("Ya existe una cuenta registrada para este email");
+    }
+
+    if (existingRequest) {
+      throw new Error("Ya existe una solicitud pendiente para este email");
+    }
+
+    const created = await this.app.prisma.signupRequest.create({
+      data: {
+        email,
+        firstName,
+        lastName,
+        message: message ?? null
+      },
+      select: {
+        id: true,
+        status: true,
+        requestedAt: true
+      }
+    });
+
+    return {
+      id: created.id,
+      status: created.status,
+      submittedAt: created.requestedAt.toISOString()
     };
   }
 
@@ -287,7 +383,7 @@ export class AuthService {
           email: invite.email,
           firstName: input.firstName,
           lastName: input.lastName,
-          baseRole: invite.baseRole,
+          baseRoleId: invite.baseRoleId,
           passwordHash
         }
       });
@@ -363,7 +459,13 @@ export class AuthService {
       this.app.prisma.projectMember.findMany({
         where: { userId },
         select: {
-          role: true,
+          role: {
+            select: {
+              id: true,
+              key: true,
+              code: true
+            }
+          },
           joinedAt: true,
           project: {
             select: {
@@ -398,14 +500,8 @@ export class AuthService {
         name: string;
         template: "SOFTWARE" | "CONTENIDO" | "OPERACIONES";
         isOwner: boolean;
-        role:
-          | "ADMINISTRADOR"
-          | "LIDER_PROYECTO"
-          | "COORDINADOR_EQUIPO"
-          | "COLABORADOR"
-          | "OBSERVADOR"
-          | "INVITADO_EXTERNO"
-          | null;
+        roleId: string | null;
+        role: string | null;
         joinedAt: Date | null;
       }
     >();
@@ -416,6 +512,7 @@ export class AuthService {
         name: project.name,
         template: project.template,
         isOwner: true,
+        roleId: null,
         role: "LIDER_PROYECTO",
         joinedAt: null
       });
@@ -431,7 +528,8 @@ export class AuthService {
           name: membership.project.name,
           template: membership.project.template,
           isOwner,
-          role: membership.role,
+          roleId: membership.role.id,
+          role: resolveRoleKey(membership.role) ?? null,
           joinedAt: membership.joinedAt
         });
         continue;
@@ -440,7 +538,8 @@ export class AuthService {
       projectsById.set(membership.project.id, {
         ...current,
         isOwner: current.isOwner || isOwner,
-        role: current.role ?? membership.role,
+        roleId: current.roleId ?? membership.role.id,
+        role: current.role ?? resolveRoleKey(membership.role) ?? null,
         joinedAt: current.joinedAt ?? membership.joinedAt
       });
     }
@@ -452,6 +551,7 @@ export class AuthService {
         name: project.name,
         template: project.template,
         isOwner: project.isOwner,
+        roleId: project.roleId,
         role: project.role,
         joinedAt: project.joinedAt ? project.joinedAt.toISOString() : null
       }));

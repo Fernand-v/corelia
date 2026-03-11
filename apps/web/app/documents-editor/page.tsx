@@ -1,13 +1,16 @@
 import { DocumentsBoard } from "@/components/documents-board";
 
-export default function DocumentsEditorPage({
-  searchParams
-}: {
-  searchParams?: { id?: string; projectId?: string; projectName?: string };
-}) {
-  const documentId = searchParams?.id ?? "";
-  const projectId = searchParams?.projectId ?? "";
-  const projectName = searchParams?.projectName ?? "";
+type DocumentsEditorPageProps = {
+  searchParams?: Promise<{ id?: string | string[]; projectId?: string | string[]; projectName?: string | string[] }>;
+};
+
+const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
+
+export default async function DocumentsEditorPage({ searchParams }: DocumentsEditorPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const documentId = getParam(resolvedSearchParams.id);
+  const projectId = getParam(resolvedSearchParams.projectId);
+  const projectName = getParam(resolvedSearchParams.projectName);
 
   if (!documentId || !projectId) {
     return (

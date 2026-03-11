@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import type { Prisma } from "@prisma/client";
 
 export class AutomationService {
   constructor(private readonly app: FastifyInstance) {}
@@ -19,7 +18,7 @@ export class AutomationService {
         name: input.name,
         event: input.event,
         action: input.action,
-        config: input.config as Prisma.InputJsonValue,
+        config: JSON.stringify(input.config),
         enabled: input.enabled,
         createdById: input.createdById
       }

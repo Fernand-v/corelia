@@ -8,10 +8,10 @@ export const auditLogSchema = z.object({
   entityId: idSchema,
   action: actionTypeSchema,
   userId: idSchema.nullable(),
-  previousData: z.record(z.string(), z.unknown()).nullable(),
-  newData: z.record(z.string(), z.unknown()).nullable(),
+  previousDataText: z.record(z.string(), z.unknown()).nullable(),
+  newDataText: z.record(z.string(), z.unknown()).nullable(),
   reason: z.string().max(500).nullable(),
-  reasonCode: codeValueSchema.nullable().optional(),
+  reasonCatalogId: codeValueSchema.nullable().optional(),
   createdAt: timestampSchema
 });
 
@@ -21,16 +21,16 @@ export const createAuditLogInputSchema = auditLogSchema
     entityId: true,
     action: true,
     userId: true,
-    previousData: true,
-    newData: true,
+    previousDataText: true,
+    newDataText: true,
     reason: true,
-    reasonCode: true
+    reasonCatalogId: true
   })
   .extend({
-    previousData: z.record(z.string(), z.unknown()).nullable().optional(),
-    newData: z.record(z.string(), z.unknown()).nullable().optional(),
+    previousDataText: z.record(z.string(), z.unknown()).nullable().optional(),
+    newDataText: z.record(z.string(), z.unknown()).nullable().optional(),
     reason: z.string().max(500).optional(),
-    reasonCode: codeValueSchema.optional()
+    reasonCatalogId: codeValueSchema.optional()
   });
 
 export type AuditLog = z.infer<typeof auditLogSchema>;

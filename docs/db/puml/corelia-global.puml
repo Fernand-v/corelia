@@ -1,0 +1,1071 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "PermissionCategory" as PermissionCategory {
+  * id: String
+    code: Int
+    key: String
+    displayName: String
+    description: String?
+    sortOrder: Int
+    createdAt: DateTime
+    updatedAt: DateTime
+    permissions: Permission[]
+}
+
+entity "Permission" as Permission {
+  * id: String
+    code: Int
+    key: String
+    displayName: String
+    description: String?
+    categoryId: String
+    createdAt: DateTime
+    updatedAt: DateTime
+    rolePermissions: RolePermission[]
+}
+
+entity "Role" as Role {
+  * id: String
+    code: Int
+    key: String
+    displayName: String
+    description: String?
+    isSystem: Boolean
+    scope: RoleScope
+    rank: Int
+    createdAt: DateTime
+    updatedAt: DateTime
+    rolePermissions: RolePermission[]
+}
+
+entity "RolePermission" as RolePermission {
+    roleId: String
+    permissionId: String
+    createdAt: DateTime
+}
+
+entity "User" as User {
+  * id: String
+    email: String
+    passwordHash: String
+    firstName: String
+    lastName: String
+    baseRoleId: String
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+    deactivatedAt: DateTime?
+    teamMemberships: TeamMember[]
+    projectMemberships: ProjectMember[]
+    personProfile: PersonProfile?
+    availabilityBlocks: AvailabilityBlock[]
+    workSchedule: WorkSchedule?
+    timeEntries: TimeEntry[]
+    channelMemberships: ChannelMember[]
+    messages: Message[]
+    meetingParticipants: MeetingParticipant[]
+    externalCalendarConnections: ExternalCalendarConnection[]
+    notificationPreferences: NotificationPreference[]
+    notifications: Notification[]
+    announcementsAudience: AnnouncementUser[]
+    refreshTokens: RefreshToken[]
+    auditLogs: AuditLog[]
+}
+
+entity "Team" as Team {
+  * id: String
+    name: String
+    description: String?
+    descriptionCatalogId: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+    members: TeamMember[]
+    channels: Channel[]
+    folders: Folder[]
+    meetings: Meeting[]
+    externalCalendarEvents: ExternalCalendarEvent[]
+    announcements: AnnouncementTeam[]
+    objectives: Objective[]
+    internalInvites: InternalInvite[]
+    projectLinks: ProjectTeamLink[]
+}
+
+entity "TeamMember" as TeamMember {
+  * id: String
+    teamId: String
+    userId: String
+    createdAt: DateTime
+}
+
+entity "Project" as Project {
+  * id: String
+    name: String
+    description: String?
+    descriptionCatalogId: String?
+    template: ProjectTemplate
+    ownerId: String
+    startDate: DateTime?
+    estimatedEndDate: DateTime?
+    createdAt: DateTime
+    updatedAt: DateTime
+    members: ProjectMember[]
+    tasks: Task[]
+    meetings: Meeting[]
+    externalCalendarEvents: ExternalCalendarEvent[]
+    channels: Channel[]
+    folders: Folder[]
+    collaborativeDocuments: CollaborativeDocument[]
+    documentSpace: ProjectDocumentSpace?
+    automationRules: AutomationRule[]
+    objectives: Objective[]
+    stages: ProjectStage[]
+    teamLinks: ProjectTeamLink[]
+    details: ProjectDetail[]
+}
+
+entity "ProjectMember" as ProjectMember {
+  * id: String
+    projectId: String
+    userId: String
+    roleId: String
+    membershipSource: ProjectMembershipSource
+    syncTeamsCount: Int
+    joinedAt: DateTime
+}
+
+entity "ProjectTeamLink" as ProjectTeamLink {
+  * id: String
+    projectId: String
+    teamId: String
+    createdById: String
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "Task" as Task {
+  * id: String
+    projectId: String
+    stageId: String?
+    title: String
+    description: String?
+    descriptionCatalogId: String?
+    assigneeId: String?
+    createdById: String
+    status: TaskStatus
+    pendingActivatedAt: DateTime?
+    startDate: DateTime?
+    dueDate: DateTime?
+    blockingTaskId: String?
+    blockedReason: String?
+    blockedReasonCatalogId: String?
+    completedAt: DateTime?
+    createdAt: DateTime
+    updatedAt: DateTime
+    statusHistory: TaskStatusHistory[]
+    reassignments: TaskReassignment[]
+    timeEntries: TimeEntry[]
+    meetingAgreements: MeetingAgreement[]
+    objectiveLinks: ObjectiveTask[]
+    scheduleHistory: TaskScheduleHistory[]
+}
+
+entity "ProjectStage" as ProjectStage {
+  * id: String
+    projectId: String
+    code: Int
+    name: String
+    color: String
+    order: Int
+    createdAt: DateTime
+    updatedAt: DateTime
+    tasks: Task[]
+}
+
+entity "TaskDependency" as TaskDependency {
+  * id: String
+    taskId: String
+    dependsOnTaskId: String
+    createdAt: DateTime
+}
+
+entity "TaskStatusHistory" as TaskStatusHistory {
+  * id: String
+    taskId: String
+    fromStatus: TaskStatus?
+    toStatus: TaskStatus
+    reason: String
+    reasonCatalogId: String?
+    changedById: String
+    changedAt: DateTime
+}
+
+entity "TaskReassignment" as TaskReassignment {
+  * id: String
+    taskId: String
+    previousAssigneeId: String?
+    newAssigneeId: String
+    reason: String
+    reasonCatalogId: String?
+    reassignedById: String
+    reassignedAt: DateTime
+}
+
+entity "TaskScheduleHistory" as TaskScheduleHistory {
+  * id: String
+    taskId: String
+    previousStartDate: DateTime?
+    previousDueDate: DateTime?
+    newStartDate: DateTime?
+    newDueDate: DateTime?
+    reason: String
+    reasonCatalogId: String?
+    changedById: String
+    changedAt: DateTime
+}
+
+entity "OnboardingChecklist" as OnboardingChecklist {
+  * id: String
+    name: String
+    isDefault: Boolean
+    createdAt: DateTime
+    items: OnboardingChecklistItem[]
+    runs: OnboardingRun[]
+}
+
+entity "OnboardingChecklistItem" as OnboardingChecklistItem {
+  * id: String
+    checklistId: String
+    stepKey: String
+    label: String
+    required: Boolean
+    order: Int
+}
+
+entity "OnboardingRun" as OnboardingRun {
+  * id: String
+    checklistId: String
+    userId: String
+    startedAt: DateTime
+    completedAt: DateTime?
+    steps: OnboardingRunStep[]
+}
+
+entity "OnboardingRunStep" as OnboardingRunStep {
+  * id: String
+    runId: String
+    stepKey: String
+    completed: Boolean
+    completedAt: DateTime?
+}
+
+entity "OffboardingRecord" as OffboardingRecord {
+  * id: String
+    userId: String
+    transferToUserId: String
+    reason: String
+    reasonCatalogId: String?
+    revokedAt: DateTime
+    archivedAt: DateTime?
+}
+
+entity "GuestInvite" as GuestInvite {
+  * id: String
+    email: String
+    tokenHash: String
+    projectId: String?
+    fileId: String?
+    documentId: String?
+    expiresAt: DateTime
+    createdById: String
+    acceptedAt: DateTime?
+    revokedAt: DateTime?
+    createdAt: DateTime
+}
+
+entity "InternalInvite" as InternalInvite {
+  * id: String
+    email: String
+    tokenHash: String
+    baseRoleId: String
+    teamId: String?
+    expiresAt: DateTime
+    createdById: String
+    acceptedAt: DateTime?
+    revokedAt: DateTime?
+    createdAt: DateTime
+    resentAt: DateTime?
+    signupRequest: SignupRequest?
+}
+
+entity "SignupRequest" as SignupRequest {
+  * id: String
+    email: String
+    firstName: String
+    lastName: String
+    message: String?
+    status: SignupRequestStatus
+    requestedAt: DateTime
+    reviewedAt: DateTime?
+    reviewedById: String?
+    decisionNote: String?
+    inviteId: String?
+}
+
+entity "PersonProfile" as PersonProfile {
+  * id: String
+    userId: String
+    internalContactEmail: String
+    internalPhone: String?
+    skills: String[]
+    timezone: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "AvailabilityBlock" as AvailabilityBlock {
+  * id: String
+    userId: String
+    type: AvailabilityType
+    startAt: DateTime
+    endAt: DateTime
+    note: String?
+    createdAt: DateTime
+}
+
+entity "WorkSchedule" as WorkSchedule {
+  * id: String
+    userId: String
+    timezone: String
+    weekDays: Int[]
+    startHour: String
+    endHour: String
+    maxActiveTasks: Int
+    periodHoursCapacity: Float
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "TimeEntry" as TimeEntry {
+  * id: String
+    userId: String
+    taskId: String
+    minutes: Int
+    note: String?
+    loggedAt: DateTime
+}
+
+entity "Channel" as Channel {
+  * id: String
+    name: String
+    scope: ChannelScope
+    teamId: String?
+    projectId: String?
+    createdAt: DateTime
+    members: ChannelMember[]
+    messages: Message[]
+}
+
+entity "ChannelMember" as ChannelMember {
+  * id: String
+    channelId: String
+    userId: String
+    joinedAt: DateTime
+}
+
+entity "Message" as Message {
+  * id: String
+    channelId: String
+    authorId: String
+    kind: MessageKind
+    content: String
+    mentions: String[]
+    meetingId: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+    attachments: MessageAttachment[]
+}
+
+entity "MessageAttachment" as MessageAttachment {
+  * id: String
+    messageId: String
+    originalName: String
+    mimeType: String
+    sizeBytes: Int
+    minioPath: String
+    createdAt: DateTime
+}
+
+entity "Meeting" as Meeting {
+  * id: String
+    title: String
+    description: String?
+    descriptionCatalogId: String?
+    projectId: String?
+    teamId: String?
+    startsAt: DateTime
+    endsAt: DateTime
+    createdById: String
+    status: MeetingStatus
+    mediaRoomId: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+    participants: MeetingParticipant[]
+    agendaItems: MeetingAgendaItem[]
+    notes: MeetingNote[]
+    agreements: MeetingAgreement[]
+    messages: Message[]
+}
+
+entity "MeetingParticipant" as MeetingParticipant {
+  * id: String
+    meetingId: String
+    userId: String
+    roleId: String?
+    muted: Boolean
+    cameraOn: Boolean
+    screenSharing: Boolean
+    speaking: Boolean
+    joinedAt: DateTime?
+    leftAt: DateTime?
+    createdAt: DateTime
+}
+
+entity "MeetingAgendaItem" as MeetingAgendaItem {
+  * id: String
+    meetingId: String
+    text: String
+    order: Int
+    createdAt: DateTime
+}
+
+entity "MeetingNote" as MeetingNote {
+  * id: String
+    meetingId: String
+    authorId: String
+    content: String
+    metadata: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "MeetingAgreement" as MeetingAgreement {
+  * id: String
+    meetingId: String
+    title: String
+    description: String?
+    descriptionCatalogId: String?
+    status: MeetingAgreementStatus
+    authorId: String
+    taskId: String?
+    createdTask: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "ExternalCalendarConnection" as ExternalCalendarConnection {
+  * id: String
+    userId: String
+    provider: ExternalCalendarProvider
+    externalAccountId: String
+    accessTokenEncrypted: String
+    refreshTokenEncrypted: String?
+    expiresAt: DateTime?
+    createdAt: DateTime
+    updatedAt: DateTime
+    events: ExternalCalendarEvent[]
+}
+
+entity "ExternalCalendarEvent" as ExternalCalendarEvent {
+  * id: String
+    connectionId: String
+    externalId: String
+    title: String
+    startsAt: DateTime
+    endsAt: DateTime
+    readOnly: Boolean
+    projectId: String?
+    teamId: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "NotificationPreference" as NotificationPreference {
+  * id: String
+    userId: String
+    event: NotificationEvent
+    channel: NotificationChannel
+    frequency: NotificationFrequency
+    enabled: Boolean
+}
+
+entity "Notification" as Notification {
+  * id: String
+    userId: String
+    event: NotificationEvent
+    channel: NotificationChannel
+    title: String
+    body: String
+    sentAt: DateTime?
+    deliveredAt: DateTime?
+    readAt: DateTime?
+    createdAt: DateTime
+}
+
+entity "Announcement" as Announcement {
+  * id: String
+    title: String
+    body: String
+    allCompany: Boolean
+    expiresAt: DateTime
+    createdById: String
+    createdAt: DateTime
+    teams: AnnouncementTeam[]
+    users: AnnouncementUser[]
+}
+
+entity "AnnouncementTeam" as AnnouncementTeam {
+  * id: String
+    announcementId: String
+    teamId: String
+}
+
+entity "AnnouncementUser" as AnnouncementUser {
+  * id: String
+    announcementId: String
+    userId: String
+}
+
+entity "FormRequest" as FormRequest {
+  * id: String
+    requesterId: String
+    type: RequestType
+    payload: String
+    status: RequestStatus
+    approverId: String?
+    comment: String?
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "Folder" as Folder {
+  * id: String
+    name: String
+    scope: FolderScope
+    teamId: String?
+    projectId: String?
+    parentId: String?
+    createdById: String
+    createdAt: DateTime
+    files: FileObject[]
+    collaborativeDocuments: CollaborativeDocument[]
+}
+
+entity "ProjectDocumentSpace" as ProjectDocumentSpace {
+    projectId: String
+    rootFolderId: String
+    textoFolderId: String
+    diagramasFolderId: String
+    tablasFolderId: String
+    whiteboardFolderId: String
+    presentacionesFolderId: String
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "CollaborativeDocument" as CollaborativeDocument {
+  * id: String
+    projectId: String
+    folderId: String
+    type: DocumentType
+    name: String
+    yDocName: String
+    diagramEngine: DiagramEngine?
+    diagramKind: DiagramKind?
+    currentVersion: Int
+    createdById: String
+    deletedAt: DateTime?
+    purgeAt: DateTime?
+    createdAt: DateTime
+    updatedAt: DateTime
+    versions: CollaborativeDocumentVersion[]
+    assets: DocumentAsset[]
+}
+
+entity "CollaborativeDocumentVersion" as CollaborativeDocumentVersion {
+  * id: String
+    documentId: String
+    versionNumber: Int
+    kind: DocumentVersionKind
+    snapshotPath: String
+    snapshotSizeBytes: Int
+    createdById: String
+    createdAt: DateTime
+}
+
+entity "DocumentAsset" as DocumentAsset {
+  * id: String
+    documentId: String
+    createdById: String
+    originalName: String
+    mimeType: String
+    sizeBytes: Int
+    minioPath: String
+    createdAt: DateTime
+}
+
+entity "FileObject" as FileObject {
+  * id: String
+    folderId: String
+    ownerId: String
+    originalName: String
+    mimeType: String
+    sizeBytes: Int
+    minioPath: String
+    deletedAt: DateTime?
+    createdAt: DateTime
+    trashRecord: FileTrash?
+}
+
+entity "FileTrash" as FileTrash {
+  * id: String
+    fileId: String
+    scheduledPurgeAt: DateTime
+    createdAt: DateTime
+}
+
+entity "StorageQuota" as StorageQuota {
+  * id: String
+    userId: String?
+    teamId: String?
+    bytesLimit: BigInt
+    alertThresholdPct: Float
+    createdAt: DateTime
+}
+
+entity "DecisionNote" as DecisionNote {
+  * id: String
+    title: String
+    description: String
+    descriptionCatalogId: String?
+    authorId: String
+    createdAt: DateTime
+    linkedUserId: String?
+    linkedProjectId: String?
+    linkedTaskId: String?
+    linkedMeetingId: String?
+    linkedMeetingAgreementId: String?
+    linkedMessageId: String?
+    linkedFileId: String?
+    linkedFormRequestId: String?
+    linkedAnnouncementId: String?
+    linkedObjectiveId: String?
+    linkedDecisionId: String?
+    linkedAutomationRuleId: String?
+    linkedExpenseId: String?
+}
+
+entity "AutomationRule" as AutomationRule {
+  * id: String
+    projectId: String
+    name: String
+    event: AutomationEvent
+    action: AutomationAction
+    enabled: Boolean
+    createdById: String
+    createdAt: DateTime
+    config: String?
+}
+
+entity "Objective" as Objective {
+  * id: String
+    scope: ObjectiveScope
+    teamId: String?
+    projectId: String?
+    title: String
+    description: String?
+    descriptionCatalogId: String?
+    ownerId: String
+    targetDate: DateTime
+    progressPct: Float
+    createdAt: DateTime
+    tasks: ObjectiveTask[]
+}
+
+entity "ObjectiveTask" as ObjectiveTask {
+  * id: String
+    objectiveId: String
+    taskId: String
+}
+
+entity "WebhookEndpoint" as WebhookEndpoint {
+  * id: String
+    url: String
+    event: WebhookEvent
+    secret: String
+    enabled: Boolean
+    createdById: String
+    createdAt: DateTime
+    deliveries: WebhookDelivery[]
+}
+
+entity "WebhookDelivery" as WebhookDelivery {
+  * id: String
+    endpointId: String
+    payload: String
+    statusCode: Int?
+    success: Boolean
+    attemptedAt: DateTime
+}
+
+entity "ImportJob" as ImportJob {
+  * id: String
+    source: ImportSource
+    filename: String
+    startedAt: DateTime
+    finishedAt: DateTime?
+    success: Boolean
+    createdById: String
+    errors: ImportError[]
+}
+
+entity "ImportError" as ImportError {
+  * id: String
+    jobId: String
+    rowNumber: Int
+    field: String
+    message: String
+    createdAt: DateTime
+}
+
+entity "RefreshToken" as RefreshToken {
+  * id: String
+    userId: String
+    tokenHash: String
+    expiresAt: DateTime
+    revokedAt: DateTime?
+    rotatedFromId: String?
+    createdAt: DateTime
+}
+
+entity "AuditLog" as AuditLog {
+  * id: String
+    targetUserId: String?
+    targetProjectId: String?
+    targetTaskId: String?
+    targetMeetingId: String?
+    targetMeetingAgreementId: String?
+    targetMessageId: String?
+    targetFileId: String?
+    targetFormRequestId: String?
+    targetAnnouncementId: String?
+    targetObjectiveId: String?
+    targetDecisionId: String?
+    targetAutomationRuleId: String?
+    targetExpenseId: String?
+    action: ActionType
+    userId: String?
+    previousDataText: String?
+    newDataText: String?
+    reason: String?
+    reasonCatalogId: String?
+    createdAt: DateTime
+}
+
+entity "TaskCodeCatalog" as TaskCodeCatalog {
+  * id: String
+    field: TaskCodeField
+    code: Int
+    key: String
+    label: String
+    description: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "ProjectCodeCatalog" as ProjectCodeCatalog {
+  * id: String
+    field: ProjectCodeField
+    code: Int
+    key: String
+    label: String
+    description: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "TeamCodeCatalog" as TeamCodeCatalog {
+  * id: String
+    field: TeamCodeField
+    code: Int
+    key: String
+    label: String
+    description: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "MeetingCodeCatalog" as MeetingCodeCatalog {
+  * id: String
+    field: MeetingCodeField
+    code: Int
+    key: String
+    label: String
+    description: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "ObjectiveCodeCatalog" as ObjectiveCodeCatalog {
+  * id: String
+    field: ObjectiveCodeField
+    code: Int
+    key: String
+    label: String
+    description: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "DecisionCodeCatalog" as DecisionCodeCatalog {
+  * id: String
+    field: DecisionCodeField
+    code: Int
+    key: String
+    label: String
+    description: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "IdentityCodeCatalog" as IdentityCodeCatalog {
+  * id: String
+    field: IdentityCodeField
+    code: Int
+    key: String
+    label: String
+    description: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "AuditCodeCatalog" as AuditCodeCatalog {
+  * id: String
+    field: AuditCodeField
+    code: Int
+    key: String
+    label: String
+    description: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "MaintenanceMode" as MaintenanceMode {
+  * id: Int
+    enabled: Boolean
+    message: String?
+    updatedAt: DateTime
+}
+
+entity "FrontendSettings" as FrontendSettings {
+  * id: Int
+    organizationName: String
+    taskStatusColorPending: String
+    taskStatusColorInReview: String
+    taskStatusColorCompleted: String
+    updatedAt: DateTime
+}
+
+entity "ProjectDetail" as ProjectDetail {
+  * id: String
+    projectId: String
+    description: String
+    estimatedBudget: Float
+    createdById: String
+    createdAt: DateTime
+    updatedAt: DateTime
+    expenses: Expense[]
+}
+
+entity "Expense" as Expense {
+  * id: String
+    projectDetailId: String
+    description: String
+    amount: Float
+    date: DateTime
+    receiptPath: String?
+    status: ExpenseStatus
+    approvedById: String?
+    approvedAt: DateTime?
+    createdById: String
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+Permission }o--|| PermissionCategory : categoryId
+RolePermission }o--|| Role : roleId
+RolePermission }o--|| Permission : permissionId
+User }o--|| Role : baseRoleId
+Team }o--|| TeamCodeCatalog : descriptionCatalogId
+TeamMember }o--|| Team : teamId
+TeamMember }o--|| User : userId
+Project }o--|| User : ownerId
+Project }o--|| ProjectCodeCatalog : descriptionCatalogId
+ProjectMember }o--|| Project : projectId
+ProjectMember }o--|| User : userId
+ProjectMember }o--|| Role : roleId
+ProjectTeamLink }o--|| Project : projectId
+ProjectTeamLink }o--|| Team : teamId
+ProjectTeamLink }o--|| User : createdById
+Task }o--|| Project : projectId
+Task }o--|| ProjectStage : stageId
+Task }o--|| User : assigneeId
+Task }o--|| User : createdById
+Task }o--|| TaskCodeCatalog : descriptionCatalogId
+Task }o--|| TaskCodeCatalog : blockedReasonCatalogId
+Task }o--|| Task : blockingTaskId
+ProjectStage }o--|| Project : projectId
+TaskDependency }o--|| Task : taskId
+TaskDependency }o--|| Task : dependsOnTaskId
+TaskStatusHistory }o--|| Task : taskId
+TaskStatusHistory }o--|| User : changedById
+TaskStatusHistory }o--|| TaskCodeCatalog : reasonCatalogId
+TaskReassignment }o--|| Task : taskId
+TaskReassignment }o--|| User : reassignedById
+TaskReassignment }o--|| TaskCodeCatalog : reasonCatalogId
+TaskScheduleHistory }o--|| Task : taskId
+TaskScheduleHistory }o--|| User : changedById
+TaskScheduleHistory }o--|| TaskCodeCatalog : reasonCatalogId
+OnboardingChecklistItem }o--|| OnboardingChecklist : checklistId
+OnboardingRun }o--|| OnboardingChecklist : checklistId
+OnboardingRun }o--|| User : userId
+OnboardingRunStep }o--|| OnboardingRun : runId
+OffboardingRecord }o--|| User : userId
+OffboardingRecord }o--|| User : transferToUserId
+OffboardingRecord }o--|| IdentityCodeCatalog : reasonCatalogId
+GuestInvite }o--|| User : createdById
+GuestInvite }o--|| Project : projectId
+GuestInvite }o--|| FileObject : fileId
+GuestInvite }o--|| CollaborativeDocument : documentId
+InternalInvite }o--|| User : createdById
+InternalInvite }o--|| Role : baseRoleId
+InternalInvite }o--|| Team : teamId
+SignupRequest }o--|| User : reviewedById
+SignupRequest }o--|| InternalInvite : inviteId
+PersonProfile }o--|| User : userId
+AvailabilityBlock }o--|| User : userId
+WorkSchedule }o--|| User : userId
+TimeEntry }o--|| User : userId
+TimeEntry }o--|| Task : taskId
+Channel }o--|| Team : teamId
+Channel }o--|| Project : projectId
+ChannelMember }o--|| Channel : channelId
+ChannelMember }o--|| User : userId
+Message }o--|| Channel : channelId
+Message }o--|| User : authorId
+Message }o--|| Meeting : meetingId
+MessageAttachment }o--|| Message : messageId
+Meeting }o--|| Project : projectId
+Meeting }o--|| Team : teamId
+Meeting }o--|| User : createdById
+Meeting }o--|| MeetingCodeCatalog : descriptionCatalogId
+MeetingParticipant }o--|| Meeting : meetingId
+MeetingParticipant }o--|| User : userId
+MeetingParticipant }o--|| Role : roleId
+MeetingAgendaItem }o--|| Meeting : meetingId
+MeetingNote }o--|| Meeting : meetingId
+MeetingNote }o--|| User : authorId
+MeetingAgreement }o--|| Meeting : meetingId
+MeetingAgreement }o--|| User : authorId
+MeetingAgreement }o--|| Task : taskId
+MeetingAgreement }o--|| MeetingCodeCatalog : descriptionCatalogId
+ExternalCalendarConnection }o--|| User : userId
+ExternalCalendarEvent }o--|| ExternalCalendarConnection : connectionId
+ExternalCalendarEvent }o--|| Project : projectId
+ExternalCalendarEvent }o--|| Team : teamId
+NotificationPreference }o--|| User : userId
+Notification }o--|| User : userId
+Announcement }o--|| User : createdById
+AnnouncementTeam }o--|| Announcement : announcementId
+AnnouncementTeam }o--|| Team : teamId
+AnnouncementUser }o--|| Announcement : announcementId
+AnnouncementUser }o--|| User : userId
+FormRequest }o--|| User : requesterId
+FormRequest }o--|| User : approverId
+Folder }o--|| Team : teamId
+Folder }o--|| Project : projectId
+Folder }o--|| Folder : parentId
+Folder }o--|| User : createdById
+ProjectDocumentSpace }o--|| Project : projectId
+CollaborativeDocument }o--|| Project : projectId
+CollaborativeDocument }o--|| Folder : folderId
+CollaborativeDocument }o--|| User : createdById
+CollaborativeDocumentVersion }o--|| CollaborativeDocument : documentId
+CollaborativeDocumentVersion }o--|| User : createdById
+DocumentAsset }o--|| CollaborativeDocument : documentId
+DocumentAsset }o--|| User : createdById
+FileObject }o--|| Folder : folderId
+FileObject }o--|| User : ownerId
+FileTrash }o--|| FileObject : fileId
+StorageQuota }o--|| User : userId
+StorageQuota }o--|| Team : teamId
+DecisionNote }o--|| User : authorId
+DecisionNote }o--|| DecisionCodeCatalog : descriptionCatalogId
+DecisionNote }o--|| User : linkedUserId
+DecisionNote }o--|| Project : linkedProjectId
+DecisionNote }o--|| Task : linkedTaskId
+DecisionNote }o--|| Meeting : linkedMeetingId
+DecisionNote }o--|| MeetingAgreement : linkedMeetingAgreementId
+DecisionNote }o--|| Message : linkedMessageId
+DecisionNote }o--|| FileObject : linkedFileId
+DecisionNote }o--|| FormRequest : linkedFormRequestId
+DecisionNote }o--|| Announcement : linkedAnnouncementId
+DecisionNote }o--|| Objective : linkedObjectiveId
+DecisionNote }o--|| DecisionNote : linkedDecisionId
+DecisionNote }o--|| AutomationRule : linkedAutomationRuleId
+DecisionNote }o--|| Expense : linkedExpenseId
+AutomationRule }o--|| Project : projectId
+AutomationRule }o--|| User : createdById
+Objective }o--|| Team : teamId
+Objective }o--|| Project : projectId
+Objective }o--|| User : ownerId
+Objective }o--|| ObjectiveCodeCatalog : descriptionCatalogId
+ObjectiveTask }o--|| Objective : objectiveId
+ObjectiveTask }o--|| Task : taskId
+WebhookEndpoint }o--|| User : createdById
+WebhookDelivery }o--|| WebhookEndpoint : endpointId
+ImportJob }o--|| User : createdById
+ImportError }o--|| ImportJob : jobId
+RefreshToken }o--|| User : userId
+AuditLog }o--|| User : userId
+AuditLog }o--|| AuditCodeCatalog : reasonCatalogId
+AuditLog }o--|| User : targetUserId
+AuditLog }o--|| Project : targetProjectId
+AuditLog }o--|| Task : targetTaskId
+AuditLog }o--|| Meeting : targetMeetingId
+AuditLog }o--|| MeetingAgreement : targetMeetingAgreementId
+AuditLog }o--|| Message : targetMessageId
+AuditLog }o--|| FileObject : targetFileId
+AuditLog }o--|| FormRequest : targetFormRequestId
+AuditLog }o--|| Announcement : targetAnnouncementId
+AuditLog }o--|| Objective : targetObjectiveId
+AuditLog }o--|| DecisionNote : targetDecisionId
+AuditLog }o--|| AutomationRule : targetAutomationRuleId
+AuditLog }o--|| Expense : targetExpenseId
+ProjectDetail }o--|| Project : projectId
+ProjectDetail }o--|| User : createdById
+Expense }o--|| ProjectDetail : projectDetailId
+Expense }o--|| User : approvedById
+Expense }o--|| User : createdById
+
+@enduml

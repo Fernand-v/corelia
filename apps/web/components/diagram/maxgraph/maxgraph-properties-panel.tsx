@@ -96,7 +96,7 @@ export const MaxGraphPropertiesPanel = ({
 
   return (
     <aside
-      className={`flex h-full min-h-[560px] w-full flex-col overflow-hidden ${
+      className={`flex h-full min-h-0 w-full flex-col overflow-hidden ${
         side === "left" ? "border-r" : "border-l"
       } border-[#e2e8f2] bg-white xl:w-[280px]`}
     >

@@ -26,7 +26,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
           entityType: "REUNION",
           entityId: created.meeting.id,
           action: "PROGRAMAR_REUNION",
-          newData: {
+          newDataText: {
             title: created.meeting.title,
             projectId: created.meeting.projectId,
             teamId: created.meeting.teamId,
@@ -131,7 +131,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
           userId: request.authUser!.id,
           title: payload.title,
           description: payload.description,
-          descriptionCode: payload.descriptionCode,
+          descriptionCatalogId: payload.descriptionCatalogId,
           existingTaskId: payload.existingTaskId,
           createTask: payload.createTask
         });
@@ -140,7 +140,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
           entityType: "ACUERDO_REUNION",
           entityId: agreement.id,
           action: "REGISTRAR_ACUERDO",
-          newData: {
+          newDataText: {
             meetingId: agreement.meetingId,
             title: agreement.title,
             taskId: agreement.taskId

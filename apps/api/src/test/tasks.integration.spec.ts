@@ -229,6 +229,28 @@ describe("Task integration flows", () => {
     expect(app.prisma.taskStatusHistory.create).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects status transition when role is not allowed", async () => {
+    const app = createMockApp();
+    const taskId = crypto.randomUUID();
+    app.prisma.task.findUnique = vi.fn().mockResolvedValue({
+      id: taskId,
+      status: "PENDIENTE",
+      assigneeId: crypto.randomUUID()
+    });
+
+    const service = new TaskService(app);
+
+    await expect(
+      service.changeStatus({
+        taskId,
+        status: "COMPLETADA",
+        reason: "Intento inválido",
+        changedById: crypto.randomUUID(),
+        activeRole: "COLABORADOR"
+      })
+    ).rejects.toThrowError("Transición de estado no permitida");
+  });
+
   it("allows moving task to review even when dependencies remain unresolved", async () => {
     const app = createMockApp();
     app.prisma.task.findUnique = vi.fn().mockResolvedValue({
@@ -308,6 +330,44 @@ describe("Task integration flows", () => {
     expect(app.prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 
+  it("requires manager role to activate task manually", async () => {
+    const app = createMockApp();
+    const service = new TaskService(app);
+
+    await expect(
+      service.activateTask({
+        taskId: crypto.randomUUID(),
+        reason: "No autorizado",
+        changedById: crypto.randomUUID(),
+        activeRole: "COLABORADOR"
+      })
+    ).rejects.toThrowError("Solo administrador, líder o coordinador pueden activar tareas manualmente");
+  });
+
+  it("returns task unchanged when manual activation is not applicable", async () => {
+    const app = createMockApp();
+    const taskId = crypto.randomUUID();
+    app.prisma.task.findUnique = vi.fn().mockResolvedValue({
+      id: taskId,
+      status: "PENDIENTE",
+      pendingActivatedAt: new Date(),
+      projectId: crypto.randomUUID(),
+      title: "Task activa",
+      assigneeId: crypto.randomUUID()
+    });
+
+    const service = new TaskService(app);
+    const task = await service.activateTask({
+      taskId,
+      reason: "Sin cambios",
+      changedById: crypto.randomUUID(),
+      activeRole: "ADMINISTRADOR"
+    });
+
+    expect(task.id).toBe(taskId);
+    expect(app.prisma.task.update).not.toHaveBeenCalled();
+  });
+
   it("finalizes task and activates next task in project flow", async () => {
     const app = createMockApp();
     const taskId = crypto.randomUUID();
@@ -374,6 +434,27 @@ describe("Task integration flows", () => {
     expect(app.prisma.notification.create).toHaveBeenCalled();
   });
 
+  it("forbids finalize when collaborator is not assignee", async () => {
+    const app = createMockApp();
+    app.prisma.task.findUnique = vi.fn().mockResolvedValue({
+      id: crypto.randomUUID(),
+      projectId: crypto.randomUUID(),
+      title: "Task ajena",
+      status: "EN_REVISION",
+      assigneeId: crypto.randomUUID()
+    });
+
+    const service = new TaskService(app);
+
+    await expect(
+      service.finalizeAndAdvance({
+        taskId: crypto.randomUUID(),
+        changedById: crypto.randomUUID(),
+        activeRole: "COLABORADOR"
+      })
+    ).rejects.toThrowError("No puedes finalizar una tarea asignada a otro usuario");
+  });
+
   it("forbids reassignment of completed task without reopen flag", async () => {
     const app = createMockApp();
     app.prisma.task.findUnique = vi.fn().mockResolvedValue({
@@ -396,6 +477,44 @@ describe("Task integration flows", () => {
         activeRole: "ADMINISTRADOR"
       })
     ).rejects.toThrowError("No se puede reasignar una tarea completada");
+  });
+
+  it("rejects completed-task reopen by coordinator role", async () => {
+    const app = createMockApp();
+    const projectId = crypto.randomUUID();
+    const currentAssigneeId = crypto.randomUUID();
+    const coordinatorId = crypto.randomUUID();
+    const newAssigneeId = crypto.randomUUID();
+
+    app.prisma.task.findUnique = vi.fn().mockResolvedValue({
+      id: crypto.randomUUID(),
+      projectId,
+      status: "COMPLETADA",
+      assigneeId: currentAssigneeId,
+      title: "Task completada",
+      completedAt: new Date()
+    });
+    app.prisma.projectMember.findFirst = vi.fn().mockResolvedValue({
+      role: { code: "COORDINADOR_EQUIPO" }
+    });
+    app.prisma.teamMember.findMany = vi
+      .fn()
+      .mockResolvedValueOnce([{ teamId: crypto.randomUUID() }])
+      .mockResolvedValueOnce([{ userId: currentAssigneeId }, { userId: newAssigneeId }]);
+
+    const service = new TaskService(app);
+
+    await expect(
+      service.reassign({
+        taskId: crypto.randomUUID(),
+        newAssigneeId,
+        reason: "Reabrir y reasignar",
+        reopenIfCompleted: true,
+        requestedById: coordinatorId,
+        activeRole: "COORDINADOR_EQUIPO",
+        projectContextId: projectId
+      })
+    ).rejects.toThrowError("Solo Líder o Administrador pueden reabrir tareas completadas");
   });
 
   it("forbids collaborator direct reassignment", async () => {

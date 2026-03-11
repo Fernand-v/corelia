@@ -90,7 +90,8 @@ export class AnnouncementService {
   }
 
   private async cleanupExpiredAnnouncementsAssets() {
-    if (!this.app.storage) {
+    const storage = this.app.storage;
+    if (!storage) {
       return;
     }
 
@@ -123,7 +124,7 @@ export class AnnouncementService {
 
       for (const objectKey of keysToDelete) {
         try {
-          await this.app.storage.removeObject(objectKey);
+          await storage.removeObject(objectKey);
         } catch {
           // Idempotent cleanup: ignore missing objects or transient failures.
         }

@@ -32,7 +32,7 @@ export const EntryAnnouncementModal = ({ enabled }: { enabled: boolean }) => {
     retry: false
   });
 
-  const announcements = query.data ?? [];
+  const announcements = useMemo(() => query.data ?? [], [query.data]);
   const entryAnnouncement = useMemo(
     () => announcements.find((announcement) => announcement.id === entryAnnouncementId) ?? null,
     [announcements, entryAnnouncementId]

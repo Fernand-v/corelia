@@ -18,6 +18,10 @@ RUN pnpm install --frozen-lockfile --filter @corelia/workers...
 
 FROM deps AS builder
 COPY . .
+RUN mkdir -p apps/workers/prisma \
+  && cp apps/api/prisma/schema.prisma apps/workers/prisma/schema.prisma \
+  && cd apps/workers \
+  && PRISMA_GENERATE_SKIP_AUTOINSTALL=1 npx prisma@6.19.2 generate --schema prisma/schema.prisma
 RUN pnpm --filter @corelia/types build
 RUN pnpm --filter @corelia/workers build
 

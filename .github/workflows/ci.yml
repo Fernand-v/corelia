@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check compose secrets
+        run: pnpm security:check-compose
+
+      - name: Check unsafe runtime casts baseline
+        run: pnpm security:check-unsafe-casts
+
+      - name: Check DB PUML sync
+        run: pnpm db:diagram:check
+
+      - name: Lint
+        run: |
+          pnpm --filter @corelia/api lint
+          pnpm --filter @corelia/web lint
+          pnpm --filter @corelia/workers lint
+          pnpm --filter @corelia/types lint
+          pnpm --filter @corelia/ui lint
+          pnpm --filter @corelia/hocuspocus lint
+
+      - name: Typecheck
+        run: |
+          pnpm --filter @corelia/api typecheck
+          pnpm --filter @corelia/web typecheck
+          pnpm --filter @corelia/workers typecheck
+          pnpm --filter @corelia/types typecheck
+          pnpm --filter @corelia/ui typecheck
+          pnpm --filter @corelia/hocuspocus typecheck
+
+      - name: Test
+        run: |
+          pnpm --filter @corelia/api test
+          pnpm --filter @corelia/web test
+          pnpm --filter @corelia/workers test
+          pnpm --filter @corelia/types test
+          pnpm --filter @corelia/ui test
+          pnpm --filter @corelia/hocuspocus test
+
+      - name: Runtime audit (high+critical)
+        run: pnpm security:audit

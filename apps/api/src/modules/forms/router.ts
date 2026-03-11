@@ -45,7 +45,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         entityId: resolved.id,
         action: "APROBAR_SOLICITUD",
         reason: payload.comment,
-        newData: {
+        newDataText: {
           status: payload.status,
           approverId: request.authUser!.id
         }

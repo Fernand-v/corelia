@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { Client } from "minio";
 import { env } from "../lib/env.js";
+import { buildAuditTargetCreateData } from "../lib/audit-target.js";
 
 const prisma = new PrismaClient();
 
@@ -80,10 +81,9 @@ const purgeExpiredDocuments = async () => {
       }),
       prisma.auditLog.create({
         data: {
-          entityType: "ARCHIVO",
-          entityId: document.id,
+          ...buildAuditTargetCreateData("ARCHIVO", document.id),
           action: "ELIMINAR",
-          reasonCode: "DOCUMENT_PURGED",
+          reasonCatalogId: null,
           reason: "Papelera expirada: documento purgado automáticamente"
         }
       })

@@ -256,7 +256,7 @@ describe("Socket realtime integration", () => {
 
     expect(ack.ok).toBe(true);
     expect(ack.data).toHaveLength(1);
-    expect(ack.data[0].id).toBe("n-1");
+    expect(ack.data[0]!.id).toBe("n-1");
 
   });
 

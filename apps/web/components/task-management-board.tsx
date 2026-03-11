@@ -118,8 +118,8 @@ export const TaskManagementBoard = ({ initialProjectId = "" }: { initialProjectI
     }
   });
 
-  const members = membersQuery.data ?? [];
-  const tasks = tasksQuery.data ?? [];
+  const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
+  const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {

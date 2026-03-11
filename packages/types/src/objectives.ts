@@ -10,7 +10,7 @@ export const objectiveSchema = z.object({
   projectId: idSchema.nullable(),
   title: z.string().min(3).max(160),
   description: z.string().max(2000).nullable(),
-  descriptionCode: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: codeValueSchema.nullable().optional(),
   descriptionLabel: z.string().nullable().optional(),
   ownerId: idSchema,
   targetDate: timestampSchema,

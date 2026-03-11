@@ -1,37 +1,98 @@
-import { timingSafeEqual } from "node:crypto";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import fp from "fastify-plugin";
 import { env } from "../config/env.js";
 
-const toSingleHeaderValue = (value: string | string[] | undefined): string | null => {
-  if (Array.isArray(value)) {
-    return value[0]?.trim() || null;
+const LOCAL_ORIGIN_PATTERN =
+  /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|host\.docker\.internal)(:\d+)?$/i;
+
+const PRIVATE_IPV4_PATTERN =
+  /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|169\.254\.)/;
+const PRIVATE_IPV6_PATTERN = /^(::1|fc|fd|fe80:)/i;
+
+const parseConfiguredCorsOrigins = () =>
+  env.CORS_ALLOWED_ORIGINS.split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const buildOriginMatcher = (pattern: string) => {
+  if (pattern === "*") {
+    return () => true;
   }
 
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
+  if (!pattern.includes("*")) {
+    return (origin: string) => origin.toLowerCase() === pattern.toLowerCase();
   }
 
-  return null;
+  const regexPattern = pattern
+    .split("*")
+    .map((segment) => escapeRegex(segment))
+    .join(".*");
+  const regex = new RegExp(`^${regexPattern}$`, "i");
+
+  return (origin: string) => regex.test(origin);
 };
 
-const constantTimeEquals = (left: string, right: string): boolean => {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
+const isPrivateNetworkOrigin = (origin: string) => {
+  try {
+    const parsed = new URL(origin);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return false;
+    }
 
-  if (leftBuffer.length !== rightBuffer.length) {
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname === "host.docker.internal"
+    ) {
+      return true;
+    }
+
+    if (hostname.endsWith(".local")) {
+      return true;
+    }
+
+    return PRIVATE_IPV4_PATTERN.test(hostname) || PRIVATE_IPV6_PATTERN.test(hostname);
+  } catch {
     return false;
   }
-
-  return timingSafeEqual(leftBuffer, rightBuffer);
 };
 
 export const securityPlugin = fp(async (app) => {
+  const originMatchers = parseConfiguredCorsOrigins().map((pattern) => buildOriginMatcher(pattern));
+
   await app.register(cors, {
-    origin: true,
+    origin: (origin, callback) => {
+      // Non-browser clients usually don't send Origin.
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (env.NODE_ENV !== "production" && LOCAL_ORIGIN_PATTERN.test(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      if (originMatchers.some((matcher) => matcher(origin))) {
+        callback(null, true);
+        return;
+      }
+
+      if (env.CORS_ALLOW_PRIVATE_NETWORK && isPrivateNetworkOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      const corsError = new Error("Origin not allowed") as Error & { statusCode?: number };
+      corsError.statusCode = 403;
+      callback(corsError, false);
+    },
     credentials: true
   });
 
@@ -57,36 +118,5 @@ export const securityPlugin = fp(async (app) => {
   await app.register(rateLimit, {
     global: false,
     keyGenerator: (request) => request.ip
-  });
-
-  app.addHook("onRequest", async (request, reply) => {
-    if (request.method === "OPTIONS") {
-      return;
-    }
-
-    const path = request.url.split("?")[0] ?? "/";
-
-    // Public-only routes that intentionally do not require API key.
-    if (
-      path === "/" ||
-      path === "/status" ||
-      path === "/status/" ||
-      path === "/status/frontend-settings" ||
-      path === "/status/frontend-settings/" ||
-      path.startsWith("/ws/socket.io") ||
-      path.startsWith("/announcements/assets/content") ||
-      path.startsWith("/api/v1/announcements/assets/content") ||
-      path.startsWith("/documents/assets/content") ||
-      path.startsWith("/api/v1/documents/assets/content")
-    ) {
-      return;
-    }
-
-    const providedApiKey = toSingleHeaderValue(request.headers["x-api-key"]);
-    if (!providedApiKey || !constantTimeEquals(providedApiKey, env.API_KEY)) {
-      return reply.code(401).send({
-        message: "API key inválida o ausente"
-      });
-    }
   });
 });

@@ -8,6 +8,12 @@ const createMockApp = () => {
         findFirst: vi.fn(),
         findMany: vi.fn()
       },
+      role: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: crypto.randomUUID(),
+          code: "INVITADO_EXTERNO"
+        })
+      },
       user: {
         findUnique: vi.fn(),
         findMany: vi.fn(),
@@ -40,6 +46,12 @@ const createMockApp = () => {
       teamMember: {
         findMany: vi.fn()
       },
+      team: {
+        findMany: vi.fn().mockResolvedValue([])
+      },
+      meetingParticipant: {
+        findMany: vi.fn().mockResolvedValue([])
+      },
       $transaction: vi.fn()
     },
     jwt: {
@@ -49,9 +61,69 @@ const createMockApp = () => {
 };
 
 describe("Identity integration flows", () => {
+  it("returns empty presence when user ids list is empty", async () => {
+    const app = createMockApp();
+    const service = new IdentityService(app);
+    const result = await service.getPresenceForUsers([]);
+
+    expect(result.items).toEqual([]);
+  });
+
+  it("resolves presence using redis pipeline and meeting state", async () => {
+    const app = createMockApp();
+    const onlineUserId = crypto.randomUUID();
+    const inMeetingUserId = crypto.randomUUID();
+    const offlineUserId = crypto.randomUUID();
+
+    Object.assign(app as { redis?: unknown }, {
+      redis: {
+        pipeline: () => ({
+          scard: vi.fn(),
+          exec: vi.fn().mockResolvedValue([
+            [null, 2],
+            [null, 0],
+            [null, 0]
+          ])
+        })
+      }
+    });
+
+    app.prisma.meetingParticipant.findMany = vi
+      .fn()
+      .mockResolvedValue([{ userId: inMeetingUserId }]);
+
+    const service = new IdentityService(app);
+    const result = await service.getPresenceForUsers([onlineUserId, inMeetingUserId, offlineUserId]);
+
+    expect(result.items).toEqual([
+      { userId: onlineUserId, status: "EN_LINEA" },
+      { userId: inMeetingUserId, status: "EN_REUNION" },
+      { userId: offlineUserId, status: "DESCONECTADO" }
+    ]);
+  });
+
+  it("resolves presence using redis scard fallback when pipeline is unavailable", async () => {
+    const app = createMockApp();
+    const userId = crypto.randomUUID();
+
+    Object.assign(app as { redis?: unknown }, {
+      redis: {
+        scard: vi.fn().mockResolvedValue(1)
+      }
+    });
+    app.prisma.meetingParticipant.findMany = vi.fn().mockResolvedValue([]);
+
+    const service = new IdentityService(app);
+    const result = await service.getPresenceForUsers([userId]);
+
+    expect(result.items).toEqual([{ userId, status: "EN_LINEA" }]);
+  });
+
   it("returns project role when project context is provided", async () => {
     const app = createMockApp();
-    app.prisma.projectMember.findFirst = vi.fn().mockResolvedValue({ role: "LIDER_PROYECTO" });
+    app.prisma.projectMember.findFirst = vi.fn().mockResolvedValue({
+      role: { id: crypto.randomUUID(), code: "LIDER_PROYECTO" }
+    });
 
     const service = new IdentityService(app);
     const result = await service.resolveActiveRole(crypto.randomUUID(), crypto.randomUUID());
@@ -63,10 +135,12 @@ describe("Identity integration flows", () => {
   it("uses most restrictive role out of project context", async () => {
     const app = createMockApp();
     app.prisma.projectMember.findMany = vi.fn().mockResolvedValue([
-      { role: "LIDER_PROYECTO" },
-      { role: "COLABORADOR" }
+      { role: { id: crypto.randomUUID(), code: "LIDER_PROYECTO" } },
+      { role: { id: crypto.randomUUID(), code: "COLABORADOR" } }
     ]);
-    app.prisma.user.findUnique = vi.fn().mockResolvedValue({ baseRole: "ADMINISTRADOR" });
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({
+      baseRole: { id: crypto.randomUUID(), code: "ADMINISTRADOR" }
+    });
 
     const service = new IdentityService(app);
     const result = await service.resolveActiveRole(crypto.randomUUID());
@@ -134,6 +208,32 @@ describe("Identity integration flows", () => {
     expect(app.prisma.onboardingRun.update).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps onboarding run open when pending steps remain", async () => {
+    const app = createMockApp();
+    app.prisma.onboardingRunStep.update = vi.fn().mockResolvedValue({
+      id: crypto.randomUUID(),
+      stepKey: "PASO",
+      completed: true
+    });
+    app.prisma.onboardingRunStep.count = vi.fn().mockResolvedValue(2);
+
+    const service = new IdentityService(app);
+    await service.completeOnboardingStep({ runId: crypto.randomUUID(), stepKey: "PASO" });
+
+    expect(app.prisma.onboardingRun.update).not.toHaveBeenCalled();
+  });
+
+  it("fails onboarding run startup when checklist does not exist", async () => {
+    const app = createMockApp();
+    app.prisma.onboardingChecklist.findUnique = vi.fn().mockResolvedValue(null);
+
+    const service = new IdentityService(app);
+
+    await expect(
+      service.startOnboardingRun({ checklistId: crypto.randomUUID(), userId: crypto.randomUUID() })
+    ).rejects.toThrowError("Checklist no encontrado");
+  });
+
   it("creates onboarding checklist template", async () => {
     const app = createMockApp();
     app.prisma.onboardingChecklist.create = vi.fn().mockResolvedValue({
@@ -162,14 +262,43 @@ describe("Identity integration flows", () => {
     const service = new IdentityService(app);
     const invite = await service.createGuestInvite({
       email: "guest@external.com",
-      resourceType: "PROYECTO",
-      resourceId: crypto.randomUUID(),
+      resourceScopeType: "PROYECTO",
+      resourceScopeId: crypto.randomUUID(),
       expiresAt: new Date().toISOString(),
       createdById: crypto.randomUUID()
     });
 
     expect(invite.email).toBe("guest@external.com");
     expect(app.prisma.guestInvite.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists all teams when actor is admin", async () => {
+    const app = createMockApp();
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({
+      baseRole: { code: "ADMINISTRADOR" }
+    });
+    app.prisma.team.findMany = vi.fn().mockResolvedValue([{ id: crypto.randomUUID(), name: "Plataforma" }]);
+
+    const service = new IdentityService(app);
+    const result = await service.listTeamsForUser(crypto.randomUUID());
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.name).toBe("Plataforma");
+  });
+
+  it("rejects offboarding when transfer user matches source user", async () => {
+    const app = createMockApp();
+    const userId = crypto.randomUUID();
+    const service = new IdentityService(app);
+
+    await expect(
+      service.offboard({
+        userId,
+        transferToUserId: userId,
+        reason: "invalid",
+        archiveHistory: false
+      })
+    ).rejects.toThrowError("No se puede transferir al mismo usuario");
   });
 
   it("returns directory profiles", async () => {
@@ -180,7 +309,9 @@ describe("Identity integration flows", () => {
         firstName: "Ana",
         lastName: "Suarez",
         email: "ana@corelia.local",
-        baseRole: "COLABORADOR",
+        baseRole: {
+          code: "COLABORADOR"
+        },
         personProfile: {
           skills: ["typescript"],
           internalContactEmail: "ana@corelia.local",

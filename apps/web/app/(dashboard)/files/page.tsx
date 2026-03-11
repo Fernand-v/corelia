@@ -1,14 +1,17 @@
 import { FilesExplorer } from "@/components/files-explorer";
 import { ProjectContextRequired } from "@/components/project-context-required";
 
-export default function FilesPage({
-  searchParams
-}: {
-  searchParams?: { projectId?: string; projectName?: string; teamId?: string };
-}) {
-  const projectId = searchParams?.projectId ?? "";
-  const projectName = searchParams?.projectName ?? "";
-  const teamId = searchParams?.teamId ?? "";
+type FilesPageProps = {
+  searchParams?: Promise<{ projectId?: string | string[]; projectName?: string | string[]; teamId?: string | string[] }>;
+};
+
+const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
+
+export default async function FilesPage({ searchParams }: FilesPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const projectId = getParam(resolvedSearchParams.projectId);
+  const projectName = getParam(resolvedSearchParams.projectName);
+  const teamId = getParam(resolvedSearchParams.teamId);
 
   if (!projectId) {
     return (

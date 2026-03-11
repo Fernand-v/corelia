@@ -1,0 +1,168 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "Project" as Project {
+  * id: String
+    name: String
+    description: String?
+    descriptionCatalogId: String?
+    template: ProjectTemplate
+    ownerId: String
+    startDate: DateTime?
+    estimatedEndDate: DateTime?
+    createdAt: DateTime
+    updatedAt: DateTime
+    members: ProjectMember[]
+    tasks: Task[]
+    meetings: Meeting[]
+    externalCalendarEvents: ExternalCalendarEvent[]
+    channels: Channel[]
+    folders: Folder[]
+    collaborativeDocuments: CollaborativeDocument[]
+    documentSpace: ProjectDocumentSpace?
+    automationRules: AutomationRule[]
+    objectives: Objective[]
+    stages: ProjectStage[]
+    teamLinks: ProjectTeamLink[]
+    details: ProjectDetail[]
+}
+
+entity "ProjectMember" as ProjectMember {
+  * id: String
+    projectId: String
+    userId: String
+    roleId: String
+    membershipSource: ProjectMembershipSource
+    syncTeamsCount: Int
+    joinedAt: DateTime
+}
+
+entity "ProjectTeamLink" as ProjectTeamLink {
+  * id: String
+    projectId: String
+    teamId: String
+    createdById: String
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+entity "Task" as Task {
+  * id: String
+    projectId: String
+    stageId: String?
+    title: String
+    description: String?
+    descriptionCatalogId: String?
+    assigneeId: String?
+    createdById: String
+    status: TaskStatus
+    pendingActivatedAt: DateTime?
+    startDate: DateTime?
+    dueDate: DateTime?
+    blockingTaskId: String?
+    blockedReason: String?
+    blockedReasonCatalogId: String?
+    completedAt: DateTime?
+    createdAt: DateTime
+    updatedAt: DateTime
+    statusHistory: TaskStatusHistory[]
+    reassignments: TaskReassignment[]
+    timeEntries: TimeEntry[]
+    meetingAgreements: MeetingAgreement[]
+    objectiveLinks: ObjectiveTask[]
+    scheduleHistory: TaskScheduleHistory[]
+}
+
+entity "ProjectStage" as ProjectStage {
+  * id: String
+    projectId: String
+    code: Int
+    name: String
+    color: String
+    order: Int
+    createdAt: DateTime
+    updatedAt: DateTime
+    tasks: Task[]
+}
+
+entity "TaskDependency" as TaskDependency {
+  * id: String
+    taskId: String
+    dependsOnTaskId: String
+    createdAt: DateTime
+}
+
+entity "TaskStatusHistory" as TaskStatusHistory {
+  * id: String
+    taskId: String
+    fromStatus: TaskStatus?
+    toStatus: TaskStatus
+    reason: String
+    reasonCatalogId: String?
+    changedById: String
+    changedAt: DateTime
+}
+
+entity "TaskReassignment" as TaskReassignment {
+  * id: String
+    taskId: String
+    previousAssigneeId: String?
+    newAssigneeId: String
+    reason: String
+    reasonCatalogId: String?
+    reassignedById: String
+    reassignedAt: DateTime
+}
+
+entity "TaskScheduleHistory" as TaskScheduleHistory {
+  * id: String
+    taskId: String
+    previousStartDate: DateTime?
+    previousDueDate: DateTime?
+    newStartDate: DateTime?
+    newDueDate: DateTime?
+    reason: String
+    reasonCatalogId: String?
+    changedById: String
+    changedAt: DateTime
+}
+
+entity "Objective" as Objective {
+  * id: String
+    scope: ObjectiveScope
+    teamId: String?
+    projectId: String?
+    title: String
+    description: String?
+    descriptionCatalogId: String?
+    ownerId: String
+    targetDate: DateTime
+    progressPct: Float
+    createdAt: DateTime
+    tasks: ObjectiveTask[]
+}
+
+entity "ObjectiveTask" as ObjectiveTask {
+  * id: String
+    objectiveId: String
+    taskId: String
+}
+
+ProjectMember }o--|| Project : projectId
+ProjectTeamLink }o--|| Project : projectId
+Task }o--|| Project : projectId
+Task }o--|| ProjectStage : stageId
+Task }o--|| Task : blockingTaskId
+ProjectStage }o--|| Project : projectId
+TaskDependency }o--|| Task : taskId
+TaskDependency }o--|| Task : dependsOnTaskId
+TaskStatusHistory }o--|| Task : taskId
+TaskReassignment }o--|| Task : taskId
+TaskScheduleHistory }o--|| Task : taskId
+Objective }o--|| Project : projectId
+ObjectiveTask }o--|| Objective : objectiveId
+ObjectiveTask }o--|| Task : taskId
+
+@enduml

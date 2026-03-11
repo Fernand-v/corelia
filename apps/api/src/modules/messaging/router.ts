@@ -200,9 +200,9 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
           entityType: "REUNION",
           entityId: result.meetingId,
           action: "PROGRAMAR_REUNION",
-          reasonCode: "INSTANT_CALL",
+          reasonCatalogId: "INSTANT_CALL",
           reason: "Videollamada instantánea iniciada desde mensajería",
-          newData: {
+          newDataText: {
             channelId: params.channelId,
             joinUrl: result.joinUrl
           }
