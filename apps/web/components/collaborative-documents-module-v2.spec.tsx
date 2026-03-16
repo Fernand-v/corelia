@@ -236,9 +236,7 @@ describe("CollaborativeDocumentsModuleV2", () => {
       onFetchTrash: vi.fn(),
       trashItems: [],
       trashLoading: false,
-      onCreateTemplate: vi.fn().mockResolvedValue(undefined),
-      onFetchTemplates: vi.fn(),
-      templates: []
+      onCreateTemplate: vi.fn().mockResolvedValue(undefined)
     };
 
     render(<CollaborativeDocumentsModuleV2 {...props} />);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type {
   CollaborativeDocument,
@@ -16,6 +16,7 @@ import { DocumentsEditorTable } from "@/components/documents-editor-table";
 import { DocumentsEditorWhiteboard } from "@/components/documents-editor-whiteboard";
 import { DocumentsEditorPresentation } from "@/components/documents-editor-presentation";
 import { CollaborativeDocumentsModuleV2 } from "@/components/collaborative-documents-module-v2";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { exportDiagramV3ToDrawioDocument } from "@/lib/diagram/maxgraph/diagram-collab-v3";
 import { serializeMxfile } from "@/lib/diagram/maxgraph/xml-format";
 
@@ -164,8 +165,6 @@ export type CollaborativeDocumentsModuleProps = {
   onBatchDelete?: (documentIds: string[]) => Promise<void>;
   onBatchRestore?: (documentIds: string[]) => Promise<void>;
   onCreateTemplate?: (input: { documentId: string; name: string; description?: string }) => Promise<void>;
-  onFetchTemplates?: () => void;
-  templates?: Array<{ id: string; projectId: string | null; type: DocumentType; name: string; description: string | null }>;
 };
 
 const syncLabelByState: Record<DocumentEditorSyncState, { label: string; tone: string }> = {
@@ -221,9 +220,7 @@ export const CollaborativeDocumentsModule = ({
   trashLoading = false,
   onBatchDelete,
   onBatchRestore,
-  onCreateTemplate,
-  onFetchTemplates,
-  templates = []
+  onCreateTemplate
 }: CollaborativeDocumentsModuleProps) => {
   const [search, setSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -955,14 +952,36 @@ export const CollaborativeDocumentsModule = ({
       onBatchDelete={onBatchDelete}
       onBatchRestore={onBatchRestore}
       onCreateTemplate={onCreateTemplate}
-      onFetchTemplates={onFetchTemplates}
-      templates={templates}
     />
   );
 
   return (
     <section className="docs-shell h-full w-full overflow-hidden font-sans">
-      {v2View}
+      <ErrorBoundary
+        fallback={
+          <div className="flex h-full min-h-[360px] flex-col items-center justify-center gap-4 p-6 text-center">
+            <h2 className="text-lg font-semibold text-slate-900">No se pudo cargar Documentos V2</h2>
+            <p className="text-sm text-slate-600">
+              Intenta recargar el módulo para continuar trabajando.
+            </p>
+            <button
+              type="button"
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+              onClick={() => {
+                if (onRetry) {
+                  onRetry();
+                  return;
+                }
+                window.location.reload();
+              }}
+            >
+              Reintentar
+            </button>
+          </div>
+        }
+      >
+        {v2View}
+      </ErrorBoundary>
 
       <UiModal
         open={createModalOpen}
