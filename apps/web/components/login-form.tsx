@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { loginInputSchema, type AuthToken } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { apiRequest, useAuthStore } from "@/lib/api";
@@ -18,7 +18,7 @@ type LoginInput = {
 
 export const LoginForm = () => {
   const router = useRouter();
-  const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  const setTokens = useAuthStore((state) => state.setTokens);
   const { settings: frontendSettings } = useFrontendSettings();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -37,10 +37,20 @@ export const LoginForm = () => {
         body: JSON.stringify(payload)
       }),
     onSuccess: (data) => {
-      setAccessToken(data.accessToken);
+      setTokens(data.accessToken, data.refreshToken);
       router.push("/home" as Route);
     }
   });
+
+  const watchedEmail = form.watch("email");
+  const watchedPassword = form.watch("password");
+
+  useEffect(() => {
+    if (loginMutation.error) {
+      loginMutation.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedEmail, watchedPassword]);
 
   return (
     <Card className="mx-auto w-full max-w-sm space-y-5 p-7 shadow-dropdown">
@@ -54,7 +64,10 @@ export const LoginForm = () => {
       <form
         className="space-y-3"
         onSubmit={form.handleSubmit((payload) => {
-          loginMutation.mutate(payload);
+          loginMutation.mutate({
+            email: payload.email.trim(),
+            password: payload.password
+          });
         })}
       >
         <label className="block space-y-1.5">
@@ -63,6 +76,7 @@ export const LoginForm = () => {
             className="h-10 w-full rounded-xl border border-[rgba(0,0,0,0.1)] bg-white/70 px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
             type="email"
             autoComplete="email"
+            disabled={loginMutation.isPending}
             {...form.register("email")}
           />
           {form.formState.errors.email ? (
@@ -77,6 +91,7 @@ export const LoginForm = () => {
               className="h-10 w-full rounded-xl border border-[rgba(0,0,0,0.1)] bg-white/70 px-3 text-sm text-slate-900 shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
+              disabled={loginMutation.isPending}
               {...form.register("password")}
             />
             <Button
@@ -85,6 +100,7 @@ export const LoginForm = () => {
               className="h-10 w-10 shrink-0 p-0"
               aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              disabled={loginMutation.isPending}
               onClick={() => setShowPassword((current) => !current)}
             >
               {showPassword ? (
