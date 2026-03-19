@@ -30,6 +30,7 @@ export const CollaborativeDocumentsModuleV2 = ({
   connectionState,
   syncLabel,
   saveStatusBadge,
+  supportsManualVersionSave = true,
   savingVersion,
   versionPanelOpen,
   versions,
@@ -169,6 +170,7 @@ export const CollaborativeDocumentsModuleV2 = ({
       savingTitle={savingTitle}
       syncLabel={syncLabel}
       saveStatusBadge={saveStatusBadge}
+      supportsManualVersionSave={supportsManualVersionSave}
       savingVersion={savingVersion}
       versionPanelOpen={versionPanelOpen}
       versions={versions}

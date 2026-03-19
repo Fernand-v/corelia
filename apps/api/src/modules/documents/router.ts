@@ -791,11 +791,9 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
           userId: request.authUser!.id,
         });
 
-        const fileName = encodeURIComponent(
-          `document-${params.documentId}-v${content.version.versionNumber}.json`,
-        );
+        const fileName = encodeURIComponent(content.fileName);
 
-        reply.header("Content-Type", "application/json");
+        reply.header("Content-Type", content.mimeType);
         reply.header(
           "Content-Disposition",
           `${query.mode}; filename*=UTF-8''${fileName}`,
@@ -806,6 +804,107 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         const message = (error as Error).message;
         const status = (error as Error).name === "Forbidden" ? 403 : 404;
         return reply.code(status).send({ message });
+      }
+    },
+  );
+
+  app.get(
+    "/:documentId/onlyoffice/config",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentIdParamsSchema,
+          request.params,
+        );
+        const canEdit = Boolean(
+          request.accessContext?.permissions.includes("ARCHIVO_SUBIR"),
+        );
+        const result = await service.getOnlyOfficeConfig({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+          canEdit,
+        });
+        return reply.send(result);
+      } catch (error) {
+        const status = (error as Error).name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.get(
+    "/:documentId/onlyoffice/file",
+    {
+      config: {
+        requiresAuth: false,
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentIdParamsSchema,
+          request.params,
+        );
+        const query = parseWithSchema(
+          documentSchemas.onlyOfficeSignedTokenQuerySchema,
+          request.query ?? {},
+        );
+        const content = await service.getOnlyOfficeFileContent({
+          documentId: params.documentId,
+          token: query.token,
+        });
+        const encodedFileName = encodeURIComponent(content.fileName);
+        reply.header("Content-Type", content.mimeType);
+        reply.header(
+          "Content-Disposition",
+          `inline; filename*=UTF-8''${encodedFileName}`,
+        );
+        reply.header("X-Content-Type-Options", "nosniff");
+        reply.header("Cross-Origin-Resource-Policy", "cross-origin");
+        return reply.send(content.stream);
+      } catch (error) {
+        const message = (error as Error).message;
+        const status = message.toLowerCase().includes("inválido") ? 400 : 404;
+        return reply.code(status).send({ message });
+      }
+    },
+  );
+
+  app.post(
+    "/:documentId/onlyoffice/callback",
+    {
+      config: {
+        requiresAuth: false,
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentIdParamsSchema,
+          request.params,
+        );
+        const query = parseWithSchema(
+          documentSchemas.onlyOfficeSignedTokenQuerySchema,
+          request.query ?? {},
+        );
+        const body = parseWithSchema(
+          documentSchemas.onlyOfficeCallbackBodySchema,
+          request.body ?? {},
+        );
+        const result = await service.handleOnlyOfficeCallback({
+          documentId: params.documentId,
+          token: query.token,
+          body,
+        });
+        return reply.send(result);
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
       }
     },
   );

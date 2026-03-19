@@ -86,8 +86,11 @@ export const AdminMonitoringView = () => {
             <h3 className="text-sm font-semibold text-slate-900">Grafana no disponible</h3>
             <p className="mt-2 max-w-md text-sm text-slate-500">
               Asegurate de que los servicios de monitoreo esten ejecutandose.
-              Ejecuta <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">docker compose up -d</code> en
-              la carpeta <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">docker/</code>.
+              Ejecuta{" "}
+              <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
+                docker compose --profile monitoring -f docker/docker-compose.yml up -d
+              </code>
+              .
             </p>
             <button
               type="button"

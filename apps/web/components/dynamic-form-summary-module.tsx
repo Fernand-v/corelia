@@ -26,7 +26,10 @@ type DynamicFormSummaryQuestion = {
   totalAnswers: number;
   choiceCounts?: Record<string, number>;
   ratingAverage?: number | null;
+  npsAverage?: number | null;
+  npsBreakdown?: { promoters: number; passives: number; detractors: number };
   textResponses?: string[];
+  fileResponses?: Array<{ originalName: string; url: string }>;
 };
 
 type DynamicFormSummary = {
@@ -57,7 +60,9 @@ const QuestionTypeLabel = ({ type }: { type: DynamicFormQuestionType }) => {
     multiple_choice: "Opcion multiple",
     checkbox: "Casillas",
     rating: "Valoracion",
-    date: "Fecha"
+    date: "Fecha",
+    nps: "NPS",
+    file_upload: "Archivo"
   };
   return <span>{labels[type] ?? type}</span>;
 };
@@ -314,6 +319,53 @@ export const DynamicFormSummaryModule = ({ formId }: { formId: string }) => {
               average={question.ratingAverage}
               total={question.totalAnswers}
             />
+          )}
+
+          {question.type === "nps" && question.npsBreakdown && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <p className="text-4xl font-bold text-slate-900">
+                    {question.npsAverage !== null && question.npsAverage !== undefined ? question.npsAverage.toFixed(1) : "-"}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">de 10 puntos</p>
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="inline-block h-3 w-3 rounded-full bg-emerald-500" />
+                    <span className="text-slate-600">Promotores (9-10)</span>
+                    <span className="ml-auto font-medium text-slate-900">{question.npsBreakdown.promoters}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="inline-block h-3 w-3 rounded-full bg-amber-400" />
+                    <span className="text-slate-600">Pasivos (7-8)</span>
+                    <span className="ml-auto font-medium text-slate-900">{question.npsBreakdown.passives}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="inline-block h-3 w-3 rounded-full bg-red-500" />
+                    <span className="text-slate-600">Detractores (0-6)</span>
+                    <span className="ml-auto font-medium text-slate-900">{question.npsBreakdown.detractors}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {question.type === "file_upload" && (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {(question.fileResponses ?? []).length === 0 ? (
+                <p className="text-sm text-slate-400 italic">Sin archivos subidos todavia.</p>
+              ) : (
+                (question.fileResponses ?? []).map((file, i) => (
+                  <div key={`file-${i}`} className="flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-slate-400 shrink-0">
+                      <path d="M3 3.5A1.5 1.5 0 014.5 2h6.879a1.5 1.5 0 011.06.44l4.122 4.12A1.5 1.5 0 0117 7.622V16.5a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 013 16.5v-13z" />
+                    </svg>
+                    <span className="truncate">{file.originalName}</span>
+                  </div>
+                ))
+              )}
+            </div>
           )}
 
           {(question.type === "short_text" || question.type === "long_text" || question.type === "date") && (

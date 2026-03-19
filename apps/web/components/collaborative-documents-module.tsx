@@ -10,13 +10,11 @@ import type {
   DocumentType
 } from "@corelia/types";
 import { UiModal } from "@/components/ui-modal";
-import { DocumentsEditorText } from "@/components/documents-editor-text";
 import { DocumentsEditorDiagram } from "@/components/documents-editor-diagram";
-import { DocumentsEditorTable } from "@/components/documents-editor-table";
 import { DocumentsEditorWhiteboard } from "@/components/documents-editor-whiteboard";
-import { DocumentsEditorPresentation } from "@/components/documents-editor-presentation";
 import { CollaborativeDocumentsModuleV2 } from "@/components/collaborative-documents-module-v2";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { OnlyOfficeEditor } from "@/components/onlyoffice-editor";
 import { exportDiagramV3ToDrawioDocument } from "@/lib/diagram/maxgraph/diagram-collab-v3";
 import { serializeMxfile } from "@/lib/diagram/maxgraph/xml-format";
 
@@ -99,6 +97,8 @@ type CollaboratorMember = {
 const DEFAULT_AUTO_SAVE_INTERVAL_MS = 5 * 60 * 1000;
 const DIAGRAM_AUTO_SAVE_INTERVAL_MS = 30 * 1000;
 const DIAGRAM_USER_CELL_REGEX = /<mxCell\b[^>]*\bid=(['"])(?!0\1|1\1)[^'"]+\1/i;
+const isOnlyOfficeDocumentType = (type: DocumentType) =>
+  type === "TEXTO" || type === "TABLA" || type === "PRESENTACION";
 
 export type DocumentEditorSyncState = "synced" | "saving" | "reconnecting" | "offline";
 
@@ -287,7 +287,11 @@ export const CollaborativeDocumentsModule = ({
     ? Boolean(recentlySavedByDocumentId[activeDocumentId])
     : false;
   const saveStatusBadge = useMemo(() => {
-    if (!activeDocumentId || isProviderOffline) {
+    if (
+      !activeDocumentId ||
+      isProviderOffline ||
+      (activeDocument && isOnlyOfficeDocumentType(activeDocument.type))
+    ) {
       return null;
     }
 
@@ -313,7 +317,7 @@ export const CollaborativeDocumentsModule = ({
     }
 
     return null;
-  }, [activeDocumentId, activeIsDirty, activeWasSavedRecently, isProviderOffline, savingVersion, syncState]);
+  }, [activeDocument, activeDocumentId, activeIsDirty, activeWasSavedRecently, isProviderOffline, savingVersion, syncState]);
 
   const markSavedState = useCallback((documentId: string) => {
     setDirtyByDocumentId((current) => ({
@@ -440,6 +444,10 @@ export const CollaborativeDocumentsModule = ({
         }
       }
 
+      if (isOnlyOfficeDocumentType(document.type)) {
+        return "";
+      }
+
       return editorDraftsRef.current[document.id]?.trim() ?? "";
     },
     [forceSyncDiagramSnapshot, requestLiveDiagramSnapshot, yjsProvider]
@@ -492,6 +500,9 @@ export const CollaborativeDocumentsModule = ({
   const flushDocumentIfDirty = useCallback(
     (document: CollaborativeDocument | null) => {
       if (!document || isProviderOfflineRef.current) {
+        return;
+      }
+      if (isOnlyOfficeDocumentType(document.type)) {
         return;
       }
 
@@ -646,7 +657,7 @@ export const CollaborativeDocumentsModule = ({
   );
 
   const saveManualVersion = async () => {
-    if (!activeDocument || savingVersion) {
+    if (!activeDocument || savingVersion || isOnlyOfficeDocumentType(activeDocument.type)) {
       return;
     }
 
@@ -667,7 +678,7 @@ export const CollaborativeDocumentsModule = ({
   };
 
   useEffect(() => {
-    if (!activeDocument || isProviderOffline) {
+    if (!activeDocument || isProviderOffline || isOnlyOfficeDocumentType(activeDocument.type)) {
       return;
     }
 
@@ -755,7 +766,7 @@ export const CollaborativeDocumentsModule = ({
       return null;
     }
 
-    if (!isProviderOffline && !yjsProvider) {
+    if (!isProviderOffline && !yjsProvider && !isOnlyOfficeDocumentType(activeDocument.type)) {
       return (
         <div className="rounded-2xl border border-[rgba(0,0,0,0.07)] bg-white p-6 text-sm text-slate-500 shadow-sm">
           Preparando el editor, un momento…
@@ -764,24 +775,12 @@ export const CollaborativeDocumentsModule = ({
     }
 
     if (activeDocument.type === "TEXTO") {
-      const uploadProps = onUploadDocumentAsset
-        ? {
-            onUploadImage: async (file: File) => onUploadDocumentAsset(activeDocument, file)
-          }
-        : {};
-
       return (
-        <DocumentsEditorText
+        <OnlyOfficeEditor
           key={activeDocument.id}
           documentId={activeDocument.id}
-          value={activeDraft}
-          readOnly={isProviderOffline}
-          provider={yjsProvider}
-          currentUser={currentUser}
-          members={members}
-          activeCollaborators={activeDocumentCollaborators}
-          {...uploadProps}
-          onChange={handleDraftChange}
+          documentType="TEXTO"
+          documentName={activeDocument.name}
         />
       );
     }
@@ -825,14 +824,11 @@ export const CollaborativeDocumentsModule = ({
 
     if (activeDocument.type === "TABLA") {
       return (
-        <DocumentsEditorTable
+        <OnlyOfficeEditor
           key={activeDocument.id}
           documentId={activeDocument.id}
-          value={activeDraft}
-          readOnly={isProviderOffline}
-          provider={yjsProvider}
-          currentUser={currentUser}
-          onChange={handleDraftChange}
+          documentType="TABLA"
+          documentName={activeDocument.name}
         />
       );
     }
@@ -852,19 +848,11 @@ export const CollaborativeDocumentsModule = ({
     }
 
     return (
-      <DocumentsEditorPresentation
+      <OnlyOfficeEditor
         key={activeDocument.id}
         documentId={activeDocument.id}
-        value={activeDraft}
-        readOnly={isProviderOffline}
-        provider={yjsProvider}
-        currentUser={currentUser}
-        {...(onUploadDocumentAsset
-          ? {
-              onUploadImage: async (file: File) => onUploadDocumentAsset(activeDocument, file)
-            }
-          : {})}
-        onChange={handleDraftChange}
+        documentType="PRESENTACION"
+        documentName={activeDocument.name}
       />
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -902,6 +890,7 @@ export const CollaborativeDocumentsModule = ({
       connectionState={connectionState}
       syncLabel={syncLabelByState[syncState]}
       saveStatusBadge={saveStatusBadge}
+      supportsManualVersionSave={!activeDocument || !isOnlyOfficeDocumentType(activeDocument.type)}
       savingVersion={savingVersion}
       versionPanelOpen={versionPanelOpen}
       versions={versions}
@@ -938,7 +927,11 @@ export const CollaborativeDocumentsModule = ({
         }
       }}
       onRestoreVersion={onRestoreVersion}
-      onPreviewVersion={onPreviewVersion ?? (async () => "")}
+      {...(
+        activeDocument && isOnlyOfficeDocumentType(activeDocument.type)
+          ? {}
+          : { onPreviewVersion: onPreviewVersion ?? (async () => "") }
+      )}
       onOpenPreview={(title, payload) => {
         setPreviewTitle(title);
         setPreviewContent(payload);

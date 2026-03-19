@@ -15,6 +15,7 @@
     "format": "prettier --check src prisma",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:status": "prisma migrate status",
     "prisma:seed": "tsx prisma/seed.ts"
   },

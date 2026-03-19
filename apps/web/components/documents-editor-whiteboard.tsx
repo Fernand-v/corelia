@@ -1,27 +1,38 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
-import { Tldraw, getSnapshot, loadSnapshot, type Editor, type TLStoreSnapshot } from "tldraw";
-import "tldraw/tldraw.css";
+import { Excalidraw } from "@excalidraw/excalidraw";
+import "@excalidraw/excalidraw/index.css";
 
-const isTLStoreSnapshot = (value: unknown): value is TLStoreSnapshot => {
+interface ExcalidrawData {
+  elements: unknown[];
+  appState?: Record<string, unknown>;
+}
+
+const isExcalidrawData = (value: unknown): value is ExcalidrawData => {
   if (!value || typeof value !== "object") {
     return false;
   }
 
-  return "store" in value && "schema" in value;
+  return "elements" in value && Array.isArray((value as ExcalidrawData).elements);
 };
 
-const parseSnapshot = (value: string) => {
+const parseData = (value: string): ExcalidrawData | null => {
   if (!value.trim()) {
     return null;
   }
 
   try {
     const parsed = JSON.parse(value) as unknown;
-    return isTLStoreSnapshot(parsed) ? parsed : null;
+
+    // Support legacy tldraw snapshots gracefully — treat them as empty canvas
+    if (parsed && typeof parsed === "object" && "store" in parsed && "schema" in parsed) {
+      return null;
+    }
+
+    return isExcalidrawData(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -54,8 +65,8 @@ export const DocumentsEditorWhiteboard = ({
   const yText = useMemo(() => yDoc.getText(`doc:${documentId}:whiteboard`), [documentId, yDoc]);
   const applyingRemoteRef = useRef(false);
   const readOnlyRef = useRef(readOnly);
-  const editorRef = useRef<Editor | null>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const apiRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
 
   useEffect(() => {
@@ -66,7 +77,11 @@ export const DocumentsEditorWhiteboard = ({
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const [snapshotPayload, setSnapshotPayload] = useState<string>(() => value || yText.toString());
+  const initialData = useMemo(() => {
+    const raw = value || yText.toString();
+    const parsed = parseData(raw);
+    return parsed ?? { elements: [] as unknown[] };
+  }, []);
 
   useEffect(() => {
     if (!yText.toString() && value.trim()) {
@@ -81,11 +96,12 @@ export const DocumentsEditorWhiteboard = ({
       }
 
       const nextValue = yText.toString();
-      setSnapshotPayload(nextValue);
-      const parsed = parseSnapshot(nextValue);
+      const parsed = parseData(nextValue);
 
-      if (parsed && editorRef.current?.store) {
-        loadSnapshot(editorRef.current.store, parsed);
+      if (parsed && apiRef.current) {
+        applyingRemoteRef.current = true;
+        apiRef.current.updateScene({ elements: parsed.elements });
+        applyingRemoteRef.current = false;
       }
     };
 
@@ -95,52 +111,40 @@ export const DocumentsEditorWhiteboard = ({
     };
   }, [yText]);
 
-  useEffect(() => {
-    return () => {
-      unsubscribeRef.current?.();
-    };
-  }, []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleChange = useCallback((elements: readonly any[]) => {
+    if (applyingRemoteRef.current) {
+      return;
+    }
+
+    const payload = JSON.stringify({ elements });
+
+    onChangeRef.current(payload);
+
+    if (!readOnlyRef.current) {
+      applyingRemoteRef.current = true;
+      yText.delete(0, yText.length);
+      yText.insert(0, payload);
+      applyingRemoteRef.current = false;
+    }
+  }, [yText]);
 
   return (
     <div className="h-full min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <Tldraw
-        {...({
-          onMount: (editor: Editor) => {
-            editorRef.current = editor;
-
-            const parsed = parseSnapshot(snapshotPayload);
-            if (parsed && editor.store) {
-              loadSnapshot(editor.store, parsed);
-            }
-
-            // Populate initial draft so manual save works without drawing
-            const initialSnapshot = getSnapshot(editor.store);
-            const initialPayload = JSON.stringify(initialSnapshot);
-            onChangeRef.current(initialPayload);
-
-            unsubscribeRef.current?.();
-            unsubscribeRef.current = editor.store.listen(() => {
-              if (applyingRemoteRef.current) {
-                return;
-              }
-
-              const snapshot = getSnapshot(editor.store);
-              const payload = JSON.stringify(snapshot);
-
-              setSnapshotPayload(payload);
-              onChangeRef.current(payload);
-
-              // Only sync to Y.js when not in readOnly (offline) mode
-              if (!readOnlyRef.current) {
-                applyingRemoteRef.current = true;
-                yText.delete(0, yText.length);
-                yText.insert(0, payload);
-                applyingRemoteRef.current = false;
-              }
-            });
-          },
-          isReadonly: readOnly
-        } as Record<string, unknown>)}
+      <Excalidraw
+        excalidrawAPI={(api: unknown) => {
+          apiRef.current = api;
+        }}
+        initialData={{
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          elements: initialData.elements as any,
+          appState: {
+            viewBackgroundColor: "#ffffff",
+            ...initialData.appState
+          }
+        }}
+        viewModeEnabled={readOnly}
+        onChange={handleChange}
       />
     </div>
   );

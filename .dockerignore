@@ -23,6 +23,19 @@ tmp
 tmp/**
 backups
 backups/**
+docker/nginx/certs-local
+docker/nginx/certs-local/**
+
+# Docs and local tooling
+.github
+.claude
+docs
+docs/**
+e2e
+e2e/**
+CHANGELOG.md
+CLAUDE.md
+README.md
 
 # Editor/OS
 .idea

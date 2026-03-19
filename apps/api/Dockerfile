@@ -6,7 +6,7 @@ ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV PNPM_STORE_DIR=/pnpm/store
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 python3-pip make g++ pkg-config ca-certificates \
+  && apt-get install -y --no-install-recommends python3 make g++ pkg-config ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 RUN npm config set fetch-retries 8 \
   && npm config set fetch-retry-factor 2 \
@@ -46,13 +46,11 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm dlx prisma@${PRISMA_CLI_VERSION} generate --schema /app/apps/api/prisma/schema.prisma
 
 FROM node:20-bookworm-slim AS runner
-ARG PNPM_VERSION=9.12.3
 ARG PRISMA_CLI_VERSION=6.19.2
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
-  && corepack enable \
-  && corepack prepare pnpm@${PNPM_VERSION} --activate \
   && npm install --global prisma@${PRISMA_CLI_VERSION} \
+  && npm cache clean --force \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production

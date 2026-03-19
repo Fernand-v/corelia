@@ -55,6 +55,7 @@ export type CollaborativeDocumentsV2Props = {
         tone: string;
       }
     | null;
+  supportsManualVersionSave?: boolean;
   savingVersion: boolean;
   versionPanelOpen: boolean;
   versions: CollaborativeDocumentVersion[];

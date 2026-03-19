@@ -31,7 +31,9 @@ export const dynamicFormQuestionTypeSchema = z.enum([
   "multiple_choice",
   "checkbox",
   "rating",
-  "date"
+  "date",
+  "nps",
+  "file_upload"
 ]);
 export type DynamicFormQuestionType = z.infer<typeof dynamicFormQuestionTypeSchema>;
 
@@ -48,6 +50,14 @@ export const dynamicFormSchema = z.object({
   updatedAt: timestampSchema
 });
 
+export const conditionalLogicSchema = z.object({
+  questionId: idSchema,
+  operator: z.enum(["equals", "not_equals", "contains", "greater_than", "less_than"]),
+  value: z.union([z.string(), z.number()]),
+  action: z.enum(["show", "skip"])
+});
+export type ConditionalLogic = z.infer<typeof conditionalLogicSchema>;
+
 export const dynamicFormQuestionSchema = z.object({
   id: idSchema,
   formId: idSchema,
@@ -56,6 +66,7 @@ export const dynamicFormQuestionSchema = z.object({
   required: z.boolean(),
   options: z.array(z.string().min(1).max(200)).nullable(),
   order: z.number().int().min(0),
+  conditionalLogic: conditionalLogicSchema.nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema
 });
@@ -94,7 +105,8 @@ export const addDynamicFormQuestionInputSchema = z
     label: z.string().trim().min(1).max(500),
     required: z.boolean().optional(),
     options: z.array(z.string().trim().min(1).max(200)).optional(),
-    order: z.number().int().min(0).optional()
+    order: z.number().int().min(0).optional(),
+    conditionalLogic: conditionalLogicSchema.optional().nullable()
   })
   .superRefine((input, ctx) => {
     if ((input.type === "multiple_choice" || input.type === "checkbox") && (!input.options || input.options.length < 2)) {
@@ -120,7 +132,8 @@ export const updateDynamicFormQuestionInputSchema = z
     label: z.string().trim().min(1).max(500).optional(),
     required: z.boolean().optional(),
     options: z.array(z.string().trim().min(1).max(200)).optional(),
-    order: z.number().int().min(0).optional()
+    order: z.number().int().min(0).optional(),
+    conditionalLogic: conditionalLogicSchema.optional().nullable()
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: "Debes enviar al menos un campo para actualizar"
@@ -158,7 +171,17 @@ export const dynamicFormSummaryQuestionSchema = z.object({
   totalAnswers: z.number().int().min(0),
   choiceCounts: z.record(z.string(), z.number().int().min(0)).optional(),
   ratingAverage: z.number().nullable().optional(),
-  textResponses: z.array(z.string()).optional()
+  npsAverage: z.number().nullable().optional(),
+  npsBreakdown: z.object({
+    promoters: z.number().int(),
+    passives: z.number().int(),
+    detractors: z.number().int()
+  }).optional(),
+  textResponses: z.array(z.string()).optional(),
+  fileResponses: z.array(z.object({
+    originalName: z.string(),
+    url: z.string()
+  })).optional()
 });
 
 export const dynamicFormSummarySchema = z.object({

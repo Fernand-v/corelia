@@ -11,6 +11,15 @@ import type {
   DocumentsExplorerResponse
 } from "@corelia/types";
 import type { Prisma } from "@prisma/client";
+import {
+  buildOnlyOfficeDocumentKey,
+  createBlankOnlyOfficeFile,
+  getOnlyOfficeFileInfo,
+  getOnlyOfficeFileName,
+  inferOnlyOfficeFileNameFromPath,
+  inferOnlyOfficeMimeType,
+  isOnlyOfficeDocumentType
+} from "./onlyoffice.js";
 
 const DOCUMENTS_ROOT_FOLDER = "documentos";
 
@@ -32,6 +41,9 @@ const DEFAULT_ASSET_MIME = "application/octet-stream";
 const DOCUMENT_ASSET_TOKEN_TYPE = "document_asset";
 const DOCUMENT_COLLAB_TOKEN_SCOPE = "collab:document";
 const DOCUMENT_COLLAB_TOKEN_TTL_SECONDS = 5 * 60;
+const ONLYOFFICE_FILE_TOKEN_TYPE = "onlyoffice_file";
+const ONLYOFFICE_CALLBACK_TOKEN_TYPE = "onlyoffice_callback";
+const ONLYOFFICE_LINK_TOKEN_TTL = "7d";
 const DOCUMENT_DIAGRAM_SESSION_SNAPSHOT_MAX_BYTES = 10 * 1024 * 1024;
 const DOCUMENT_DIAGRAM_SNAPSHOT_MIME = "application/xml";
 const DOCUMENT_DIAGRAM_SESSION_STALE_MS = 70_000;
@@ -309,6 +321,55 @@ export class DocumentsService {
         presentacionesFolderId: upserted.presentacionesFolderId
       };
     });
+  }
+
+  private getOnlyOfficeDocumentServerUrl() {
+    const value = env.ONLYOFFICE_DOCUMENT_SERVER_URL.trim();
+    return value.replace(/\/+$/g, "");
+  }
+
+  private getOnlyOfficeApiBaseUrl() {
+    const configured = env.ONLYOFFICE_CALLBACK_BASE_URL.trim();
+    const base = (configured || env.CORELIA_APP_URL).replace(/\/+$/g, "");
+    return `${base}/api/v1`;
+  }
+
+  private async signOnlyOfficeFileToken(input: {
+    documentId: string;
+    userId: string;
+    fileName: string;
+    mimeType: string;
+    snapshotPath: string;
+  }) {
+    return this.app.jwt.sign(
+      {
+        typ: ONLYOFFICE_FILE_TOKEN_TYPE,
+        documentId: input.documentId,
+        userId: input.userId,
+        snapshotPath: input.snapshotPath,
+        fileName: input.fileName,
+        mimeType: input.mimeType
+      },
+      {
+        expiresIn: ONLYOFFICE_LINK_TOKEN_TTL
+      }
+    );
+  }
+
+  private async signOnlyOfficeCallbackToken(input: {
+    documentId: string;
+    userId: string;
+  }) {
+    return this.app.jwt.sign(
+      {
+        typ: ONLYOFFICE_CALLBACK_TOKEN_TYPE,
+        documentId: input.documentId,
+        userId: input.userId
+      },
+      {
+        expiresIn: ONLYOFFICE_LINK_TOKEN_TTL
+      }
+    );
   }
 
   private mapDocument(
@@ -648,6 +709,30 @@ export class DocumentsService {
       }
     });
 
+    if (isOnlyOfficeDocumentType(document.type) && this.app.storage) {
+      try {
+        const fileInfo = getOnlyOfficeFileInfo(document.type);
+        const initialBuffer = createBlankOnlyOfficeFile(document.type);
+        const initialFileName = getOnlyOfficeFileName(document.name, document.type);
+        await this.createVersionFromBuffer({
+          documentId: document.id,
+          userId: input.userId,
+          kind: "MANUAL",
+          fileName: initialFileName,
+          mimeType: fileInfo.mimeType,
+          data: initialBuffer
+        });
+
+        return this.getDocument({
+          documentId: document.id,
+          userId: input.userId
+        });
+      } catch {
+        // If the initial office file cannot be created, the document still exists
+        // and the frontend can report the integration issue.
+      }
+    }
+
     return this.mapDocument(document);
   }
 
@@ -703,6 +788,231 @@ export class DocumentsService {
       token,
       expiresInSeconds: DOCUMENT_COLLAB_TOKEN_TTL_SECONDS
     };
+  }
+
+  private async resolveOnlyOfficeLatestVersion(documentId: string) {
+    return this.app.prisma.collaborativeDocumentVersion.findFirst({
+      where: {
+        documentId
+      },
+      orderBy: {
+        versionNumber: "desc"
+      },
+      select: {
+        id: true,
+        versionNumber: true,
+        snapshotPath: true
+      }
+    });
+  }
+
+  async getOnlyOfficeConfig(input: {
+    documentId: string;
+    userId: string;
+    canEdit: boolean;
+  }) {
+    const document = await this.getDocumentForUser({
+      documentId: input.documentId,
+      userId: input.userId
+    });
+
+    if (!isOnlyOfficeDocumentType(document.type)) {
+      throw new Error("ONLYOFFICE está disponible solo para texto, tabla y presentación");
+    }
+
+    if (!this.app.storage) {
+      throw new Error("Servicio de almacenamiento no disponible");
+    }
+
+    const documentServerUrl = this.getOnlyOfficeDocumentServerUrl();
+    if (!documentServerUrl) {
+      throw new Error("ONLYOFFICE no está configurado");
+    }
+
+    const latestVersion = await this.resolveOnlyOfficeLatestVersion(document.id);
+    if (!latestVersion) {
+      throw new Error("El documento no tiene archivo base para abrir en ONLYOFFICE");
+    }
+
+    const user = await this.app.prisma.user.findUnique({
+      where: {
+        id: input.userId
+      },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true
+      }
+    });
+
+    const userName =
+      user ? `${user.firstName} ${user.lastName}`.trim() || user.email : `Usuario ${input.userId}`;
+    const fileInfo = getOnlyOfficeFileInfo(document.type);
+    const fileName = inferOnlyOfficeFileNameFromPath(
+      latestVersion.snapshotPath,
+      getOnlyOfficeFileName(document.name, document.type),
+      document.type
+    );
+    const mimeType = inferOnlyOfficeMimeType(latestVersion.snapshotPath, document.type);
+    const apiBaseUrl = this.getOnlyOfficeApiBaseUrl();
+    const fileToken = await this.signOnlyOfficeFileToken({
+      documentId: document.id,
+      userId: input.userId,
+      fileName,
+      mimeType,
+      snapshotPath: latestVersion.snapshotPath
+    });
+    const callbackToken = await this.signOnlyOfficeCallbackToken({
+      documentId: document.id,
+      userId: input.userId
+    });
+
+    const config = {
+      documentType: fileInfo.documentType,
+      type: "desktop",
+      document: {
+        fileType: fileInfo.fileType,
+        key: buildOnlyOfficeDocumentKey({
+          documentId: document.id,
+          currentVersion: latestVersion.versionNumber,
+          updatedAt: document.updatedAt.toISOString()
+        }),
+        title: fileName,
+        url: `${apiBaseUrl}/documents/${encodeURIComponent(document.id)}/onlyoffice/file?token=${encodeURIComponent(fileToken)}`,
+        permissions: {
+          edit: input.canEdit,
+          download: true,
+          print: true,
+          copy: true,
+          review: input.canEdit
+        }
+      },
+      editorConfig: {
+        mode: input.canEdit ? "edit" : "view",
+        lang: "es",
+        callbackUrl: `${apiBaseUrl}/documents/${encodeURIComponent(document.id)}/onlyoffice/callback?token=${encodeURIComponent(callbackToken)}`,
+        user: {
+          id: input.userId,
+          name: userName
+        },
+        customization: {
+          autosave: true,
+          forcesave: true
+        }
+      }
+    } as Record<string, unknown>;
+
+    if (env.ONLYOFFICE_JWT_SECRET) {
+      return {
+        documentServerUrl,
+        config: {
+          ...config,
+          token: await this.app.jwt.sign(config, {
+            key: env.ONLYOFFICE_JWT_SECRET
+          })
+        }
+      };
+    }
+
+    return {
+      documentServerUrl,
+      config
+    };
+  }
+
+  async getOnlyOfficeFileContent(input: { documentId: string; token: string }) {
+    const payload = (await this.app.jwt.verify(input.token)) as Partial<{
+      typ: string;
+      documentId: string;
+      snapshotPath: string;
+      fileName: string;
+      mimeType: string;
+    }>;
+
+    if (
+      payload.typ !== ONLYOFFICE_FILE_TOKEN_TYPE ||
+      payload.documentId !== input.documentId ||
+      !payload.documentId ||
+      !payload.snapshotPath ||
+      !payload.fileName ||
+      !payload.mimeType
+    ) {
+      throw new Error("Token de ONLYOFFICE inválido");
+    }
+
+    if (!this.app.storage) {
+      throw new Error("Servicio de almacenamiento no disponible");
+    }
+
+    const stream = await this.app.storage.getObjectStream(payload.snapshotPath);
+    return {
+      stream,
+      fileName: payload.fileName,
+      mimeType: payload.mimeType
+    };
+  }
+
+  async handleOnlyOfficeCallback(input: {
+    documentId: string;
+    token: string;
+    body: {
+      status: number;
+      url?: string;
+    };
+  }) {
+    const tokenPayload = (await this.app.jwt.verify(input.token)) as Partial<{
+      typ: string;
+      documentId: string;
+      userId: string;
+    }>;
+
+    if (
+      tokenPayload.typ !== ONLYOFFICE_CALLBACK_TOKEN_TYPE ||
+      tokenPayload.documentId !== input.documentId ||
+      !tokenPayload.userId
+    ) {
+      throw new Error("Callback de ONLYOFFICE inválido");
+    }
+
+    const document = await this.getDocumentForUser({
+      documentId: input.documentId,
+      userId: tokenPayload.userId
+    });
+
+    if (!isOnlyOfficeDocumentType(document.type)) {
+      throw new Error("Tipo de documento no soportado por ONLYOFFICE");
+    }
+
+    const status = Number(input.body.status);
+    if (![2, 3, 6, 7].includes(status)) {
+      return { error: 0 as const };
+    }
+
+    if (status === 3 || status === 7) {
+      return { error: 0 as const };
+    }
+
+    if (!input.body.url) {
+      throw new Error("ONLYOFFICE no envió la URL del archivo");
+    }
+
+    const response = await fetch(input.body.url);
+    if (!response.ok) {
+      throw new Error("No se pudo descargar el archivo guardado por ONLYOFFICE");
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const fileInfo = getOnlyOfficeFileInfo(document.type);
+    await this.saveVersion({
+      documentId: document.id,
+      userId: tokenPayload.userId,
+      kind: status === 6 ? "AUTO" : "MANUAL",
+      fileName: getOnlyOfficeFileName(document.name, document.type),
+      mimeType: fileInfo.mimeType,
+      data: Buffer.from(arrayBuffer)
+    });
+
+    return { error: 0 as const };
   }
 
   private getDiagramSessionHeartbeatMs() {
@@ -1690,7 +2000,7 @@ export class DocumentsService {
     versionId: string;
     userId: string;
   }) {
-    await this.getDocumentForUser({
+    const document = await this.getDocumentForUser({
       documentId: input.documentId,
       userId: input.userId
     });
@@ -1720,7 +2030,13 @@ export class DocumentsService {
 
     return {
       stream,
-      version
+      version,
+      fileName: inferOnlyOfficeFileNameFromPath(
+        version.snapshotPath,
+        `document-${document.id}-v${version.versionNumber}`,
+        document.type
+      ),
+      mimeType: inferOnlyOfficeMimeType(version.snapshotPath, document.type)
     };
   }
 
@@ -1729,7 +2045,7 @@ export class DocumentsService {
     versionId: string;
     userId: string;
   }) {
-    await this.getDocumentForUser({
+    const document = await this.getDocumentForUser({
       documentId: input.documentId,
       userId: input.userId
     });
@@ -1760,8 +2076,15 @@ export class DocumentsService {
       documentId: input.documentId,
       userId: input.userId,
       kind: "MANUAL",
-      fileName: `restore-from-v${sourceVersion.versionNumber}.json`,
-      mimeType: DEFAULT_VERSION_MIME,
+      fileName: inferOnlyOfficeFileNameFromPath(
+        sourceVersion.snapshotPath,
+        `restore-from-v${sourceVersion.versionNumber}`,
+        document.type
+      ),
+      mimeType:
+        document.type === "DIAGRAMA"
+          ? DOCUMENT_DIAGRAM_SNAPSHOT_MIME
+          : inferOnlyOfficeMimeType(sourceVersion.snapshotPath, document.type),
       data: sourceBuffer
     });
   }
@@ -2043,8 +2366,24 @@ export class DocumentsService {
         try {
           const stream = await this.app.storage.getObjectStream(latestVersion.snapshotPath);
           const buffer = await streamToBuffer(stream);
-          const snapshotPath = `documents/${created.projectId}/${created.id}/v1-manual-${Date.now()}-snapshot.json`;
-          await this.app.storage.putObject(snapshotPath, buffer, DEFAULT_VERSION_MIME);
+          const copiedFallbackName = isOnlyOfficeDocumentType(created.type)
+            ? getOnlyOfficeFileName(created.name, created.type)
+            : `${created.name}.json`;
+          const copiedFileName = inferOnlyOfficeFileNameFromPath(
+            latestVersion.snapshotPath,
+            copiedFallbackName,
+            created.type as DocumentType
+          );
+          const snapshotPath = `documents/${created.projectId}/${created.id}/v1-manual-${Date.now()}-${sanitizeFileName(copiedFileName)}`;
+          await this.app.storage.putObject(
+            snapshotPath,
+            buffer,
+            created.type === "DIAGRAMA"
+              ? DOCUMENT_DIAGRAM_SNAPSHOT_MIME
+              : isOnlyOfficeDocumentType(created.type)
+                ? inferOnlyOfficeMimeType(latestVersion.snapshotPath, created.type)
+                : DEFAULT_VERSION_MIME
+          );
 
           await this.app.prisma.$transaction(async (tx) => {
             await tx.collaborativeDocumentVersion.create({
@@ -2173,8 +2512,24 @@ export class DocumentsService {
 
     const sourceStream = await this.app.storage.getObjectStream(latestVersion.snapshotPath);
     const buffer = await streamToBuffer(sourceStream);
-    const snapshotPath = `templates/${document.projectId}/${randomUUID()}-${Date.now()}.json`;
-    await this.app.storage.putObject(snapshotPath, buffer, DEFAULT_VERSION_MIME);
+    const templateFallbackName = isOnlyOfficeDocumentType(document.type)
+      ? getOnlyOfficeFileName(document.name, document.type)
+      : `${document.name}.json`;
+    const templateFileName = inferOnlyOfficeFileNameFromPath(
+      latestVersion.snapshotPath,
+      templateFallbackName,
+      document.type
+    );
+    const snapshotPath = `templates/${document.projectId}/${randomUUID()}-${Date.now()}-${sanitizeFileName(templateFileName)}`;
+    await this.app.storage.putObject(
+      snapshotPath,
+      buffer,
+      document.type === "DIAGRAMA"
+        ? DOCUMENT_DIAGRAM_SNAPSHOT_MIME
+        : isOnlyOfficeDocumentType(document.type)
+          ? inferOnlyOfficeMimeType(latestVersion.snapshotPath, document.type)
+          : DEFAULT_VERSION_MIME
+    );
 
     const template = await this.app.prisma.documentTemplate.create({
       data: {
@@ -2249,8 +2604,24 @@ export class DocumentsService {
     try {
       const stream = await this.app.storage.getObjectStream(template.snapshotPath);
       const buffer = await streamToBuffer(stream);
-      const snapshotPath = `documents/${document.projectId}/${document.id}/v1-manual-${Date.now()}-from-template.json`;
-      await this.app.storage.putObject(snapshotPath, buffer, DEFAULT_VERSION_MIME);
+      const templateCopyFallbackName = isOnlyOfficeDocumentType(document.type)
+        ? getOnlyOfficeFileName(document.name, document.type)
+        : `${document.name}.json`;
+      const templateFileName = inferOnlyOfficeFileNameFromPath(
+        template.snapshotPath,
+        templateCopyFallbackName,
+        document.type
+      );
+      const snapshotPath = `documents/${document.projectId}/${document.id}/v1-manual-${Date.now()}-${sanitizeFileName(templateFileName)}`;
+      await this.app.storage.putObject(
+        snapshotPath,
+        buffer,
+        document.type === "DIAGRAMA"
+          ? DOCUMENT_DIAGRAM_SNAPSHOT_MIME
+          : isOnlyOfficeDocumentType(document.type)
+            ? inferOnlyOfficeMimeType(template.snapshotPath, document.type)
+            : DEFAULT_VERSION_MIME
+      );
 
       await this.app.prisma.$transaction(async (tx) => {
         await tx.collaborativeDocumentVersion.create({

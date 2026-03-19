@@ -74,6 +74,8 @@ enum DynamicFormQuestionType {
   checkbox
   rating
   date
+  nps
+  file_upload
 }
 
 enum ChannelScope {
@@ -1238,10 +1240,11 @@ model DynamicFormQuestion {
   type      DynamicFormQuestionType
   label     String
   required  Boolean                 @default(false)
-  options   Json?
-  order     Int
-  createdAt DateTime                @default(now())
-  updatedAt DateTime                @updatedAt
+  options          Json?
+  order            Int
+  conditionalLogic Json?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
 
   form    DynamicForm         @relation(fields: [formId], references: [id], onDelete: Cascade)
   answers DynamicFormAnswer[]

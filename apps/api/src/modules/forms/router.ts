@@ -1,9 +1,11 @@
 import type { FastifyPluginAsync } from "fastify";
+import multipart from "@fastify/multipart";
 import { parseWithSchema } from "../../lib/validate.js";
 import { FormService } from "./service.js";
 import { formSchemas } from "./schema.js";
 
 export const formsRouter: FastifyPluginAsync = async (app) => {
+  await app.register(multipart);
   const service = new FormService(app);
 
   app.post(
@@ -265,6 +267,44 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
               ? 404
               : 400;
         return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.post(
+    "/:id/upload",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+        const data = await request.file();
+        if (!data) {
+          return reply.code(400).send({ message: "No se envió ningún archivo" });
+        }
+
+        if (!app.storage) {
+          return reply.code(503).send({ message: "Servicio de almacenamiento no disponible" });
+        }
+
+        const buffer = await data.toBuffer();
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (buffer.length > maxSize) {
+          return reply.code(400).send({ message: "El archivo excede el tamaño máximo de 10MB" });
+        }
+
+        const sanitizedName = data.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const objectKey = `form-uploads/${params.id}/${Date.now()}-${sanitizedName}`;
+
+        await app.storage.putObject(objectKey, buffer, data.mimetype);
+
+        return reply.code(201).send({ path: objectKey, originalName: data.filename, mimeType: data.mimetype, sizeBytes: buffer.length });
+      } catch (error) {
+        const known = error as Error;
+        return reply.code(400).send({ message: known.message });
       }
     }
   );

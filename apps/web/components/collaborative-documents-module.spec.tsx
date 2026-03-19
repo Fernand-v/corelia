@@ -71,32 +71,24 @@ vi.mock("@/components/ui-modal", () => ({
     ) : null
 }));
 
-vi.mock("@/components/documents-editor-text", () => ({
-  DocumentsEditorText: ({ onChange }: { onChange: (value: string) => void }) => (
-    <button
-      type="button"
-      data-testid="documents-editor-text-mock-change"
-      onClick={() => onChange("{\"type\":\"doc\",\"content\":[]}")}
-    >
-      mock-editor-change
-    </button>
-  )
-}));
-
 vi.mock("@/components/documents-editor-diagram", () => ({
   DocumentsEditorDiagram: () => <div data-testid="documents-editor-diagram-mock" />
 }));
 
-vi.mock("@/components/documents-editor-table", () => ({
-  DocumentsEditorTable: () => <div data-testid="documents-editor-table-mock" />
-}));
-
 vi.mock("@/components/documents-editor-whiteboard", () => ({
-  DocumentsEditorWhiteboard: () => <div data-testid="documents-editor-whiteboard-mock" />
+  DocumentsEditorWhiteboard: ({ onChange }: { onChange: (value: string) => void }) => (
+    <button
+      type="button"
+      data-testid="documents-editor-whiteboard-mock-change"
+      onClick={() => onChange("{\"elements\":[]}")}
+    >
+      mock-whiteboard-change
+    </button>
+  )
 }));
 
-vi.mock("@/components/documents-editor-presentation", () => ({
-  DocumentsEditorPresentation: () => <div data-testid="documents-editor-presentation-mock" />
+vi.mock("@/components/onlyoffice-editor", () => ({
+  OnlyOfficeEditor: () => <div data-testid="onlyoffice-editor-mock" />
 }));
 
 const buildDocument = (id: string, type: DocumentType, name: string): CollaborativeDocument => ({
@@ -122,7 +114,7 @@ const buildModuleProps = () => {
     TEXTO: [buildDocument("doc-text", "TEXTO", "Acta semanal")],
     DIAGRAMA: [],
     TABLA: [],
-    WHITEBOARD: [],
+    WHITEBOARD: [buildDocument("doc-board", "WHITEBOARD", "Pizarra semanal")],
     PRESENTACION: []
   };
   const activeDocument = docs.TEXTO[0]!;
@@ -254,12 +246,12 @@ describe("CollaborativeDocumentsModule", () => {
   it("hace flush de cambios pendientes al cerrar documento activo", async () => {
     const props = {
       ...buildModuleProps(),
-      activeDocument: buildDocument("doc-text", "TEXTO", "Acta semanal")
+      activeDocument: buildDocument("doc-board", "WHITEBOARD", "Pizarra semanal")
     };
 
     render(<CollaborativeDocumentsModule {...props} />);
 
-    fireEvent.click(screen.getByTestId("documents-editor-text-mock-change"));
+    fireEvent.click(screen.getByTestId("documents-editor-whiteboard-mock-change"));
 
     await waitFor(() => {
       expect(screen.getByText("● Cambios sin guardar")).toBeInTheDocument();
@@ -270,11 +262,11 @@ describe("CollaborativeDocumentsModule", () => {
     await waitFor(() => {
       expect(props.onSaveVersion).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: "doc-text"
+          id: "doc-board"
         }),
         expect.objectContaining({
           kind: "AUTO",
-          content: "{\"type\":\"doc\",\"content\":[]}",
+          content: "{\"elements\":[]}",
           format: "json",
           mimeType: "application/json"
         })

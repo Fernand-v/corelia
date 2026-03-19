@@ -71,7 +71,9 @@ const questionTypeOptions: Array<{ value: DynamicFormQuestionType; label: string
   { value: "multiple_choice", label: "Opcion multiple", icon: "O" },
   { value: "checkbox", label: "Casillas de verificacion", icon: "V" },
   { value: "rating", label: "Escala lineal", icon: "S" },
-  { value: "date", label: "Fecha", icon: "D" }
+  { value: "date", label: "Fecha", icon: "D" },
+  { value: "nps", label: "NPS (0-10)", icon: "N" },
+  { value: "file_upload", label: "Subida de archivo", icon: "F" }
 ];
 
 const questionTypeLabel = (type: DynamicFormQuestionType) =>

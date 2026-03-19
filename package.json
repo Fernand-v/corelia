@@ -28,6 +28,7 @@
     "prisma:generate": "pnpm --filter @corelia/api prisma:generate",
     "prisma:seed": "pnpm --filter @corelia/api prisma:seed",
     "prisma:migrate:dev": "pnpm --filter @corelia/api prisma:migrate:dev",
+    "prisma:migrate:deploy": "pnpm --filter @corelia/api prisma:migrate:deploy",
     "prisma:migrate:status": "pnpm --filter @corelia/api prisma:migrate:status"
   },
   "devDependencies": {

@@ -34,7 +34,7 @@ const runAutoMigrations = async () => {
 
   const schemaPath = await resolvePrismaSchemaPath();
   const apiWorkdir = dirname(dirname(schemaPath));
-  await execFileAsync("pnpm", ["prisma", "migrate", "deploy", "--schema", schemaPath], {
+  await execFileAsync("prisma", ["migrate", "deploy", "--schema", schemaPath], {
     cwd: apiWorkdir,
     env: process.env
   });

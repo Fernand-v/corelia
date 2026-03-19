@@ -40,6 +40,15 @@ const documentDiagramSessionLeaveInputSchema = z.object({
   sessionId: z.string().uuid(),
   clientId: z.string().trim().min(1).max(120)
 });
+const onlyOfficeSignedTokenQuerySchema = z.object({
+  token: z.string().min(1)
+});
+const onlyOfficeCallbackBodySchema = z
+  .object({
+    status: z.coerce.number().int(),
+    url: z.string().url().optional()
+  })
+  .passthrough();
 
 export const documentSchemas = {
   initFoldersInputSchema,
@@ -51,6 +60,8 @@ export const documentSchemas = {
   documentDiagramSessionHeartbeatInputSchema,
   documentDiagramSessionSnapshotInputSchema,
   documentDiagramSessionLeaveInputSchema,
+  onlyOfficeSignedTokenQuerySchema,
+  onlyOfficeCallbackBodySchema,
   renameDocumentInputSchema,
   listDocumentVersionsQuerySchema,
   saveVersionInputSchema,

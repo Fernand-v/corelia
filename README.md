@@ -58,9 +58,11 @@ Servicios principales:
 - Web: `http://localhost` (recomendado vía nginx)
 - API estado: `http://localhost/status`
 - API directa: `http://localhost:4000/api/v1`
-- Grafana: `http://localhost/grafana/`
-- Prometheus: `http://localhost:9090`
 - MinIO consola: `http://localhost:9001`
+
+Servicios opcionales por perfil:
+
+- Grafana + Prometheus + Tempo: `docker compose --profile monitoring --env-file .env -f docker/docker-compose.yml up -d`
 
 ## 4) Inicializar base de datos y roles
 

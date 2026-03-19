@@ -105,6 +105,26 @@ const validateRequiredAnswers = (
       continue;
     }
 
+    if (question.type === "nps") {
+      const numeric =
+        typeof value === "number"
+          ? value
+          : typeof value === "string"
+            ? Number(value)
+            : Number.NaN;
+      if (Number.isNaN(numeric) || !Number.isInteger(numeric) || numeric < 0 || numeric > 10) {
+        return `La pregunta "${question.label}" es obligatoria`;
+      }
+      continue;
+    }
+
+    if (question.type === "file_upload") {
+      if (typeof value !== "string" || value.trim().length === 0) {
+        return `La pregunta "${question.label}" es obligatoria`;
+      }
+      continue;
+    }
+
     if (typeof value !== "string" || value.trim().length === 0) {
       return `La pregunta "${question.label}" es obligatoria`;
     }
@@ -148,6 +168,32 @@ const buildSubmissionAnswers = (
         payload.push({
           questionId: question.id,
           value: numeric
+        });
+      }
+      continue;
+    }
+
+    if (question.type === "nps") {
+      const numeric =
+        typeof value === "number"
+          ? value
+          : typeof value === "string"
+            ? Number(value)
+            : Number.NaN;
+      if (Number.isInteger(numeric) && numeric >= 0 && numeric <= 10) {
+        payload.push({
+          questionId: question.id,
+          value: numeric
+        });
+      }
+      continue;
+    }
+
+    if (question.type === "file_upload") {
+      if (typeof value === "string" && value.trim().length > 0) {
+        payload.push({
+          questionId: question.id,
+          value: value.trim()
         });
       }
       continue;
@@ -214,6 +260,44 @@ const StarRating = ({
     </div>
   );
 };
+
+const NpsScale = ({
+  value,
+  onChange,
+  disabled
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  disabled: boolean;
+}) => (
+  <div className="space-y-2">
+    <div className="flex items-center gap-1">
+      {Array.from({ length: 11 }, (_, i) => i).map((score) => (
+        <button
+          key={score}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(score)}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+            value === score
+              ? score <= 6
+                ? "bg-red-500 text-white"
+                : score <= 8
+                  ? "bg-amber-400 text-white"
+                  : "bg-emerald-500 text-white"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          } disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          {score}
+        </button>
+      ))}
+    </div>
+    <div className="flex justify-between text-xs text-slate-400">
+      <span>Nada probable</span>
+      <span>Muy probable</span>
+    </div>
+  </div>
+);
 
 export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
   const queryClient = useQueryClient();
@@ -500,6 +584,12 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
               : typeof rawValue === "string"
                 ? Number(rawValue) || 0
                 : 0;
+          const npsValue =
+            typeof rawValue === "number"
+              ? rawValue
+              : typeof rawValue === "string"
+                ? Number(rawValue)
+                : -1;
 
           return (
             <div key={question.id} className="rounded-xl bg-white shadow-sm p-6 space-y-4">
@@ -613,6 +703,49 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
                   onChange={(event) => setAnswerValue(question.id, event.target.value)}
                   disabled={!canSubmit}
                 />
+              )}
+
+              {question.type === "nps" && (
+                <NpsScale
+                  value={npsValue >= 0 ? npsValue : -1}
+                  onChange={(v) => setAnswerValue(question.id, v)}
+                  disabled={!canSubmit}
+                />
+              )}
+
+              {question.type === "file_upload" && (
+                <div className="space-y-2">
+                  {textValue && (
+                    <p className="text-xs text-emerald-600 truncate">Archivo subido: {textValue.split("/").pop()}</p>
+                  )}
+                  <label className={`inline-flex items-center gap-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 cursor-pointer hover:border-indigo-400 hover:text-indigo-600 transition-colors ${!canSubmit ? "opacity-50 pointer-events-none" : ""}`}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                      <path d="M9.25 13.25a.75.75 0 001.5 0V4.636l2.955 3.129a.75.75 0 001.09-1.03l-4.25-4.5a.75.75 0 00-1.09 0l-4.25 4.5a.75.75 0 101.09 1.03L9.25 4.636v8.614z" />
+                      <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                    </svg>
+                    Seleccionar archivo
+                    <input
+                      type="file"
+                      className="sr-only"
+                      disabled={!canSubmit}
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        try {
+                          const result = await apiRequest<{ path: string }>(`/forms/${encodeURIComponent(formId)}/upload`, {
+                            method: "POST",
+                            body: formData
+                          });
+                          setAnswerValue(question.id, result.path);
+                        } catch {
+                          setSubmitError("Error al subir el archivo.");
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
               )}
             </div>
           );

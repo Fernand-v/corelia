@@ -39,6 +39,8 @@ const OFFLINE_GRACE_MS = 4_000;
 const DEFAULT_DIAGRAM_SESSION_HEARTBEAT_MS = 20_000;
 const DEFAULT_DIAGRAM_SESSION_SNAPSHOT_MS = 30_000;
 const DIAGRAM_USER_CELL_REGEX = /<mxCell\b[^>]*\bid=(['"])(?!0\1|1\1)[^'"]+\1/i;
+const isOnlyOfficeDocumentType = (type: DocumentType) =>
+  type === "TEXTO" || type === "TABLA" || type === "PRESENTACION";
 
 const docsDebugEnabled = (process.env.NEXT_PUBLIC_DOCS_DEBUG ?? "false").toLowerCase() === "true";
 
@@ -883,6 +885,18 @@ export const DocumentsBoard = ({
     };
 
     if (!activeDocument) {
+      destroyCurrentCollab();
+      clearOfflineTimer();
+      diagramSessionRef.current = null;
+      setDiagramSessionState(null);
+      setProvider(null);
+      setProviderOffline(false);
+      setConnectionState("connected");
+      setSyncState("synced");
+      return;
+    }
+
+    if (isOnlyOfficeDocumentType(activeDocument.type)) {
       destroyCurrentCollab();
       clearOfflineTimer();
       diagramSessionRef.current = null;

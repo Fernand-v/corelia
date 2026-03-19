@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import type { DynamicFormQuestionType, RoleCode } from "@corelia/types";
+import type { ConditionalLogic, DynamicFormQuestionType, RoleCode } from "@corelia/types";
 import type { FastifyInstance } from "fastify";
 import { attachTraceContext } from "../../lib/tracing.js";
 
@@ -21,6 +21,7 @@ type DynamicFormQuestionInput = {
   required?: boolean;
   options?: string[];
   order?: number;
+  conditionalLogic?: ConditionalLogic | null;
 };
 
 export class FormService {
@@ -132,13 +133,27 @@ export class FormService {
     };
   }
 
+  private parseConditionalLogic(value: Prisma.JsonValue | null): ConditionalLogic | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.questionId === "string" && typeof obj.operator === "string" && typeof obj.action === "string") {
+      return obj as unknown as ConditionalLogic;
+    }
+
+    return null;
+  }
+
   private mapDynamicQuestion(question: {
     id: string;
     formId: string;
-    type: DynamicFormQuestionType;
+    type: string;
     label: string;
     required: boolean;
     options: Prisma.JsonValue | null;
+    conditionalLogic?: Prisma.JsonValue | null;
     order: number;
     createdAt: Date;
     updatedAt: Date;
@@ -150,6 +165,7 @@ export class FormService {
       label: question.label,
       required: question.required,
       options: this.parseOptions(question.options),
+      conditionalLogic: this.parseConditionalLogic(question.conditionalLogic ?? null),
       order: question.order,
       createdAt: question.createdAt.toISOString(),
       updatedAt: question.updatedAt.toISOString()
@@ -231,7 +247,7 @@ export class FormService {
 
   private normalizeAnswerValue(
     question: {
-      type: DynamicFormQuestionType;
+      type: string;
       label: string;
       required: boolean;
       options: Prisma.JsonValue | null;
@@ -337,9 +353,90 @@ export class FormService {
 
         return value;
       }
+      case "nps": {
+        const numeric =
+          typeof rawValue === "number"
+            ? rawValue
+            : typeof rawValue === "string"
+              ? Number(rawValue)
+              : Number.NaN;
+
+        if (question.required && Number.isNaN(numeric)) {
+          throw new Error(`La pregunta "${question.label}" es obligatoria`);
+        }
+
+        if (!Number.isNaN(numeric) && (!Number.isInteger(numeric) || numeric < 0 || numeric > 10)) {
+          throw new Error(`La puntuación NPS de "${question.label}" debe estar entre 0 y 10`);
+        }
+
+        return Number.isNaN(numeric) ? (null as unknown as Prisma.JsonValue) : numeric;
+      }
+      case "file_upload": {
+        if (typeof rawValue !== "string") {
+          throw new Error(`La respuesta para "${question.label}" debe ser una ruta de archivo`);
+        }
+
+        const value = rawValue.trim();
+        if (question.required && value.length === 0) {
+          throw new Error(`La pregunta "${question.label}" es obligatoria`);
+        }
+
+        if (value.length > 1000) {
+          throw new Error(`La ruta de archivo para "${question.label}" excede el máximo permitido`);
+        }
+
+        return value;
+      }
       default:
         return rawValue as Prisma.JsonValue;
     }
+  }
+
+  private evaluateCondition(
+    condition: ConditionalLogic,
+    answersByQuestion: Map<string, unknown>
+  ): boolean {
+    const answer = answersByQuestion.get(condition.questionId);
+    if (answer === undefined || answer === null) {
+      return false;
+    }
+
+    const answerStr = String(answer);
+    const condValueStr = String(condition.value);
+
+    switch (condition.operator) {
+      case "equals":
+        return answerStr === condValueStr;
+      case "not_equals":
+        return answerStr !== condValueStr;
+      case "contains":
+        return answerStr.toLowerCase().includes(condValueStr.toLowerCase());
+      case "greater_than": {
+        const a = Number(answer);
+        const b = Number(condition.value);
+        return !Number.isNaN(a) && !Number.isNaN(b) && a > b;
+      }
+      case "less_than": {
+        const a = Number(answer);
+        const b = Number(condition.value);
+        return !Number.isNaN(a) && !Number.isNaN(b) && a < b;
+      }
+      default:
+        return false;
+    }
+  }
+
+  private shouldShowQuestion(
+    question: { conditionalLogic?: Prisma.JsonValue | null },
+    answersByQuestion: Map<string, unknown>
+  ): boolean {
+    const logic = this.parseConditionalLogic(question.conditionalLogic ?? null);
+    if (!logic) {
+      return true;
+    }
+
+    const result = this.evaluateCondition(logic, answersByQuestion);
+    return logic.action === "show" ? result : !result;
   }
 
   private async enqueueNotification(notificationId: string) {
@@ -817,6 +914,7 @@ export class FormService {
         label: input.label.trim(),
         required: input.required ?? false,
         ...(options ? { options } : {}),
+        ...(input.conditionalLogic ? { conditionalLogic: input.conditionalLogic as unknown as Prisma.InputJsonValue } : {}),
         order
       }
     });
@@ -833,6 +931,7 @@ export class FormService {
       required?: boolean;
       options?: string[];
       order?: number;
+      conditionalLogic?: ConditionalLogic | null;
     }
   ) {
     const actorRole = await this.getActorRole(actorId);
@@ -896,7 +995,10 @@ export class FormService {
         ...(input.label !== undefined ? { label: input.label.trim() } : {}),
         ...(input.required !== undefined ? { required: input.required } : {}),
         ...(input.options !== undefined ? { options: nextOptions ?? Prisma.JsonNull } : {}),
-        ...(input.order !== undefined ? { order: input.order } : {})
+        ...(input.order !== undefined ? { order: input.order } : {}),
+        ...(input.conditionalLogic !== undefined
+          ? { conditionalLogic: input.conditionalLogic ? (input.conditionalLogic as unknown as Prisma.InputJsonValue) : Prisma.JsonNull }
+          : {})
       }
     });
 
@@ -1053,11 +1155,17 @@ export class FormService {
     const answerRows: Array<{ questionId: string; value: Prisma.JsonValue }> = [];
 
     for (const question of form.questions) {
+      const visible = this.shouldShowQuestion(question, answersByQuestion);
       const hasAnswer = answersByQuestion.has(question.id);
+
       if (!hasAnswer) {
-        if (question.required) {
+        if (question.required && visible) {
           throw new Error(`La pregunta "${question.label}" es obligatoria`);
         }
+        continue;
+      }
+
+      if (!visible) {
         continue;
       }
 
@@ -1108,7 +1216,7 @@ export class FormService {
       };
     });
 
-    return {
+    const result = {
       id: created.id,
       formId: created.formId,
       userId: form.isAnonymous ? null : created.userId,
@@ -1119,6 +1227,52 @@ export class FormService {
         value: answer.value
       }))
     };
+
+    // Fire webhooks for form submission (best-effort, don't block response)
+    this.fireFormSubmissionWebhooks(form, result).catch(() => {});
+
+    return result;
+  }
+
+  private async fireFormSubmissionWebhooks(
+    form: { id: string; title: string; projectId: string | null },
+    response: { id: string; formId: string; userId: string | null; submittedAt: string }
+  ) {
+    if (!this.app.queues) {
+      return;
+    }
+
+    const endpoints = await this.app.prisma.webhookEndpoint.findMany({
+      where: {
+        enabled: true
+      },
+      select: { id: true, event: true }
+    });
+
+    const matching = endpoints.filter((endpoint) => endpoint.event === "SOLICITUD_APROBADA");
+    if (matching.length === 0) {
+      return;
+    }
+
+    await Promise.all(
+      matching.map((endpoint) =>
+        this.app.queues!.webhooks.add(
+          "deliver-webhook",
+          attachTraceContext({
+            endpointId: endpoint.id,
+            payload: {
+              event: "FORMULARIO_RESPONDIDO",
+              formId: form.id,
+              formTitle: form.title,
+              projectId: form.projectId,
+              responseId: response.id,
+              userId: response.userId,
+              submittedAt: response.submittedAt
+            }
+          })
+        )
+      )
+    );
   }
 
   async listDynamicFormResponses(actorId: string, formId: string) {
@@ -1293,6 +1447,51 @@ export class FormService {
           options,
           totalAnswers: values.length,
           ratingAverage: average
+        };
+      }
+
+      if (question.type === "nps") {
+        const numericValues = values.filter((value): value is number => typeof value === "number");
+        const average =
+          numericValues.length > 0
+            ? Number((numericValues.reduce((acc, value) => acc + value, 0) / numericValues.length).toFixed(2))
+            : null;
+
+        let promoters = 0;
+        let passives = 0;
+        let detractors = 0;
+        for (const v of numericValues) {
+          if (v >= 9) promoters++;
+          else if (v >= 7) passives++;
+          else detractors++;
+        }
+
+        return {
+          questionId: question.id,
+          label: question.label,
+          type: question.type,
+          required: question.required,
+          options,
+          totalAnswers: values.length,
+          npsAverage: average,
+          npsBreakdown: { promoters, passives, detractors }
+        };
+      }
+
+      if (question.type === "file_upload") {
+        return {
+          questionId: question.id,
+          label: question.label,
+          type: question.type,
+          required: question.required,
+          options,
+          totalAnswers: values.length,
+          fileResponses: values
+            .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+            .map((path) => ({
+              originalName: path.split("/").pop() ?? path,
+              url: `/files/form-uploads/${encodeURIComponent(path)}`
+            }))
         };
       }
 

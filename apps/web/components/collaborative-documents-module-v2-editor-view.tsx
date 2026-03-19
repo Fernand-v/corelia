@@ -51,6 +51,7 @@ type CollaborativeDocumentsEditorViewProps = {
         tone: string;
       }
     | null;
+  supportsManualVersionSave?: boolean;
   savingVersion: boolean;
   versionPanelOpen: boolean;
   versions: CollaborativeDocumentVersion[];
@@ -151,6 +152,7 @@ export const CollaborativeDocumentsModuleV2EditorView = ({
   savingTitle,
   syncLabel,
   saveStatusBadge,
+  supportsManualVersionSave = true,
   savingVersion,
   versionPanelOpen,
   versions,
@@ -208,14 +210,16 @@ export const CollaborativeDocumentsModuleV2EditorView = ({
                 {saveStatusBadge.label}
               </Badge>
             ) : null}
-            <Button
-              icon={<Save24Regular />}
-              appearance="primary"
-              onClick={onSaveVersion}
-              disabled={savingVersion}
-            >
-              {savingVersion ? "Guardando…" : "Guardar versión"}
-            </Button>
+            {supportsManualVersionSave ? (
+              <Button
+                icon={<Save24Regular />}
+                appearance="primary"
+                onClick={onSaveVersion}
+                disabled={savingVersion}
+              >
+                {savingVersion ? "Guardando…" : "Guardar versión"}
+              </Button>
+            ) : null}
             {onCreateTemplate ? (
               <Button
                 icon={<Copy24Regular />}
@@ -225,7 +229,7 @@ export const CollaborativeDocumentsModuleV2EditorView = ({
                 Plantilla
               </Button>
             ) : null}
-            {["TEXTO", "TABLA", "DIAGRAMA", "WHITEBOARD"].includes(activeDocument.type) ? (
+            {["DIAGRAMA", "WHITEBOARD"].includes(activeDocument.type) ? (
               <Menu positioning="below-end">
                 <MenuTrigger disableButtonEnhancement>
                   <Button
@@ -237,46 +241,6 @@ export const CollaborativeDocumentsModuleV2EditorView = ({
                 </MenuTrigger>
                 <MenuPopover>
                   <MenuList>
-                    {activeDocument.type === "TEXTO" ? (
-                      <MenuItem onClick={() => {
-                        const editorEl = window.document.querySelector(".ProseMirror");
-                        if (editorEl) {
-                          const html = editorEl.innerHTML;
-                          const blob = new Blob(
-                            [`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`],
-                            { type: "text/html" }
-                          );
-                          downloadFromBlob(blob, `${activeDocument.name}.html`);
-                        }
-                      }}>
-                        Exportar HTML
-                      </MenuItem>
-                    ) : null}
-                    {activeDocument.type === "TABLA" ? (
-                      <MenuItem onClick={() => {
-                        const table = window.document.querySelector(".ag-root-wrapper");
-                        if (table) {
-                          const tableRows = table.querySelectorAll(".ag-row");
-                          const csvRows: string[] = [];
-                          const headers = table.querySelectorAll(".ag-header-cell-text");
-                          if (headers.length) {
-                            csvRows.push(Array.from(headers).map((header) => header.textContent ?? "").join(","));
-                          }
-                          tableRows.forEach((tableRow) => {
-                            const cells = tableRow.querySelectorAll(".ag-cell");
-                            csvRows.push(
-                              Array.from(cells)
-                                .map((cell) => `"${(cell.textContent ?? "").replace(/"/g, "\"\"")}"`)
-                                .join(",")
-                            );
-                          });
-                          const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-                          downloadFromBlob(blob, `${activeDocument.name}.csv`);
-                        }
-                      }}>
-                        Exportar CSV
-                      </MenuItem>
-                    ) : null}
                     {activeDocument.type === "DIAGRAMA" ? (
                       <MenuItem onClick={() => {
                         const svg = window.document.querySelector(".react-flow svg, .react-flow__viewport");
@@ -292,7 +256,7 @@ export const CollaborativeDocumentsModuleV2EditorView = ({
                     ) : null}
                     {activeDocument.type === "WHITEBOARD" ? (
                       <MenuItem onClick={() => {
-                        const svgEl = window.document.querySelector(".tl-svg-context svg, .tldraw svg");
+                        const svgEl = window.document.querySelector(".excalidraw svg.excalidraw__canvas");
                         if (svgEl) {
                           const serializer = new XMLSerializer();
                           const svgStr = serializer.serializeToString(svgEl);
