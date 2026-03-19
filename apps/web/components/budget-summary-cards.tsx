@@ -11,7 +11,7 @@ type BudgetSummaryData = {
 };
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(value);
+  new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 }).format(value);
 
 const formatPct = (value: number) =>
   `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 }).format(value)}%`;

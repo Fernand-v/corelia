@@ -117,7 +117,7 @@ export const securityPlugin = fp(async (app) => {
 
   await app.register(rateLimit, {
     global: true,
-    max: 100,
+    max: 300,
     timeWindow: "1 minute",
     keyGenerator: (request) => {
       const forwarded = request.headers["x-forwarded-for"];

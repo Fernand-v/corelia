@@ -688,7 +688,9 @@ export const buildOnlyOfficeDocumentKey = (input: {
   currentVersion: number;
   updatedAt: string;
 }) =>
-  `${input.documentId}:${input.currentVersion}:${input.updatedAt}`.slice(0, 128);
+  `${input.documentId}_${input.currentVersion}_${input.updatedAt}`
+    .replace(/[^0-9a-zA-Z_.=-]/g, "_")
+    .slice(0, 128);
 
 export const buildOnlyOfficeVersionNote = (documentName: string, status: number) => {
   const title = escapeXml(documentName.trim() || "Documento");

@@ -30,6 +30,22 @@ export const socketPlugin = fp(async (app) => {
     ? env.CORS_ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
     : [];
 
+  const PRIVATE_IPV4_PATTERN =
+    /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|169\.254\.)/;
+  const PRIVATE_IPV6_PATTERN = /^(::1|fc|fd|fe80:)/i;
+
+  const isPrivateNetworkOrigin = (raw: string) => {
+    try {
+      const parsed = new URL(raw);
+      const h = parsed.hostname.toLowerCase();
+      if (h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0" || h === "host.docker.internal") return true;
+      if (h.endsWith(".local")) return true;
+      return PRIVATE_IPV4_PATTERN.test(h) || PRIVATE_IPV6_PATTERN.test(h);
+    } catch {
+      return false;
+    }
+  };
+
   const io = new Server(app.server, {
     path: env.SOCKET_IO_PATH,
     cors: {
@@ -45,6 +61,11 @@ export const socketPlugin = fp(async (app) => {
         }
 
         if (allowedOrigins.some((allowed) => origin.toLowerCase() === allowed.toLowerCase())) {
+          callback(null, true);
+          return;
+        }
+
+        if (env.CORS_ALLOW_PRIVATE_NETWORK && isPrivateNetworkOrigin(origin)) {
           callback(null, true);
           return;
         }

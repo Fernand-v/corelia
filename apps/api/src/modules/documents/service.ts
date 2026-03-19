@@ -325,7 +325,10 @@ export class DocumentsService {
 
   private getOnlyOfficeDocumentServerUrl() {
     const value = env.ONLYOFFICE_DOCUMENT_SERVER_URL.trim();
-    return value.replace(/\/+$/g, "");
+    if (value) {
+      return value.replace(/\/+$/g, "");
+    }
+    return "/onlyoffice";
   }
 
   private getOnlyOfficeApiBaseUrl() {

@@ -68,7 +68,7 @@ export const resolveHocuspocusUrl = (): ResolvedHocuspocus => {
     const path = normalizeRelativeCollabPath(raw);
     const shouldUseLocalFallback =
       isLocalHost(window.location.hostname) &&
-      window.location.port !== "1234" &&
+      window.location.port === "3000" &&
       (configured.length === 0 || configured === "/collab" || configured === "/collab/");
 
     if (shouldUseLocalFallback) {

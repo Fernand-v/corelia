@@ -49,7 +49,7 @@ type ExpensesResponse = {
 const MANAGE_ROLES = new Set(["ADMINISTRADOR", "LIDER_PROYECTO", "COORDINADOR_EQUIPO"]);
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(value);
+  new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 }).format(value);
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString("es-ES", { dateStyle: "medium" });

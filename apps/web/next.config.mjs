@@ -4,10 +4,8 @@ import path from "node:path";
 const nextConfig = {
   output: "standalone",
   serverExternalPackages: ["tldraw"],
-  experimental: {
-    typedRoutes: true,
-    outputFileTracingRoot: path.join(process.cwd(), "../../"),
-  },
+  typedRoutes: true,
+  outputFileTracingRoot: path.join(process.cwd(), "../../")
 };
 
 export default nextConfig;

@@ -2,8 +2,15 @@ import { PrismaClient } from "@prisma/client";
 import { Client } from "minio";
 import { env } from "../lib/env.js";
 import { buildAuditTargetCreateData } from "../lib/audit-target.js";
+import { createPrismaSchemaGate } from "../lib/schema-readiness.js";
 
 const prisma = new PrismaClient();
+const ensureDocumentsPurgeSchemaReady = createPrismaSchemaGate(prisma, "documents purge scheduler", [
+  { table: "CollaborativeDocument", column: "purgeAt" },
+  { table: "CollaborativeDocumentVersion", column: "snapshotPath" },
+  { table: "DocumentAsset", column: "minioPath" },
+  { table: "AuditLog", column: "action" }
+]);
 
 const storage = new Client({
   endPoint: env.MINIO_ENDPOINT,
@@ -91,14 +98,22 @@ const purgeExpiredDocuments = async () => {
   }
 };
 
+const runDocumentsPurge = async () => {
+  if (!(await ensureDocumentsPurgeSchemaReady())) {
+    return;
+  }
+
+  await purgeExpiredDocuments();
+};
+
 export const startDocumentsPurgeScheduler = () => {
   const timer = setInterval(() => {
-    void purgeExpiredDocuments().catch((error) => {
+    void runDocumentsPurge().catch((error) => {
       console.error("[workers] documents purge failed", error);
     });
   }, purgeIntervalMs);
 
-  void purgeExpiredDocuments().catch((error) => {
+  void runDocumentsPurge().catch((error) => {
     console.error("[workers] initial documents purge failed", error);
   });
 

@@ -113,7 +113,8 @@ services:
     environment:
       GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_USERS_DEFAULT_THEME: light
     volumes:
@@ -181,7 +182,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET:-corelia-files}
       DOCUMENTS_PRESENCE_TTL_SECONDS: ${DOCUMENTS_PRESENCE_TTL_SECONDS:-70}
-      ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-https://localhost/onlyoffice}
+      ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-}
       ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-}
       SMTP_HOST: ${SMTP_HOST:-mailhog}
       SMTP_PORT: ${SMTP_PORT:-1025}
@@ -212,6 +213,18 @@ services:
       GRAFANA_URL: ${GRAFANA_URL:-/grafana}
     ports:
       - "4000:4000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/status').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   web:
     build:
@@ -220,6 +233,9 @@ services:
       target: runner
       args:
         PNPM_VERSION: ${PNPM_VERSION:-9.12.3}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_DOCKER:-/api/v1}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL_DOCKER:-}
+        NEXT_PUBLIC_SOCKET_PATH: /ws/socket.io
         NEXT_PUBLIC_HOCUSPOCUS_URL: ${NEXT_PUBLIC_HOCUSPOCUS_URL_DOCKER:-/collab}
         NEXT_PUBLIC_DOCS_DEBUG: ${NEXT_PUBLIC_DOCS_DEBUG:-false}
     container_name: corelia-web
@@ -228,11 +244,6 @@ services:
       - api
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_DOCKER:-/api/v1}
-      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL_DOCKER:-}
-      NEXT_PUBLIC_SOCKET_PATH: /ws/socket.io
-      NEXT_PUBLIC_HOCUSPOCUS_URL: ${NEXT_PUBLIC_HOCUSPOCUS_URL_DOCKER:-/collab}
-      NEXT_PUBLIC_DOCS_DEBUG: ${NEXT_PUBLIC_DOCS_DEBUG:-false}
     ports:
       - "3000:3000"
 
@@ -274,6 +285,8 @@ services:
       redis:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      api:
         condition: service_healthy
     environment:
       NODE_ENV: production

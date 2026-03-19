@@ -4,9 +4,17 @@ import { PrismaClient } from "@prisma/client";
 import { connection, notificationsQueue } from "../lib/queues.js";
 import { runJobWithTrace } from "../lib/tracing.js";
 import { buildAuditTargetCreateData } from "../lib/audit-target.js";
+import { createPrismaSchemaGate } from "../lib/schema-readiness.js";
 
 const prisma = new PrismaClient();
 const PENDING_ACTIVATION_SCAN_INTERVAL_MS = 60_000;
+const ensureTaskLifecycleSchemaReady = createPrismaSchemaGate(prisma, "task lifecycle scheduler", [
+  { table: "Task", column: "pendingActivatedAt" },
+  { table: "TaskDependency", column: "dependsOnTaskId" },
+  { table: "TaskStatusHistory", column: "changedAt" },
+  { table: "ProjectMember", column: "roleId" },
+  { table: "Notification", column: "event" }
+]);
 const taskStatuses = [
   "PENDIENTE",
   "EN_REVISION",
@@ -151,14 +159,22 @@ const activatePendingTasksLifecycle = async () => {
   }
 };
 
+const runTaskLifecycleActivation = async () => {
+  if (!(await ensureTaskLifecycleSchemaReady())) {
+    return;
+  }
+
+  await activatePendingTasksLifecycle();
+};
+
 export const startTaskLifecycleScheduler = () => {
   const timer = setInterval(() => {
-    void activatePendingTasksLifecycle().catch((error) => {
+    void runTaskLifecycleActivation().catch((error) => {
       console.error("[workers] task lifecycle activation failed", error);
     });
   }, PENDING_ACTIVATION_SCAN_INTERVAL_MS);
 
-  void activatePendingTasksLifecycle().catch((error) => {
+  void runTaskLifecycleActivation().catch((error) => {
     console.error("[workers] initial task lifecycle activation failed", error);
   });
 
