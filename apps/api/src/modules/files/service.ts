@@ -173,43 +173,37 @@ export class FileService {
           createdAt: true
         }
       }),
-      this.app.prisma.fileObject.findMany({
-        where: currentFolder
-          ? {
+      currentFolder
+        ? this.app.prisma.fileObject.findMany({
+            where: {
               folderId: currentFolder.id,
               deletedAt: null
-            }
-          : {
-              deletedAt: null,
-              folder: {
-                projectId: input.projectId,
-                scope: "PROYECTO"
-              }
             },
-        orderBy: [{ createdAt: "desc" }],
-        take: currentFolder ? 100 : 10,
-        select: {
-          id: true,
-          folderId: true,
-          ownerId: true,
-          originalName: true,
-          mimeType: true,
-          sizeBytes: true,
-          minioPath: true,
-          createdAt: true,
-          owner: {
+            orderBy: [{ createdAt: "desc" }],
+            take: 100,
             select: {
-              firstName: true,
-              lastName: true
+              id: true,
+              folderId: true,
+              ownerId: true,
+              originalName: true,
+              mimeType: true,
+              sizeBytes: true,
+              minioPath: true,
+              createdAt: true,
+              owner: {
+                select: {
+                  firstName: true,
+                  lastName: true
+                }
+              },
+              folder: {
+                select: {
+                  name: true
+                }
+              }
             }
-          },
-          folder: {
-            select: {
-              name: true
-            }
-          }
-        }
-      })
+          })
+        : Promise.resolve([])
     ]);
 
     return {

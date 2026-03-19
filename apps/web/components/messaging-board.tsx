@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Channel, Message, MessagingConversationsResponse } from "@corelia/types";
-import type { TypingUser } from "@/components/messaging-module";
+import type { TypingUser, PendingFile, UploadProgress } from "@/components/messaging-module";
 import { apiRequest, getApiBaseUrl, getAuthToken, useAuthStore } from "@/lib/api";
 import { buildMaskedCallRoute } from "@/lib/call-route-ref";
 import { getContextFromSearchParams } from "@/lib/context";
@@ -40,6 +40,118 @@ type AttachmentPreviewTarget = {
 };
 
 const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 1920;
+const IMAGE_QUALITY = 0.8;
+
+const getFileCategory = (file: File): PendingFile["type"] => {
+  const mime = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  if (mime.startsWith("image/") || /\.(jpe?g|png|gif|webp|bmp)$/i.test(name)) return "image";
+  if (mime.startsWith("video/") || /\.(mp4|webm|mov|m4v|avi)$/i.test(name)) return "video";
+  if (mime.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name)) return "audio";
+  if (mime === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+  return "other";
+};
+
+const compressImage = (file: File): Promise<File> =>
+  new Promise((resolve) => {
+    if (!file.type.startsWith("image/") || file.type === "image/gif") {
+      resolve(file);
+      return;
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION) {
+        resolve(file);
+        return;
+      }
+      const ratio = Math.min(MAX_IMAGE_DIMENSION / width, MAX_IMAGE_DIMENSION / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(file); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          resolve(new File([blob], file.name, { type: file.type, lastModified: Date.now() }));
+        },
+        file.type,
+        IMAGE_QUALITY
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+
+const generateVideoThumbnail = (file: File): Promise<string | null> =>
+  new Promise((resolve) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    video.muted = true;
+    video.preload = "metadata";
+    video.onloadeddata = () => {
+      video.currentTime = Math.min(1, video.duration * 0.1);
+    };
+    video.onseeked = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.min(video.videoWidth, 320);
+      canvas.height = Math.round((canvas.width / video.videoWidth) * video.videoHeight);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { URL.revokeObjectURL(url); resolve(null); return; }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const thumbUrl = canvas.toDataURL("image/jpeg", 0.6);
+      URL.revokeObjectURL(url);
+      resolve(thumbUrl);
+    };
+    video.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    video.src = url;
+  });
+
+const uploadFileWithProgress = (
+  channelId: string,
+  file: File,
+  onProgress: (pct: number) => void
+): Promise<Message> =>
+  new Promise((resolve, reject) => {
+    const token = getAuthToken();
+    if (!token) { reject(new Error("Sin sesion")); return; }
+
+    const formData = new FormData();
+    formData.append("channelId", channelId);
+    formData.append("file", file, file.name);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${getApiBaseUrl()}/messaging/messages/file`);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error("Respuesta invalida del servidor")); }
+      } else {
+        try {
+          const body = JSON.parse(xhr.responseText);
+          reject(new Error(body.message ?? `Error ${xhr.status}`));
+        } catch {
+          reject(new Error(`Error ${xhr.status}`));
+        }
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Error de red al subir archivo"));
+    xhr.send(formData);
+  });
 
 const downloadAttachment = async (attachmentId: string, fileName: string) => {
   const token = getAuthToken();
@@ -162,6 +274,9 @@ export const MessagingBoard = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const blobCacheRef = useRef(new Map<string, string>());
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
@@ -184,8 +299,162 @@ export const MessagingBoard = () => {
   useEffect(() => {
     return () => {
       clearPreviewUrl();
+      for (const url of blobCacheRef.current.values()) {
+        URL.revokeObjectURL(url);
+      }
+      blobCacheRef.current.clear();
+      for (const pf of pendingFiles) {
+        if (pf.previewUrl) URL.revokeObjectURL(pf.previewUrl);
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearPreviewUrl]);
+
+  const resolveAttachmentUrl = useCallback(async (attachmentId: string): Promise<string> => {
+    const cached = blobCacheRef.current.get(attachmentId);
+    if (cached) return cached;
+
+    const authToken = getAuthToken();
+    if (!authToken) throw new Error("Sin sesion");
+
+    const response = await fetch(
+      `${getApiBaseUrl()}/messaging/attachments/${encodeURIComponent(attachmentId)}/content?mode=inline`,
+      { headers: { Authorization: `Bearer ${authToken}` } }
+    );
+
+    if (!response.ok) throw new Error("No se pudo cargar el adjunto");
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    blobCacheRef.current.set(attachmentId, url);
+    return url;
+  }, []);
+
+  const handleAddPendingFiles = useCallback(async (files: File[]) => {
+    const newPending: PendingFile[] = [];
+    for (const file of files) {
+      const id = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const type = getFileCategory(file);
+      let previewUrl: string | null = null;
+
+      if (type === "image") {
+        previewUrl = URL.createObjectURL(file);
+      } else if (type === "video") {
+        previewUrl = await generateVideoThumbnail(file);
+      }
+
+      newPending.push({ id, file, previewUrl, type });
+    }
+    setPendingFiles((current) => [...current, ...newPending]);
+  }, []);
+
+  const handleRemovePendingFile = useCallback((fileId: string) => {
+    setPendingFiles((current) => {
+      const removed = current.find((f) => f.id === fileId);
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+      return current.filter((f) => f.id !== fileId);
+    });
+    setUploadProgress((current) => current.filter((p) => p.fileId !== fileId));
+  }, []);
+
+  const handleConfirmSendFiles = useCallback(async () => {
+    if (!activeChannelId || pendingFiles.length === 0) return;
+
+    const filesToSend = [...pendingFiles];
+    const progressEntries: UploadProgress[] = filesToSend.map((pf) => ({
+      fileId: pf.id,
+      progress: 0,
+      status: pf.type === "image" ? "compressing" : "uploading"
+    }));
+    setUploadProgress(progressEntries);
+
+    for (const pf of filesToSend) {
+      try {
+        let fileToUpload = pf.file;
+
+        if (pf.type === "image") {
+          setUploadProgress((prev) =>
+            prev.map((p) => (p.fileId === pf.id ? { ...p, status: "compressing", progress: 0 } : p))
+          );
+          fileToUpload = await compressImage(pf.file);
+          setUploadProgress((prev) =>
+            prev.map((p) => (p.fileId === pf.id ? { ...p, status: "uploading", progress: 0 } : p))
+          );
+        }
+
+        await uploadFileWithProgress(activeChannelId, fileToUpload, (pct) => {
+          setUploadProgress((prev) =>
+            prev.map((p) => (p.fileId === pf.id ? { ...p, progress: pct } : p))
+          );
+        });
+
+        setUploadProgress((prev) =>
+          prev.map((p) => (p.fileId === pf.id ? { ...p, status: "done", progress: 100 } : p))
+        );
+      } catch (error) {
+        setUploadProgress((prev) =>
+          prev.map((p) =>
+            p.fileId === pf.id
+              ? { ...p, status: "error", errorMessage: error instanceof Error ? error.message : "Error al subir" }
+              : p
+          )
+        );
+      }
+    }
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["messaging", "messages", activeChannelId] }),
+      queryClient.invalidateQueries({ queryKey: ["messaging", "conversations"] })
+    ]);
+
+    setPendingFiles((current) => {
+      for (const pf of current) {
+        if (pf.previewUrl) URL.revokeObjectURL(pf.previewUrl);
+      }
+      return [];
+    });
+
+    setTimeout(() => setUploadProgress([]), 2000);
+  }, [activeChannelId, pendingFiles, queryClient]);
+
+  const handleRetryUpload = useCallback(async (fileId: string) => {
+    const pf = pendingFiles.find((f) => f.id === fileId);
+    if (!pf || !activeChannelId) return;
+
+    setUploadProgress((prev) =>
+      prev.map((p) => (p.fileId === fileId ? { ...p, status: "uploading", progress: 0, errorMessage: null } : p))
+    );
+
+    try {
+      let fileToUpload = pf.file;
+      if (pf.type === "image") {
+        fileToUpload = await compressImage(pf.file);
+      }
+
+      await uploadFileWithProgress(activeChannelId, fileToUpload, (pct) => {
+        setUploadProgress((prev) =>
+          prev.map((p) => (p.fileId === fileId ? { ...p, progress: pct } : p))
+        );
+      });
+
+      setUploadProgress((prev) =>
+        prev.map((p) => (p.fileId === fileId ? { ...p, status: "done", progress: 100 } : p))
+      );
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["messaging", "messages", activeChannelId] }),
+        queryClient.invalidateQueries({ queryKey: ["messaging", "conversations"] })
+      ]);
+    } catch (error) {
+      setUploadProgress((prev) =>
+        prev.map((p) =>
+          p.fileId === fileId
+            ? { ...p, status: "error", errorMessage: error instanceof Error ? error.message : "Error al subir" }
+            : p
+        )
+      );
+    }
+  }, [activeChannelId, pendingFiles, queryClient]);
 
   const handlePreviewAttachment = useCallback(
     async (attachmentId: string, fileName: string, mimeType?: string | null) => {
@@ -781,6 +1050,12 @@ export const MessagingBoard = () => {
             mentions: input.mentions
           });
         }}
+        pendingFiles={pendingFiles}
+        uploadProgress={uploadProgress}
+        onRemovePendingFile={handleRemovePendingFile}
+        onConfirmSendFiles={() => { void handleConfirmSendFiles(); }}
+        onRetryUpload={(fileId) => { void handleRetryUpload(fileId); }}
+        resolveAttachmentUrl={resolveAttachmentUrl}
         onUploadFile={(file) => {
           if (!activeChannelId) {
             setActionError("Selecciona una conversación antes de adjuntar");
@@ -792,7 +1067,7 @@ export const MessagingBoard = () => {
             return;
           }
 
-          sendFileMessageMutation.mutate(file);
+          void handleAddPendingFiles([file]);
         }}
         onDownloadAttachment={(attachmentId, fileName) => {
           void downloadAttachment(attachmentId, fileName);
