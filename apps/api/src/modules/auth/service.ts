@@ -163,12 +163,8 @@ export class AuthService {
       })
     ]);
 
-    if (existingUser) {
-      throw new Error("Ya existe una cuenta registrada para este email");
-    }
-
-    if (existingRequest) {
-      throw new Error("Ya existe una solicitud pendiente para este email");
+    if (existingUser || existingRequest) {
+      throw new Error("No se pudo procesar la solicitud. Verifica los datos e intenta de nuevo.");
     }
 
     const created = await this.app.prisma.signupRequest.create({
@@ -240,7 +236,7 @@ export class AuthService {
 
     const validPassword = await verifyPassword(input.currentPassword, user.passwordHash);
     if (!validPassword) {
-      throw new Error("La contraseña actual no es válida");
+      throw new Error("Credenciales inválidas");
     }
 
     const passwordHash = await hashPassword(input.newPassword);
@@ -320,23 +316,40 @@ export class AuthService {
       throw new Error("Refresh token inválido");
     }
 
-    await this.app.prisma.refreshToken.update({
-      where: { id: existing.id },
-      data: { revokedAt: new Date() }
-    });
-
     const user = await this.app.prisma.user.findUnique({ where: { id: existing.userId } });
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
 
-    return this.createSessionTokens(
-      {
-        id: user.id,
-        email: user.email
-      },
-      existing.id
-    );
+    const accessToken = await this.app.jwt.sign({
+      id: user.id,
+      email: user.email
+    });
+
+    const newRefreshToken = createOpaqueToken();
+    const newRefreshTokenHash = hashOpaqueToken(newRefreshToken);
+
+    await this.app.prisma.$transaction([
+      this.app.prisma.refreshToken.update({
+        where: { id: existing.id },
+        data: { revokedAt: new Date() }
+      }),
+      this.app.prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: newRefreshTokenHash,
+          expiresAt: new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000),
+          rotatedFromId: existing.id
+        }
+      })
+    ]);
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      accessTokenExpiresInSeconds: env.ACCESS_TOKEN_TTL_MINUTES * 60,
+      userId: user.id
+    };
   }
 
   async activateInternalInvite(input: {
@@ -372,7 +385,7 @@ export class AuthService {
     });
 
     if (existing) {
-      throw new Error("Ya existe una cuenta registrada para esta invitación");
+      throw new Error("Invitación inválida o expirada");
     }
 
     const passwordHash = await hashPassword(input.password);

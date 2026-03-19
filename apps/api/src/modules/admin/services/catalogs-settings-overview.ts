@@ -223,6 +223,7 @@ export class AdminCatalogsSettingsOverviewService extends AdminCommonService {
         EN_REVISION?: string;
         COMPLETADA?: string;
       };
+      instantCallExpiryHours?: number;
     }
   ) {
     await this.assertAdmin(actorId);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -92,6 +92,44 @@ const formatBytes = (value: number) => {
   return `${(value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 };
 
+const isImageFile = (input: { mimeType: string; name: string }) =>
+  input.mimeType.toLowerCase().startsWith("image/");
+
+const isPdfFile = (input: { mimeType: string; name: string }) => {
+  const mime = input.mimeType.toLowerCase();
+  return mime.includes("pdf") || input.name.toLowerCase().endsWith(".pdf");
+};
+
+const isVideoFile = (input: { mimeType: string; name: string }) => {
+  const mime = input.mimeType.toLowerCase();
+  if (mime.startsWith("video/")) {
+    return true;
+  }
+
+  const name = input.name.toLowerCase();
+  return (
+    name.endsWith(".mp4") ||
+    name.endsWith(".webm") ||
+    name.endsWith(".mov") ||
+    name.endsWith(".m4v")
+  );
+};
+
+const isAudioFile = (input: { mimeType: string; name: string }) => {
+  const mime = input.mimeType.toLowerCase();
+  if (mime.startsWith("audio/")) {
+    return true;
+  }
+
+  const name = input.name.toLowerCase();
+  return (
+    name.endsWith(".mp3") ||
+    name.endsWith(".wav") ||
+    name.endsWith(".ogg") ||
+    name.endsWith(".m4a")
+  );
+};
+
 export const FilesExplorer = ({
   projectId,
   projectName,
@@ -108,6 +146,61 @@ export const FilesExplorer = ({
   const [folderId, setFolderId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ExplorerFileItem | null>(null);
+  const [previewFile, setPreviewFile] = useState<ExplorerFileItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const closePreview = useCallback(() => {
+    setPreviewFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  }, [previewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handlePreviewFile = async (file: ExplorerFileItem) => {
+    const token = getAuthToken();
+    if (!token) {
+      setActionError("Sesion no valida para previsualizar el archivo");
+      return;
+    }
+
+    setPreviewFile(file);
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+
+    try {
+      const response = await fetch(
+        `${getApiBaseUrl()}/files/objects/${file.id}/content?mode=inline`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ message: "No se pudo cargar la previsualizacion" }));
+        throw new Error(body.message ?? "No se pudo cargar la previsualizacion");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+    } catch (error) {
+      setPreviewFile(null);
+      setActionError(error instanceof Error ? error.message : "Error al previsualizar");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   const changesHref = withDashboardContext("/changes", {
     projectId,
@@ -383,6 +476,9 @@ export const FilesExplorer = ({
           setActionError(null);
           setFolderId(currentFolder?.parentId ?? null);
         }}
+        onPreviewFile={(file) => {
+          void handlePreviewFile(file);
+        }}
         onDownloadFile={(file) => {
           void openFile(file, "attachment").catch((error) => {
             setActionError(error.message);
@@ -440,6 +536,103 @@ export const FilesExplorer = ({
           </button>
         </div>
       </UiModal>
+
+      {previewFile ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closePreview();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Previsualizar ${previewFile.name}`}
+            className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold text-slate-900">{previewFile.name}</h3>
+                <p className="text-xs text-slate-500">{previewFile.mimeType}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void openFile(previewFile, "attachment").catch((error) => {
+                      setActionError(error.message);
+                    });
+                  }}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Descargar
+                </button>
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-1">
+              {previewLoading ? (
+                <div className="flex h-96 items-center justify-center">
+                  <p className="text-sm text-slate-500">Cargando previsualizacion...</p>
+                </div>
+              ) : previewUrl ? (
+                isImageFile(previewFile) ? (
+                  <div className="flex items-center justify-center p-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrl}
+                      alt={previewFile.name}
+                      className="max-h-[75vh] max-w-full rounded-lg object-contain"
+                    />
+                  </div>
+                ) : isVideoFile(previewFile) ? (
+                  <div className="flex items-center justify-center p-4">
+                    <video
+                      src={previewUrl}
+                      controls
+                      className="max-h-[75vh] w-full rounded-lg bg-black"
+                    >
+                      Tu navegador no soporta la etiqueta de video.
+                    </video>
+                  </div>
+                ) : isAudioFile(previewFile) ? (
+                  <div className="flex h-[40vh] items-center justify-center p-4">
+                    <audio src={previewUrl} controls className="w-full max-w-xl">
+                      Tu navegador no soporta la etiqueta de audio.
+                    </audio>
+                  </div>
+                ) : isPdfFile(previewFile) ? (
+                  <iframe
+                    src={previewUrl}
+                    title={previewFile.name}
+                    className="h-[75vh] w-full rounded-lg border-0"
+                  />
+                ) : (
+                  <div className="flex h-96 items-center justify-center px-6">
+                    <p className="text-center text-sm text-slate-500">
+                      Este tipo de archivo no admite previsualizacion.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="flex h-96 items-center justify-center">
+                  <p className="text-sm text-slate-500">No se pudo cargar la previsualizacion</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 };

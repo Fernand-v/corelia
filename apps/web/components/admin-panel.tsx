@@ -161,6 +161,24 @@ const toIso = (value: string) => {
   return parsed.toISOString();
 };
 
+const parseDownloadFilename = (contentDisposition: string | null, fallback: string) => {
+  if (!contentDisposition) {
+    return fallback;
+  }
+
+  const encodedMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedMatch?.[1]) {
+    try {
+      return decodeURIComponent(encodedMatch[1]);
+    } catch {
+      return fallback;
+    }
+  }
+
+  const plainMatch = contentDisposition.match(/filename=\"?([^";]+)\"?/i);
+  return plainMatch?.[1] ?? fallback;
+};
+
 export const AdminPanelView = () => {
   const session = useSession();
   const { settings: frontendSettings } = useFrontendSettings();
@@ -180,6 +198,7 @@ export const AdminPanelView = () => {
   const [openCreateTeamModal, setOpenCreateTeamModal] = useState(false);
   const [openAccessModal, setOpenAccessModal] = useState(false);
   const [openAuditModal, setOpenAuditModal] = useState(false);
+  const [openDatabaseBackupModal, setOpenDatabaseBackupModal] = useState(false);
   const [openResetPasswordModal, setOpenResetPasswordModal] = useState(false);
   const [openVisualSettingsModal, setOpenVisualSettingsModal] = useState(false);
   const [openRolesPermissionsModal, setOpenRolesPermissionsModal] = useState(false);
@@ -247,15 +266,18 @@ export const AdminPanelView = () => {
     page: 1,
     pageSize: 50
   });
+  const [databaseBackupPassword, setDatabaseBackupPassword] = useState("");
 
   const [visualSettingsForm, setVisualSettingsForm] = useState<{
     organizationName: string;
     taskStatusColors: TaskStatusColors;
+    instantCallExpiryHours: string;
   }>({
     organizationName: frontendSettingsDefaults.organizationName,
     taskStatusColors: {
       ...frontendSettingsDefaults.taskStatusColors
-    }
+    },
+    instantCallExpiryHours: String(frontendSettingsDefaults.instantCallExpiryHours)
   });
   const [visualSettingsDirty, setVisualSettingsDirty] = useState(false);
   const [visualSettingsFeedback, setVisualSettingsFeedback] = useState<string | null>(null);
@@ -339,7 +361,8 @@ export const AdminPanelView = () => {
       organizationName: adminFrontendSettings.organizationName,
       taskStatusColors: {
         ...adminFrontendSettings.taskStatusColors
-      }
+      },
+      instantCallExpiryHours: String(adminFrontendSettings.instantCallExpiryHours)
     });
     setVisualSettingsDirty(false);
   }, [adminFrontendSettings]);
@@ -354,7 +377,8 @@ export const AdminPanelView = () => {
             PENDIENTE: visualSettingsForm.taskStatusColors.PENDIENTE.trim().toUpperCase(),
             EN_REVISION: visualSettingsForm.taskStatusColors.EN_REVISION.trim().toUpperCase(),
             COMPLETADA: visualSettingsForm.taskStatusColors.COMPLETADA.trim().toUpperCase()
-          }
+          },
+          instantCallExpiryHours: Number.parseInt(visualSettingsForm.instantCallExpiryHours, 10)
         })
       }),
     onSuccess: async (updated) => {
@@ -362,7 +386,8 @@ export const AdminPanelView = () => {
         organizationName: updated.organizationName,
         taskStatusColors: {
           ...updated.taskStatusColors
-        }
+        },
+        instantCallExpiryHours: String(updated.instantCallExpiryHours)
       });
       setVisualSettingsDirty(false);
       setVisualSettingsFeedback("Configuración guardada correctamente.");
@@ -383,7 +408,8 @@ export const AdminPanelView = () => {
         organizationName: updated.organizationName,
         taskStatusColors: {
           ...updated.taskStatusColors
-        }
+        },
+        instantCallExpiryHours: String(updated.instantCallExpiryHours)
       });
       setVisualSettingsDirty(false);
       setVisualSettingsFeedback("Se restauraron los valores por defecto.");
@@ -607,6 +633,50 @@ export const AdminPanelView = () => {
       )
   });
 
+  const databaseBackupMutation = useMutation({
+    mutationFn: async () => {
+      const headers = new Headers();
+      headers.set("Content-Type", "application/json");
+
+      const token = getAuthToken();
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+
+      const response = await fetch(`${getApiBaseUrl()}/admin/database-backup`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          password: databaseBackupPassword
+        })
+      });
+
+      if (!response.ok) {
+        const body = await response
+          .json()
+          .catch(() => ({ message: "No se pudo generar el backup de base de datos" }));
+        throw new Error(body.message ?? "No se pudo generar el backup de base de datos");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = parseDownloadFilename(
+        response.headers.get("Content-Disposition"),
+        `corelia-backup-${new Date().toISOString().slice(0, 10)}.dump`
+      );
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    },
+    onSuccess: () => {
+      setDatabaseBackupPassword("");
+      setOpenDatabaseBackupModal(false);
+    }
+  });
+
   const userOptions = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data?.items]);
   const projectOptions = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
 
@@ -692,8 +762,16 @@ export const AdminPanelView = () => {
 
   const overview = overviewQuery.data;
   const visualColorRegex = /^#[0-9A-F]{6}$/;
+  const visualInstantCallHoursText = visualSettingsForm.instantCallExpiryHours.trim();
+  const visualInstantCallHours = Number.parseInt(visualInstantCallHoursText, 10);
+  const visualInstantCallHoursValid =
+    /^\d+$/.test(visualInstantCallHoursText) &&
+    Number.isInteger(visualInstantCallHours) &&
+    visualInstantCallHours >= 1 &&
+    visualInstantCallHours <= 720;
   const visualSettingsValid =
     visualSettingsForm.organizationName.trim().length > 0 &&
+    visualInstantCallHoursValid &&
     TASK_STATUS_OPTIONS.every(({ status }) =>
       visualColorRegex.test(visualSettingsForm.taskStatusColors[status].trim().toUpperCase())
     );
@@ -757,6 +835,17 @@ export const AdminPanelView = () => {
             helper={`Eventos recientes: ${overview?.audit.latestEvents.length ?? 0}`}
             buttonLabel="Abrir"
             onOpen={() => setOpenAuditModal(true)}
+          />
+          <ActionCard
+            title="Backup de base de datos"
+            description="Genera un respaldo completo (.dump) y lo descarga de inmediato."
+            helper="Solicita contraseña del administrador para confirmar la operación."
+            buttonLabel="Generar"
+            onOpen={() => {
+              setDatabaseBackupPassword("");
+              databaseBackupMutation.reset();
+              setOpenDatabaseBackupModal(true);
+            }}
           />
           <ActionCard
             title="Resetear contraseña"
@@ -961,7 +1050,7 @@ export const AdminPanelView = () => {
         }
       >
         <p className="text-xs text-slate-500">
-          Configura nombre de empresa y colores de estados de tarea sin editar código.
+          Configura nombre de empresa, colores de estados de tarea y vigencia de videollamadas instantáneas sin editar código.
         </p>
 
         {adminFrontendSettingsQuery.isLoading ? (
@@ -994,6 +1083,38 @@ export const AdminPanelView = () => {
               {visualSettingsForm.organizationName.trim() || frontendSettingsDefaults.organizationName}
             </p>
             <p className="text-xs text-slate-600">Nombre aplicado en login, shell, admin y home.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Vigencia de videollamada instantánea (horas)</span>
+            <input
+              type="number"
+              min={1}
+              max={720}
+              step={1}
+              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              value={visualSettingsForm.instantCallExpiryHours}
+              onChange={(event) => {
+                setVisualSettingsFeedback(null);
+                setVisualSettingsDirty(true);
+                setVisualSettingsForm((prev) => ({
+                  ...prev,
+                  instantCallExpiryHours: event.target.value
+                }));
+              }}
+              placeholder="24"
+            />
+          </label>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vista previa</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              {visualInstantCallHoursValid ? `${visualInstantCallHours} horas` : "Valor no válido"}
+            </p>
+            <p className="text-xs text-slate-600">
+              Después de este tiempo el botón de ingreso pasa a gris y se bloquea el acceso.
+            </p>
           </div>
         </div>
 
@@ -1056,7 +1177,9 @@ export const AdminPanelView = () => {
         </div>
 
         {!visualSettingsValid ? (
-          <p className="text-sm text-red-600">Verifica nombre y colores hex válidos (formato #RRGGBB).</p>
+          <p className="text-sm text-red-600">
+            Verifica nombre, colores hex válidos (formato #RRGGBB) y vigencia en horas (1 a 720).
+          </p>
         ) : null}
         {saveVisualSettingsMutation.error ? (
           <p className="text-sm text-red-600">{saveVisualSettingsMutation.error.message}</p>
@@ -1736,6 +1859,54 @@ export const AdminPanelView = () => {
               </li>
             ))}
           </ul>
+        ) : null}
+      </UiModal>
+
+      <UiModal
+        open={openDatabaseBackupModal}
+        onClose={() => {
+          setOpenDatabaseBackupModal(false);
+          setDatabaseBackupPassword("");
+        }}
+        title="Generar backup de base de datos"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setOpenDatabaseBackupModal(false);
+                setDatabaseBackupPassword("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={databaseBackupMutation.isPending || !databaseBackupPassword}
+              onClick={() => databaseBackupMutation.mutate()}
+            >
+              {databaseBackupMutation.isPending ? "Generando..." : "Generar y descargar"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-xs text-slate-500">
+          Para generar el backup, confirma la operación con tu contraseña actual de administrador.
+        </p>
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-slate-600">Contraseña de administrador</span>
+          <input
+            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            type="password"
+            autoComplete="current-password"
+            value={databaseBackupPassword}
+            onChange={(event) => setDatabaseBackupPassword(event.target.value)}
+            placeholder="Ingresa tu contraseña"
+          />
+        </label>
+        {databaseBackupMutation.error ? (
+          <p className="text-sm text-red-600">{databaseBackupMutation.error.message}</p>
         ) : null}
       </UiModal>
 

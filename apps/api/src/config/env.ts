@@ -21,7 +21,7 @@ const envSchema = z.object({
   REDIS_URL: z.string().url(),
   REDIS_PASSWORD: z.string().min(1),
   JWT_ACCESS_SECRET: z.string().min(16),
-  JWT_REFRESH_SECRET: z.string().min(16),
+  JWT_REFRESH_SECRET: z.string().min(16).optional(),
   ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   COLLAB_AUTH_SECRET: z.string().min(16),
@@ -63,7 +63,8 @@ const envSchema = z.object({
   TEAMS_WEBHOOK_URL: z.string().url().optional().or(z.literal("")),
   OTEL_ENABLED: envBoolean.default(false),
   OTEL_SERVICE_NAME: z.string().default("corelia-api"),
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional().or(z.literal(""))
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional().or(z.literal("")),
+  GRAFANA_URL: z.string().default("/grafana")
 });
 
 export type Env = z.infer<typeof envSchema>;

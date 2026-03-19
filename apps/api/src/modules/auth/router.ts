@@ -166,7 +166,11 @@ export const authRouter: FastifyPluginAsync = async (app) => {
     "/change-password",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        rateLimit: {
+          max: 5,
+          timeWindow: "15 minutes"
+        }
       }
     },
     async (request, reply) => {
@@ -197,7 +201,11 @@ export const authRouter: FastifyPluginAsync = async (app) => {
     "/admin-reset-password",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        rateLimit: {
+          max: 10,
+          timeWindow: "15 minutes"
+        }
       }
     },
     async (request, reply) => {
@@ -258,7 +266,11 @@ export const authRouter: FastifyPluginAsync = async (app) => {
           email: true,
           firstName: true,
           lastName: true,
-          baseRole: true,
+          baseRole: {
+            select: {
+              key: true
+            }
+          },
           isActive: true
         }
       });
@@ -267,8 +279,11 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ message: "Usuario no encontrado" });
       }
 
+      const baseRoleKey = user.baseRole?.key ?? request.accessContext?.activeRole ?? "INVITADO_EXTERNO";
+
       return reply.send({
         ...user,
+        baseRole: baseRoleKey,
         activeRole: request.accessContext?.activeRole,
         permissions: request.accessContext?.permissions ?? []
       });

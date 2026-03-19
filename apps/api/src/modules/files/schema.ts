@@ -31,7 +31,7 @@ export const fileSchemas = {
     minioPath: true
   }),
   fileContentQuerySchema: z.object({
-    mode: z.enum(["inline", "attachment"]).default("inline")
+    mode: z.enum(["inline", "attachment"]).default("attachment")
   }),
   storageQuotaSchema,
   storageSummaryQuerySchema: z.object({

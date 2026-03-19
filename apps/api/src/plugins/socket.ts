@@ -9,6 +9,7 @@ import { registerMeetingCallEvents } from "./socket/meeting-call-events.js";
 import { registerNotificationEvents } from "./socket/notification-events.js";
 import { markSocketOnline } from "./socket/presence.js";
 import { registerSubscriptionEvents } from "./socket/subscription-events.js";
+import { registerTypingEvents } from "./socket/typing-events.js";
 import { withSocketSpan } from "./socket/tracing.js";
 import type { SocketWithUser } from "./socket/types.js";
 
@@ -25,10 +26,31 @@ export const socketPlugin = fp(async (app) => {
 
   const hasMeetingAccess = createMeetingAccessChecker(app);
 
+  const allowedOrigins = env.CORS_ALLOWED_ORIGINS
+    ? env.CORS_ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+    : [];
+
   const io = new Server(app.server, {
     path: env.SOCKET_IO_PATH,
     cors: {
-      origin: true,
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        if (env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        if (allowedOrigins.some((allowed) => origin.toLowerCase() === allowed.toLowerCase())) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error("Origin not allowed"), false);
+      },
       credentials: true
     }
   });
@@ -55,6 +77,7 @@ export const socketPlugin = fp(async (app) => {
     };
 
     registerSubscriptionEvents(context);
+    registerTypingEvents(context);
     registerLegacyCallEvents(context);
     registerMeetingCallEvents(context);
     registerNotificationEvents(context);

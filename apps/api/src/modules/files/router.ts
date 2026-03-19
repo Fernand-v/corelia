@@ -191,7 +191,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       try {
         const params = parseWithSchema(fileSchemas.fileIdParamSchema, request.params);
         const query = parseWithSchema(fileSchemas.fileContentQuerySchema, request.query ?? {});
-        const content = await service.getFileContent({ fileId: params.fileId });
+        const content = await service.getFileContent({ fileId: params.fileId, userId: request.authUser!.id });
         const encodedFileName = encodeURIComponent(content.file.originalName);
 
         reply.header("Content-Type", content.file.mimeType || "application/octet-stream");
@@ -202,9 +202,9 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
         reply.header("X-Content-Type-Options", "nosniff");
         return reply.send(content.stream);
       } catch (error) {
-        const message = (error as Error).message;
-        const statusCode = message.includes("no encontrado") ? 404 : 400;
-        return reply.code(statusCode).send({ message });
+        const err = error as Error;
+        const statusCode = err.name === "NotFoundError" ? 404 : 400;
+        return reply.code(statusCode).send({ message: err.message });
       }
     }
   );

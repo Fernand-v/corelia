@@ -53,7 +53,14 @@ export class SearchService {
             { firstName: { contains: input.query, mode: "insensitive" } },
             { lastName: { contains: input.query, mode: "insensitive" } },
             { email: { contains: input.query, mode: "insensitive" } }
-          ]
+          ],
+          AND: {
+            OR: [
+              { projectMemberships: { some: { projectId: { in: projectIds } } } },
+              { createdProjects: { some: { id: { in: projectIds } } } },
+              { teamMemberships: { some: { team: { members: { some: { userId: input.userId } } } } } }
+            ]
+          }
         },
         take: 20
       }),

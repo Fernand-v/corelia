@@ -17,7 +17,7 @@ type RequestItem = {
 export default function RequestsPage() {
   const query = useQuery({
     queryKey: ["form-requests"],
-    queryFn: () => apiRequest<RequestItem[]>("/forms")
+    queryFn: () => apiRequest<RequestItem[]>("/forms/requests")
   });
 
   return (

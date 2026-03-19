@@ -1,9 +1,57 @@
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 
+const notFound = (message: string): Error => {
+  const error = new Error(message);
+  error.name = "NotFoundError";
+  return error;
+};
+
 const TRASH_RETENTION_DAYS = 30;
 const DEFAULT_FILE_MIME = "application/octet-stream";
 const DEFAULT_PROJECT_STORAGE_LIMIT_BYTES = 10 * 1024 * 1024 * 1024;
+
+const ALLOWED_MIME_PREFIXES = [
+  "image/",
+  "audio/",
+  "video/",
+  "text/",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument",
+  "application/vnd.ms-excel",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.oasis.opendocument",
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/gzip",
+  "application/x-tar",
+  "application/json",
+  "application/xml",
+  "application/octet-stream"
+];
+
+const BLOCKED_EXTENSIONS = new Set([
+  ".exe", ".bat", ".cmd", ".com", ".scr", ".pif", ".vbs", ".vbe",
+  ".js", ".jse", ".wsf", ".wsh", ".msi", ".msp", ".mst", ".cpl",
+  ".hta", ".inf", ".ins", ".isp", ".lnk", ".reg", ".rgs", ".sct",
+  ".shb", ".shs", ".ws", ".ps1", ".ps1xml", ".ps2", ".ps2xml",
+  ".psc1", ".psc2", ".dll", ".sys", ".drv", ".sh", ".bash", ".csh"
+]);
+
+const isAllowedMimeType = (mimeType: string): boolean => {
+  const normalized = mimeType.trim().toLowerCase();
+  return ALLOWED_MIME_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+};
+
+const isBlockedExtension = (fileName: string): boolean => {
+  const dotIndex = fileName.lastIndexOf(".");
+  if (dotIndex < 0) {
+    return false;
+  }
+  const extension = fileName.slice(dotIndex).toLowerCase();
+  return BLOCKED_EXTENSIONS.has(extension);
+};
 
 const toSafeNumber = (value: bigint): number => {
   if (value <= 0n) {
@@ -86,24 +134,27 @@ export class FileService {
 
     const breadcrumbs: Array<{ id: string; name: string }> = [];
     if (currentFolder) {
-      let cursor: { id: string; name: string; parentId: string | null } | null = currentFolder;
-      while (cursor) {
-        breadcrumbs.unshift({ id: cursor.id, name: cursor.name });
-        if (!cursor.parentId) {
-          break;
-        }
-        cursor = await this.app.prisma.folder.findFirst({
-          where: {
-            id: cursor.parentId,
-            projectId: input.projectId,
-            scope: "PROYECTO"
-          },
-          select: {
-            id: true,
-            name: true,
-            parentId: true
-          }
-        });
+      const ancestors = await this.app.prisma.$queryRaw<
+        Array<{ id: string; name: string; depth: number }>
+      >`
+        WITH RECURSIVE folder_path AS (
+          SELECT id, name, "parentId", 0 AS depth
+          FROM "Folder"
+          WHERE id = ${currentFolder.id}::uuid
+            AND "projectId" = ${input.projectId}::uuid
+            AND scope = 'PROYECTO'
+          UNION ALL
+          SELECT f.id, f.name, f."parentId", fp.depth + 1
+          FROM "Folder" f
+          INNER JOIN folder_path fp ON f.id = fp."parentId"
+          WHERE f."projectId" = ${input.projectId}::uuid
+            AND f.scope = 'PROYECTO'
+            AND fp.depth < 50
+        )
+        SELECT id, name, depth FROM folder_path ORDER BY depth DESC
+      `;
+      for (const ancestor of ancestors) {
+        breadcrumbs.push({ id: ancestor.id, name: ancestor.name });
       }
     }
 
@@ -227,6 +278,14 @@ export class FileService {
     }
 
     const originalName = sanitizeFileName(input.originalName);
+
+    if (isBlockedExtension(originalName)) {
+      throw new Error("El tipo de archivo no está permitido por razones de seguridad");
+    }
+
+    if (!isAllowedMimeType(input.mimeType)) {
+      throw new Error("El tipo MIME del archivo no está permitido");
+    }
     const objectKey = `project/${input.projectId}/${input.folderId}/${Date.now()}-${randomUUID()}-${originalName}`;
 
     await this.app.storage.putObject(
@@ -275,19 +334,42 @@ export class FileService {
     sizeBytes: number;
     minioPath: string;
   }) {
+    const sanitizedName = sanitizeFileName(input.originalName);
+
+    if (isBlockedExtension(sanitizedName)) {
+      throw new Error("El tipo de archivo no está permitido por razones de seguridad");
+    }
+
+    if (!isAllowedMimeType(input.mimeType)) {
+      throw new Error("El tipo MIME del archivo no está permitido");
+    }
+
+    if (/\.\./.test(input.minioPath) || input.minioPath.startsWith("/")) {
+      throw new Error("La ruta del archivo no es válida");
+    }
+
+    const folder = await this.app.prisma.folder.findUnique({
+      where: { id: input.folderId },
+      select: { id: true }
+    });
+
+    if (!folder) {
+      throw new Error("La carpeta especificada no existe");
+    }
+
     return this.app.prisma.fileObject.create({
       data: {
         folderId: input.folderId,
         ownerId: input.ownerId,
-        originalName: input.originalName,
-        mimeType: input.mimeType,
+        originalName: sanitizedName,
+        mimeType: input.mimeType.trim() || DEFAULT_FILE_MIME,
         sizeBytes: input.sizeBytes,
         minioPath: input.minioPath
       }
     });
   }
 
-  async getFileContent(input: { fileId: string }) {
+  async getFileContent(input: { fileId: string; userId: string }) {
     const file = await this.app.prisma.fileObject.findUnique({
       where: { id: input.fileId },
       select: {
@@ -295,12 +377,51 @@ export class FileService {
         originalName: true,
         mimeType: true,
         minioPath: true,
-        deletedAt: true
+        deletedAt: true,
+        folder: {
+          select: {
+            projectId: true
+          }
+        }
       }
     });
 
     if (!file || file.deletedAt) {
-      throw new Error("Archivo no encontrado");
+      throw notFound("Archivo no encontrado");
+    }
+
+    if (file.folder.projectId) {
+      const isAdmin = await this.app.prisma.user.findFirst({
+        where: {
+          id: input.userId,
+          baseRole: { is: { key: "ADMINISTRADOR" } }
+        },
+        select: { id: true }
+      });
+
+      if (!isAdmin) {
+        const isMember = await this.app.prisma.projectMember.findFirst({
+          where: {
+            projectId: file.folder.projectId,
+            userId: input.userId
+          },
+          select: { userId: true }
+        });
+
+        const isOwner = !isMember
+          ? await this.app.prisma.project.findFirst({
+              where: {
+                id: file.folder.projectId,
+                ownerId: input.userId
+              },
+              select: { id: true }
+            })
+          : null;
+
+        if (!isMember && !isOwner) {
+          throw notFound("Archivo no encontrado");
+        }
+      }
     }
 
     if (!this.app.storage) {

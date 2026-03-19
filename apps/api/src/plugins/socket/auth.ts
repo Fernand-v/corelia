@@ -1,5 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import type { SocketAuthPayload, SocketWithUser } from "./types.js";
+import { z } from "zod";
+import type { SocketWithUser } from "./types.js";
+
+const socketAuthPayloadSchema = z.object({
+  id: z.string().min(1),
+  email: z.string().email()
+});
 
 export const parseBearerToken = (authorization?: string): string | null => {
   if (!authorization) {
@@ -32,7 +38,8 @@ export const authenticateSocket = async (
       return next(new Error("Unauthorized socket"));
     }
 
-    const payload = (await app.jwt.verify(authToken)) as SocketAuthPayload;
+    const raw = await app.jwt.verify(authToken);
+    const payload = socketAuthPayloadSchema.parse(raw);
     socket.data.user = {
       id: payload.id,
       email: payload.email

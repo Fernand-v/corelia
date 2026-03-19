@@ -101,7 +101,7 @@ export const securityPlugin = fp(async (app) => {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'"],
         imgSrc: ["'self'", "data:"]
       }
     },
@@ -116,7 +116,18 @@ export const securityPlugin = fp(async (app) => {
   });
 
   await app.register(rateLimit, {
-    global: false,
-    keyGenerator: (request) => request.ip
+    global: true,
+    max: 100,
+    timeWindow: "1 minute",
+    keyGenerator: (request) => {
+      const forwarded = request.headers["x-forwarded-for"];
+      if (typeof forwarded === "string") {
+        const clientIp = forwarded.split(",")[0]?.trim();
+        if (clientIp) {
+          return clientIp;
+        }
+      }
+      return request.ip;
+    }
   });
 });

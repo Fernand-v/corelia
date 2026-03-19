@@ -10,6 +10,7 @@ import { socketPlugin } from "./plugins/socket.js";
 import { mediaPlugin } from "./plugins/media.js";
 import { storagePlugin } from "./plugins/storage.js";
 import { securityPlugin } from "./plugins/security.js";
+import metricsPlugin from "./plugins/metrics.js";
 import { statusRouter } from "./modules/status/router.js";
 import { authRouter } from "./modules/auth/router.js";
 import { identityRouter } from "./modules/identity/router.js";
@@ -42,7 +43,8 @@ export const createApp = async (): Promise<FastifyInstance> => {
   const app = Fastify({
     logger: {
       level: process.env.NODE_ENV === "production" ? "info" : "debug"
-    }
+    },
+    trustProxy: true
   });
 
   app.setErrorHandler((error, _request, reply) => {
@@ -70,12 +72,20 @@ export const createApp = async (): Promise<FastifyInstance> => {
         ? knownError.statusCode
         : 500;
 
+    if (statusCode >= 500) {
+      app.log.error(knownError);
+      return reply.code(statusCode).send({
+        message: "Error interno del servidor"
+      });
+    }
+
     return reply.code(statusCode).send({
       message: knownError.message
     });
   });
 
   await app.register(securityPlugin);
+  await app.register(metricsPlugin);
   await app.register(prismaPlugin);
   await app.register(redisPlugin);
   await app.register(storagePlugin);

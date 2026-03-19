@@ -10,8 +10,8 @@ services:
     command: ["postgres", "-c", "password_encryption=scram-sha-256", "-c", "listen_addresses=*"]
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?Set POSTGRES_USER}"]
       interval: 10s
@@ -25,8 +25,8 @@ services:
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD}"]
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?Set REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -43,9 +43,9 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    # ports:
+    #   - "${MINIO_API_PORT:-9000}:9000"
+    #   - "${MINIO_CONSOLE_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -54,6 +54,7 @@ services:
 
   minio-init:
     image: minio/mc:latest
+    container_name: corelia-minio-init
     depends_on:
       minio:
         condition: service_healthy
@@ -65,6 +66,58 @@ services:
       exit 0;
       "
 
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: corelia-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    # ports:
+    #   - "9090:9090"
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.66.0
+    container_name: corelia-redis-exporter
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: corelia-postgres-exporter
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB}?sslmode=disable
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: corelia-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_USERS_DEFAULT_THEME: light
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+
   tempo:
     image: grafana/tempo:2.6.1
     container_name: corelia-tempo
@@ -74,9 +127,9 @@ services:
     volumes:
       - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo_data:/tmp/tempo
-    ports:
-      - "3200:3200"
-      - "4318:4318"
+    # ports:
+    #   - "3200:3200"
+    #   - "4318:4318"
 
   api:
     build:
@@ -149,6 +202,7 @@ services:
       OTEL_ENABLED: ${OTEL_ENABLED:-true}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME_API:-corelia-api}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT_DOCKER:-http://tempo:4318}
+      GRAFANA_URL: ${GRAFANA_URL:-/grafana}
     ports:
       - "4000:4000"
 
@@ -187,8 +241,8 @@ services:
       HOCUSPOCUS_PORT: ${HOCUSPOCUS_PORT:-1234}
       HOCUSPOCUS_QUIET: ${HOCUSPOCUS_QUIET:-false}
       COLLAB_AUTH_SECRET: ${COLLAB_AUTH_SECRET:?Set COLLAB_AUTH_SECRET}
-    ports:
-      - "1234:1234"
+    # ports:
+    #   - "1234:1234"
 
   workers:
     build:
@@ -246,3 +300,5 @@ volumes:
   redis_data:
   minio_data:
   tempo_data:
+  prometheus_data:
+  grafana_data:

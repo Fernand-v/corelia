@@ -1,14 +1,17 @@
 import { CalendarBoard } from "@/components/calendar-board";
 import { ProjectContextRequired } from "@/components/project-context-required";
+import { getContextFromSearchParamsRecord } from "@/lib/context";
 
 type CalendarPageProps = {
-  searchParams?: Promise<{ projectId?: string | string[] }>;
+  searchParams?: Promise<{ projectId?: string | string[]; ctx?: string | string[] }>;
 };
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
-  const rawProjectId = resolvedSearchParams.projectId;
-  const projectId = Array.isArray(rawProjectId) ? (rawProjectId[0] ?? "") : (rawProjectId ?? "");
+  const dashboardContext = getContextFromSearchParamsRecord(
+    resolvedSearchParams as Record<string, string | string[] | undefined>
+  );
+  const projectId = dashboardContext.projectId ?? "";
 
   if (!projectId) {
     return (

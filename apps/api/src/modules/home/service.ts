@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { HomeDashboard, RoleCode, TaskStatus } from "@corelia/types";
+import { env } from "../../config/env.js";
 import { getFrontendSettings } from "../../lib/frontend-settings.js";
 import { StatusService } from "../status/service.js";
 import { parseAnnouncementBody } from "../announcements/content.js";
@@ -880,7 +881,7 @@ export class HomeService {
         now: system.now,
         maintenance: system.maintenance,
         services: system.services,
-        grafanaUrl: process.env.GRAFANA_URL ?? "http://localhost:3001"
+        grafanaUrl: env.GRAFANA_URL
       },
       organizationActivity: {
         newUsersLast7Days,

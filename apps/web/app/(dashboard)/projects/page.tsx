@@ -8,7 +8,7 @@ import { Button, Card } from "@corelia/ui";
 import type { Route } from "next";
 import { UiModal } from "@/components/ui-modal";
 import { apiRequest } from "@/lib/api";
-import { withDashboardContext } from "@/lib/context";
+import { getContextFromSearchParams, withDashboardContext } from "@/lib/context";
 import { useSession } from "@/lib/session";
 
 type ProjectItem = {
@@ -33,13 +33,21 @@ const resourceCards = [
   { label: "Presupuesto", href: "/budget", description: "Partidas, gastos y resumen financiero", isProjectRoute: true }
 ];
 
+const normalizeSearchValue = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
 export default function ProjectsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const session = useSession();
   const params = useSearchParams();
+  const dashboardContext = useMemo(() => getContextFromSearchParams(params), [params]);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(params.get("projectId") ?? "");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(dashboardContext.projectId ?? "");
   const [newProjectModalOpen, setNewProjectModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
@@ -47,6 +55,7 @@ export default function ProjectsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [newProjectStartDate, setNewProjectStartDate] = useState("");
   const [newProjectEndDate, setNewProjectEndDate] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
 
   const projectsQuery = useQuery({
     queryKey: ["projects"],
@@ -94,16 +103,32 @@ export default function ProjectsPage() {
   });
 
   useEffect(() => {
-    const fromQuery = params.get("projectId") ?? "";
+    const fromQuery = dashboardContext.projectId ?? "";
     if (fromQuery !== selectedProjectId) {
       setSelectedProjectId(fromQuery);
     }
-  }, [params, selectedProjectId]);
+  }, [dashboardContext.projectId, selectedProjectId]);
 
   const selectedProject = useMemo(
     () => projectsQuery.data?.find((project) => project.id === selectedProjectId) ?? null,
     [projectsQuery.data, selectedProjectId]
   );
+
+  const filteredProjects = useMemo(() => {
+    const projects = projectsQuery.data ?? [];
+    const needle = normalizeSearchValue(projectSearch);
+
+    if (!needle) {
+      return projects;
+    }
+
+    return projects.filter((project) => {
+      const haystack = normalizeSearchValue(
+        `${project.name} ${project.description ?? ""} ${project.template}`
+      );
+      return haystack.includes(needle);
+    });
+  }, [projectSearch, projectsQuery.data]);
 
   const selectProject = (projectId: string) => {
     const selected = projectsQuery.data?.find((project) => project.id === projectId) ?? null;
@@ -111,7 +136,7 @@ export default function ProjectsPage() {
     const next = withDashboardContext("/projects", {
       projectId,
       projectName: selected?.name ?? null,
-      teamId: params.get("teamId")
+      teamId: dashboardContext.teamId ?? null
     });
     router.push(next as Route);
   };
@@ -139,8 +164,20 @@ export default function ProjectsPage() {
 
         {projectsQuery.isLoading ? <p className="text-sm text-slate-600">Cargando proyectos...</p> : null}
         {projectsQuery.error ? <p className="text-sm text-red-600">{projectsQuery.error.message}</p> : null}
+
+        <label className="block space-y-1">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Buscar proyecto</span>
+          <input
+            type="text"
+            value={projectSearch}
+            onChange={(event) => setProjectSearch(event.target.value)}
+            placeholder="Nombre, descripción o plantilla"
+            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+          />
+        </label>
+
         <ul className="space-y-2">
-          {projectsQuery.data?.map((project) => {
+          {filteredProjects.map((project) => {
             const selected = project.id === selectedProjectId;
             return (
               <li key={project.id}>
@@ -163,6 +200,11 @@ export default function ProjectsPage() {
             );
           })}
         </ul>
+        {!projectsQuery.isLoading && !projectsQuery.error && filteredProjects.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            No se encontraron proyectos con ese criterio.
+          </p>
+        ) : null}
       </Card>
 
       {selectedProject ? (
@@ -190,7 +232,7 @@ export default function ProjectsPage() {
                 : withDashboardContext(resource.href, {
                     projectId: selectedProject.id,
                     projectName: selectedProject.name,
-                    teamId: params.get("teamId")
+                    teamId: dashboardContext.teamId ?? null
                   });
               return (
                 <Link

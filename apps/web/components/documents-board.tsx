@@ -801,17 +801,6 @@ export const DocumentsBoard = ({
     }
   });
 
-  // ── Templates ──────────────────────────────────────────
-
-  const templatesQuery = useQuery({
-    queryKey: ["documents", "templates", projectId],
-    queryFn: () =>
-      apiRequest<{ items: DocumentTemplate[] }>(
-        `/documents/templates?projectId=${encodeURIComponent(projectId)}`
-      ),
-    enabled: false // fetch on demand
-  });
-
   const createTemplateMutation = useMutation({
     mutationFn: (input: { documentId: string; name: string; description?: string }) =>
       apiRequest<DocumentTemplate>("/documents/templates", {
@@ -1308,7 +1297,7 @@ export const DocumentsBoard = ({
     return () => {
       yText.unobserve(onTextChange);
     };
-  }, [activeDocument?.id, activeDocument?.type, provider]);
+  }, [activeDocument, activeDocument?.id, activeDocument?.type, provider]);
 
   useEffect(() => {
     if (
@@ -1367,6 +1356,7 @@ export const DocumentsBoard = ({
       window.clearInterval(timer);
     };
   }, [
+    activeDocument,
     activeDocument?.id,
     activeDocument?.type,
     connectionState,
@@ -1422,6 +1412,7 @@ export const DocumentsBoard = ({
       window.removeEventListener("beforeunload", onBeforeUnload);
     };
   }, [
+    activeDocument,
     activeDocument?.id,
     activeDocument?.type,
     connectionState,
@@ -1568,10 +1559,6 @@ export const DocumentsBoard = ({
       onCreateTemplate={async (input) => {
         await createTemplateMutation.mutateAsync(input);
       }}
-      onFetchTemplates={() => {
-        void templatesQuery.refetch();
-      }}
-      templates={templatesQuery.data?.items ?? []}
     />
   );
 };

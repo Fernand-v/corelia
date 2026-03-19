@@ -1,5 +1,12 @@
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 import { Server } from "@hocuspocus/server";
 import jwt from "jsonwebtoken";
+
+// Load .env from monorepo root so dev mode picks up COLLAB_AUTH_SECRET
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, "../../.env") });
 
 const host = process.env.HOCUSPOCUS_HOST?.trim() || "0.0.0.0";
 const port = Number(process.env.HOCUSPOCUS_PORT || "1234");

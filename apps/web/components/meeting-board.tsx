@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Button, Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
+import { buildMaskedCallRoute } from "@/lib/call-route-ref";
+import { getContextFromSearchParams } from "@/lib/context";
 
 type Meeting = {
   id: string;
@@ -64,7 +66,8 @@ const meetingStatusClass = (status: Meeting["status"]) => {
 export const MeetingBoard = () => {
   const queryClient = useQueryClient();
   const params = useSearchParams();
-  const projectId = params.get("projectId");
+  const dashboardContext = useMemo(() => getContextFromSearchParams(params), [params]);
+  const projectId = dashboardContext.projectId;
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
 
   const form = useForm<CreateMeetingInput>({
@@ -147,11 +150,11 @@ export const MeetingBoard = () => {
   );
 
   const openCallTab = (meetingId: string) => {
-    const query = new URLSearchParams({
+    const callUrl = buildMaskedCallRoute({
       meetingId,
-      ...(projectId ? { projectId } : {})
+      projectId: projectId ?? null
     });
-    window.open(`/call?${query.toString()}`, "_blank", "noopener,noreferrer");
+    window.open(callUrl, "_blank", "noopener,noreferrer");
   };
 
   return (

@@ -73,11 +73,37 @@ export type FilesModuleProps = {
   onDownloadFile: (file: FileItem) => void | Promise<void>;
   onDeleteFile: (file: FileItem) => void | Promise<void>;
   onShareFile: (file: FileItem) => void | Promise<void>;
+  onPreviewFile?: (file: FileItem) => void | Promise<void>;
   currentUser: CurrentUser;
   onViewChanges?: () => void;
   onOpenRoot?: () => void;
   isLoading?: boolean;
   errorMessage?: string | null;
+};
+
+const isPreviewable = (file: FileItem) => {
+  const mime = file.mimeType.toLowerCase();
+  if (
+    mime.startsWith("image/") ||
+    mime.includes("pdf") ||
+    mime.startsWith("video/") ||
+    mime.startsWith("audio/")
+  ) {
+    return true;
+  }
+
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".pdf") ||
+    name.endsWith(".mp4") ||
+    name.endsWith(".webm") ||
+    name.endsWith(".mov") ||
+    name.endsWith(".m4v") ||
+    name.endsWith(".mp3") ||
+    name.endsWith(".wav") ||
+    name.endsWith(".ogg") ||
+    name.endsWith(".m4a")
+  );
 };
 
 const formatBytes = (bytes: number) => {
@@ -165,6 +191,20 @@ const fileTypeMeta = (file: FileItem) => {
       badge: "bg-pink-100 text-pink-700"
     };
   }
+  if (mime.startsWith("video/")) {
+    return {
+      icon: "🎬",
+      label: "Video",
+      badge: "bg-violet-100 text-violet-700"
+    };
+  }
+  if (mime.startsWith("audio/")) {
+    return {
+      icon: "🎵",
+      label: "Audio",
+      badge: "bg-cyan-100 text-cyan-700"
+    };
+  }
   if (
     mime.includes("zip") ||
     mime.includes("compressed") ||
@@ -233,6 +273,7 @@ export const FilesModule = ({
   onDownloadFile,
   onDeleteFile,
   onShareFile,
+  onPreviewFile,
   currentUser,
   onViewChanges,
   onOpenRoot,
@@ -243,6 +284,9 @@ export const FilesModule = ({
   const [dragActive, setDragActive] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showRecentFiles, setShowRecentFiles] = useState(false);
+  const [showChangeLog, setShowChangeLog] = useState(false);
+  const [showFilesTable, setShowFilesTable] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -668,6 +712,16 @@ export const FilesModule = ({
                           </td>
                           <td className="px-3 py-3">
                             <div className="flex items-center gap-1">
+                              {onPreviewFile && isPreviewable(file) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void onPreviewFile(file)}
+                                  title="Previsualizar"
+                                  className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                >
+                                  👁
+                                </button>
+                              ) : null}
                               <button
                                 type="button"
                                 onClick={() => void onDownloadFile(file)}
@@ -700,125 +754,182 @@ export const FilesModule = ({
             )}
           </section>
 
-          <section className="mt-5 rounded-[14px] border border-[#e4e9f0] bg-white shadow-[0_2px_12px_rgba(15,27,45,.07)]">
-            <div className="border-b border-[#eef2f8] px-4 py-3">
-              <h3 className={`${sora.className} text-sm font-semibold text-slate-900`}>
-                Archivos recientes
-                <span className="ml-2 text-xs font-medium text-slate-500">
-                  ({filteredFiles.length})
-                </span>
-              </h3>
-            </div>
+          {showFilesTable ? (
+            <section className="mt-4 rounded-[14px] border border-[#e4e9f0] bg-white shadow-[0_2px_12px_rgba(15,27,45,.07)]">
+              <div className="border-b border-[#eef2f8] px-4 py-3">
+                <h3 className={`${sora.className} text-sm font-semibold text-slate-900`}>
+                  Archivos en esta carpeta
+                  <span className="ml-2 text-xs font-medium text-slate-500">
+                    ({filteredFiles.length})
+                  </span>
+                </h3>
+              </div>
 
-            <div className="px-4 py-3">
-              {isLoading ? (
-                <FilesSkeleton />
-              ) : filteredFiles.length === 0 ? (
-                <div className="rounded-[12px] border border-dashed border-[#d5deeb] bg-[#f9fbff] px-5 py-8 text-center">
-                  <p className="text-4xl opacity-30">📄</p>
-                  <p className={`${sora.className} mt-2 text-sm font-semibold text-slate-800`}>
-                    Esta carpeta está vacía
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Sube el primer archivo usando el área de arriba
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[880px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[#eef2f8] text-xs uppercase tracking-wide text-slate-500">
-                        <th className="px-2 py-2">Nombre</th>
-                        <th className="px-2 py-2">Tipo</th>
-                        <th className="px-2 py-2">Tamaño</th>
-                        <th className="px-2 py-2">Modificado</th>
-                        <th className="px-2 py-2">Subido por</th>
-                        <th className="px-2 py-2">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredFiles.map((file) => {
-                        const type = fileTypeMeta(file);
-                        const isCurrentUser =
-                          file.uploadedById === currentUser.id ||
-                          file.uploadedBy === currentUser.name;
-                        return (
-                          <tr
-                            key={file.id}
-                            className="border-b border-[#f1f4f9] transition hover:bg-slate-50"
-                          >
-                            <td className="px-2 py-3">
-                              <div className="flex min-w-0 items-start gap-2">
-                                <span className="text-xl">{type.icon}</span>
-                                <span className="min-w-0">
-                                  <p className="truncate font-semibold text-slate-900">{file.name}</p>
-                                  <p className="truncate text-xs text-slate-500">
-                                    {file.folderPath ?? currentFolder?.name ?? "/"}
-                                  </p>
+              <div className="px-4 py-3">
+                {isLoading ? (
+                  <FilesSkeleton />
+                ) : filteredFiles.length === 0 ? (
+                  <div className="rounded-[12px] border border-dashed border-[#d5deeb] bg-[#f9fbff] px-5 py-8 text-center">
+                    <p className="text-4xl opacity-30">📄</p>
+                    <p className={`${sora.className} mt-2 text-sm font-semibold text-slate-800`}>
+                      Esta carpeta está vacía
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Sube el primer archivo usando el área de arriba
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[880px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-[#eef2f8] text-xs uppercase tracking-wide text-slate-500">
+                          <th className="px-2 py-2">Nombre</th>
+                          <th className="px-2 py-2">Tipo</th>
+                          <th className="px-2 py-2">Tamaño</th>
+                          <th className="px-2 py-2">Modificado</th>
+                          <th className="px-2 py-2">Subido por</th>
+                          <th className="px-2 py-2">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredFiles.map((file) => {
+                          const type = fileTypeMeta(file);
+                          const isCurrentUser =
+                            file.uploadedById === currentUser.id ||
+                            file.uploadedBy === currentUser.name;
+                          return (
+                            <tr
+                              key={file.id}
+                              className="border-b border-[#f1f4f9] transition hover:bg-slate-50"
+                            >
+                              <td className="px-2 py-3">
+                                <div className="flex min-w-0 items-start gap-2">
+                                  <span className="text-xl">{type.icon}</span>
+                                  <span className="min-w-0">
+                                    <p className="truncate font-semibold text-slate-900">{file.name}</p>
+                                    <p className="truncate text-xs text-slate-500">
+                                      {file.folderPath ?? currentFolder?.name ?? "/"}
+                                    </p>
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-3">
+                                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${type.badge}`}>
+                                  {type.label}
                                 </span>
-                              </div>
-                            </td>
-                            <td className="px-2 py-3">
-                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${type.badge}`}>
-                                {type.label}
-                              </span>
-                            </td>
-                            <td className="px-2 py-3 text-slate-700">{formatBytes(file.sizeBytes)}</td>
-                            <td className="px-2 py-3 text-slate-700">
-                              {formatRelativeDate(file.modifiedAt)}
-                            </td>
-                            <td className="px-2 py-3">
-                              <span className="inline-flex items-center gap-2">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700">
-                                  {initialsFromName(file.uploadedBy)}
+                              </td>
+                              <td className="px-2 py-3 text-slate-700">{formatBytes(file.sizeBytes)}</td>
+                              <td className="px-2 py-3 text-slate-700">
+                                {formatRelativeDate(file.modifiedAt)}
+                              </td>
+                              <td className="px-2 py-3">
+                                <span className="inline-flex items-center gap-2">
+                                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700">
+                                    {initialsFromName(file.uploadedBy)}
+                                  </span>
+                                  <span className="text-slate-700">
+                                    {file.uploadedBy}
+                                    {isCurrentUser ? " (Tú)" : ""}
+                                  </span>
                                 </span>
-                                <span className="text-slate-700">
-                                  {file.uploadedBy}
-                                  {isCurrentUser ? " (Tú)" : ""}
-                                </span>
-                              </span>
-                            </td>
-                            <td className="px-2 py-3">
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => void onDownloadFile(file)}
-                                  className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
-                                >
-                                  ⬇
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => void onShareFile(file)}
-                                  className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
-                                >
-                                  ↗
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => void onDeleteFile(file)}
-                                  className="rounded-[8px] border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                                >
-                                  🗑
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </section>
+                              </td>
+                              <td className="px-2 py-3">
+                                <div className="flex items-center gap-1">
+                                  {onPreviewFile && isPreviewable(file) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => void onPreviewFile(file)}
+                                      title="Previsualizar"
+                                      className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                    >
+                                      👁
+                                    </button>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    onClick={() => void onDownloadFile(file)}
+                                    className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                  >
+                                    ⬇
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void onShareFile(file)}
+                                    className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                  >
+                                    ↗
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void onDeleteFile(file)}
+                                    className="rounded-[8px] border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                                  >
+                                    🗑
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </section>
+          ) : null}
 
-          {recentFiles.length > 0 ? (
-            <section className="mt-4 rounded-[14px] border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(15,27,45,.07)]">
-              <h4 className={`${sora.className} text-sm font-semibold text-slate-900`}>
+          {/* Collapsible panels row */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowFilesTable((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-xs font-semibold transition ${
+                showFilesTable
+                  ? "border-[#3b6cf6] bg-blue-50 text-[#3b6cf6]"
+                  : "border-[#e4e9f0] bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <span className="text-sm leading-none">📄</span>
+              Archivos ({filteredFiles.length})
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`h-3 w-3 transition-transform ${showFilesTable ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            {recentFiles.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowRecentFiles((v) => !v)}
+                className={`inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-xs font-semibold transition ${
+                  showRecentFiles
+                    ? "border-[#3b6cf6] bg-blue-50 text-[#3b6cf6]"
+                    : "border-[#e4e9f0] bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span className="text-sm leading-none">🕐</span>
+                Recientes ({recentFiles.length > 8 ? "8+" : recentFiles.length})
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`h-3 w-3 transition-transform ${showRecentFiles ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setShowChangeLog((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-xs font-semibold transition ${
+                showChangeLog
+                  ? "border-[#3b6cf6] bg-blue-50 text-[#3b6cf6]"
+                  : "border-[#e4e9f0] bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <span className="text-sm leading-none">📋</span>
+              Historial ({changeLog.length})
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`h-3 w-3 transition-transform ${showChangeLog ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+          </div>
+
+          {showRecentFiles && recentFiles.length > 0 ? (
+            <section className="mt-2 rounded-[14px] border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(15,27,45,.07)]">
+              <h4 className={`${sora.className} mb-2 text-sm font-semibold text-slate-900`}>
                 Últimos archivos subidos
               </h4>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {recentFiles.slice(0, 8).map((file) => (
                   <button
                     key={file.id}
@@ -833,54 +944,56 @@ export const FilesModule = ({
             </section>
           ) : null}
 
-          <section className="mt-4 rounded-[14px] border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(15,27,45,.07)]">
-            <div className="mb-2 flex items-center justify-between">
-              <h4 className={`${sora.className} text-sm font-semibold text-slate-900`}>
-                Historial de cambios
-              </h4>
-              <button
-                type="button"
-                onClick={() => onViewChanges?.()}
-                className="rounded-[10px] border border-[#e4e9f0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-              >
-                Ver todos
-              </button>
-            </div>
+          {showChangeLog ? (
+            <section className="mt-2 rounded-[14px] border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(15,27,45,.07)]">
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className={`${sora.className} text-sm font-semibold text-slate-900`}>
+                  Historial de cambios
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => onViewChanges?.()}
+                  className="rounded-[10px] border border-[#e4e9f0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Ver todos
+                </button>
+              </div>
 
-            {changeLog.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin cambios registrados aún</p>
-            ) : (
-              <ul className="space-y-2">
-                {changeLog.map((change) => (
-                  <li
-                    key={change.id}
-                    className="flex items-start justify-between gap-3 rounded-[12px] border border-[#eef2f8] bg-slate-50 px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-start gap-2">
-                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700">
-                          {initialsFromName(change.actorName)}
-                        </span>
-                        <p className="min-w-0 text-sm text-slate-700">
-                          <span className="font-semibold text-slate-900">{change.actorName}</span>{" "}
-                          {change.description}{" "}
-                          {change.fileName ? (
-                            <span className="font-semibold text-[#3b6cf6]">{change.fileName}</span>
-                          ) : null}
-                          {change.folderPath ? (
-                            <span className="text-slate-500"> en {change.folderPath}</span>
-                          ) : null}
-                        </p>
+              {changeLog.length === 0 ? (
+                <p className="text-sm text-slate-500">Sin cambios registrados aún</p>
+              ) : (
+                <ul className="space-y-2">
+                  {changeLog.map((change) => (
+                    <li
+                      key={change.id}
+                      className="flex items-start justify-between gap-3 rounded-[12px] border border-[#eef2f8] bg-slate-50 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-start gap-2">
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700">
+                            {initialsFromName(change.actorName)}
+                          </span>
+                          <p className="min-w-0 text-sm text-slate-700">
+                            <span className="font-semibold text-slate-900">{change.actorName}</span>{" "}
+                            {change.description}{" "}
+                            {change.fileName ? (
+                              <span className="font-semibold text-[#3b6cf6]">{change.fileName}</span>
+                            ) : null}
+                            {change.folderPath ? (
+                              <span className="text-slate-500"> en {change.folderPath}</span>
+                            ) : null}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <span className="shrink-0 text-xs text-slate-500">
-                      {formatRelativeDate(change.occurredAt)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                      <span className="shrink-0 text-xs text-slate-500">
+                        {formatRelativeDate(change.occurredAt)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ) : null}
 
           <section className="mt-4 rounded-[14px] border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(15,27,45,.07)]">
             <div className="flex items-center justify-between gap-3">

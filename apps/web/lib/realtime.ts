@@ -1,6 +1,7 @@
 "use client";
 
 import { io, type Socket } from "socket.io-client";
+import { getAuthToken } from "./api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 const resolveWsBase = () => {
@@ -35,6 +36,16 @@ export const getRealtimeSocket = (accessToken: string): Socket => {
     transports: ["websocket", "polling"],
     auth: {
       token: accessToken
+    }
+  });
+
+  // Update auth token on every reconnect attempt so the server
+  // receives a fresh (non-expired) JWT instead of the stale one
+  // that was provided at initial connection time.
+  socket.on("reconnect_attempt", () => {
+    const freshToken = getAuthToken();
+    if (freshToken && socket) {
+      socket.auth = { token: freshToken };
     }
   });
 

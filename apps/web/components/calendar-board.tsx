@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ProjectStage, Task, TaskStatus, TaskStatusColors } from "@corelia/types";
 import { apiRequest } from "@/lib/api";
+import { getContextFromSearchParams } from "@/lib/context";
 import {
   getTaskStatusBadgeStyle,
   getTaskStatusColor,
@@ -1487,7 +1488,8 @@ const CalendarBoardView = ({
 export const CalendarBoard = () => {
   const queryClient = useQueryClient();
   const params = useSearchParams();
-  const projectId = params.get("projectId");
+  const dashboardContext = useMemo(() => getContextFromSearchParams(params), [params]);
+  const projectId = dashboardContext.projectId;
   const session = useSession();
 
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());

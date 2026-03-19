@@ -1,28 +1,21 @@
 import { redirect } from "next/navigation";
+import type { Route } from "next";
+import { getContextFromSearchParamsRecord, withDashboardContext } from "@/lib/context";
 
 type TaskManagementPageProps = {
-  searchParams?: Promise<{ projectId?: string | string[]; projectName?: string | string[]; teamId?: string | string[] }>;
+  searchParams?: Promise<{
+    projectId?: string | string[];
+    projectName?: string | string[];
+    teamId?: string | string[];
+    ctx?: string | string[];
+  }>;
 };
-
-const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
 
 export default async function TaskManagementPage({ searchParams }: TaskManagementPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
-  const params = new URLSearchParams();
-  params.set("tab", "gestion");
-  const projectId = getParam(resolvedSearchParams.projectId);
-  const projectName = getParam(resolvedSearchParams.projectName);
-  const teamId = getParam(resolvedSearchParams.teamId);
-
-  if (projectId) {
-    params.set("projectId", projectId);
-  }
-  if (projectName) {
-    params.set("projectName", projectName);
-  }
-  if (teamId) {
-    params.set("teamId", teamId);
-  }
-
-  redirect(`/tasks?${params.toString()}`);
+  const dashboardContext = getContextFromSearchParamsRecord(
+    resolvedSearchParams as Record<string, string | string[] | undefined>
+  );
+  const redirectPath = withDashboardContext("/tasks?tab=gestion", dashboardContext);
+  redirect(redirectPath as Route);
 }

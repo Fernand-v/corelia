@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { resolveInstantCallExpiryStatus } from "../../lib/instant-call-expiry.js";
 import type { MeetingAccessResult } from "./types.js";
 
 export const createMeetingAccessChecker =
@@ -10,6 +11,7 @@ export const createMeetingAccessChecker =
         id: true,
         projectId: true,
         teamId: true,
+        createdAt: true,
         participants: {
           select: {
             userId: true
@@ -20,6 +22,18 @@ export const createMeetingAccessChecker =
 
     if (!meeting) {
       return { ok: false, message: "Reunión no encontrada" };
+    }
+
+    const instantCallStatus = await resolveInstantCallExpiryStatus(app.prisma, {
+      meetingId,
+      meetingCreatedAt: meeting.createdAt
+    });
+
+    if (instantCallStatus.isInstantCall && instantCallStatus.expired) {
+      return {
+        ok: false,
+        message: `La videollamada instantánea venció (vigencia: ${instantCallStatus.expiryHours} horas)`
+      };
     }
 
     const isParticipant = meeting.participants.some((participant) => participant.userId === userId);

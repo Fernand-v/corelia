@@ -52,14 +52,18 @@ export const writeDocumentsUiPreferences = (
     return;
   }
 
-  window.localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      viewMode: normalizeViewMode(preferences.viewMode),
-      density: normalizeDensity(preferences.density),
-      sidebarCollapsed: Boolean(preferences.sidebarCollapsed)
-    })
-  );
+  try {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        viewMode: normalizeViewMode(preferences.viewMode),
+        density: normalizeDensity(preferences.density),
+        sidebarCollapsed: Boolean(preferences.sidebarCollapsed)
+      })
+    );
+  } catch {
+    // Silently fail — quota exceeded or private browsing
+  }
 };
 
 export const documentsUiPreferencesDefaults = DEFAULT_PREFERENCES;

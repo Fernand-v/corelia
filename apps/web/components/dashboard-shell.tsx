@@ -5,13 +5,14 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Permission, RoleCode } from "@corelia/types";
 import type { Route } from "next";
-import { useAuthStore } from "@/lib/api";
+import { apiRequest, useAuthStore } from "@/lib/api";
 import { useSession, useSessionMembershipSummary } from "@/lib/session";
 import { useFrontendSettings } from "@/lib/frontend-settings";
 import { EntryAnnouncementModal } from "@/components/entry-announcement-modal";
 import { NotificationsBadge } from "@/components/notifications-badge";
 import {
   getContextFromSearchParams,
+  hasDirectDashboardContextParams,
   readStoredDashboardContext,
   saveStoredDashboardContext,
   withDashboardContext
@@ -82,6 +83,7 @@ const NAV_ITEMS: NavItem[] = [
     contextual: true,
     requiresProjectContext: true
   },
+  { label: "Formularios", href: "/forms", roles: INTERNAL_ROLES, contextual: true },
   { label: "Solicitudes", href: "/requests", roles: WORK_ROLES },
   { label: "Notificaciones", href: "/notifications", roles: ALL_ROLES },
   { label: "Buscar", href: "/search", roles: INTERNAL_ROLES }
@@ -90,7 +92,8 @@ const NAV_ITEMS: NavItem[] = [
 const ADMIN_ITEMS: NavItem[] = [
   { label: "Panel de Admin", href: "/admin/panel", roles: ["ADMINISTRADOR"] },
   { label: "Equipos", href: "/admin/teams", roles: ["ADMINISTRADOR"] },
-  { label: "Estado del Sistema", href: "/admin/system", roles: ["ADMINISTRADOR"] }
+  { label: "Estado del Sistema", href: "/admin/system", roles: ["ADMINISTRADOR"] },
+  { label: "Monitoreo", href: "/admin/monitoring", roles: ["ADMINISTRADOR"] }
 ];
 
 const roleLabel: Record<RoleCode, string> = {
@@ -228,6 +231,27 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
   const activeRole = session.data?.activeRole;
   const queryContext = getContextFromSearchParams(params);
+
+  useEffect(() => {
+    if (!hasDirectDashboardContextParams(params)) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(params.toString());
+    nextParams.delete("projectId");
+    nextParams.delete("projectName");
+    nextParams.delete("teamId");
+    nextParams.delete("ctx");
+
+    const baseHref = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname;
+    const maskedHref = withDashboardContext(baseHref, queryContext);
+    const currentHref = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+
+    if (maskedHref !== currentHref) {
+      router.replace(maskedHref as Route);
+    }
+  }, [params, pathname, queryContext.projectId, queryContext.projectName, queryContext.teamId, router]);
+
   const dashboardContext = useMemo(
     () => ({
       projectId: queryContext.projectId ?? storedDashboardContext.projectId ?? null,
@@ -336,6 +360,13 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   const topTeams = memberships.data?.teams.slice(0, 2).map((item) => item.name) ?? [];
 
   const handleSignOut = () => {
+    const refreshToken = useAuthStore.getState().refreshToken;
+    if (refreshToken) {
+      void apiRequest("/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken })
+      }).catch(() => {});
+    }
     clearAccessToken();
     setUserMenuOpen(false);
     router.replace("/login" as Route);

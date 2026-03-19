@@ -18,6 +18,21 @@ export interface SessionUser {
 
 export interface SessionMembershipSummary extends AuthMembershipSummary {}
 
+const coerceRoleCode = (value: unknown): RoleCode | null => {
+  if (typeof value === "string" && value.length > 0) {
+    return value as RoleCode;
+  }
+
+  if (value && typeof value === "object") {
+    const key = (value as { key?: unknown }).key;
+    if (typeof key === "string" && key.length > 0) {
+      return key as RoleCode;
+    }
+  }
+
+  return null;
+};
+
 export const useAuthBootstrap = () => {
   const hydrate = useAuthStore((state) => state.hydrate);
   const hydrated = useAuthStore((state) => state.hydrated);
@@ -37,7 +52,23 @@ export const useSession = () => {
 
   return useQuery({
     queryKey: ["session", accessToken],
-    queryFn: () => apiRequest<SessionUser>("/auth/me"),
+    queryFn: async () => {
+      const payload = await apiRequest<
+        Omit<SessionUser, "baseRole" | "activeRole"> & {
+          baseRole: unknown;
+          activeRole: unknown;
+        }
+      >("/auth/me");
+
+      const baseRole = coerceRoleCode(payload.baseRole) ?? "INVITADO_EXTERNO";
+      const activeRole = coerceRoleCode(payload.activeRole) ?? baseRole;
+
+      return {
+        ...payload,
+        baseRole,
+        activeRole
+      };
+    },
     enabled: hydrated && Boolean(accessToken),
     retry: false
   });

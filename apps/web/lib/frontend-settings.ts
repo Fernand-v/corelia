@@ -32,7 +32,16 @@ const frontendSettingsFallback: FrontendSettings = {
   taskStatusColors: {
     ...frontendSettingsDefaults.taskStatusColors
   },
+  instantCallExpiryHours: frontendSettingsDefaults.instantCallExpiryHours,
   updatedAt: new Date(0).toISOString()
+};
+
+const sanitizeInstantCallExpiryHours = (value: unknown) => {
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    return frontendSettingsDefaults.instantCallExpiryHours;
+  }
+
+  return Math.min(720, Math.max(1, value));
 };
 
 const sanitizeColor = (value: string | undefined, fallback: string) => {
@@ -65,6 +74,7 @@ const sanitizeSettings = (settings: FrontendSettings): FrontendSettings => ({
       frontendSettingsDefaults.taskStatusColors.COMPLETADA
     )
   },
+  instantCallExpiryHours: sanitizeInstantCallExpiryHours(settings.instantCallExpiryHours),
   updatedAt: settings.updatedAt
 });
 

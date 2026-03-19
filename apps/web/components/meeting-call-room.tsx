@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@corelia/ui";
 import { useVideoCall, type PeersCaller } from "@sawport/peers-caller";
 import { apiRequest, useAuthStore } from "@/lib/api";
+import { withDashboardContext } from "@/lib/context";
 import {
   buildParticipantRail,
   selectGalleryParticipants,
@@ -658,7 +659,12 @@ export const MeetingCallRoom = ({
       setConnected(false);
     }
 
-    const backUrl = projectId ? `/meetings?projectId=${projectId}` : "/meetings";
+    const backUrl = projectId
+      ? withDashboardContext("/meetings", {
+          projectId,
+          teamId: null
+        })
+      : "/meetings";
     if (window.opener) {
       window.close();
       return;
@@ -671,13 +677,17 @@ export const MeetingCallRoom = ({
       return;
     }
 
+    if (meetingQuery.isLoading || meetingQuery.error) {
+      return;
+    }
+
     if (!meetingId || !me) {
       return;
     }
 
     autoJoinAttemptedRef.current = true;
     void handleJoinCall();
-  }, [handleJoinCall, hydrated, meetingId, me, token]);
+  }, [handleJoinCall, hydrated, meetingId, me, meetingQuery.error, meetingQuery.isLoading, token]);
 
   const memberNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -926,6 +936,29 @@ export const MeetingCallRoom = ({
             onClick={() => (window.location.href = "/login")}
           >
             Ir a login
+          </Button>
+        </div>
+      </main>
+    );
+  }
+
+  if (meetingQuery.error) {
+    return (
+      <main className="teams-call flex min-h-screen items-center justify-center px-4">
+        <div className="teams-call-panel max-w-md rounded-2xl p-5 text-center">
+          <p className="text-sm text-[--teams-call-text]">{meetingQuery.error.message}</p>
+          <Button
+            className="mt-3 h-9 rounded-xl bg-[--teams-call-accent] px-3 text-xs text-white hover:bg-[--teams-call-accent-hover]"
+            onClick={() => {
+              window.location.href = projectId
+                ? withDashboardContext("/meetings", {
+                    projectId,
+                    teamId: null
+                  })
+                : "/meetings";
+            }}
+          >
+            Volver a reuniones
           </Button>
         </div>
       </main>

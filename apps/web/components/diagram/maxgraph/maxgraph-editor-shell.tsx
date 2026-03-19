@@ -183,6 +183,8 @@ export const MaxGraphEditorShell = memo(({
   const [runtimeSyncLifecycle, setRuntimeSyncLifecycle] = useState<"bootstrap" | "live">(
     provider ? "bootstrap" : "live"
   );
+  const [concurrentFlash, setConcurrentFlash] = useState(false);
+  const concurrentFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const applyingRemoteRef = useRef(false);
   const lastSyncedPayloadRef = useRef("");
@@ -317,7 +319,17 @@ export const MaxGraphEditorShell = memo(({
     guidesEnabled,
     minimapEnabled,
     ...(onLegacyMigration ? { onLegacyMigration } : {}),
-    onSyncLifecycleChange: setRuntimeSyncLifecycle
+    onSyncLifecycleChange: setRuntimeSyncLifecycle,
+    onConcurrentRemoteApplied: () => {
+      setConcurrentFlash(true);
+      if (concurrentFlashTimerRef.current) {
+        clearTimeout(concurrentFlashTimerRef.current);
+      }
+      concurrentFlashTimerRef.current = setTimeout(() => {
+        setConcurrentFlash(false);
+        concurrentFlashTimerRef.current = null;
+      }, 2000);
+    }
   });
 
   useEffect(() => {
@@ -573,6 +585,30 @@ export const MaxGraphEditorShell = memo(({
               {zoomPercent}%
             </div>
 
+            {diagramSyncLifecycle !== "live" ? (
+              <div
+                className={`pointer-events-none absolute right-3 bottom-3 z-20 rounded px-2 py-1 text-[11px] font-semibold shadow ${
+                  diagramSyncLifecycle === "bootstrap"
+                    ? "bg-blue-100 text-blue-700"
+                    : diagramSyncLifecycle === "reconnecting"
+                      ? "animate-pulse bg-amber-100 text-amber-700"
+                      : "bg-red-100 text-red-700"
+                }`}
+              >
+                {diagramSyncLifecycle === "bootstrap"
+                  ? "Sincronizando..."
+                  : diagramSyncLifecycle === "reconnecting"
+                    ? "Reconectando..."
+                    : "Sin conexión"}
+              </div>
+            ) : null}
+
+            {concurrentFlash ? (
+              <div className="pointer-events-none absolute left-1/2 bottom-10 z-40 -translate-x-1/2 rounded-lg bg-slate-800/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+                Cambios remotos aplicados
+              </div>
+            ) : null}
+
             {minimapEnabled ? (
               <div
                 ref={outlineContainerRef}
@@ -590,17 +626,25 @@ export const MaxGraphEditorShell = memo(({
                   width: box.width,
                   height: box.height,
                   borderColor: box.color,
-                  boxShadow: `0 0 0 2px ${box.color}33`
+                  backgroundColor: `${box.color}0D`,
+                  boxShadow: `0 0 0 2px ${box.color}33`,
+                  transition: "left 100ms ease-out, top 100ms ease-out, width 100ms ease-out, height 100ms ease-out"
                 }}
-                title={box.name}
-              />
+              >
+                <span
+                  className="absolute -top-5 left-0 rounded px-1 py-0.5 text-[10px] font-semibold text-white whitespace-nowrap"
+                  style={{ backgroundColor: box.color }}
+                >
+                  {box.name}
+                </span>
+              </div>
             ))}
 
             {renderableRemoteCursors.map((peer) => (
               <div
                 key={peer.id}
                 className="pointer-events-none absolute z-40"
-                style={{ left: peer.cursor.x, top: peer.cursor.y }}
+                style={{ left: peer.cursor.x, top: peer.cursor.y, transition: "left 100ms ease-out, top 100ms ease-out" }}
               >
                 <div className="h-3.5 w-3.5 rounded-full border-2 border-white shadow" style={{ backgroundColor: peer.color }} />
                 <span

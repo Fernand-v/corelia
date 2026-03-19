@@ -17,6 +17,7 @@ vi.mock("../lib/password.js", () => ({
 const createMockApp = () => {
   return {
     prisma: {
+      $transaction: vi.fn(async (operations: Promise<unknown>[]) => Promise.all(operations)),
       user: {
         findFirst: vi.fn(),
         findUnique: vi.fn(),

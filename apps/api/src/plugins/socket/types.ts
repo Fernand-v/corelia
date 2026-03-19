@@ -30,6 +30,7 @@ export type MeetingAccessResult =
         id: string;
         projectId: string | null;
         teamId: string | null;
+        createdAt: Date;
         participants: Array<{ userId: string }>;
       };
     }

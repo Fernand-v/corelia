@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
@@ -15,630 +14,33 @@ import Underline from "@tiptap/extension-underline";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
-import Image from "@tiptap/extension-image";
-import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TextAlign from "@tiptap/extension-text-align";
 import { UiModal } from "@/components/ui-modal";
+import {
+  type ActiveCollaborator,
+  FONT_SIZES,
+  type Member,
+  type MentionSuggestionItem,
+  RIBBON_TABS,
+  type RibbonTab
+} from "@/components/documents-editor-text-types";
+import {
+  buildMentionSuggestion,
+  FontSize,
+  ResizableImage
+} from "@/components/documents-editor-text-extensions";
+import {
+  formatSeenTime,
+  initialsFromName,
+  normalizeLinkInput,
+  parseContent,
+  resolveDocumentAssetUrl
+} from "@/components/documents-editor-text-utils";
 import { getApiBaseUrl } from "@/lib/api";
-
-type Member = {
-  id: string;
-  name: string;
-  color: string;
-};
-
-type ActiveCollaborator = {
-  userId: string;
-  name: string;
-  color: string;
-  cursorLabel?: string | null;
-  lastSeenAt?: string;
-};
-
-type MentionSuggestionItem = {
-  id: string;
-  label: string;
-  color: string;
-};
-
-const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
-const RIBBON_TABS = ["INICIO", "INSERTAR", "REVISAR"] as const;
-type RibbonTab = (typeof RIBBON_TABS)[number];
-
-const DOCUMENT_ASSET_PATH_PATTERN = /^\/(?:api\/v1\/)?documents\/assets\/content\?/i;
-
-const normalizeDocumentAssetPath = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  if (/^\/documents\/assets\/content\?/i.test(trimmed)) {
-    return `/api/v1${trimmed}`;
-  }
-
-  if (/^documents\/assets\/content\?/i.test(trimmed)) {
-    return `/api/v1/${trimmed}`;
-  }
-
-  if (/^api\/v1\/documents\/assets\/content\?/i.test(trimmed)) {
-    return `/${trimmed}`;
-  }
-
-  return trimmed;
-};
-
-const resolveDocumentAssetUrl = (value: string, apiBase: string) => {
-  const normalizedValue = normalizeDocumentAssetPath(value);
-  if (!normalizedValue) {
-    return "";
-  }
-
-  if (/^blob:/i.test(normalizedValue) || /^data:/i.test(normalizedValue)) {
-    return normalizedValue;
-  }
-
-  if (/^https?:\/\//i.test(normalizedValue)) {
-    try {
-      const parsed = new URL(normalizedValue);
-      if (/^\/documents\/assets\/content$/i.test(parsed.pathname)) {
-        parsed.pathname = `/api/v1${parsed.pathname}`;
-      }
-      return parsed.toString();
-    } catch {
-      return normalizedValue;
-    }
-  }
-
-  if (!normalizedValue.startsWith("/")) {
-    return normalizedValue;
-  }
-
-  if (!DOCUMENT_ASSET_PATH_PATTERN.test(normalizedValue)) {
-    return normalizedValue;
-  }
-
-  if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-    const apiOrigin = apiBase.replace(/\/api\/v1\/?$/i, "");
-    return `${apiOrigin}${normalizedValue}`;
-  }
-
-  return normalizedValue;
-};
-
-const normalizeLinkInput = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  if (
-    /^https?:\/\//i.test(trimmed) ||
-    /^mailto:/i.test(trimmed) ||
-    /^tel:/i.test(trimmed) ||
-    trimmed.startsWith("/")
-  ) {
-    return trimmed;
-  }
-
-  return `https://${trimmed}`;
-};
-
-const FontSize = Extension.create({
-  name: "fontSize",
-  addGlobalAttributes() {
-    return [
-      {
-        types: ["textStyle"],
-        attributes: {
-          fontSize: {
-            default: null,
-            parseHTML: (element: HTMLElement) => element.style.fontSize || null,
-            renderHTML: (attributes: Record<string, unknown>) => {
-              const fontSize = attributes.fontSize;
-              if (!fontSize) {
-                return {};
-              }
-              return {
-                style: `font-size: ${String(fontSize)}`
-              };
-            }
-          }
-        }
-      }
-    ];
-  },
-  addCommands() {
-    return {
-      setFontSize:
-        (fontSize: string) =>
-        ({ chain }: { chain: () => any }) =>
-          chain().setMark("textStyle", { fontSize }).run(),
-      unsetFontSize:
-        () =>
-        ({ chain }: { chain: () => any }) =>
-          chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run()
-    };
-  }
-}) as Extension;
-
-const ResizableImageComponent = ({ node, updateAttributes, selected }: any) => {
-  const [resizing, setResizing] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const startXRef = useRef(0);
-  const startYRef = useRef(0);
-  const startWidthRef = useRef(0);
-  const startHeightRef = useRef(0);
-  const startLeftRef = useRef(0);
-  const startTopRef = useRef(0);
-
-  const width = node.attrs.width as number | null;
-  const height = node.attrs.height as number | null;
-  const align = (node.attrs.align as "left" | "center" | "right" | undefined) ?? "left";
-  const freePosition = Boolean(node.attrs.freePosition);
-  const x = typeof node.attrs.x === "number" ? node.attrs.x : 0;
-  const y = typeof node.attrs.y === "number" ? node.attrs.y : 0;
-  const zIndex = typeof node.attrs.zIndex === "number" ? node.attrs.zIndex : 10;
-  const src = node.attrs.src as string;
-  const alt = node.attrs.alt as string | null;
-  const title = node.attrs.title as string | null;
-
-  const startResize = useCallback(
-    (mode: "left" | "right" | "bottom" | "corner") => (event: React.MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      setResizing(true);
-      startXRef.current = event.clientX;
-      startYRef.current = event.clientY;
-      startWidthRef.current = imgRef.current?.offsetWidth ?? width ?? 320;
-      startHeightRef.current = imgRef.current?.offsetHeight ?? height ?? 220;
-
-      const onMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = moveEvent.clientX - startXRef.current;
-        const deltaY = moveEvent.clientY - startYRef.current;
-        let nextWidth = startWidthRef.current;
-        let nextHeight = startHeightRef.current;
-
-        if (mode === "left" || mode === "right" || mode === "corner") {
-          const direction = mode === "left" ? -1 : 1;
-          nextWidth = Math.max(60, Math.min(1800, startWidthRef.current + deltaX * direction));
-        }
-
-        if (mode === "bottom" || mode === "corner") {
-          nextHeight = Math.max(40, Math.min(1600, startHeightRef.current + deltaY));
-        }
-
-        updateAttributes({
-          width: Math.round(nextWidth),
-          height: Math.round(nextHeight)
-        });
-      };
-
-      const onMouseUp = () => {
-        setResizing(false);
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-    },
-    [height, updateAttributes, width]
-  );
-
-  const startDrag = useCallback(
-    (event: React.MouseEvent) => {
-      if (!freePosition || !selected) {
-        return;
-      }
-      if ((event.target as HTMLElement).closest("[data-image-handle='true']")) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      setDragging(true);
-      startXRef.current = event.clientX;
-      startYRef.current = event.clientY;
-      startLeftRef.current = x;
-      startTopRef.current = y;
-
-      const onMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = moveEvent.clientX - startXRef.current;
-        const deltaY = moveEvent.clientY - startYRef.current;
-        updateAttributes({
-          x: Math.round(startLeftRef.current + deltaX),
-          y: Math.round(startTopRef.current + deltaY)
-        });
-      };
-
-      const onMouseUp = () => {
-        setDragging(false);
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-    },
-    [freePosition, selected, updateAttributes, x, y]
-  );
-
-  const wrapperStyle = freePosition
-    ? {
-        width: width ? `${width}px` : undefined,
-        position: "absolute" as const,
-        left: `${x}px`,
-        top: `${y}px`,
-        zIndex,
-        margin: 0
-      }
-    : {
-        width: width ? `${width}px` : undefined,
-        maxWidth: "100%",
-        position: "relative" as const,
-        display: "block",
-        marginTop: "0.5rem",
-        marginBottom: "0.5rem",
-        marginLeft: align === "center" || align === "right" ? "auto" : "0",
-        marginRight: align === "center" ? "auto" : align === "left" ? "auto" : "0",
-        zIndex: 8
-      };
-
-  const overlayVisible = selected || resizing || dragging;
-
-  return (
-    <NodeViewWrapper
-      as="div"
-      className={`word-image-node group ${freePosition ? "word-image-free" : ""} ${
-        overlayVisible ? "ring-2 ring-blue-400 ring-offset-2 rounded" : ""
-      }`}
-      style={wrapperStyle}
-      onMouseDown={startDrag}
-    >
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt ?? undefined}
-        title={title ?? undefined}
-        draggable={false}
-        className="block rounded shadow-sm"
-        style={{
-          width: width ? `${width}px` : "100%",
-          height: height ? `${height}px` : "auto",
-          maxWidth: freePosition ? undefined : "100%",
-          cursor: freePosition ? (dragging ? "grabbing" : selected ? "grab" : "default") : "default",
-          objectFit: "contain"
-        }}
-      />
-
-      <div
-        data-image-handle="true"
-        className="absolute left-0 top-0 h-full w-2 cursor-col-resize"
-        onMouseDown={startResize("left")}
-      />
-      <div
-        data-image-handle="true"
-        className="absolute right-0 top-0 h-full w-2 cursor-col-resize"
-        onMouseDown={startResize("right")}
-      />
-      <div
-        data-image-handle="true"
-        className="absolute bottom-0 left-0 h-2 w-full cursor-row-resize"
-        onMouseDown={startResize("bottom")}
-      />
-      <div
-        data-image-handle="true"
-        className="absolute -bottom-1 -right-1 h-3.5 w-3.5 cursor-nwse-resize rounded-sm border border-white bg-blue-500 shadow"
-        onMouseDown={startResize("corner")}
-      />
-
-      {freePosition ? (
-        <div
-          data-image-handle="true"
-          className="absolute -top-3 left-1/2 -translate-x-1/2 rounded bg-slate-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white"
-        >
-          Mover
-        </div>
-      ) : null}
-
-      <span
-        className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white"
-        style={{ opacity: overlayVisible ? 1 : 0 }}
-      >
-        {(width ?? imgRef.current?.offsetWidth ?? 0) > 0
-          ? `${Math.round(width ?? imgRef.current?.offsetWidth ?? 0)} × ${Math.round(
-              height ?? imgRef.current?.offsetHeight ?? 0
-            )}`
-          : ""}
-      </span>
-    </NodeViewWrapper>
-  );
-};
-
-const ResizableImage = Image.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      width: {
-        default: null,
-        parseHTML: (element: HTMLElement) => {
-          const w = element.getAttribute("width") || element.style.width;
-          return w ? parseInt(String(w), 10) || null : null;
-        },
-        renderHTML: (attributes: Record<string, unknown>) => {
-          if (!attributes.width) {
-            return {};
-          }
-          return { width: String(attributes.width) };
-        }
-      },
-      height: {
-        default: null,
-        parseHTML: (element: HTMLElement) => {
-          const h = element.getAttribute("height") || element.style.height;
-          return h ? parseInt(String(h), 10) || null : null;
-        },
-        renderHTML: (attributes: Record<string, unknown>) => {
-          if (!attributes.height) {
-            return {};
-          }
-          return { height: String(attributes.height) };
-        }
-      },
-      align: {
-        default: "left",
-        parseHTML: (element: HTMLElement) => {
-          const value = element.getAttribute("data-align");
-          return value === "center" || value === "right" ? value : "left";
-        },
-        renderHTML: (attributes: Record<string, unknown>) => ({
-          "data-align": String(attributes.align ?? "left")
-        })
-      },
-      freePosition: {
-        default: false,
-        parseHTML: (element: HTMLElement) =>
-          element.getAttribute("data-free-position") === "true" ||
-          element.style.position === "absolute",
-        renderHTML: (attributes: Record<string, unknown>) => ({
-          "data-free-position": attributes.freePosition ? "true" : "false"
-        })
-      },
-      x: {
-        default: 0,
-        parseHTML: (element: HTMLElement) => {
-          const raw = element.getAttribute("data-x") ?? element.style.left;
-          const value = parseInt(String(raw ?? "0"), 10);
-          return Number.isFinite(value) ? value : 0;
-        },
-        renderHTML: (attributes: Record<string, unknown>) => ({
-          "data-x": String(attributes.x ?? 0)
-        })
-      },
-      y: {
-        default: 0,
-        parseHTML: (element: HTMLElement) => {
-          const raw = element.getAttribute("data-y") ?? element.style.top;
-          const value = parseInt(String(raw ?? "0"), 10);
-          return Number.isFinite(value) ? value : 0;
-        },
-        renderHTML: (attributes: Record<string, unknown>) => ({
-          "data-y": String(attributes.y ?? 0)
-        })
-      },
-      zIndex: {
-        default: 10,
-        parseHTML: (element: HTMLElement) => {
-          const raw = element.getAttribute("data-z-index") ?? element.style.zIndex;
-          const value = parseInt(String(raw ?? "10"), 10);
-          return Number.isFinite(value) ? value : 10;
-        },
-        renderHTML: (attributes: Record<string, unknown>) => ({
-          "data-z-index": String(attributes.zIndex ?? 10)
-        })
-      }
-    };
-  },
-  addNodeView() {
-    return ReactNodeViewRenderer(ResizableImageComponent);
-  }
-});
-
-const parseContent = (value: string) => {
-  if (!value.trim()) {
-    return "";
-  }
-
-  try {
-    return JSON.parse(value) as object;
-  } catch {
-    return value;
-  }
-};
-
-const normalizeMentionQuery = (value: string) => {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-};
-
-const initialsFromName = (name: string) => {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length === 0) {
-    return "??";
-  }
-  if (parts.length === 1) {
-    return parts[0]!.slice(0, 2).toUpperCase();
-  }
-  return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase();
-};
-
-const formatSeenTime = (value?: string) => {
-  if (!value) {
-    return "activo";
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "activo";
-  }
-  return `activo ${date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`;
-};
-
-const buildMentionSuggestion = (items: MentionSuggestionItem[]) => ({
-  items: ({ query }: { query: string }) => {
-    const needle = normalizeMentionQuery(query);
-    if (!needle) {
-      return items.slice(0, 7);
-    }
-
-    return items
-      .filter((item) => normalizeMentionQuery(item.label).includes(needle))
-      .slice(0, 7);
-  },
-  render: () => {
-    let selectedIndex = 0;
-    let latestProps: any = null;
-    let container: HTMLDivElement | null = null;
-
-    const selectItem = (index: number) => {
-      const option = latestProps?.items?.[index] as MentionSuggestionItem | undefined;
-      if (!option) {
-        return false;
-      }
-
-      latestProps.command({
-        id: option.id,
-        label: option.label,
-        color: option.color
-      });
-      return true;
-    };
-
-    const positionContainer = () => {
-      if (!container || !latestProps?.clientRect) {
-        return;
-      }
-
-      const rect = latestProps.clientRect();
-      if (!rect) {
-        return;
-      }
-
-      container.style.left = `${rect.left + window.scrollX}px`;
-      container.style.top = `${rect.bottom + window.scrollY + 8}px`;
-    };
-
-    const renderItems = () => {
-      if (!container) {
-        return;
-      }
-
-      const options = (latestProps?.items ?? []) as MentionSuggestionItem[];
-      container.replaceChildren();
-
-      if (options.length === 0) {
-        container.style.display = "none";
-        return;
-      }
-
-      container.style.display = "block";
-      selectedIndex = Math.max(0, Math.min(selectedIndex, options.length - 1));
-      const list = document.createElement("ul");
-      list.className = "space-y-1";
-
-      options.forEach((item, index) => {
-        const li = document.createElement("li");
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className =
-          "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm " +
-          (index === selectedIndex ? "bg-slate-100 text-slate-900" : "text-slate-700 hover:bg-slate-50");
-        button.onmousedown = (event) => {
-          event.preventDefault();
-          selectItem(index);
-        };
-
-        const dot = document.createElement("span");
-        dot.className = "inline-flex h-2.5 w-2.5 rounded-full";
-        dot.style.backgroundColor = item.color;
-        const label = document.createElement("span");
-        label.textContent = item.label;
-
-        button.appendChild(dot);
-        button.appendChild(label);
-        li.appendChild(button);
-        list.appendChild(li);
-      });
-
-      container.appendChild(list);
-    };
-
-    return {
-      onStart: (props: any) => {
-        latestProps = props;
-        selectedIndex = 0;
-        container = document.createElement("div");
-        container.className =
-          "z-[9999] min-w-[220px] max-w-[320px] rounded-xl border border-slate-200 bg-white p-2 shadow-xl";
-        container.style.position = "absolute";
-        container.style.display = "none";
-        document.body.appendChild(container);
-        renderItems();
-        positionContainer();
-      },
-      onUpdate: (props: any) => {
-        latestProps = props;
-        selectedIndex = Math.max(0, Math.min(selectedIndex, (props.items?.length ?? 1) - 1));
-        renderItems();
-        positionContainer();
-      },
-      onKeyDown: (props: any) => {
-        if (!latestProps?.items?.length) {
-          return false;
-        }
-
-        if (props.event.key === "ArrowDown") {
-          selectedIndex = (selectedIndex + 1) % latestProps.items.length;
-          renderItems();
-          return true;
-        }
-
-        if (props.event.key === "ArrowUp") {
-          selectedIndex = (selectedIndex + latestProps.items.length - 1) % latestProps.items.length;
-          renderItems();
-          return true;
-        }
-
-        if (props.event.key === "Enter" || props.event.key === "Tab") {
-          props.event.preventDefault();
-          return selectItem(selectedIndex);
-        }
-
-        if (props.event.key === "Escape") {
-          props.event.preventDefault();
-          return true;
-        }
-
-        return false;
-      },
-      onExit: () => {
-        container?.remove();
-        container = null;
-      }
-    };
-  }
-});
 
 export const DocumentsEditorText = ({
   documentId,
@@ -751,19 +153,6 @@ export const DocumentsEditorText = ({
     return [...map.values()];
   }, [currentUser.color, currentUser.id, currentUser.name, liveCollaborators, memberList]);
 
-  const liveCollaboratorIds = useMemo(
-    () => new Set(liveCollaborators.map((collaborator) => collaborator.userId)),
-    [liveCollaborators]
-  );
-
-  const mentionDirectory = useMemo(
-    () =>
-      mentionItems.filter(
-        (item) => item.id !== currentUser.id && !liveCollaboratorIds.has(item.id)
-      ),
-    [currentUser.id, liveCollaboratorIds, mentionItems]
-  );
-
   const mentionSuggestion = useMemo(() => buildMentionSuggestion(mentionItems), [mentionItems]);
 
   const extensions = useMemo(() => {
@@ -863,7 +252,13 @@ export const DocumentsEditorText = ({
     editor.commands.setContent(content);
   }, [editor, value]);
 
-  const editorChain = () => (editor?.chain().focus() as any);
+  const editorChain = useCallback(() => {
+    if (!editor) {
+      throw new Error("Editor no inicializado");
+    }
+
+    return editor.chain().focus();
+  }, [editor]);
 
   const handleInsertImage = () => {
     if (!editor || readOnly) {
@@ -971,7 +366,7 @@ export const DocumentsEditorText = ({
       }
       editorChain().updateAttributes("image", attrs).run();
     },
-    [editor, readOnly]
+    [editor, editorChain, readOnly]
   );
 
   const hasTableInDoc = (() => {
@@ -1024,7 +419,20 @@ export const DocumentsEditorText = ({
         return;
       }
 
-      (editor.chain().focus() as any)[command]().run();
+      const chain = editor.chain().focus();
+      if (command === "addColumnAfter") {
+        chain.addColumnAfter().run();
+        return;
+      }
+      if (command === "addRowAfter") {
+        chain.addRowAfter().run();
+        return;
+      }
+      if (command === "deleteColumn") {
+        chain.deleteColumn().run();
+        return;
+      }
+      chain.deleteRow().run();
     },
     [editor, focusAnyTableCell, readOnly]
   );
@@ -1035,7 +443,7 @@ export const DocumentsEditorText = ({
     }
 
     if (focusAnyTableCell()) {
-      const deletedByCommand = (editor.chain().focus() as any).deleteTable().run();
+      const deletedByCommand = editor.chain().focus().deleteTable().run();
       if (deletedByCommand) {
         return;
       }
@@ -1145,7 +553,7 @@ export const DocumentsEditorText = ({
                   </div>
                   <select
                     defaultValue="16px"
-                    onChange={(event) => (editor.chain().focus() as any).setFontSize(event.target.value).run()}
+                    onChange={(event) => editor.chain().focus().setFontSize(event.target.value).run()}
                     className="h-7 rounded-lg border border-[rgba(0,0,0,0.09)] bg-white px-2 text-xs text-slate-700 shadow-sm"
                   >
                     {FONT_SIZES.map((size) => (

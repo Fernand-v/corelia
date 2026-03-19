@@ -18,6 +18,7 @@ const createSettingsRow = (overrides?: Partial<{
   taskStatusColorPending: string;
   taskStatusColorInReview: string;
   taskStatusColorCompleted: string;
+  instantCallExpiryHours: number;
   updatedAt: Date;
 }>) => ({
   id: 1,
@@ -25,6 +26,7 @@ const createSettingsRow = (overrides?: Partial<{
   taskStatusColorPending: frontendSettingsDefaults.taskStatusColors.PENDIENTE,
   taskStatusColorInReview: frontendSettingsDefaults.taskStatusColors.EN_REVISION,
   taskStatusColorCompleted: frontendSettingsDefaults.taskStatusColors.COMPLETADA,
+  instantCallExpiryHours: frontendSettingsDefaults.instantCallExpiryHours,
   updatedAt: new Date("2026-03-06T00:00:00.000Z"),
   ...(overrides ?? {})
 });
@@ -57,6 +59,7 @@ describe("Frontend settings flows", () => {
 
     expect(result.organizationName).toBe(frontendSettingsDefaults.organizationName);
     expect(result.taskStatusColors).toEqual(frontendSettingsDefaults.taskStatusColors);
+    expect(result.instantCallExpiryHours).toBe(frontendSettingsDefaults.instantCallExpiryHours);
   });
 
   it("updates frontend settings with normalized values", async () => {
@@ -68,7 +71,8 @@ describe("Frontend settings flows", () => {
         organizationName: "Corilia Labs",
         taskStatusColorPending: "#AA5500",
         taskStatusColorInReview: "#2563EB",
-        taskStatusColorCompleted: "#16A34A"
+        taskStatusColorCompleted: "#16A34A",
+        instantCallExpiryHours: 36
       })
     );
 
@@ -77,19 +81,22 @@ describe("Frontend settings flows", () => {
       organizationName: "  Corilia Labs  ",
       taskStatusColors: {
         PENDIENTE: "#aa5500"
-      }
+      },
+      instantCallExpiryHours: 36
     });
 
     expect(app.prisma.frontendSettings.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({
           organizationName: "Corilia Labs",
-          taskStatusColorPending: "#AA5500"
+          taskStatusColorPending: "#AA5500",
+          instantCallExpiryHours: 36
         })
       })
     );
     expect(result.organizationName).toBe("Corilia Labs");
     expect(result.taskStatusColors.PENDIENTE).toBe("#AA5500");
+    expect(result.instantCallExpiryHours).toBe(36);
   });
 
   it("hides technical service details in public system status", async () => {
@@ -132,6 +139,7 @@ describe("Frontend settings flows", () => {
 
     expect(result.organizationName).toBe(frontendSettingsDefaults.organizationName);
     expect(result.taskStatusColors).toEqual(frontendSettingsDefaults.taskStatusColors);
+    expect(result.instantCallExpiryHours).toBe(frontendSettingsDefaults.instantCallExpiryHours);
   });
 
   it("rejects non-admin users when attempting to update settings", async () => {

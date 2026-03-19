@@ -75,7 +75,7 @@ describe("Audit middleware", () => {
     await app.close();
   });
 
-  it("skips writing audit when response status is >= 400", async () => {
+  it("writes audit failure snapshot when response status is >= 400", async () => {
     const app = Fastify();
 
     app.decorate(
@@ -106,7 +106,17 @@ describe("Audit middleware", () => {
     });
 
     expect(response.statusCode).toBe(422);
-    expect(app.prisma.auditLog.create).not.toHaveBeenCalled();
+    expect(app.prisma.auditLog.create).toHaveBeenCalledTimes(1);
+    expect(app.prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "ACTUALIZAR",
+          reason: "test",
+          reasonCatalogId: "LEGACY_UNMAPPED",
+          newDataText: expect.stringContaining("\"_auditOutcome\":\"FAILURE\"")
+        })
+      })
+    );
 
     await app.close();
   });

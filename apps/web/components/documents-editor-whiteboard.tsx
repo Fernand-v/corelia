@@ -3,8 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
-import { Tldraw, getSnapshot, loadSnapshot } from "tldraw";
+import { Tldraw, getSnapshot, loadSnapshot, type Editor, type TLStoreSnapshot } from "tldraw";
 import "tldraw/tldraw.css";
+
+const isTLStoreSnapshot = (value: unknown): value is TLStoreSnapshot => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  return "store" in value && "schema" in value;
+};
 
 const parseSnapshot = (value: string) => {
   if (!value.trim()) {
@@ -12,7 +20,8 @@ const parseSnapshot = (value: string) => {
   }
 
   try {
-    return JSON.parse(value) as Record<string, unknown>;
+    const parsed = JSON.parse(value) as unknown;
+    return isTLStoreSnapshot(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -45,7 +54,7 @@ export const DocumentsEditorWhiteboard = ({
   const yText = useMemo(() => yDoc.getText(`doc:${documentId}:whiteboard`), [documentId, yDoc]);
   const applyingRemoteRef = useRef(false);
   const readOnlyRef = useRef(readOnly);
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<Editor | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const onChangeRef = useRef(onChange);
 
@@ -76,7 +85,7 @@ export const DocumentsEditorWhiteboard = ({
       const parsed = parseSnapshot(nextValue);
 
       if (parsed && editorRef.current?.store) {
-        loadSnapshot(editorRef.current.store, parsed as any);
+        loadSnapshot(editorRef.current.store, parsed);
       }
     };
 
@@ -96,12 +105,12 @@ export const DocumentsEditorWhiteboard = ({
     <div className="h-full min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <Tldraw
         {...({
-          onMount: (editor: any) => {
+          onMount: (editor: Editor) => {
             editorRef.current = editor;
 
             const parsed = parseSnapshot(snapshotPayload);
             if (parsed && editor.store) {
-              loadSnapshot(editor.store, parsed as any);
+              loadSnapshot(editor.store, parsed);
             }
 
             // Populate initial draft so manual save works without drawing

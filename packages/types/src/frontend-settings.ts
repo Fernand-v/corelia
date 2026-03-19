@@ -15,23 +15,27 @@ export const frontendSettingsDefaults = {
     PENDIENTE: "#F59E0B",
     EN_REVISION: "#2563EB",
     COMPLETADA: "#16A34A"
-  }
+  },
+  instantCallExpiryHours: 24
 } as const;
 
 export const frontendSettingsSchema = z.object({
   organizationName: z.string().trim().min(1).max(160),
   taskStatusColors: taskStatusColorsSchema,
+  instantCallExpiryHours: z.number().int().min(1).max(720),
   updatedAt: timestampSchema
 });
 
 export const adminUpdateFrontendSettingsInputSchema = z
   .object({
     organizationName: z.string().trim().min(1).max(160).optional(),
-    taskStatusColors: taskStatusColorsSchema.partial().optional()
+    taskStatusColors: taskStatusColorsSchema.partial().optional(),
+    instantCallExpiryHours: z.number().int().min(1).max(720).optional()
   })
   .refine(
     (input) =>
       input.organizationName !== undefined ||
+      input.instantCallExpiryHours !== undefined ||
       (input.taskStatusColors !== undefined && Object.keys(input.taskStatusColors).length > 0),
     {
       message: "Debes enviar al menos un cambio para actualizar la configuración"

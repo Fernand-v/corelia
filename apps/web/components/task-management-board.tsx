@@ -5,6 +5,16 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Task } from "@corelia/types";
+
+interface TaskReassignment {
+  id: string;
+  reassignedAt: string;
+  reason: string;
+}
+
+interface TaskDetail extends Task {
+  reassignments?: TaskReassignment[];
+}
 import { Button, Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
 import { getTaskStatusBadgeStyle, useFrontendSettings } from "@/lib/frontend-settings";
@@ -73,7 +83,7 @@ export const TaskManagementBoard = ({ initialProjectId = "" }: { initialProjectI
 
   const taskDetailQuery = useQuery({
     queryKey: ["task-management", "task-detail", expandedTaskId],
-    queryFn: () => apiRequest<Task>(`/tasks/${expandedTaskId}`),
+    queryFn: () => apiRequest<TaskDetail>(`/tasks/${expandedTaskId}`),
     enabled: Boolean(expandedTaskId)
   });
 
@@ -294,9 +304,9 @@ export const TaskManagementBoard = ({ initialProjectId = "" }: { initialProjectI
                     <p className="text-xs text-slate-500">Cargando historial...</p>
                   ) : taskDetailQuery.error ? (
                     <p className="text-xs text-red-600">{taskDetailQuery.error.message}</p>
-                  ) : (taskDetailQuery.data as any)?.reassignments?.length ? (
+                  ) : taskDetailQuery.data?.reassignments?.length ? (
                     <ul className="space-y-1 text-xs text-slate-700">
-                      {(taskDetailQuery.data as any).reassignments.slice(0, 5).map((item: any) => (
+                      {taskDetailQuery.data.reassignments.slice(0, 5).map((item) => (
                         <li key={item.id}>
                           {formatDateTime(item.reassignedAt)} · motivo: {item.reason}
                         </li>

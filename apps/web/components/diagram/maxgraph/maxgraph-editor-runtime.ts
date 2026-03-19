@@ -175,13 +175,14 @@ export type MaxGraphEditorRuntimeOptions = {
     backupSnapshot: string;
   }) => void | Promise<void>;
   onSyncLifecycleChange?: (state: "bootstrap" | "live") => void;
+  onConcurrentRemoteApplied?: () => void;
 };
 
 const PRESENCE_STALE_MS = 15_000;
 const PRESENCE_REFRESH_THROTTLE_MS = 120;
 const CURSOR_THROTTLE_MS = 120;
 const MIN_CURSOR_DELTA = 1.5;
-const MODEL_SYNC_DEBOUNCE_MS = 250;
+const MODEL_SYNC_DEBOUNCE_MS = 150;
 const BOOTSTRAP_TIMEOUT_MS = 2_500;
 const DRAG_MORPH_STEPS = 4;
 const DRAG_MORPH_EASE = 1.6;
@@ -271,7 +272,8 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
     guidesEnabled,
     minimapEnabled,
     onLegacyMigration,
-    onSyncLifecycleChange
+    onSyncLifecycleChange,
+    onConcurrentRemoteApplied
   } = options;
   const canonicalPageId = `p-${documentId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "main"}`;
 
@@ -285,6 +287,8 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
   const lastZoomPercentRef = useRef(100);
   const lastSelectionSignatureRef = useRef("");
   const lastRemoteOpRef = useRef("none");
+  const isPointerDownOnGraphRef = useRef(false);
+  const hasPendingRemoteImportRef = useRef(false);
   const latestValueRef = useRef(value);
   const latestOnChangeRef = useRef(onChange);
   const onLegacyMigrationRef = useRef(onLegacyMigration);
@@ -307,6 +311,7 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
   const refreshSelectedStateRef = useRef<() => void>(() => {});
   const refreshRemoteSelectionBoxesRef = useRef<() => void>(() => {});
   const updateLocalAwarenessRef = useRef<(patch: Partial<RemoteCursorPresence>) => void>(() => {});
+  const publishDiagramFromV3Ref = useRef<(source: string, options?: { importActivePage?: boolean; writeYText?: boolean }) => DrawioDocument | undefined>(() => undefined);
   const currentKindRef = useRef(currentKind);
 
   useEffect(() => {
@@ -625,6 +630,7 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
     if (activePage.xml === modelXml) {
       return;
     }
+    const removedCellIds = Array.from(pendingRemovedCellIdsRef.current);
     applyGraphModelXmlToDiagramV3Page(
       yDiagramMap,
       {
@@ -632,7 +638,8 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
         pageName: activePage.name,
         xml: modelXml,
         setActive: true,
-        preserveMissing: false
+        preserveMissing: true,
+        removedCellIds
       },
       {
         actorId: currentUser.id,
@@ -778,6 +785,7 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
     drawioDocumentRef.current = updated;
     setDrawioDocument(updated);
 
+    const removedCellIds = Array.from(pendingRemovedCellIdsRef.current);
     applyGraphModelXmlToDiagramV3Page(
       yDiagramMap,
       {
@@ -785,7 +793,8 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
         pageName: activePage.name,
         xml: modelXml,
         setActive: false,
-        preserveMissing: false
+        preserveMissing: true,
+        removedCellIds
       },
       {
         actorId: currentUser.id,
@@ -881,6 +890,7 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
   refreshSelectedStateRef.current = refreshSelectedState;
   refreshRemoteSelectionBoxesRef.current = refreshRemoteSelectionBoxes;
   updateLocalAwarenessRef.current = updateLocalAwareness;
+  publishDiagramFromV3Ref.current = publishDiagramFromV3;
   currentKindRef.current = currentKind;
   providerRef.current = provider;
 
@@ -1165,6 +1175,29 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
     // internal view updates; avoid subscribing here to reduce render pressure.
     graph.addListener(InternalEvent.CLICK, clickToConnectListener);
 
+    // Track pointer-down state on the graph container so that syncFromV3 can
+    // defer graph reimports while the user is mid-drag/resize.  On pointer-up
+    // we flush any deferred remote import so the graph catches up immediately.
+    const onGraphPointerDown = () => {
+      isPointerDownOnGraphRef.current = true;
+    };
+    const onGraphPointerUp = () => {
+      isPointerDownOnGraphRef.current = false;
+      if (hasPendingRemoteImportRef.current) {
+        hasPendingRemoteImportRef.current = false;
+        // Flush local model changes first (the drag just ended and the model
+        // was updated by maxGraph), then reimport from v3 to merge any
+        // remote changes that arrived during the drag.
+        flushPendingModelSyncRef.current();
+        publishDiagramFromV3Ref.current("deferred_remote_import", {
+          importActivePage: true
+        });
+      }
+    };
+    graphContainer.addEventListener("pointerdown", onGraphPointerDown);
+    window.addEventListener("pointerup", onGraphPointerUp);
+    window.addEventListener("pointercancel", onGraphPointerUp);
+
     if (outlineContainerRef.current) {
       outlineRef.current = new Outline(graph, outlineContainerRef.current);
       outlineRef.current.updateOnPan = true;
@@ -1206,6 +1239,12 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
       graph.getView().removeListener(viewListener);
       graph.removeListener(cellsMovedListener);
       graph.removeListener(clickToConnectListener);
+
+      graphContainer.removeEventListener("pointerdown", onGraphPointerDown);
+      window.removeEventListener("pointerup", onGraphPointerUp);
+      window.removeEventListener("pointercancel", onGraphPointerUp);
+      isPointerDownOnGraphRef.current = false;
+      hasPendingRemoteImportRef.current = false;
 
       outlineRef.current?.destroy();
       outlineRef.current = null;
@@ -1278,12 +1317,30 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
       // still waiting in the debounce queue would be overwritten when the
       // remote Y.js state is imported into the graph – causing the edge to
       // silently disappear.
+      const hadPendingSync =
+        pendingModelSyncFrameRef.current !== null || pendingModelSyncTimerRef.current !== null;
       flushPendingModelSyncRef.current();
 
       lastRemoteOpRef.current = `v3:${String(transaction.origin ?? "remote")}`;
+
+      // When the user is actively interacting with the graph (pointer down,
+      // i.e. mid-drag or mid-resize), the maxGraph data model has NOT yet
+      // committed the in-progress move.  Reimporting the page XML now would
+      // reset every cell to the pre-drag v3 state, causing a visual
+      // "snap-back".  Instead, update the document ref and v3 state without
+      // touching the graph, and mark the reimport as pending so it runs once
+      // the pointer is released.
+      const shouldDeferImport = isPointerDownOnGraphRef.current;
       publishDiagramFromV3("v3_observe_remote", {
-        importActivePage: true
+        importActivePage: !shouldDeferImport
       });
+      if (shouldDeferImport) {
+        hasPendingRemoteImportRef.current = true;
+      }
+
+      if (hadPendingSync && onConcurrentRemoteApplied) {
+        onConcurrentRemoteApplied();
+      }
       if (!bootstrapCompleteRef.current) {
         markBootstrapLive("v3_observe_remote");
       }
@@ -1293,7 +1350,13 @@ export const useMaxGraphEditorRuntime = (options: MaxGraphEditorRuntimeOptions) 
     return () => {
       yDiagramMap.unobserveDeep(syncFromV3);
     };
-  }, [applyingRemoteRef, markBootstrapLive, publishDiagramFromV3, yDiagramMap]);
+  }, [
+    applyingRemoteRef,
+    markBootstrapLive,
+    onConcurrentRemoteApplied,
+    publishDiagramFromV3,
+    yDiagramMap
+  ]);
 
   useEffect(() => {
     const syncFromLegacyYText = () => {

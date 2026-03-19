@@ -710,11 +710,7 @@ export class DocumentsService {
   }
 
   private getCollabPrisma() {
-    return this.app.prisma as unknown as {
-      documentCollabSession: any;
-      documentCollabParticipant: any;
-      documentCollabEvent: any;
-    };
+    return this.app.prisma;
   }
 
   private getDiagramSessionSnapshotIntervalMs() {
@@ -812,7 +808,7 @@ export class DocumentsService {
     }
 
     await this.app.prisma.$transaction(async (tx) => {
-      await (tx as any).documentCollabSession.update({
+      await tx.documentCollabSession.update({
         where: {
           id: activeSession.id
         },
@@ -823,7 +819,7 @@ export class DocumentsService {
         }
       });
 
-      await (tx as any).documentCollabParticipant.updateMany({
+      await tx.documentCollabParticipant.updateMany({
         where: {
           sessionId: activeSession.id,
           status: "ONLINE"
@@ -834,7 +830,7 @@ export class DocumentsService {
         }
       });
 
-      await (tx as any).documentCollabEvent.create({
+      await tx.documentCollabEvent.create({
         data: {
           sessionId: activeSession.id,
           type: "DISCONNECT",
@@ -882,7 +878,7 @@ export class DocumentsService {
     const staleIds = staleParticipants.map((row: { id: string }) => row.id);
 
     await this.app.prisma.$transaction(async (tx) => {
-      await (tx as any).documentCollabParticipant.updateMany({
+      await tx.documentCollabParticipant.updateMany({
         where: {
           id: {
             in: staleIds
@@ -894,7 +890,7 @@ export class DocumentsService {
         }
       });
 
-      await (tx as any).documentCollabEvent.createMany({
+      await tx.documentCollabEvent.createMany({
         data: staleParticipants.map((row: { userId: string; clientId: string }) => ({
           sessionId,
           userId: row.userId,
@@ -992,7 +988,7 @@ export class DocumentsService {
     });
 
     await this.app.prisma.$transaction(async (tx) => {
-      await (tx as any).documentCollabParticipant.upsert({
+      await tx.documentCollabParticipant.upsert({
         where: {
           sessionId_userId_clientId: participantKey
         },
@@ -1011,7 +1007,7 @@ export class DocumentsService {
         }
       });
 
-      await (tx as any).documentCollabSession.update({
+      await tx.documentCollabSession.update({
         where: {
           id: activeSession!.id
         },
@@ -1021,7 +1017,7 @@ export class DocumentsService {
       });
 
       if (!previousParticipant) {
-        await (tx as any).documentCollabEvent.create({
+        await tx.documentCollabEvent.create({
           data: {
             sessionId: activeSession!.id,
             userId: input.userId,
@@ -1030,7 +1026,7 @@ export class DocumentsService {
           }
         });
       } else if (previousParticipant.status === "OFFLINE") {
-        await (tx as any).documentCollabEvent.create({
+        await tx.documentCollabEvent.create({
           data: {
             sessionId: activeSession!.id,
             userId: input.userId,
@@ -1111,7 +1107,7 @@ export class DocumentsService {
     });
 
     await this.app.prisma.$transaction(async (tx) => {
-      await (tx as any).documentCollabParticipant.upsert({
+      await tx.documentCollabParticipant.upsert({
         where: {
           sessionId_userId_clientId: participantKey
         },
@@ -1130,7 +1126,7 @@ export class DocumentsService {
         }
       });
 
-      await (tx as any).documentCollabSession.update({
+      await tx.documentCollabSession.update({
         where: {
           id: session.id
         },
@@ -1140,7 +1136,7 @@ export class DocumentsService {
       });
 
       if (previousParticipant?.status === "OFFLINE") {
-        await (tx as any).documentCollabEvent.create({
+        await tx.documentCollabEvent.create({
           data: {
             sessionId: session.id,
             userId: input.userId,
@@ -1220,10 +1216,15 @@ export class DocumentsService {
     const snapshotHash = createHash("sha256").update(contentBuffer).digest("hex");
     const deduped = session.latestSnapshotHash === snapshotHash;
     let nextRevision = session.revision;
-    let eventType: SessionEventType = input.reason === "migration" ? "MIGRATION" : "SNAPSHOT_SAVED";
+    const eventType: SessionEventType =
+      input.reason === "migration" ? "MIGRATION" : "SNAPSHOT_SAVED";
+    const metadata =
+      input.metadata === undefined
+        ? null
+        : (JSON.parse(JSON.stringify(input.metadata)) as Prisma.InputJsonValue);
 
     await this.app.prisma.$transaction(async (tx) => {
-      await (tx as any).documentCollabParticipant.upsert({
+      await tx.documentCollabParticipant.upsert({
         where: {
           sessionId_userId_clientId: {
             sessionId: session.id,
@@ -1256,7 +1257,7 @@ export class DocumentsService {
           `/r${nextRevision}-${Date.now()}-${randomUUID()}.drawio`;
         await this.app.storage.putObject(snapshotPath, contentBuffer, DOCUMENT_DIAGRAM_SNAPSHOT_MIME);
 
-        await (tx as any).documentCollabSession.update({
+        await tx.documentCollabSession.update({
           where: {
             id: session.id
           },
@@ -1270,7 +1271,7 @@ export class DocumentsService {
           }
         });
 
-        await (tx as any).documentCollabEvent.create({
+        await tx.documentCollabEvent.create({
           data: {
             sessionId: session.id,
             userId: input.userId,
@@ -1283,12 +1284,12 @@ export class DocumentsService {
               snapshotSizeBytes: contentBuffer.byteLength,
               revision: nextRevision,
               deduped: false,
-              metadata: input.metadata ?? null
+              metadata
             }
           }
         });
       } else {
-        await (tx as any).documentCollabSession.update({
+        await tx.documentCollabSession.update({
           where: {
             id: session.id
           },
@@ -1298,7 +1299,7 @@ export class DocumentsService {
         });
 
         if (input.reason === "migration") {
-          await (tx as any).documentCollabEvent.create({
+          await tx.documentCollabEvent.create({
             data: {
               sessionId: session.id,
               userId: input.userId,
@@ -1309,7 +1310,7 @@ export class DocumentsService {
                 snapshotHash,
                 revision: nextRevision,
                 deduped: true,
-                metadata: input.metadata ?? null
+                metadata
               }
             }
           });

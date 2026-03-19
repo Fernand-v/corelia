@@ -58,7 +58,8 @@ const ensureSchemaCompatibility = async (
     { table: "CollaborativeDocument", column: "yDocName" },
     { table: "CollaborativeDocumentVersion", column: "versionNumber" },
     { table: "DocumentCollabSession", column: "revision" },
-    { table: "FrontendSettings", column: "organizationName" }
+    { table: "FrontendSettings", column: "organizationName" },
+    { table: "FrontendSettings", column: "instantCallExpiryHours" }
   ];
 
   for (const check of checks) {

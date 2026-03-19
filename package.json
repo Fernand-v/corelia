@@ -24,11 +24,14 @@
     "db:diagram:render": "bash scripts/render-puml.sh",
     "db:diagram:check": "bash scripts/check-puml-up-to-date.sh",
     "backfill:project-general-channels": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/backfill-project-general-channels.ts",
+    "bootstrap:admin": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/bootstrap-admin.ts",
     "prisma:generate": "pnpm --filter @corelia/api prisma:generate",
+    "prisma:seed": "pnpm --filter @corelia/api prisma:seed",
     "prisma:migrate:dev": "pnpm --filter @corelia/api prisma:migrate:dev",
     "prisma:migrate:status": "pnpm --filter @corelia/api prisma:migrate:status"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "turbo": "^2.3.3"
   },
   "pnpm": {

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { ProjectTeamSyncService } from "../projects/team-sync-service.js";
 import { AdminAuditSystemService } from "./services/audit-system.js";
 import { AdminCatalogsSettingsOverviewService } from "./services/catalogs-settings-overview.js";
+import { AdminDatabaseBackupService } from "./services/database-backup.js";
 import { AdminRolesAccessService } from "./services/roles-access.js";
 import { AdminSignupInvitesService } from "./services/signup-invites.js";
 import { AdminTeamsService } from "./services/teams.js";
@@ -13,6 +14,7 @@ export class AdminService {
   private readonly teamsService: AdminTeamsService;
   private readonly rolesAccessService: AdminRolesAccessService;
   private readonly auditSystemService: AdminAuditSystemService;
+  private readonly databaseBackupService: AdminDatabaseBackupService;
   private readonly catalogsSettingsOverviewService: AdminCatalogsSettingsOverviewService;
 
   constructor(app: FastifyInstance) {
@@ -23,6 +25,7 @@ export class AdminService {
     this.teamsService = new AdminTeamsService(app, teamSync);
     this.rolesAccessService = new AdminRolesAccessService(app, teamSync);
     this.auditSystemService = new AdminAuditSystemService(app, teamSync);
+    this.databaseBackupService = new AdminDatabaseBackupService(app, teamSync);
     this.catalogsSettingsOverviewService = new AdminCatalogsSettingsOverviewService(app, teamSync);
   }
 
@@ -156,6 +159,10 @@ export class AdminService {
 
   async exportAuditReportCsv(...args: Parameters<AdminAuditSystemService["exportAuditReportCsv"]>) {
     return this.auditSystemService.exportAuditReportCsv(...args);
+  }
+
+  async createDatabaseBackup(...args: Parameters<AdminDatabaseBackupService["createDatabaseBackup"]>) {
+    return this.databaseBackupService.createDatabaseBackup(...args);
   }
 
   async getSystemStatus(...args: Parameters<AdminAuditSystemService["getSystemStatus"]>) {

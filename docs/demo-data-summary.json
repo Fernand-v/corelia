@@ -1,31 +1,31 @@
 {
-  "generatedAt": "2026-03-10T11:52:17.082Z",
+  "generatedAt": "2026-03-18T18:13:07.192Z",
   "project": {
-    "id": "a0980fc0-5e2d-41af-b652-2ffe08804ac1",
+    "id": "f9fa84f3-e53f-4154-8077-0777cfa93c7a",
     "name": "Proyecto Demo Orion"
   },
   "team": {
-    "id": "a838953a-3c0c-4577-ac52-17bdd3431b83",
+    "id": "31d79ede-8e9a-458b-9db2-8e0bb8661b47",
     "name": "Equipo Demo Plataforma"
   },
   "channels": {
-    "projectChannelId": "cf80bf5f-12bd-4bec-b8c6-30e359d8da07",
-    "teamChannelId": "162fd59c-b6e9-4b1e-a4db-1ff065d0b825"
+    "projectChannelId": "44af21d1-cc08-4eef-a6b8-b97ef57f13c6",
+    "teamChannelId": "0cfcda81-d0e2-407e-ae9e-6087e7c64e59"
   },
   "meeting": {
-    "id": "95380d01-8d1e-42f7-8ecc-5c4dba02fbfd",
+    "id": "4bff851a-02ca-4140-ad83-2b5ccdb55abc",
     "title": "Sync semanal Proyecto Orion"
   },
   "documents": {
-    "textDocumentId": "5b2e07eb-2995-4d24-a7ee-13dad531c66f",
-    "diagramDocumentId": "4ac882ab-762a-4706-b755-4415472568b5"
+    "textDocumentId": "62c89167-f61f-4642-9707-a6e7be575cb1",
+    "diagramDocumentId": "5ffdeba6-1925-4fc4-96e3-e66459b30256"
   },
   "expenses": {
-    "approvedExpenseId": "314bd99e-97c6-45b8-93e3-90033e30177a",
-    "pendingExpenseId": "dfdb3c87-c8a5-4334-852c-3c7f93b11b58"
+    "approvedExpenseId": "3e262ef7-f570-4aa0-a6f9-e2c546dff924",
+    "pendingExpenseId": "61d19142-750d-412e-9877-66fffc1ec4c2"
   },
   "objective": {
-    "id": "bead5cc3-88dc-4415-a623-49365dc80d64",
+    "id": "eb189314-1472-43f1-9a10-99b29bbb11e6",
     "title": "Reducir incidencias de despliegue"
   },
   "users": [

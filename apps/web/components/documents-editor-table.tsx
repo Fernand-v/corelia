@@ -546,11 +546,13 @@ export const DocumentsEditorTable = ({
   }, [onChange]);
 
   const canUndo = useMemo(() => {
+    void undoRevision;
     const manager = undoManagerRef.current as unknown as { undoStack?: unknown[] } | null;
     return (manager?.undoStack?.length ?? 0) > 0;
   }, [undoRevision]);
 
   const canRedo = useMemo(() => {
+    void undoRevision;
     const manager = undoManagerRef.current as unknown as { redoStack?: unknown[] } | null;
     return (manager?.redoStack?.length ?? 0) > 0;
   }, [undoRevision]);
@@ -1026,6 +1028,7 @@ export const DocumentsEditorTable = ({
   );
 
   const displayedRowIndexes = useMemo(() => {
+    void calcRevision;
     const hiddenRows = new Set(activeSheet.dimensions.hiddenRows);
     const base = activeSheet.rows
       .map((_, index) => index)

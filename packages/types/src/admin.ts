@@ -292,6 +292,10 @@ export const adminAccessByResourceQuerySchema = z.object({
   id: idSchema
 });
 
+export const adminDatabaseBackupInputSchema = z.object({
+  password: z.string().min(1).max(128)
+});
+
 export const adminResourceAccessItemSchema = z.object({
   userId: idSchema,
   fullName: z.string().min(1),

@@ -4,6 +4,7 @@ import {
   adminAccessByResourceQuerySchema,
   adminApproveSignupRequestInputSchema,
   adminCreateCodeCatalogInputSchema,
+  adminDatabaseBackupInputSchema,
   adminCreateExternalInviteInputSchema,
   adminCreateInternalInviteInputSchema,
   adminCreateTeamInputSchema,
@@ -46,6 +47,7 @@ export const adminSchemas = {
   adminAccessByResourceQuerySchema,
   adminListCodeCatalogsQuerySchema,
   adminCreateCodeCatalogInputSchema,
+  adminDatabaseBackupInputSchema,
   adminUpdateCodeCatalogInputSchema,
   adminUpdateFrontendSettingsInputSchema,
   adminRoleIdParamsSchema: z.object({

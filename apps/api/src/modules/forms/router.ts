@@ -7,7 +7,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
   const service = new FormService(app);
 
   app.post(
-    "/",
+    "/requests",
     {
       config: {
         requiresAuth: true,
@@ -26,7 +26,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
   );
 
   app.post(
-    "/resolve",
+    "/requests/resolve",
     {
       config: {
         requiresAuth: true,
@@ -56,7 +56,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
   );
 
   app.get(
-    "/",
+    "/requests",
     {
       config: {
         requiresAuth: true,
@@ -65,6 +65,285 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     },
     async (request) => {
       return service.listForUser(request.authUser!.id);
+    }
+  );
+
+  app.post(
+    "/",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(formSchemas.createDynamicFormInputSchema, request.body);
+        const created = await service.createDynamicForm(request.authUser!.id, payload);
+        return reply.code(201).send(created);
+      } catch (error) {
+        const known = error as Error;
+        const status = known.name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.get(
+    "/",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const query = parseWithSchema(formSchemas.dynamicFormListQuerySchema, request.query ?? {});
+        const forms = await service.listDynamicForms(request.authUser!.id, query);
+        return reply.send(forms);
+      } catch (error) {
+        const known = error as Error;
+        const status = known.name === "Forbidden" ? 403 : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.get(
+    "/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+        const form = await service.getDynamicFormById(request.authUser!.id, params.id);
+        return reply.send(form);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Formulario no encontrado"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.put(
+    "/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+        const payload = parseWithSchema(formSchemas.updateDynamicFormInputSchema, request.body);
+        const updated = await service.updateDynamicForm(request.authUser!.id, params.id, payload);
+        return reply.send(updated);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Formulario no encontrado" || known.message === "Proyecto no encontrado"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.delete(
+    "/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+        const result = await service.deleteDynamicForm(request.authUser!.id, params.id);
+        return reply.send(result);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Formulario no encontrado"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.post(
+    "/:id/questions",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+        const payload = parseWithSchema(formSchemas.addDynamicFormQuestionInputSchema, request.body);
+        const question = await service.addDynamicQuestion(request.authUser!.id, params.id, payload);
+        return reply.code(201).send(question);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Formulario no encontrado" || known.message === "Proyecto no encontrado"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.put(
+    "/questions/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormQuestionIdParamsSchema, request.params);
+        const payload = parseWithSchema(formSchemas.updateDynamicFormQuestionInputSchema, request.body);
+        const question = await service.updateDynamicQuestion(request.authUser!.id, params.id, payload);
+        return reply.send(question);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Pregunta no encontrada"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.delete(
+    "/questions/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormQuestionIdParamsSchema, request.params);
+        const removed = await service.removeDynamicQuestion(request.authUser!.id, params.id);
+        return reply.send(removed);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Pregunta no encontrada"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.post(
+    "/:id/submit",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+        const payload = parseWithSchema(formSchemas.submitDynamicFormInputSchema, request.body);
+        const submitted = await service.submitDynamicForm(request.authUser!.id, params.id, payload);
+        return reply.code(201).send(submitted);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Formulario no encontrado"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.get(
+    "/:id/responses",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+        const responses = await service.listDynamicFormResponses(request.authUser!.id, params.id);
+        return reply.send(responses);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Formulario no encontrado"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
+    }
+  );
+
+  app.get(
+    "/:id/summary",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+        const summary = await service.getDynamicFormSummary(request.authUser!.id, params.id);
+        return reply.send(summary);
+      } catch (error) {
+        const known = error as Error;
+        const status =
+          known.name === "Forbidden"
+            ? 403
+            : known.message === "Formulario no encontrado"
+              ? 404
+              : 400;
+        return reply.code(status).send({ message: known.message });
+      }
     }
   );
 };

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { env } from "../../config/env.js";
+import { resolveInstantCallExpiryStatus } from "../../lib/instant-call-expiry.js";
 import { createAndDispatchNotification } from "../../lib/notifications.js";
 
 interface MeetingConflictWarning {
@@ -119,6 +120,13 @@ export class MeetingsService {
     }
 
     throw new Error("No tienes acceso a esta reunión");
+  }
+
+  private async assertInstantCallNotExpired(input: { meetingId: string; meetingCreatedAt: Date }) {
+    const status = await resolveInstantCallExpiryStatus(this.app.prisma, input);
+    if (status.isInstantCall && status.expired) {
+      throw new Error(`La videollamada instantánea venció (vigencia: ${status.expiryHours} horas)`);
+    }
   }
 
   private async validateParticipants(
@@ -346,7 +354,11 @@ export class MeetingsService {
   }
 
   async getMeeting(meetingId: string, userId: string) {
-    await this.ensureMeetingReadAccess(meetingId, userId);
+    const meetingAccess = await this.ensureMeetingReadAccess(meetingId, userId);
+    await this.assertInstantCallNotExpired({
+      meetingId,
+      meetingCreatedAt: meetingAccess.createdAt
+    });
     return this.app.prisma.meeting.findUnique({
       where: { id: meetingId },
       include: {
@@ -514,7 +526,11 @@ export class MeetingsService {
   }
 
   async getMediaCapabilities(meetingId: string, userId: string) {
-    await this.ensureMeetingReadAccess(meetingId, userId);
+    const meetingAccess = await this.ensureMeetingReadAccess(meetingId, userId);
+    await this.assertInstantCallNotExpired({
+      meetingId,
+      meetingCreatedAt: meetingAccess.createdAt
+    });
 
     const meeting = await this.app.prisma.meeting.findUnique({
       where: { id: meetingId },

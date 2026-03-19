@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@corelia/ui";
 import { ProjectContextRequired } from "@/components/project-context-required";
 import { apiRequest } from "@/lib/api";
-import { withDashboardContext } from "@/lib/context";
+import { getContextFromSearchParams, withDashboardContext } from "@/lib/context";
 
 type ProjectChangesResponse = {
   project: {
@@ -44,9 +44,10 @@ const typeTone: Record<ProjectChangesResponse["changes"][number]["type"], string
 
 export default function ProjectChangesPage() {
   const params = useSearchParams();
-  const projectId = params.get("projectId") ?? "";
-  const projectName = params.get("projectName");
-  const teamId = params.get("teamId");
+  const dashboardContext = getContextFromSearchParams(params);
+  const projectId = dashboardContext.projectId ?? "";
+  const projectName = dashboardContext.projectName;
+  const teamId = dashboardContext.teamId;
 
   const changesQuery = useQuery({
     queryKey: ["files", "history", projectId],
@@ -68,8 +69,8 @@ export default function ProjectChangesPage() {
 
   const filesHref = withDashboardContext("/files", {
     projectId,
-    projectName,
-    teamId
+    projectName: projectName ?? null,
+    teamId: teamId ?? null
   });
 
   return (

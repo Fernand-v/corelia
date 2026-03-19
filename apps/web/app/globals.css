@@ -415,3 +415,15 @@ body {
 .teams-meetings-input::placeholder {
   color: rgba(100, 116, 139, 0.8);
 }
+
+/* Typing indicator animation */
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}

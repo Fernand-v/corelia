@@ -1,15 +1,17 @@
 import { MeetingBoard } from "@/components/meeting-board";
 import { ProjectContextRequired } from "@/components/project-context-required";
+import { getContextFromSearchParamsRecord } from "@/lib/context";
 
 type MeetingsPageProps = {
-  searchParams?: Promise<{ projectId?: string | string[] }>;
+  searchParams?: Promise<{ projectId?: string | string[]; ctx?: string | string[] }>;
 };
-
-const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
 
 export default async function MeetingsPage({ searchParams }: MeetingsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
-  const projectId = getParam(resolvedSearchParams.projectId);
+  const dashboardContext = getContextFromSearchParamsRecord(
+    resolvedSearchParams as Record<string, string | string[] | undefined>
+  );
+  const projectId = dashboardContext.projectId ?? "";
 
   if (!projectId) {
     return (

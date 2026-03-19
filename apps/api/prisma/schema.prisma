@@ -67,6 +67,15 @@ enum RequestStatus {
   RECHAZADA
 }
 
+enum DynamicFormQuestionType {
+  short_text
+  long_text
+  multiple_choice
+  checkbox
+  rating
+  date
+}
+
 enum ChannelScope {
   EQUIPO
   PROYECTO
@@ -395,6 +404,8 @@ model User {
   expensesApproved                     Expense[]                      @relation("ExpenseApprover")
   storageQuotaUser                     StorageQuota?                  @relation("StorageQuotaUser")
   reviewedSignupRequests               SignupRequest[]                @relation("SignupRequestReviewer")
+  createdDynamicForms                  DynamicForm[]                  @relation("DynamicFormCreator")
+  dynamicFormResponses                 DynamicFormResponse[]          @relation("DynamicFormResponder")
 
   @@index([baseRoleId])
   @@index([isActive])
@@ -469,6 +480,7 @@ model Project {
   documentTemplates      DocumentTemplate[]
   decisionNotesLinkedProject DecisionNote[]          @relation("DecisionLinkedProject")
   auditLogsTargetProject AuditLog[]                  @relation("AuditTargetProject")
+  dynamicForms           DynamicForm[]
 
   @@index([ownerId])
   @@index([template])
@@ -1198,6 +1210,74 @@ model FormRequest {
   @@index([status])
 }
 
+model DynamicForm {
+  id                       String   @id @default(uuid()) @db.Uuid
+  title                    String
+  description              String?
+  createdById              String   @db.Uuid
+  projectId                String?  @db.Uuid
+  isActive                 Boolean  @default(false)
+  allowMultipleSubmissions Boolean  @default(false)
+  isAnonymous              Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  createdBy User    @relation("DynamicFormCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  questions DynamicFormQuestion[]
+  responses DynamicFormResponse[]
+
+  @@index([createdById, createdAt(sort: Desc)])
+  @@index([projectId, isActive, createdAt(sort: Desc)])
+  @@index([isActive, createdAt(sort: Desc)])
+}
+
+model DynamicFormQuestion {
+  id        String                  @id @default(uuid()) @db.Uuid
+  formId    String                  @db.Uuid
+  type      DynamicFormQuestionType
+  label     String
+  required  Boolean                 @default(false)
+  options   Json?
+  order     Int
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  form    DynamicForm         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers DynamicFormAnswer[]
+
+  @@unique([formId, order])
+  @@index([formId])
+}
+
+model DynamicFormResponse {
+  id          String   @id @default(uuid()) @db.Uuid
+  formId      String   @db.Uuid
+  userId      String?  @db.Uuid
+  submittedAt DateTime @default(now())
+
+  form    DynamicForm         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user    User?               @relation("DynamicFormResponder", fields: [userId], references: [id], onDelete: SetNull)
+  answers DynamicFormAnswer[]
+
+  @@index([formId, submittedAt(sort: Desc)])
+  @@index([userId])
+  @@index([formId, userId])
+}
+
+model DynamicFormAnswer {
+  id         String @id @default(uuid()) @db.Uuid
+  responseId String @db.Uuid
+  questionId String @db.Uuid
+  value      Json
+
+  response DynamicFormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question DynamicFormQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([responseId, questionId])
+  @@index([questionId])
+}
+
 model Folder {
   id          String      @id @default(uuid()) @db.Uuid
   name        String
@@ -1847,6 +1927,7 @@ model FrontendSettings {
   taskStatusColorPending  String
   taskStatusColorInReview String
   taskStatusColorCompleted String
+  instantCallExpiryHours  Int      @default(24)
   updatedAt               DateTime @updatedAt
 }
 

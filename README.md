@@ -1,229 +1,140 @@
 # Corelia
 
-Plataforma intranet y de gestión de proyectos. Monorepo con pnpm workspaces + Turborepo.
+Guía operativa para instalar, levantar y entregar Corelia desde cero.
 
-## Requisitos previos
+## 1) Requisitos
 
-| Herramienta | Versión mínima |
-|-------------|---------------|
-| Node.js     | 20.0.0        |
-| pnpm        | 9.12.3 (se instala automáticamente con `corepack enable`) |
-| Docker      | 24+ (solo para infraestructura o despliegue) |
+- Node.js 20+
+- `corepack` habilitado (para usar `pnpm@9.12.3`)
+- Docker + Docker Compose
 
-## Inicio rápido (desarrollo local)
+Verificación rápida:
 
 ```bash
-# 1. Instalar dependencias
-corepack enable        # activa pnpm con la versión exacta del repo
-pnpm install
+node -v
+docker --version
+docker compose version
+```
 
-# 2. Configurar variables de entorno
+## 2) Preparar entorno
+
+```bash
+# Desde la raíz del proyecto
+corepack enable
+corepack pnpm install
+
 cp .env.example .env
-# Editar .env con valores reales (ver sección "Variables de entorno")
-
-# 3. Levantar infraestructura (PostgreSQL, Redis, MinIO, Tempo)
-cd docker && docker compose up -d postgres redis minio minio-init tempo && cd ..
-
-# 4. Aplicar migraciones de base de datos
-pnpm prisma:migrate:dev
-
-# 5. Arrancar todos los servicios en modo desarrollo
-pnpm dev
 ```
 
-Servicios disponibles tras `pnpm dev`:
+Editar `.env` con valores reales, al menos:
 
-| Servicio    | URL                              |
-|-------------|----------------------------------|
-| Web         | http://localhost:3000             |
-| API         | http://localhost:4000/api/v1      |
-| Hocuspocus  | ws://localhost:1234               |
-| MinIO Console | http://localhost:9001           |
-| Tempo (traces) | http://localhost:3200          |
+- `POSTGRES_PASSWORD`
+- `REDIS_PASSWORD`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `COLLAB_AUTH_SECRET`
+- `MINIO_ROOT_USER`
+- `MINIO_ROOT_PASSWORD`
+- `SMTP_USER`
+- `SMTP_PASS`
 
-> En desarrollo sin nginx, el frontend auto-resuelve API a `:4000`, Socket.IO a `:4000` y Hocuspocus a `:1234`.
-
-## Stack completo con Docker
+## 3) Levantar todo el stack
 
 ```bash
-# Construir y levantar todo (incluye nginx en :80/:443)
-cd docker && docker compose up -d --build
-
-# Solo reconstruir un servicio
-docker compose -f docker/docker-compose.yml build api
-docker compose -f docker/docker-compose.yml up -d api
-
-# Staging (con límites de recursos)
-cd docker && docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+docker compose --env-file .env -f docker/docker-compose.yml up -d --build --force-recreate
 ```
 
-### Enrutamiento nginx
-
-| Ruta       | Destino            | Protocolo    |
-|------------|--------------------|--------------|
-| `/`        | web:3000           | HTTP         |
-| `/api/`    | api:4000           | HTTP         |
-| `/ws/`     | api:4000           | WebSocket    |
-| `/collab`  | hocuspocus:1234    | WebSocket    |
-| `/status`  | api:4000/status    | HTTP         |
-
-## Estructura del monorepo
-
-```
-apps/
-  api/          Fastify 5 REST API (ESM, TypeScript)
-  web/          Next.js 14 frontend (App Router)
-  hocuspocus/   Servidor colaborativo Y.js
-  workers/      Workers BullMQ (notificaciones, webhooks, automaciones)
-packages/
-  types/        Schemas Zod y tipos compartidos
-  ui/           Componentes UI compartidos
-  config/       Configuración ESLint/Prettier/TypeScript base
-docker/
-  docker-compose.yml           Stack local
-  docker-compose.staging.yml   Overrides de staging (límites CPU/memoria)
-  nginx/                       Configuración reverse proxy
-  tempo/                       Configuración Grafana Tempo
-```
-
-## Comandos principales
+Si algún puerto local está ocupado, puedes sobrescribir puertos al levantar:
 
 ```bash
-# Desarrollo
-pnpm dev                         # Todos los servicios en watch mode
-pnpm --filter @corelia/api dev   # Solo API
-pnpm --filter @corelia/web dev   # Solo Web
-
-# Calidad
-pnpm build                       # Build completo (orden de dependencias)
-pnpm test                        # Tests (Vitest)
-pnpm lint                        # Linting
-pnpm typecheck                   # Type-check
-pnpm format                      # Verificar formato
-
-# Test individual
-pnpm --filter @corelia/api exec vitest run src/test/auth.integration.spec.ts
-
-# Base de datos
-pnpm prisma:migrate:dev          # Crear y aplicar migración
-pnpm prisma:migrate:status       # Estado de migraciones
-pnpm prisma:generate             # Regenerar Prisma client
+POSTGRES_PORT=5433 REDIS_PORT=6380 MINIO_API_PORT=9002 MINIO_CONSOLE_PORT=9003 \
+docker compose --env-file .env -f docker/docker-compose.yml up -d --build --force-recreate
 ```
 
-## Variables de entorno
+Cuando uses puertos alternos, ajusta también en `.env` las URLs correspondientes (`DATABASE_URL`, `REDIS_URL`, `MINIO_PORT`).
 
-Copiar `.env.example` a `.env` y configurar. Las variables están organizadas por servicio:
+Servicios principales:
 
-| Grupo | Variables clave | Notas |
-|-------|----------------|-------|
-| PostgreSQL | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DATABASE_URL` | Prisma requiere `DATABASE_URL` |
-| Redis | `REDIS_URL`, `REDIS_PASSWORD` | Usado por API y workers |
-| JWT | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Secrets mínimo 16 chars |
-| Seguridad | `COLLAB_AUTH_SECRET`, `CORS_ALLOWED_ORIGINS` | `COLLAB_AUTH_SECRET` se comparte entre API y Hocuspocus; `CORS_ALLOWED_ORIGINS` es lista separada por comas |
-| MinIO | `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET` | Bucket se auto-crea con `minio-init` |
-| SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Workers envían emails |
-| Frontend | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`, `NEXT_PUBLIC_HOCUSPOCUS_URL` | Variantes `_DOCKER` para builds Docker |
-| MediaSoup | `MEDIA_LISTEN_IP`, `MEDIA_ANNOUNCED_IP`, `MEDIA_MIN_PORT`-`MEDIA_MAX_PORT` | Puertos UDP 40000-40100 por defecto |
-| Calendar | `GOOGLE_CALENDAR_CLIENT_ID/SECRET`, `MICROSOFT_CALENDAR_CLIENT_ID/SECRET` | Opcional |
-| Webhooks | `SLACK_WEBHOOK_URL`, `TEAMS_WEBHOOK_URL` | Opcional |
-| Tracing | `OTEL_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT` | Grafana Tempo |
+- Web: `http://localhost` (recomendado vía nginx)
+- API estado: `http://localhost/status`
+- API directa: `http://localhost:4000/api/v1`
+- Grafana: `http://localhost/grafana/`
+- Prometheus: `http://localhost:9090`
+- MinIO consola: `http://localhost:9001`
 
-> `AUTO_MIGRATE_ON_START=true` ejecuta `prisma migrate deploy` al iniciar la API.
-
-## Operaciones
-
-### Backup de base de datos
+## 4) Inicializar base de datos y roles
 
 ```bash
-# Backup completo (desde host con Docker)
-docker exec corelia-postgres pg_dump -U corelia -Fc corelia > backup_$(date +%Y%m%d_%H%M%S).dump
-
-# Backup solo esquema
-docker exec corelia-postgres pg_dump -U corelia --schema-only corelia > schema_$(date +%Y%m%d).sql
-
-# Backup con compresión
-docker exec corelia-postgres pg_dump -U corelia -Fc corelia | gzip > backup_$(date +%Y%m%d_%H%M%S).dump.gz
+corepack pnpm prisma:seed
 ```
 
-### Restore de base de datos
+## 5) Crear administrador inicial
+
+Script incluido: `scripts/bootstrap-admin.ts`
 
 ```bash
-# Restore completo (reemplaza la base de datos)
-docker exec -i corelia-postgres pg_restore -U corelia -d corelia --clean --if-exists < backup.dump
-
-# Si la DB no existe, crearla primero
-docker exec corelia-postgres createdb -U corelia corelia
-docker exec -i corelia-postgres pg_restore -U corelia -d corelia < backup.dump
-
-# Tras restore, re-aplicar migraciones pendientes si las hay
-pnpm prisma:migrate:dev
+# Admin principal
+BOOTSTRAP_ADMIN_EMAIL='admin@corelia.local' \
+BOOTSTRAP_ADMIN_PASSWORD='Admin123!@#' \
+BOOTSTRAP_ADMIN_FIRST_NAME='Admin' \
+BOOTSTRAP_ADMIN_LAST_NAME='Corelia' \
+corepack pnpm bootstrap:admin
 ```
 
-### Backup de MinIO (archivos)
+Ejemplo para crear un segundo admin:
 
 ```bash
-# Instalar mc (MinIO Client) si no está disponible
-# https://min.io/docs/minio/linux/reference/minio-mc.html
-
-# Configurar alias
-mc alias set corelia http://localhost:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
-
-# Backup completo del bucket
-mc mirror corelia/corelia-files ./backup_files_$(date +%Y%m%d)
-
-# Restore
-mc mirror ./backup_files_20260309 corelia/corelia-files
+BOOTSTRAP_ADMIN_EMAIL='demo.admin@corelia.local' \
+BOOTSTRAP_ADMIN_PASSWORD='Demo123!@#' \
+BOOTSTRAP_ADMIN_FIRST_NAME='Demo' \
+BOOTSTRAP_ADMIN_LAST_NAME='Admin' \
+corepack pnpm bootstrap:admin
 ```
 
-### Backup de Redis
+## 6) Verificación mínima
 
 ```bash
-# Forzar snapshot y copiar
-docker exec corelia-redis redis-cli -a "$REDIS_PASSWORD" BGSAVE
-docker cp corelia-redis:/data/dump.rdb ./redis_backup_$(date +%Y%m%d).rdb
+# Estado de contenedores
+docker compose --env-file .env -f docker/docker-compose.yml ps
 
-# Restore: copiar dump.rdb y reiniciar
-docker cp ./redis_backup.rdb corelia-redis:/data/dump.rdb
-docker restart corelia-redis
+# Health API
+curl -sS http://localhost/status
+
+# Login admin (ejemplo)
+curl -X POST http://localhost/api/v1/auth/login \
+  -H 'content-type: application/json' \
+  -d '{"email":"admin@corelia.local","password":"Admin123!@#"}'
 ```
 
-### Verificación de salud
+## 7) Reinicio total (DESTRUCTIVO)
+
+El siguiente comando elimina completamente datos de PostgreSQL, Redis, MinIO, Grafana, Prometheus y volúmenes asociados:
 
 ```bash
-# Estado de todos los contenedores
-docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-
-# Health check de la API
-curl -sS http://localhost:4000/status
-
-# Estado de migraciones
-pnpm prisma:migrate:status
-
-# Logs de un servicio
-docker logs corelia-api --tail 100 -f
-docker logs corelia-workers --tail 100 -f
+docker compose --env-file .env -f docker/docker-compose.yml down -v --remove-orphans
 ```
 
-### Limpieza
+Luego, para reconstruir desde cero, repetir secciones **3**, **4** y **5**.
+
+## 8) Operación diaria
 
 ```bash
-# Purgar volúmenes (DESTRUCTIVO - elimina todos los datos)
-cd docker && docker compose down -v
+# Ver logs en vivo de API
+docker compose --env-file .env -f docker/docker-compose.yml logs -f api
 
-# Limpiar solo imágenes de build
-docker image prune -f --filter "label=com.docker.compose.project=docker"
+# Reiniciar solo un servicio
+docker compose --env-file .env -f docker/docker-compose.yml restart web
+
+# Detener entorno sin borrar datos
+docker compose --env-file .env -f docker/docker-compose.yml down
 ```
 
-## Recursos de staging
+## Nota de despliegue
 
-El archivo `docker-compose.staging.yml` añade límites de recursos:
+Para acceso LAN/producción, ajustar en `.env`:
 
-| Servicio    | CPU | Memoria |
-|-------------|-----|---------|
-| API         | 2   | 2 GB    |
-| Web         | 2   | 2 GB    |
-| Workers     | 2   | 2 GB    |
-| PostgreSQL  | 2   | 4 GB    |
-| Redis       | 1   | 1 GB    |
-| Hocuspocus  | 1   | 1 GB    |
-| Tempo       | 1   | 1 GB    |
+- `CORS_ALLOWED_ORIGINS`
+- `NEXT_PUBLIC_API_URL_DOCKER`
+- `NEXT_PUBLIC_WS_URL_DOCKER`
+- `MEDIA_ANNOUNCED_IP`
+- certificados nginx (`NGINX_SSL_CERT_PATH`, `NGINX_SSL_KEY_PATH`)

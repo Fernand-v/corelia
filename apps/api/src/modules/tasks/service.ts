@@ -931,14 +931,16 @@ export class TaskService {
       recipients.add(task.assigneeId);
     }
 
-    for (const userId of recipients) {
-      await createAndDispatchNotification(this.app, {
-        userId,
-        event: "TAREA_ESTADO_CAMBIADO",
-        title: "Tarea activada manualmente",
-        body: `La tarea ${task.title} fue activada y ahora está en PENDIENTE`
-      });
-    }
+    await Promise.all(
+      Array.from(recipients).map((userId) =>
+        createAndDispatchNotification(this.app, {
+          userId,
+          event: "TAREA_ESTADO_CAMBIADO",
+          title: "Tarea activada manualmente",
+          body: `La tarea ${task.title} fue activada y ahora está en PENDIENTE`
+        })
+      )
+    );
 
     return updated;
   }
@@ -1083,15 +1085,17 @@ export class TaskService {
         recipients.add(nextTask.assigneeId);
       }
 
-      for (const userId of recipients) {
-        await createAndDispatchNotification(this.app, {
-          userId,
-          event: "TAREA_ESTADO_CAMBIADO",
-          title: "Siguiente tarea activada",
-          body: `Se activó la tarea ${nextTask.title} en ${nextTask.status}`
-        });
-        notificationsSent += 1;
-      }
+      await Promise.all(
+        Array.from(recipients).map((userId) =>
+          createAndDispatchNotification(this.app, {
+            userId,
+            event: "TAREA_ESTADO_CAMBIADO",
+            title: "Siguiente tarea activada",
+            body: `Se activó la tarea ${nextTask.title} en ${nextTask.status}`
+          })
+        )
+      );
+      notificationsSent = recipients.size;
     }
 
     return {
@@ -1208,14 +1212,16 @@ export class TaskService {
       ...(task.assigneeId ? [task.assigneeId] : [])
     ]);
 
-    for (const userId of recipients) {
-      await createAndDispatchNotification(this.app, {
-        userId,
-        event: "TAREA_REASIGNADA",
-        title: "Tarea reasignada",
-        body: `La tarea ${task.title} cambió de responsable`
-      });
-    }
+    await Promise.all(
+      Array.from(recipients).map((userId) =>
+        createAndDispatchNotification(this.app, {
+          userId,
+          event: "TAREA_REASIGNADA",
+          title: "Tarea reasignada",
+          body: `La tarea ${task.title} cambió de responsable`
+        })
+      )
+    );
 
     await this.enqueueWebhooks("TAREA_REASIGNADA", {
       taskId: task.id,

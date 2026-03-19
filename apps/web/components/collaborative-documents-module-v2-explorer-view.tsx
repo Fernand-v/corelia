@@ -604,7 +604,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                                     onClick={(event) => event.stopPropagation()}
                                     onDoubleClick={(event) => event.stopPropagation()}
                                   >
-                                    <Menu positioning="below-end">
+                                    <Menu inline positioning="below-end">
                                       <MenuTrigger disableButtonEnhancement>
                                         <Button
                                           size="small"
@@ -700,7 +700,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                             onClick={(event) => event.stopPropagation()}
                             onDoubleClick={(event) => event.stopPropagation()}
                           >
-                            <Menu>
+                            <Menu inline positioning="below-end">
                               <MenuTrigger disableButtonEnhancement>
                                 <Button size="small" appearance="subtle" icon={<Edit24Regular />} aria-label="Más acciones" />
                               </MenuTrigger>

@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Channel, Message, MessagingConversationsResponse } from "@corelia/types";
+import type { TypingUser } from "@/components/messaging-module";
 import { apiRequest, getApiBaseUrl, getAuthToken, useAuthStore } from "@/lib/api";
+import { buildMaskedCallRoute } from "@/lib/call-route-ref";
+import { getContextFromSearchParams } from "@/lib/context";
+import { useFrontendSettings } from "@/lib/frontend-settings";
 import { getRealtimeSocket, disconnectRealtimeSocket } from "@/lib/realtime";
 import { useSession } from "@/lib/session";
 import { MessagingModule } from "@/components/messaging-module";
@@ -27,6 +31,12 @@ type ProjectMember = {
   availability: "DISPONIBLE" | "OCUPADO" | "EN_REUNION" | "AUSENTE";
   activeTasks: number;
   role: string;
+};
+
+type AttachmentPreviewTarget = {
+  id: string;
+  name: string;
+  mimeType: string | null;
 };
 
 const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
@@ -82,14 +92,64 @@ const previewText = (message: { content: string; kind: Message["kind"] }) => {
   return message.content;
 };
 
+const isImageMime = (mimeType: string | null | undefined) =>
+  (mimeType ?? "").toLowerCase().startsWith("image/");
+
+const isVideoFile = (input: { mimeType: string | null | undefined; fileName: string }) => {
+  const mime = (input.mimeType ?? "").toLowerCase().trim();
+  if (mime.startsWith("video/")) {
+    return true;
+  }
+
+  const name = input.fileName.toLowerCase();
+  return (
+    name.endsWith(".mp4") ||
+    name.endsWith(".webm") ||
+    name.endsWith(".mov") ||
+    name.endsWith(".m4v")
+  );
+};
+
+const isAudioFile = (input: { mimeType: string | null | undefined; fileName: string }) => {
+  const mime = (input.mimeType ?? "").toLowerCase().trim();
+  if (mime.startsWith("audio/")) {
+    return true;
+  }
+
+  const name = input.fileName.toLowerCase();
+  return (
+    name.endsWith(".mp3") ||
+    name.endsWith(".wav") ||
+    name.endsWith(".ogg") ||
+    name.endsWith(".m4a")
+  );
+};
+
+const isPdfFile = (input: { mimeType: string | null | undefined; fileName: string }) => {
+  const mime = (input.mimeType ?? "").toLowerCase().trim();
+  return mime === "application/pdf" || input.fileName.toLowerCase().endsWith(".pdf");
+};
+
+const isInstantCallInviteExpired = (createdAt: string, expiryHours: number) => {
+  const createdAtMs = new Date(createdAt).getTime();
+  if (!Number.isFinite(createdAtMs)) {
+    return false;
+  }
+
+  const expiryMs = Math.max(1, expiryHours) * 60 * 60 * 1000;
+  return Date.now() >= createdAtMs + expiryMs;
+};
+
 export const MessagingBoard = () => {
   const queryClient = useQueryClient();
   const token = useAuthStore((state) => state.accessToken);
   const session = useSession();
+  const { settings: frontendSettings } = useFrontendSettings();
   const params = useSearchParams();
+  const dashboardContext = useMemo(() => getContextFromSearchParams(params), [params]);
   const ensuredProjectRef = useRef<string | null>(null);
 
-  const requestedProjectId = params.get("projectId");
+  const requestedProjectId = dashboardContext.projectId;
   const requestedChannelId = params.get("channelId");
 
   const [activeChannelId, setActiveChannelId] = useState("");
@@ -97,6 +157,83 @@ export const MessagingBoard = () => {
   const [privateSearch, setPrivateSearch] = useState("");
   const [privateTargetUserId, setPrivateTargetUserId] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<AttachmentPreviewTarget | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
+
+  const clearPreviewUrl = useCallback(() => {
+    setPreviewUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return null;
+    });
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewAttachment(null);
+    setPreviewLoading(false);
+    setPreviewError(null);
+    clearPreviewUrl();
+  }, [clearPreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      clearPreviewUrl();
+    };
+  }, [clearPreviewUrl]);
+
+  const handlePreviewAttachment = useCallback(
+    async (attachmentId: string, fileName: string, mimeType?: string | null) => {
+      const authToken = getAuthToken();
+      if (!authToken) {
+        setActionError("Sesion no valida para previsualizar el adjunto");
+        return;
+      }
+
+      setActionError(null);
+      setPreviewAttachment({
+        id: attachmentId,
+        name: fileName,
+        mimeType: mimeType ?? null
+      });
+      setPreviewLoading(true);
+      setPreviewError(null);
+      clearPreviewUrl();
+
+      try {
+        const response = await fetch(
+          `${getApiBaseUrl()}/messaging/attachments/${encodeURIComponent(attachmentId)}/content?mode=inline`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authToken}`
+            }
+          }
+        );
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({
+            message: "No se pudo cargar la previsualizacion del adjunto"
+          }));
+          throw new Error(body.message ?? "No se pudo cargar la previsualizacion del adjunto");
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+      } catch (error) {
+        setPreviewError(error instanceof Error ? error.message : "Error al previsualizar el adjunto");
+      } finally {
+        setPreviewLoading(false);
+      }
+    },
+    [clearPreviewUrl]
+  );
 
   const channelsQuery = useQuery({
     queryKey: ["messaging", "channels"],
@@ -322,6 +459,20 @@ export const MessagingBoard = () => {
     }
   });
 
+  const authorNameById = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const user of directoryQuery.data ?? []) {
+      map.set(user.userId, user.fullName);
+    }
+
+    if (session.data) {
+      map.set(session.data.id, `${session.data.firstName} ${session.data.lastName}`.trim());
+    }
+
+    return map;
+  }, [directoryQuery.data, session.data]);
+
   useEffect(() => {
     if (!token || !activeChannelId) {
       return;
@@ -346,8 +497,45 @@ export const MessagingBoard = () => {
       void queryClient.invalidateQueries({ queryKey: ["messaging", "conversations"] });
     };
 
+    const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+    const onChannelTyping = (data: { channelId: string; userId: string; isTyping: boolean }) => {
+      if (data.channelId !== activeChannelId) {
+        return;
+      }
+
+      if (data.isTyping) {
+        const userName = authorNameById.get(data.userId) ?? "Usuario";
+
+        setTypingUsers((current) => {
+          if (current.some((u) => u.userId === data.userId)) {
+            return current;
+          }
+          return [...current, { userId: data.userId, userName }];
+        });
+
+        if (typingTimers.has(data.userId)) {
+          clearTimeout(typingTimers.get(data.userId));
+        }
+        typingTimers.set(
+          data.userId,
+          setTimeout(() => {
+            setTypingUsers((current) => current.filter((u) => u.userId !== data.userId));
+            typingTimers.delete(data.userId);
+          }, 4000)
+        );
+      } else {
+        setTypingUsers((current) => current.filter((u) => u.userId !== data.userId));
+        if (typingTimers.has(data.userId)) {
+          clearTimeout(typingTimers.get(data.userId));
+          typingTimers.delete(data.userId);
+        }
+      }
+    };
+
     socket.on("connect", onConnect);
     socket.on("channel:message", onChannelMessage);
+    socket.on("channel:typing", onChannelTyping);
 
     if (socket.connected) {
       subscribe();
@@ -356,8 +544,14 @@ export const MessagingBoard = () => {
     return () => {
       socket.off("connect", onConnect);
       socket.off("channel:message", onChannelMessage);
+      socket.off("channel:typing", onChannelTyping);
+      for (const timer of typingTimers.values()) {
+        clearTimeout(timer);
+      }
+      typingTimers.clear();
+      setTypingUsers([]);
     };
-  }, [activeChannelId, queryClient, token]);
+  }, [activeChannelId, authorNameById, queryClient, token]);
 
   useEffect(() => {
     if (!token) {
@@ -406,19 +600,45 @@ export const MessagingBoard = () => {
     ensureGeneralChannelMutation.mutate(requestedProjectId);
   }, [channels, ensureGeneralChannelMutation, requestedProjectId]);
 
-  const authorNameById = useMemo(() => {
-    const map = new Map<string, string>();
+  const handleComposerChange = useCallback(
+    (value: string) => {
+      if (!token || !activeChannelId) {
+        return;
+      }
 
-    for (const user of directoryQuery.data ?? []) {
-      map.set(user.userId, user.fullName);
-    }
+      const socket = getRealtimeSocket(token);
 
-    if (session.data) {
-      map.set(session.data.id, `${session.data.firstName} ${session.data.lastName}`.trim());
-    }
+      if (value.length > 0 && !isTypingRef.current) {
+        isTypingRef.current = true;
+        socket.emit("channel:typing:start", activeChannelId);
+      }
 
-    return map;
-  }, [directoryQuery.data, session.data]);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        if (isTypingRef.current) {
+          isTypingRef.current = false;
+          socket.emit("channel:typing:stop", activeChannelId);
+        }
+      }, 2000);
+    },
+    [activeChannelId, token]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (isTypingRef.current && token && activeChannelId) {
+        const socket = getRealtimeSocket(token);
+        socket.emit("channel:typing:stop", activeChannelId);
+        isTypingRef.current = false;
+      }
+    };
+  }, [activeChannelId, token]);
 
   const mappedMessages = useMemo(() => {
     return (messagesQuery.data ?? []).map((message) => {
@@ -438,12 +658,19 @@ export const MessagingBoard = () => {
         createdAt: message.createdAt,
         kind: message.kind,
         meetingUrl: message.meetingId
-          ? `/call?meetingId=${message.meetingId}${activeProjectId ? `&projectId=${activeProjectId}` : ""}`
+          ? buildMaskedCallRoute({
+              meetingId: message.meetingId,
+              projectId: activeProjectId
+            })
           : null,
+        callExpired:
+          message.kind === "CALL_INVITE"
+            ? isInstantCallInviteExpired(message.createdAt, frontendSettings.instantCallExpiryHours)
+            : false,
         attachments
       };
     });
-  }, [activeProjectId, authorNameById, messagesQuery.data]);
+  }, [activeProjectId, authorNameById, frontendSettings.instantCallExpiryHours, messagesQuery.data]);
 
   const teamMembers = useMemo(() => {
     const presenceById = new Map(
@@ -481,6 +708,11 @@ export const MessagingBoard = () => {
     });
   }, [directoryQuery.data, privateSearch, session.data?.id]);
 
+  const selectedPrivateCandidate = useMemo(
+    () => privateCandidates.find((candidate) => candidate.userId === privateTargetUserId) ?? null,
+    [privateCandidates, privateTargetUserId]
+  );
+
   return (
     <section className="h-full min-h-0 w-full">
       <MessagingModule
@@ -505,6 +737,7 @@ export const MessagingBoard = () => {
         }
         messages={mappedMessages}
         teamMembers={teamMembers}
+        typingUsers={typingUsers}
         actionError={actionError}
         currentUser={{
           id: session.data?.id ?? "",
@@ -526,10 +759,21 @@ export const MessagingBoard = () => {
           setActionError(null);
           setActiveChannelId(conversationId);
         }}
+        onComposerChange={handleComposerChange}
         onSendMessage={(input) => {
           if (!activeChannelId) {
             setActionError("Selecciona una conversación antes de enviar mensajes");
             return;
+          }
+
+          if (isTypingRef.current && token) {
+            isTypingRef.current = false;
+            if (typingTimeoutRef.current) {
+              clearTimeout(typingTimeoutRef.current);
+              typingTimeoutRef.current = null;
+            }
+            const socket = getRealtimeSocket(token);
+            socket.emit("channel:typing:stop", activeChannelId);
           }
 
           sendTextMutation.mutate({
@@ -553,13 +797,126 @@ export const MessagingBoard = () => {
         onDownloadAttachment={(attachmentId, fileName) => {
           void downloadAttachment(attachmentId, fileName);
         }}
+        onPreviewAttachment={(attachmentId, fileName, mimeType) => {
+          void handlePreviewAttachment(attachmentId, fileName, mimeType);
+        }}
       />
+
+      {previewAttachment ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closePreview();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Previsualizar ${previewAttachment.name}`}
+            className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold text-slate-900">{previewAttachment.name}</h3>
+                <p className="text-xs text-slate-500">{previewAttachment.mimeType ?? "Archivo adjunto"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void downloadAttachment(previewAttachment.id, previewAttachment.name);
+                  }}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Descargar
+                </button>
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-1">
+              {previewLoading ? (
+                <div className="flex h-96 items-center justify-center">
+                  <p className="text-sm text-slate-500">Cargando previsualizacion...</p>
+                </div>
+              ) : previewError ? (
+                <div className="flex h-96 items-center justify-center px-6">
+                  <p className="text-center text-sm text-slate-500">{previewError}</p>
+                </div>
+              ) : previewUrl ? (
+                isImageMime(previewAttachment.mimeType) ? (
+                  <div className="flex items-center justify-center p-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrl}
+                      alt={previewAttachment.name}
+                      className="max-h-[75vh] max-w-full rounded-lg object-contain"
+                    />
+                  </div>
+                ) : isVideoFile({
+                      mimeType: previewAttachment.mimeType,
+                      fileName: previewAttachment.name
+                    }) ? (
+                  <div className="flex items-center justify-center p-4">
+                    <video
+                      src={previewUrl}
+                      controls
+                      className="max-h-[75vh] w-full rounded-lg bg-black"
+                    >
+                      Tu navegador no soporta la etiqueta de video.
+                    </video>
+                  </div>
+                ) : isAudioFile({
+                      mimeType: previewAttachment.mimeType,
+                      fileName: previewAttachment.name
+                    }) ? (
+                  <div className="flex h-[40vh] items-center justify-center p-4">
+                    <audio src={previewUrl} controls className="w-full max-w-xl">
+                      Tu navegador no soporta la etiqueta de audio.
+                    </audio>
+                  </div>
+                ) : isPdfFile({
+                      mimeType: previewAttachment.mimeType,
+                      fileName: previewAttachment.name
+                    }) ? (
+                  <iframe
+                    src={previewUrl}
+                    title={previewAttachment.name}
+                    className="h-[75vh] w-full rounded-lg border-0"
+                  />
+                ) : (
+                  <div className="flex h-96 items-center justify-center px-6">
+                    <p className="text-center text-sm text-slate-500">
+                      Este tipo de archivo no admite previsualizacion.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="flex h-96 items-center justify-center">
+                  <p className="text-sm text-slate-500">No se pudo cargar la previsualizacion</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <UiModal
         open={privateModalOpen}
         onClose={() => {
           if (!createDirectChannelMutation.isPending) {
             setPrivateModalOpen(false);
+            setPrivateSearch("");
+            setPrivateTargetUserId("");
           }
         }}
         title="Nuevo chat privado"
@@ -576,21 +933,47 @@ export const MessagingBoard = () => {
             />
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Seleccionar usuario</span>
-            <select
-              value={privateTargetUserId}
-              onChange={(event) => setPrivateTargetUserId(event.target.value)}
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-            >
-              <option value="">Seleccionar...</option>
-              {privateCandidates.map((candidate) => (
-                <option key={candidate.userId} value={candidate.userId}>
-                  {candidate.fullName} · {candidate.contact.email}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Selecciona un usuario</p>
+            <div className="h-64 overflow-y-auto rounded-xl border border-slate-200">
+              {privateCandidates.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-slate-500">No hay usuarios que coincidan con tu búsqueda.</p>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {privateCandidates.map((candidate) => {
+                    const selected = candidate.userId === privateTargetUserId;
+                    return (
+                      <li key={candidate.userId}>
+                        <button
+                          type="button"
+                          onClick={() => setPrivateTargetUserId(candidate.userId)}
+                          className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition ${
+                            selected ? "bg-slate-900 text-white" : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium">{candidate.fullName}</span>
+                            <span className={`block truncate text-xs ${selected ? "text-slate-200" : "text-slate-500"}`}>
+                              {candidate.contact.email}
+                            </span>
+                            <span className={`block truncate text-xs ${selected ? "text-slate-300" : "text-slate-500"}`}>
+                              {candidate.activeRole}
+                              {candidate.teamName ? ` · ${candidate.teamName}` : ""}
+                            </span>
+                          </span>
+                          {selected ? (
+                            <span className="rounded-full bg-white/20 px-2 py-1 text-[11px] font-semibold">
+                              Seleccionado
+                            </span>
+                          ) : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2">
@@ -615,7 +998,11 @@ export const MessagingBoard = () => {
             disabled={!privateTargetUserId || createDirectChannelMutation.isPending}
             className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
-            {createDirectChannelMutation.isPending ? "Creando..." : "Crear chat"}
+            {createDirectChannelMutation.isPending
+              ? "Creando..."
+              : selectedPrivateCandidate
+                ? `Crear chat con ${selectedPrivateCandidate.fullName}`
+                : "Crear chat"}
           </button>
         </div>
       </UiModal>

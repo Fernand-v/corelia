@@ -277,6 +277,96 @@ describe("diagram collab v3", () => {
     expect(DIAGRAM_USER_CELL_REGEX.test(serialized)).toBe(true);
   });
 
+  it("preserves remote edge when concurrent user flushes with preserveMissing:true", () => {
+    const yDoc = new Y.Doc();
+    const rootMap = yDoc.getMap("diagram:v3");
+
+    // User B creates an edge between two vertices and syncs to Y.js
+    writeDrawioDocumentToDiagramV3(
+      rootMap,
+      createDoc(
+        "p-1",
+        "Main",
+        baseGraphXml(
+          '<mxCell id="v-a" value="A" vertex="1" parent="1"><mxGeometry x="10" y="10" width="80" height="40" as="geometry"/></mxCell>' +
+          '<mxCell id="v-b" value="B" vertex="1" parent="1"><mxGeometry x="200" y="10" width="80" height="40" as="geometry"/></mxCell>' +
+          '<mxCell id="edge-b" edge="1" source="v-a" target="v-b" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>'
+        )
+      ),
+      { actorId: "user-b", operation: "seed" }
+    );
+
+    // User A's local graph only has v-a and v-c (does NOT know about v-b or edge-b yet)
+    // User A flushes with preserveMissing:true → edge-b should survive
+    applyGraphModelXmlToDiagramV3Page(
+      rootMap,
+      {
+        pageId: "p-1",
+        pageName: "Main",
+        xml: baseGraphXml(
+          '<mxCell id="v-a" value="A" vertex="1" parent="1"><mxGeometry x="10" y="10" width="80" height="40" as="geometry"/></mxCell>' +
+          '<mxCell id="v-c" value="C" vertex="1" parent="1"><mxGeometry x="400" y="10" width="80" height="40" as="geometry"/></mxCell>'
+        ),
+        preserveMissing: true
+      },
+      { actorId: "user-a", operation: "flush_model_sync" }
+    );
+
+    const v3 = readDiagramDocumentV3(rootMap);
+    const page = v3?.pages["p-1"];
+
+    // User A's cells are present
+    expect(page?.cells["v-a"]).toBeTruthy();
+    expect(page?.cells["v-c"]).toBeTruthy();
+
+    // User B's remote cells are preserved (NOT deleted)
+    expect(page?.cells["v-b"]).toBeTruthy();
+    expect(page?.cells["edge-b"]).toBeTruthy();
+    expect(page?.cells["edge-b"]?.kind).toBe("edge");
+  });
+
+  it("removes edge-b from Y.js when user A explicitly deletes it via removedCellIds", () => {
+    const yDoc = new Y.Doc();
+    const rootMap = yDoc.getMap("diagram:v3");
+
+    writeDrawioDocumentToDiagramV3(
+      rootMap,
+      createDoc(
+        "p-1",
+        "Main",
+        baseGraphXml(
+          '<mxCell id="v-a" value="A" vertex="1" parent="1"><mxGeometry x="10" y="10" width="80" height="40" as="geometry"/></mxCell>' +
+          '<mxCell id="v-b" value="B" vertex="1" parent="1"><mxGeometry x="200" y="10" width="80" height="40" as="geometry"/></mxCell>' +
+          '<mxCell id="edge-ab" edge="1" source="v-a" target="v-b" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>'
+        )
+      ),
+      { actorId: "user-b", operation: "seed" }
+    );
+
+    // User A flushes and explicitly marks edge-ab as removed
+    applyGraphModelXmlToDiagramV3Page(
+      rootMap,
+      {
+        pageId: "p-1",
+        pageName: "Main",
+        xml: baseGraphXml(
+          '<mxCell id="v-a" value="A" vertex="1" parent="1"><mxGeometry x="10" y="10" width="80" height="40" as="geometry"/></mxCell>' +
+          '<mxCell id="v-b" value="B" vertex="1" parent="1"><mxGeometry x="200" y="10" width="80" height="40" as="geometry"/></mxCell>'
+        ),
+        preserveMissing: true,
+        removedCellIds: ["edge-ab"]
+      },
+      { actorId: "user-a", operation: "flush_model_sync" }
+    );
+
+    const v3 = readDiagramDocumentV3(rootMap);
+    const page = v3?.pages["p-1"];
+
+    expect(page?.cells["v-a"]).toBeTruthy();
+    expect(page?.cells["v-b"]).toBeTruthy();
+    expect(page?.cells["edge-ab"]).toBeUndefined();
+  });
+
   it("tracks revision diagnostics for debug mode", () => {
     const yDoc = new Y.Doc();
     const rootMap = yDoc.getMap("diagram:v3");

@@ -14,6 +14,7 @@ const codeCatalogParamsSchema = z.object({
   id: idSchema
 });
 const FRONTEND_SETTINGS_ENTITY_ID = "33333333-3333-4333-8333-333333333333";
+const DATABASE_BACKUP_ENTITY_ID = "44444444-4444-4444-8444-444444444444";
 
 export const adminRouter: FastifyPluginAsync = async (app) => {
   const service = new AdminService(app);
@@ -22,7 +23,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/users",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -47,7 +49,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/users",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -77,7 +80,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/users/:id",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -105,7 +109,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/offboarding/preview",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -124,7 +129,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/offboarding/execute",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -155,7 +161,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/signup-requests",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -177,7 +184,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/signup-requests/:id/approve",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -209,7 +217,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/signup-requests/:id/reject",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -241,7 +250,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/internal-invites",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -259,7 +269,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/internal-invites",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -290,7 +301,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/internal-invites/:id/revoke",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -319,7 +331,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/internal-invites/:id/resend",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -353,7 +366,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/guest-invites",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -371,7 +385,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/guest-invites",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -402,7 +417,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/guest-invites/:id/revoke",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -431,7 +447,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/guest-invites/:id/extend",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -461,7 +478,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/teams",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -479,7 +497,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/teams",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -508,7 +527,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/teams/:id",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -527,7 +547,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/teams/:id",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -555,7 +576,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/teams/:id",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -581,7 +603,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/frontend-settings",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -598,7 +621,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/frontend-settings",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -625,7 +649,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/frontend-settings/reset",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -655,7 +680,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/system-status",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -672,7 +698,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/system-status/check",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -926,7 +953,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/access",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -944,7 +972,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/code-catalogs",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -963,7 +992,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/code-catalogs",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -994,7 +1024,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/code-catalogs/:domain/:id",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1030,7 +1061,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/code-catalogs/:domain/:id",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1060,7 +1092,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/audit-report",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1080,11 +1113,55 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     }
   );
 
+  app.post(
+    "/database-backup",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(adminSchemas.adminDatabaseBackupInputSchema, request.body ?? {});
+        const backup = await service.createDatabaseBackup(request.authUser!.id, payload);
+
+        request.auditEvent = {
+          entityType: "AUTOMATIZACION",
+          entityId: DATABASE_BACKUP_ENTITY_ID,
+          action: "CREAR",
+          reasonCatalogId: "DATABASE_BACKUP_EXPORT",
+          reason: "Backup de base de datos generado desde panel administrador",
+          newDataText: {
+            fileName: backup.fileName
+          }
+        };
+
+        reply.header("Content-Type", backup.contentType);
+        reply.header("Content-Disposition", `attachment; filename="${backup.fileName}"`);
+        reply.header("X-Content-Type-Options", "nosniff");
+        reply.header("Cache-Control", "no-store");
+        return reply.send(backup.content);
+      } catch (error) {
+        const status =
+          (error as Error).name === "Forbidden"
+            ? 403
+            : (error as Error).name === "Unauthorized"
+              ? 401
+              : (error as Error).name === "Internal"
+                ? 500
+                : 400;
+        return reply.code(status).send({ message: (error as Error).message });
+      }
+    }
+  );
+
   app.get(
     "/audit-report/export.csv",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1111,7 +1188,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/maintenance/backfill-project-general-channels",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1145,7 +1223,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
     "/overview",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredPermission: "USUARIO_GESTIONAR"
       }
     },
     async (request, reply) => {

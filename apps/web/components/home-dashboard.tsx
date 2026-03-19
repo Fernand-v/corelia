@@ -7,6 +7,7 @@ import type { HomeDashboard } from "@corelia/types";
 import type { Route } from "next";
 import { Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
+import { getContextFromSearchParams, withDashboardContext } from "@/lib/context";
 import { AnnouncementContent } from "@/components/announcement-content";
 
 const roleLabel: Record<HomeDashboard["role"], string> = {
@@ -119,8 +120,9 @@ const ProgressBar = ({ value }: { value: number }) => {
 
 export const HomeDashboardView = () => {
   const params = useSearchParams();
-  const projectId = params.get("projectId");
-  const teamId = params.get("teamId");
+  const dashboardContext = getContextFromSearchParams(params);
+  const projectId = dashboardContext.projectId;
+  const teamId = dashboardContext.teamId;
 
   const query = useQuery<HomeDashboard, Error>({
     queryKey: ["home-dashboard", projectId, teamId],
@@ -276,38 +278,107 @@ export const HomeDashboardView = () => {
       ) : null}
 
       {blocks.myProjects ? (
-        <Card className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-700">Mis proyectos activos</h2>
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Mis proyectos activos</h2>
+            <span className="text-xs text-slate-400">{blocks.myProjects.length} {blocks.myProjects.length === 1 ? "proyecto" : "proyectos"}</span>
+          </div>
           {blocks.myProjects.length === 0 ? (
-            <p className="text-sm text-slate-600">No hay proyectos asociados.</p>
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/50 p-8 text-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto h-8 w-8 text-slate-300 mb-2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+              </svg>
+              <p className="text-sm text-slate-500">No hay proyectos asociados.</p>
+            </div>
           ) : (
-            <ul className="space-y-3">
-              {blocks.myProjects.map((project) => (
-                <li key={project.projectId} className="space-y-1 rounded-xl border border-[rgba(0,0,0,0.07)] bg-white/50 p-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-medium text-slate-900">{project.name}</p>
-                    <p className="text-xs text-slate-600">{project.completionPct}% completado</p>
-                  </div>
-                  <ProgressBar value={project.completionPct} />
-                  <p className="text-xs text-slate-600">
-                    Bloqueadas que me involucran: {project.involvedBlockedTasks}
-                  </p>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {blocks.myProjects.map((project) => {
+                const pct = project.completionPct;
+                const pctColor = pct >= 80 ? "text-emerald-600" : pct >= 50 ? "text-amber-600" : "text-indigo-600";
+                const barColor = pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-indigo-500";
+
+                return (
                   <Link
-                    href={`/projects?projectId=${project.projectId}` as Route}
-                    className="inline-flex rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/60 px-2.5 py-1 text-xs text-slate-600 shadow-sm transition-colors duration-100 hover:bg-white/90"
+                    key={project.projectId}
+                    href={
+                      withDashboardContext("/projects", {
+                        projectId: project.projectId,
+                        projectName: project.name,
+                        teamId: teamId ?? null
+                      }) as Route
+                    }
+                    className="group relative rounded-2xl border border-[rgba(0,0,0,0.07)] bg-white/80 p-4 shadow-sm backdrop-blur-sm transition-all duration-150 hover:shadow-md hover:border-indigo-200/60 hover:-translate-y-0.5"
                   >
-                    Abrir recursos del proyecto
+                    {project.risk && (
+                      <span className="absolute top-3 right-3 flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                      </span>
+                    )}
+
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors pr-4">
+                          {project.name}
+                        </p>
+                      </div>
+
+                      {/* Progress ring + percentage */}
+                      <div className="flex items-center gap-3">
+                        <svg width="40" height="40" className="shrink-0 -rotate-90">
+                          <circle cx="20" cy="20" r="16" fill="none" stroke="#f1f5f9" strokeWidth="4" />
+                          <circle
+                            cx="20"
+                            cy="20"
+                            r="16"
+                            fill="none"
+                            stroke={pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#6366f1"}
+                            strokeWidth="4"
+                            strokeDasharray={2 * Math.PI * 16}
+                            strokeDashoffset={2 * Math.PI * 16 - (Math.min(pct, 100) / 100) * 2 * Math.PI * 16}
+                            strokeLinecap="round"
+                            className="transition-all duration-700"
+                          />
+                        </svg>
+                        <div>
+                          <p className={`text-lg font-bold tabular-nums ${pctColor}`}>{pct}%</p>
+                          <p className="text-[11px] text-slate-400">completado</p>
+                        </div>
+                      </div>
+
+                      {/* Bottom bar */}
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+
+                      {/* Stats */}
+                      <div className="flex items-center gap-3 text-xs">
+                        {project.involvedBlockedTasks > 0 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-red-600 font-medium">
+                            <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
+                              <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-10.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM8 12a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                            </svg>
+                            {project.involvedBlockedTasks} bloqueadas
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Sin bloqueos</span>
+                        )}
+                        {project.risk && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-red-600 font-medium">
+                            Riesgo
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </Link>
-                  {project.risk ? (
-                    <p className="inline-flex rounded-full border border-red-100 bg-red-50/80 px-2 py-0.5 text-[10px] font-medium text-red-500">
-                      Riesgo alto
-                    </p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           )}
-        </Card>
+        </section>
       ) : null}
 
       {blocks.recentActivity ? (
@@ -462,7 +533,13 @@ export const HomeDashboardView = () => {
                     {task.projectName} · {task.status}
                   </p>
                   <Link
-                    href={`/tasks?projectId=${task.projectId}` as Route}
+                    href={
+                      withDashboardContext("/tasks", {
+                        projectId: task.projectId,
+                        projectName: task.projectName,
+                        teamId: teamId ?? null
+                      }) as Route
+                    }
                     className="text-xs font-medium text-accent hover:underline"
                   >
                     Asignación rápida
@@ -501,7 +578,13 @@ export const HomeDashboardView = () => {
                     </p>
                   ) : null}
                   <Link
-                    href={`/projects?projectId=${project.projectId}` as Route}
+                    href={
+                      withDashboardContext("/projects", {
+                        projectId: project.projectId,
+                        projectName: project.name,
+                        teamId: teamId ?? null
+                      }) as Route
+                    }
                     className="inline-flex rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/60 px-2.5 py-1 text-xs text-slate-600 shadow-sm transition-colors duration-100 hover:bg-white/90"
                   >
                     Ver detalles del proyecto
@@ -539,33 +622,6 @@ export const HomeDashboardView = () => {
         </Card>
       ) : null}
 
-      {blocks.systemState ? (
-        <Card className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-700">Estado del sistema</h2>
-          <p className="text-xs text-slate-500">Actualizado: {formatDateTime(blocks.systemState.now)}</p>
-          <ul className="space-y-2">
-            {blocks.systemState.services.map((service) => (
-              <li
-                key={service.service}
-                className={`flex items-center justify-between rounded-xl border p-3 ${toneForStatus(
-                  service.status
-                )}`}
-              >
-                <p className="text-sm font-medium">{serviceLabel[service.service] ?? service.service}</p>
-                <p className="text-xs">{statusLabel[service.status] ?? service.status}</p>
-              </li>
-            ))}
-          </ul>
-          <a
-            href={blocks.systemState.grafanaUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm font-medium text-accent hover:underline"
-          >
-            Ir a Grafana
-          </a>
-        </Card>
-      ) : null}
 
       {blocks.organizationActivity ? (
         <Card className="space-y-3">

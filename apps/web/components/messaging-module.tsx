@@ -35,6 +35,7 @@ type ChatMessage = {
   createdAt: string;
   kind?: "TEXT" | "FILE" | "CALL_INVITE";
   meetingUrl?: string | null;
+  callExpired?: boolean;
   attachments?: Array<{
     id: string;
     name: string;
@@ -74,15 +75,27 @@ type ActiveComposerToken = {
   query: string;
 };
 
+export type TypingUser = {
+  userId: string;
+  userName: string;
+};
+
 export type MessagingModuleProps = {
   conversations: ConversationItem[];
   activeConversation: ConversationItem | null;
   messages: ChatMessage[];
   teamMembers: TeamMember[];
+  typingUsers?: TypingUser[];
   onSendMessage: (input: { content: string; mentions: string[] }) => void | Promise<void>;
   onSelectConversation: (conversationId: string) => void;
   onUploadFile: (file: File) => void | Promise<void>;
+  onPreviewAttachment?: (
+    attachmentId: string,
+    fileName: string,
+    mimeType?: string | null
+  ) => void | Promise<void>;
   onDownloadAttachment?: (attachmentId: string, fileName: string) => void | Promise<void>;
+  onComposerChange?: (value: string) => void;
   currentUser: CurrentUser;
   onOpenNewChat?: () => void;
   onStartCall?: () => void;
@@ -155,6 +168,31 @@ const statusLabel: Record<NonNullable<TeamMember["status"]>, string> = {
   DISPONIBLE: "Disponible",
   OCUPADO: "Ocupado",
   AUSENTE: "Ausente"
+};
+
+const isPreviewableAttachment = (input: { mimeType?: string | null; name: string }) => {
+  const mime = (input.mimeType ?? "").toLowerCase().trim();
+  if (
+    mime.startsWith("image/") ||
+    mime === "application/pdf" ||
+    mime.startsWith("video/") ||
+    mime.startsWith("audio/")
+  ) {
+    return true;
+  }
+
+  const name = input.name.toLowerCase();
+  return (
+    name.endsWith(".pdf") ||
+    name.endsWith(".mp4") ||
+    name.endsWith(".webm") ||
+    name.endsWith(".mov") ||
+    name.endsWith(".m4v") ||
+    name.endsWith(".mp3") ||
+    name.endsWith(".wav") ||
+    name.endsWith(".ogg") ||
+    name.endsWith(".m4a")
+  );
 };
 
 const buildEmojiOptions = (): EmojiOption[] => {
@@ -234,10 +272,13 @@ export const MessagingModule = ({
   activeConversation,
   messages,
   teamMembers,
+  typingUsers = [],
   onSendMessage,
   onSelectConversation,
   onUploadFile,
+  onPreviewAttachment,
   onDownloadAttachment,
+  onComposerChange,
   currentUser,
   onOpenNewChat,
   onStartCall,
@@ -685,15 +726,21 @@ export const MessagingModule = ({
                       ) : null}
                       <p className="whitespace-pre-wrap break-words text-sm">{mentionNodes(message.content)}</p>
 
-                      {message.kind === "CALL_INVITE" && message.meetingUrl ? (
-                        <a
-                          href={message.meetingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex rounded-full bg-[#128c7e] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6f66]"
-                        >
-                          Unirme a llamada
-                        </a>
+                      {message.kind === "CALL_INVITE" ? (
+                        message.callExpired ? (
+                          <span className="mt-2 inline-flex rounded-full bg-slate-300 px-3 py-1 text-xs font-semibold text-slate-700">
+                            Llamada vencida
+                          </span>
+                        ) : message.meetingUrl ? (
+                          <a
+                            href={message.meetingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex rounded-full bg-[#128c7e] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6f66]"
+                          >
+                            Unirme a llamada
+                          </a>
+                        ) : null
                       ) : null}
 
                       {message.kind === "FILE" && (message.attachments?.length ?? 0) > 0 ? (
@@ -713,6 +760,21 @@ export const MessagingModule = ({
                                     : "-")}
                               </p>
                               <div className="mt-1 flex gap-2 text-[11px]">
+                                {onPreviewAttachment && isPreviewableAttachment(attachment) ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onPreviewAttachment(
+                                        attachment.id,
+                                        attachment.name,
+                                        attachment.mimeType
+                                      )
+                                    }
+                                    className="text-[#128c7e] hover:underline"
+                                  >
+                                    Previsualizar
+                                  </button>
+                                ) : null}
                                 {onDownloadAttachment ? (
                                   <button
                                     type="button"
@@ -738,6 +800,32 @@ export const MessagingModule = ({
               );
             })}
           </div>
+
+          {typingUsers.length > 0 ? (
+            <div className="flex items-center gap-2 border-t border-[#e4e9f0] bg-[#f0f2f5] px-4 py-1.5">
+              <span className="flex items-center gap-[3px]">
+                <span
+                  className="inline-block h-[6px] w-[6px] rounded-full bg-[#667781]"
+                  style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0s" }}
+                />
+                <span
+                  className="inline-block h-[6px] w-[6px] rounded-full bg-[#667781]"
+                  style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0.2s" }}
+                />
+                <span
+                  className="inline-block h-[6px] w-[6px] rounded-full bg-[#667781]"
+                  style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0.4s" }}
+                />
+              </span>
+              <span className="text-xs text-[#667781]">
+                {typingUsers.length === 1
+                  ? `${typingUsers[0]!.userName} está escribiendo`
+                  : typingUsers.length === 2
+                    ? `${typingUsers[0]!.userName} y ${typingUsers[1]!.userName} están escribiendo`
+                    : `${typingUsers[0]!.userName} y ${typingUsers.length - 1} más están escribiendo`}
+              </span>
+            </div>
+          ) : null}
 
           <footer className="border-t border-[#e4e9f0] bg-white px-3 py-3">
             <div className="relative">
@@ -786,6 +874,7 @@ export const MessagingModule = ({
                         start: event.target.selectionStart ?? event.target.value.length,
                         end: event.target.selectionEnd ?? event.target.value.length
                       });
+                      onComposerChange?.(event.target.value);
                     }}
                     onSelect={(event) => {
                       setComposerSelection({

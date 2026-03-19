@@ -16,6 +16,7 @@ type FrontendSettingsRecord = {
   taskStatusColorPending: string;
   taskStatusColorInReview: string;
   taskStatusColorCompleted: string;
+  instantCallExpiryHours: number;
   updatedAt: Date;
 };
 
@@ -39,7 +40,8 @@ const defaultsToRowData = () => ({
   organizationName: frontendSettingsDefaults.organizationName,
   taskStatusColorPending: frontendSettingsDefaults.taskStatusColors.PENDIENTE,
   taskStatusColorInReview: frontendSettingsDefaults.taskStatusColors.EN_REVISION,
-  taskStatusColorCompleted: frontendSettingsDefaults.taskStatusColors.COMPLETADA
+  taskStatusColorCompleted: frontendSettingsDefaults.taskStatusColors.COMPLETADA,
+  instantCallExpiryHours: frontendSettingsDefaults.instantCallExpiryHours
 });
 
 const mapRecordToFrontendSettings = (record: FrontendSettingsRecord | null): FrontendSettings => {
@@ -58,10 +60,18 @@ const mapRecordToFrontendSettings = (record: FrontendSettingsRecord | null): Fro
   const organizationName = record?.organizationName?.trim()
     ? normalizeOrganizationName(record.organizationName)
     : frontendSettingsDefaults.organizationName;
+  const instantCallExpiryHours =
+    typeof record?.instantCallExpiryHours === "number" &&
+    Number.isInteger(record.instantCallExpiryHours) &&
+    record.instantCallExpiryHours >= 1 &&
+    record.instantCallExpiryHours <= 720
+      ? record.instantCallExpiryHours
+      : frontendSettingsDefaults.instantCallExpiryHours;
 
   return frontendSettingsSchema.parse({
     organizationName,
     taskStatusColors,
+    instantCallExpiryHours,
     updatedAt: (record?.updatedAt ?? new Date()).toISOString()
   });
 };
@@ -90,6 +100,9 @@ export const updateFrontendSettings = async (
       : {}),
     ...(input.taskStatusColors?.COMPLETADA !== undefined
       ? { taskStatusColorCompleted: normalizeHexColor(input.taskStatusColors.COMPLETADA) }
+      : {}),
+    ...(input.instantCallExpiryHours !== undefined
+      ? { instantCallExpiryHours: input.instantCallExpiryHours }
       : {})
   };
 

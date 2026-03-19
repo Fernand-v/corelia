@@ -1,16 +1,23 @@
-import { DocumentsBoard } from "@/components/documents-board";
 import { ProjectContextRequired } from "@/components/project-context-required";
+import { DocumentsBoardLazy } from "@/components/documents-board-lazy";
+import { getContextFromSearchParamsRecord } from "@/lib/context";
 
 type DocumentsPageProps = {
-  searchParams?: Promise<{ projectId?: string | string[]; projectName?: string | string[]; teamId?: string | string[] }>;
+  searchParams?: Promise<{
+    projectId?: string | string[];
+    projectName?: string | string[];
+    teamId?: string | string[];
+    ctx?: string | string[];
+  }>;
 };
-
-const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
 
 export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
-  const projectId = getParam(resolvedSearchParams.projectId);
-  const projectName = getParam(resolvedSearchParams.projectName);
+  const dashboardContext = getContextFromSearchParamsRecord(
+    resolvedSearchParams as Record<string, string | string[] | undefined>
+  );
+  const projectId = dashboardContext.projectId ?? "";
+  const projectName = dashboardContext.projectName ?? "";
 
   if (!projectId) {
     return (
@@ -23,7 +30,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
 
   return (
     <main className="-mx-4 -my-6 h-[calc(100vh-4rem)] w-[calc(100%+2rem)] md:-mx-6 md:-my-8 md:w-[calc(100%+3rem)]">
-      <DocumentsBoard projectId={projectId} projectName={projectName} />
+      <DocumentsBoardLazy projectId={projectId} projectName={projectName} />
     </main>
   );
 }
