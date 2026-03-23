@@ -23,7 +23,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   }
 
   return (
-    <main className="h-[calc(100vh-4.5rem)] w-full px-2 py-2 md:px-3">
+    <main className="-mx-4 -my-6 h-[calc(100vh-4rem)] w-[calc(100%+2rem)] overflow-hidden md:-mx-6 md:-my-8 md:w-[calc(100%+3rem)]">
       <CalendarBoard />
     </main>
   );

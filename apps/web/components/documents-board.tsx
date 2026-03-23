@@ -20,6 +20,7 @@ import { serializeMxfile } from "@/lib/diagram/maxgraph/xml-format";
 import { getActivePage } from "@/lib/diagram/maxgraph/xml-pages";
 import { parseDiagramSource } from "@/lib/diagram/maxgraph/xml-serializer";
 import { resolveHocuspocusUrl } from "@/lib/hocuspocus";
+import { buildMaskedDocumentsEditorRoute } from "@/lib/documents-editor-route-ref";
 import { useSession } from "@/lib/session";
 import {
   CollaborativeDocumentsModule,
@@ -1513,10 +1514,19 @@ export const DocumentsBoard = ({
         return created;
       }}
       onOpenDocument={(document) => {
-        setActiveDocument(document);
+        const editorUrl = buildMaskedDocumentsEditorRoute({
+          documentId: document.id,
+          projectId,
+          projectName: projectName ?? null
+        });
+        window.open(editorUrl, "_blank", "noopener,noreferrer");
       }}
       onCloseDocument={() => {
         setActiveDocument(null);
+        // If the editor was opened in a standalone tab, close it
+        if (window.opener || window.location.pathname.startsWith("/documents-editor")) {
+          window.close();
+        }
       }}
       onDeleteDocument={async (document) => {
         await deleteDocumentMutation.mutateAsync(document.id);

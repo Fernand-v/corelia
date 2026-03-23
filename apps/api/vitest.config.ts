@@ -11,6 +11,10 @@ export default defineConfig({
         "src/modules/auth/service.ts",
         "src/modules/identity/service.ts",
         "src/modules/tasks/service.ts",
+        "src/modules/automations/service.ts",
+        "src/modules/notifications/service.ts",
+        "src/modules/decisions/service.ts",
+        "src/modules/objectives/service.ts",
         "src/plugins/audit.ts",
         "src/lib/rbac.ts"
       ],

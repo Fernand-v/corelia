@@ -12,7 +12,7 @@ import {
   selectStageParticipant,
   type CallVisualParticipant
 } from "@/components/meeting-call-room-state";
-import { getRealtimeBaseUrl, getRealtimePath } from "@/lib/realtime";
+import { getRealtimeBaseUrl, getRealtimePath, getRealtimeSocket } from "@/lib/realtime";
 import { useAuthBootstrap, useSession } from "@/lib/session";
 
 type MeetingDetails = {
@@ -82,6 +82,7 @@ type ControlDockProps = {
   localAudioOn: boolean;
   localVideoOn: boolean;
   localScreenSharing: boolean;
+  remoteScreenSharing: boolean;
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onToggleScreenShare: () => void;
@@ -384,58 +385,74 @@ const ControlDock = ({
   localAudioOn,
   localVideoOn,
   localScreenSharing,
+  remoteScreenSharing,
   onToggleAudio,
   onToggleVideo,
   onToggleScreenShare,
   onLeave
-}: ControlDockProps) => (
-  <footer className="pointer-events-none fixed inset-x-3 bottom-4 z-40 flex justify-center">
-    <div className="pointer-events-auto flex w-full max-w-[640px] items-center justify-center gap-2 rounded-2xl border border-[--teams-call-border] bg-[--teams-call-panel]/95 px-2 py-2 shadow-[var(--teams-call-shadow-strong)] backdrop-blur-xl sm:gap-3 sm:px-3">
-      <button
-        type="button"
-        className={`teams-call-dock-btn ${localAudioOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
-        disabled={!connected}
-        onClick={onToggleAudio}
-        aria-pressed={localAudioOn}
-      >
-        <span className="teams-call-dock-btn__label">Mic</span>
-        <span className="teams-call-dock-btn__state">{localAudioOn ? "On" : "Off"}</span>
-      </button>
-      <button
-        type="button"
-        className={`teams-call-dock-btn ${localVideoOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
-        disabled={!connected}
-        onClick={onToggleVideo}
-        aria-pressed={localVideoOn}
-      >
-        <span className="teams-call-dock-btn__label">Cam</span>
-        <span className="teams-call-dock-btn__state">{localVideoOn ? "On" : "Off"}</span>
-      </button>
-      <button
-        type="button"
-        className={`teams-call-dock-btn ${localScreenSharing ? "teams-call-dock-btn--accent" : "teams-call-dock-btn--active"}`}
-        disabled={!connected}
-        onClick={onToggleScreenShare}
-        aria-pressed={localScreenSharing}
-      >
-        <span className="teams-call-dock-btn__label">Pantalla</span>
-        <span className="teams-call-dock-btn__state">{localScreenSharing ? "On" : "Off"}</span>
-      </button>
-      <button type="button" className="teams-call-dock-btn teams-call-dock-btn--danger" onClick={onLeave}>
-        <span className="teams-call-dock-btn__label">Salir</span>
-        <span className="teams-call-dock-btn__state">Llamada</span>
-      </button>
-    </div>
-  </footer>
-);
+}: ControlDockProps) => {
+  const screenShareDisabled = !connected || (remoteScreenSharing && !localScreenSharing);
+  const screenShareClass = localScreenSharing
+    ? "teams-call-dock-btn--accent"
+    : screenShareDisabled
+      ? "teams-call-dock-btn--disabled"
+      : "teams-call-dock-btn--active";
+
+  return (
+    <footer className="pointer-events-none fixed inset-x-3 bottom-4 z-40 flex justify-center">
+      <div className="pointer-events-auto flex w-full max-w-[640px] items-center justify-center gap-2 rounded-2xl border border-[--teams-call-border] bg-[--teams-call-panel]/95 px-2 py-2 shadow-[var(--teams-call-shadow-strong)] backdrop-blur-xl sm:gap-3 sm:px-3">
+        <button
+          type="button"
+          className={`teams-call-dock-btn ${localAudioOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
+          disabled={!connected}
+          onClick={onToggleAudio}
+          aria-pressed={localAudioOn}
+        >
+          <span className="teams-call-dock-btn__label">Mic</span>
+          <span className="teams-call-dock-btn__state">{localAudioOn ? "On" : "Off"}</span>
+        </button>
+        <button
+          type="button"
+          className={`teams-call-dock-btn ${localVideoOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
+          disabled={!connected}
+          onClick={onToggleVideo}
+          aria-pressed={localVideoOn}
+        >
+          <span className="teams-call-dock-btn__label">Cam</span>
+          <span className="teams-call-dock-btn__state">{localVideoOn ? "On" : "Off"}</span>
+        </button>
+        <button
+          type="button"
+          className={`teams-call-dock-btn ${screenShareClass}`}
+          disabled={screenShareDisabled}
+          onClick={onToggleScreenShare}
+          aria-pressed={localScreenSharing}
+          title={remoteScreenSharing && !localScreenSharing ? "Otro participante está compartiendo pantalla" : undefined}
+        >
+          <span className="teams-call-dock-btn__label">Pantalla</span>
+          <span className="teams-call-dock-btn__state">
+            {localScreenSharing ? "On" : remoteScreenSharing ? "Bloq" : "Off"}
+          </span>
+        </button>
+        <button type="button" className="teams-call-dock-btn teams-call-dock-btn--danger" onClick={onLeave}>
+          <span className="teams-call-dock-btn__label">Salir</span>
+          <span className="teams-call-dock-btn__state">Llamada</span>
+        </button>
+      </div>
+    </footer>
+  );
+};
 
 export const MeetingCallRoom = ({
   meetingId,
-  projectId
+  projectId,
+  callType = "VIDEO"
 }: {
   meetingId: string;
   projectId?: string;
+  callType?: "VIDEO" | "VOZ";
 }) => {
+  const isVoiceOnly = callType === "VOZ";
   const hydrated = useAuthBootstrap();
   const token = useAuthStore((state) => state.accessToken);
   const session = useSession();
@@ -535,7 +552,7 @@ export const MeetingCallRoom = ({
     socketPath: getRealtimePath(),
     maxParticipants: 4,
     mediaConfig: {
-      video: true,
+      video: !isVoiceOnly,
       audio: true
     },
     callbacks: peersCallbacks,
@@ -912,9 +929,36 @@ export const MeetingCallRoom = ({
   const localAudioOn = localUiParticipant?.audioOn ?? false;
   const localVideoOn = localUiParticipant?.videoOn ?? false;
   const localScreenSharing = localUiParticipant?.screenSharing ?? false;
+  const remoteScreenSharing = remoteParticipants.some((p) => p.screenSharing);
   const activeStageName = activeStageParticipant
     ? memberNameById.get(activeStageParticipant.userId) ?? activeStageParticipant.userId
     : null;
+
+  const notifyScreenShareState = useCallback(
+    (sharing: boolean) => {
+      if (!token || !meetingId) return;
+      try {
+        const sock = getRealtimeSocket(token);
+        sock.emit("meeting:participant:update-state", {
+          meetingId,
+          screenSharing: sharing
+        });
+      } catch {
+        // best-effort notification
+      }
+    },
+    [token, meetingId]
+  );
+
+  // Sync screen share state with API when it changes (covers browser "stop sharing" button)
+  const prevScreenSharingRef = useRef(false);
+  useEffect(() => {
+    const prev = prevScreenSharingRef.current;
+    prevScreenSharingRef.current = localScreenSharing;
+    if (prev && !localScreenSharing) {
+      notifyScreenShareState(false);
+    }
+  }, [localScreenSharing, notifyScreenShareState]);
 
   if (!hydrated) {
     return (
@@ -1020,44 +1064,78 @@ export const MeetingCallRoom = ({
               ))}
             </div>
 
-            <StageSurface participant={activeStageParticipant} participantName={activeStageName} />
-
-            {galleryParticipants.length > 0 ? (
-              <div className="teams-call-gallery">
-                {galleryParticipants.map((participant) => {
-                  const fullName = memberNameById.get(participant.userId) ?? participant.userId;
-                  const canRenderVideo = Boolean(
-                    participant.stream && (participant.hasLiveVideo || participant.screenSharing)
-                  );
-
-                  return (
-                    <article
-                      key={participant.userId}
-                      className="teams-call-gallery-tile rounded-xl border border-[--teams-call-border] bg-[--teams-call-surface-2] p-2"
-                    >
-                      <div className="overflow-hidden rounded-lg border border-[--teams-call-border-soft] bg-[#121621]">
-                        {canRenderVideo && participant.stream ? (
-                          <StreamVideo
-                            stream={participant.stream}
-                            muted
-                            mirror={participant.isLocal && !participant.screenSharing}
-                            className="h-20 w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-20 w-full items-center justify-center bg-[#121621] text-sm font-semibold text-[--teams-call-text]">
-                            {getInitials(fullName)}
-                          </div>
-                        )}
+            {isVoiceOnly ? (
+              <div className="flex min-h-[300px] flex-wrap items-center justify-center gap-6 rounded-2xl bg-[--teams-call-surface-2] p-8 sm:min-h-[400px]">
+                {visualParticipants.length === 0 ? (
+                  <p className="text-sm text-[--teams-call-muted]">Esperando participantes...</p>
+                ) : (
+                  visualParticipants.map((participant) => {
+                    const fullName = memberNameById.get(participant.userId) ?? participant.userId;
+                    return (
+                      <div key={participant.userId} className="flex flex-col items-center gap-2">
+                        <div
+                          className={`flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white transition-all ${
+                            participant.hasLiveAudio
+                              ? "bg-[--teams-call-accent] ring-4 ring-[--teams-call-accent]/40 animate-pulse"
+                              : "bg-[--teams-call-accent-soft]"
+                          }`}
+                        >
+                          {getInitials(fullName)}
+                        </div>
+                        <p className="text-xs font-medium text-[--teams-call-text]">
+                          {fullName}
+                          {participant.isLocal ? " (Tú)" : ""}
+                        </p>
+                        <p className="text-[10px] text-[--teams-call-muted]">
+                          {participant.hasLiveAudio ? "Mic on" : "Mic off"}
+                        </p>
                       </div>
-                      <p className="mt-2 truncate text-xs text-[--teams-call-muted]">
-                        {fullName}
-                        {participant.isLocal ? " (Tú)" : ""}
-                      </p>
-                    </article>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
-            ) : null}
+            ) : (
+              <>
+                <StageSurface participant={activeStageParticipant} participantName={activeStageName} />
+
+                {galleryParticipants.length > 0 ? (
+                  <div className="teams-call-gallery">
+                    {galleryParticipants.map((participant) => {
+                      const fullName = memberNameById.get(participant.userId) ?? participant.userId;
+                      const canRenderVideo = Boolean(
+                        participant.stream && (participant.hasLiveVideo || participant.screenSharing)
+                      );
+
+                      return (
+                        <article
+                          key={participant.userId}
+                          className="teams-call-gallery-tile rounded-xl border border-[--teams-call-border] bg-[--teams-call-surface-2] p-2"
+                        >
+                          <div className="overflow-hidden rounded-lg border border-[--teams-call-border-soft] bg-[#121621]">
+                            {canRenderVideo && participant.stream ? (
+                              <StreamVideo
+                                stream={participant.stream}
+                                muted
+                                mirror={participant.isLocal && !participant.screenSharing}
+                                className="h-20 w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-20 w-full items-center justify-center bg-[#121621] text-sm font-semibold text-[--teams-call-text]">
+                                {getInitials(fullName)}
+                              </div>
+                            )}
+                          </div>
+                          <p className="mt-2 truncate text-xs text-[--teams-call-muted]">
+                            {fullName}
+                            {participant.isLocal ? " (Tú)" : ""}
+                          </p>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </>
+            )}
           </section>
 
           <ParticipantRail
@@ -1068,26 +1146,60 @@ export const MeetingCallRoom = ({
         </div>
       </div>
 
-      <ControlDock
-        connected={connected}
-        localAudioOn={localAudioOn}
-        localVideoOn={localVideoOn}
-        localScreenSharing={localScreenSharing}
-        onToggleAudio={() => toggleAudio(!localAudioOn)}
-        onToggleVideo={() => toggleVideo(!localVideoOn)}
-        onToggleScreenShare={() => {
-          if (localScreenSharing) {
-            void stopScreenShare();
-            return;
-          }
-          void startScreenShare().catch((shareError) => {
-            const message =
-              shareError instanceof Error ? shareError.message : "No se pudo iniciar la pantalla compartida.";
-            setCallWarning(message);
-          });
-        }}
-        onLeave={() => void handleLeaveCall()}
-      />
+      {isVoiceOnly ? (
+        <footer className="pointer-events-none fixed inset-x-3 bottom-4 z-40 flex justify-center">
+          <div className="pointer-events-auto flex w-full max-w-[400px] items-center justify-center gap-3 rounded-2xl border border-[--teams-call-border] bg-[--teams-call-panel]/95 px-3 py-2 shadow-[var(--teams-call-shadow-strong)] backdrop-blur-xl">
+            <button
+              type="button"
+              className={`teams-call-dock-btn ${localAudioOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
+              disabled={!connected}
+              onClick={() => toggleAudio(!localAudioOn)}
+              aria-pressed={localAudioOn}
+            >
+              <span className="teams-call-dock-btn__label">Mic</span>
+              <span className="teams-call-dock-btn__state">{localAudioOn ? "On" : "Off"}</span>
+            </button>
+            <button type="button" className="teams-call-dock-btn teams-call-dock-btn--danger" onClick={() => void handleLeaveCall()}>
+              <span className="teams-call-dock-btn__label">Salir</span>
+              <span className="teams-call-dock-btn__state">Llamada</span>
+            </button>
+          </div>
+        </footer>
+      ) : (
+        <ControlDock
+          connected={connected}
+          localAudioOn={localAudioOn}
+          localVideoOn={localVideoOn}
+          localScreenSharing={localScreenSharing}
+          remoteScreenSharing={remoteScreenSharing}
+          onToggleAudio={() => toggleAudio(!localAudioOn)}
+          onToggleVideo={() => toggleVideo(!localVideoOn)}
+          onToggleScreenShare={() => {
+            if (localScreenSharing) {
+              void stopScreenShare()
+                .then(() => notifyScreenShareState(false))
+                .catch((stopError) => {
+                  notifyScreenShareState(false);
+                  const msg = stopError instanceof Error ? stopError.message : String(stopError);
+                  if (msg.includes("cannot replace track") || msg.includes("Close called")) {
+                    logWebRtcDebug("screen-share-stop-track-error-suppressed", { message: msg });
+                    return;
+                  }
+                  setCallWarning(msg);
+                });
+              return;
+            }
+            void startScreenShare()
+              .then(() => notifyScreenShareState(true))
+              .catch((shareError) => {
+                const message =
+                  shareError instanceof Error ? shareError.message : "No se pudo iniciar la pantalla compartida.";
+                setCallWarning(message);
+              });
+          }}
+          onLeave={() => void handleLeaveCall()}
+        />
+      )}
     </main>
   );
 };

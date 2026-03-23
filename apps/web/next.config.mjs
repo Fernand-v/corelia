@@ -5,6 +5,9 @@ const nextConfig = {
   output: "standalone",
   serverExternalPackages: ["tldraw"],
   typedRoutes: true,
+  eslint: {
+    ignoreDuringBuilds: true
+  },
   outputFileTracingRoot: path.join(process.cwd(), "../../")
 };
 

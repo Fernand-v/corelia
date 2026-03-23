@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent
@@ -55,11 +56,6 @@ type ProjectMemberAvailability = {
   maxActiveTasks: number;
 };
 
-type StorageSummary = {
-  usageBytes: number;
-  bytesLimit: number;
-};
-
 type CalendarView = "hoy" | "semana" | "mes";
 
 type ModalTab = "evento" | "tarea";
@@ -97,7 +93,6 @@ type CalendarBoardViewProps = {
   currentWeek: Date[];
   currentMonth: Date;
   daysWithEvents: Date[];
-  storageInfo: { used: number; total: number } | null;
   onCreateEvent: (eventData: CalendarEventCreatePayload) => Promise<void>;
   onCreateTask: (taskData: CalendarTaskCreatePayload) => Promise<void>;
   onRescheduleTask: (task: Task, newDatetime: string, confirmOutOfSchedule: boolean) => Promise<void>;
@@ -122,8 +117,8 @@ const WEEKDAY_HEADER = ["L", "M", "X", "J", "V", "S", "D"];
 const WEEKDAY_LONG = ["LUN", "MAR", "MIE", "JUE", "VIE", "SAB", "DOM"];
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
-const GRID_START_HOUR = 7;
-const GRID_END_HOUR = 20;
+const GRID_START_HOUR = 1;
+const GRID_END_HOUR = 24;
 const GRID_HOUR_HEIGHT = 60;
 const GRID_MINUTE_HEIGHT = 1;
 const GRID_TOTAL_MINUTES = (GRID_END_HOUR - GRID_START_HOUR) * 60;
@@ -179,22 +174,6 @@ const formatTimeRange = (startIso: string, endIso: string) => {
     hour: "2-digit",
     minute: "2-digit"
   })}`;
-};
-
-const formatBytes = (value: number) => {
-  if (!Number.isFinite(value) || value <= 0) {
-    return "0 B";
-  }
-
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let amount = value;
-  let unitIndex = 0;
-  while (amount >= 1024 && unitIndex < units.length - 1) {
-    amount /= 1024;
-    unitIndex += 1;
-  }
-
-  return `${amount.toFixed(amount >= 100 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 };
 
 const formatRelativeEventDate = (iso: string) => {
@@ -414,7 +393,6 @@ const CalendarBoardView = ({
   currentWeek,
   currentMonth,
   daysWithEvents,
-  storageInfo,
   onCreateEvent,
   onCreateTask,
   onRescheduleTask,
@@ -428,6 +406,7 @@ const CalendarBoardView = ({
 }: CalendarBoardViewProps) => {
   const { settings: frontendSettings } = useFrontendSettings();
   const taskStatusColors = frontendSettings.taskStatusColors;
+  const timeGridRef = useRef<HTMLDivElement>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState<CalendarView>("semana");
   const [selectedDay, setSelectedDay] = useState<Date>(() => normalizeDate(currentWeek[0] ?? new Date()));
@@ -486,6 +465,17 @@ const CalendarBoardView = ({
     return () => {
       window.clearInterval(interval);
     };
+  }, []);
+
+  useEffect(() => {
+    const container = timeGridRef.current;
+    if (!container) {
+      return;
+    }
+    const currentHour = new Date().getHours();
+    const targetHour = Math.max(GRID_START_HOUR, currentHour - 1);
+    const scrollPx = (targetHour - GRID_START_HOUR) * GRID_HOUR_HEIGHT;
+    container.scrollTop = scrollPx;
   }, []);
 
   useEffect(() => {
@@ -773,21 +763,14 @@ const CalendarBoardView = ({
     return (currentMinutes - GRID_START_HOUR * 60) * GRID_MINUTE_HEIGHT;
   }, [now]);
 
-  const usedStoragePct = useMemo(() => {
-    if (!storageInfo || storageInfo.total <= 0) {
-      return 0;
-    }
-    return clamp((storageInfo.used / storageInfo.total) * 100, 0, 100);
-  }, [storageInfo]);
-
   const hourRows = useMemo(
     () => Array.from({ length: GRID_END_HOUR - GRID_START_HOUR }, (_, index) => GRID_START_HOUR + index),
     []
   );
 
   return (
-    <section className={`${dmSans.className} h-[calc(100vh-6rem)] w-full overflow-hidden bg-[#f0f4f9] p-2 lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-3`}>
-      <aside className={`${mobileSidebarOpen ? "flex" : "hidden"} lg:flex h-full flex-col overflow-y-auto rounded-2xl border border-[#e2e8f2] bg-white p-3 shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
+    <section className={`${dmSans.className} h-full min-h-0 w-full overflow-hidden bg-[#f0f4f9] p-2 lg:grid lg:grid-cols-[clamp(340px,31vw,400px)_minmax(0,1fr)] lg:gap-3`}>
+      <aside className={`${mobileSidebarOpen ? "flex" : "hidden"} lg:flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#e2e8f2] bg-white p-3 shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
@@ -809,7 +792,7 @@ const CalendarBoardView = ({
           </button>
         </div>
 
-        <div className="rounded-2xl border border-[#e2e8f2] bg-[#f8faff] p-3">
+        <div className="shrink-0 rounded-2xl border border-[#e2e8f2] bg-[#f8faff] p-3">
           <div className="mb-3 flex items-center justify-between">
             <button
               type="button"
@@ -870,7 +853,7 @@ const CalendarBoardView = ({
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl border border-[#e2e8f2] bg-white p-2">
+        <div className="mt-3 shrink-0 grid grid-cols-3 gap-2 rounded-2xl border border-[#e2e8f2] bg-white p-2">
           {([
             { value: "hoy", label: "Hoy" },
             { value: "semana", label: "Semana" },
@@ -891,7 +874,7 @@ const CalendarBoardView = ({
           ))}
         </div>
 
-        <div className="mt-3 rounded-2xl border border-[#e2e8f2] bg-white p-3">
+        <div className="mt-3 shrink-0 rounded-2xl border border-[#e2e8f2] bg-white p-3">
           <h3 className={`${sora.className} mb-2 text-sm font-semibold text-slate-900`}>Reprogramar tarea</h3>
           <select
             value={rescheduleTaskId}
@@ -929,15 +912,15 @@ const CalendarBoardView = ({
           </button>
         </div>
 
-        <div className="mt-3 min-h-[18rem] flex-1 overflow-hidden rounded-2xl border border-[#e2e8f2] bg-white p-3">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#e2e8f2] bg-white p-3">
           <h3 className={`${sora.className} mb-2 text-sm font-semibold text-slate-900`}>Próximos eventos</h3>
-          <div className="h-full max-h-[36rem] overflow-y-auto pr-1">
+          <div className="calendar-upcoming-scroll min-h-0 flex-1 overflow-y-auto pr-2">
             {upcomingEvents.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-500">
                 Sin eventos próximos.
               </p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="w-full space-y-2">
                 {upcomingEvents.map((event) => {
                   const task = event.type === "TAREA" ? tasksById.get(event.id) : undefined;
                   const state = resolveTaskState(task, nowMs, taskStatusColors);
@@ -947,7 +930,7 @@ const CalendarBoardView = ({
                   return (
                     <li
                       key={`upcoming-${event.id}`}
-                      className="rounded-xl border border-[#e2e8f2] bg-white px-3 py-2 transition hover:translate-x-0.5 hover:shadow-sm"
+                      className="min-w-0 rounded-xl border border-[#e2e8f2] bg-white px-3 py-2 transition hover:translate-x-0.5 hover:shadow-sm"
                       style={{ borderLeft: `4px solid ${state.borderColor}` }}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -961,8 +944,8 @@ const CalendarBoardView = ({
                           {state.label}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm font-semibold text-slate-900">{event.title}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="mt-1 break-words text-sm font-semibold text-slate-900">{event.title}</p>
+                      <p className="break-words text-xs text-slate-500">
                         {owner ?? "Proyecto"} · {formatRelativeEventDate(event.startsAt)}
                       </p>
                     </li>
@@ -973,25 +956,9 @@ const CalendarBoardView = ({
           </div>
         </div>
 
-        {storageInfo ? (
-          <div className="mt-3 rounded-2xl border border-[#e2e8f2] bg-white p-3">
-            <div className="mb-1 flex items-center justify-between gap-2 text-xs text-slate-600">
-              <span>Almacenamiento</span>
-              <span className="font-semibold text-slate-700">
-                {formatBytes(storageInfo.used)} / {formatBytes(storageInfo.total)}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-slate-100">
-              <div
-                className="h-2 rounded-full bg-gradient-to-r from-[#4f6ef7] to-[#10b981]"
-                style={{ width: `${usedStoragePct}%` }}
-              />
-            </div>
-          </div>
-        ) : null}
       </aside>
 
-      <section className={`${mobileSidebarOpen ? "hidden" : "flex"} lg:flex min-w-0 flex-col rounded-2xl border border-[#e2e8f2] bg-white shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
+      <section className={`${mobileSidebarOpen ? "hidden" : "flex"} lg:flex min-h-0 min-w-0 flex-col rounded-2xl border border-[#e2e8f2] bg-white shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
         {(errorMessage || localError) && (
           <div className="mx-3 mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {errorMessage ?? localError}
@@ -1137,7 +1104,7 @@ const CalendarBoardView = ({
               })}
             </div>
 
-            <div className="min-h-0 flex-1 overflow-auto">
+            <div ref={timeGridRef} className="calendar-hours-scroll min-h-0 flex-1 overflow-x-auto overflow-y-scroll">
               <div className="grid" style={{ gridTemplateColumns: gridColumnTemplate }}>
                 <div className="relative border-r border-[#e2e8f2] bg-white" style={{ height: GRID_TOTAL_HEIGHT }}>
                   {hourRows.map((hour) => (
@@ -1145,6 +1112,9 @@ const CalendarBoardView = ({
                       <span className="relative -top-2 inline-block bg-white px-1">{formatHourLabel(hour)}</span>
                     </div>
                   ))}
+                  <div className="pointer-events-none absolute bottom-0 right-0 pr-2 text-right text-[11px] text-slate-500">
+                    <span className="relative top-2 inline-block bg-white px-1">{formatHourLabel(GRID_END_HOUR)}</span>
+                  </div>
                 </div>
 
                 {timelineDays.map((day) => {
@@ -1481,6 +1451,41 @@ const CalendarBoardView = ({
           </div>
         </div>
       ) : null}
+
+      <style jsx global>{`
+        .calendar-hours-scroll,
+        .calendar-upcoming-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(79, 110, 247, 0.55) rgba(226, 232, 240, 0.7);
+          scrollbar-gutter: stable;
+        }
+
+        .calendar-hours-scroll::-webkit-scrollbar,
+        .calendar-upcoming-scroll::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+
+        .calendar-hours-scroll::-webkit-scrollbar-track,
+        .calendar-upcoming-scroll::-webkit-scrollbar-track {
+          background: rgba(226, 232, 240, 0.7);
+          border-radius: 999px;
+        }
+
+        .calendar-hours-scroll::-webkit-scrollbar-thumb,
+        .calendar-upcoming-scroll::-webkit-scrollbar-thumb {
+          background: rgba(79, 110, 247, 0.55);
+          border: 2px solid transparent;
+          border-radius: 999px;
+          background-clip: padding-box;
+        }
+
+        .calendar-hours-scroll::-webkit-scrollbar-thumb:hover,
+        .calendar-upcoming-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(63, 92, 224, 0.72);
+          background-clip: padding-box;
+        }
+      `}</style>
     </section>
   );
 };
@@ -1541,14 +1546,6 @@ export const CalendarBoard = () => {
         `/tasks/project-members?projectId=${encodeURIComponent(projectId!)}`
       ),
     enabled: Boolean(projectId)
-  });
-
-  const storageQuery = useQuery({
-    queryKey: ["project-storage-summary", projectId],
-    queryFn: () =>
-      apiRequest<StorageSummary>(`/files/storage-summary?projectId=${encodeURIComponent(projectId!)}`),
-    enabled: Boolean(projectId),
-    staleTime: 60_000
   });
 
   const createEventMutation = useMutation({
@@ -1696,7 +1693,6 @@ export const CalendarBoard = () => {
     tasksQuery.error?.message ??
     stagesQuery.error?.message ??
     membersQuery.error?.message ??
-    storageQuery.error?.message ??
     null;
 
   const currentUser = session.data
@@ -1716,14 +1712,6 @@ export const CalendarBoard = () => {
       currentWeek={currentWeek}
       currentMonth={monthStart}
       daysWithEvents={daysWithEvents}
-      storageInfo={
-        storageQuery.data
-          ? {
-              used: storageQuery.data.usageBytes,
-              total: storageQuery.data.bytesLimit
-            }
-          : null
-      }
       onCreateEvent={onCreateEvent}
       onCreateTask={onCreateTask}
       onRescheduleTask={onRescheduleTask}

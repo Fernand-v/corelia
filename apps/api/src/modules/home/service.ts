@@ -185,7 +185,15 @@ export class HomeService {
 
     const announcements = await this.app.prisma.announcement.findMany({
       where: {
-        expiresAt: { gt: now }
+        OR: [
+          {
+            scheduleType: { not: "CUMPLEANOS" },
+            expiresAt: { gt: now }
+          },
+          {
+            scheduleType: "CUMPLEANOS"
+          }
+        ]
       },
       include: {
         teams: {
@@ -204,6 +212,19 @@ export class HomeService {
     });
 
     return announcements
+      .filter((announcement) => {
+        // Filtrar por visibilidad según tipo de programación
+        if (announcement.scheduleType === "CUMPLEANOS") {
+          const m = announcement.recurringMonth;
+          const d = announcement.recurringDay;
+          if (m == null || d == null) return false;
+          return now.getMonth() + 1 === m && now.getDate() === d;
+        }
+        if (announcement.scheduleType === "PROGRAMADO" && announcement.startsAt) {
+          if (now < announcement.startsAt) return false;
+        }
+        return true;
+      })
       .map((announcement) => {
         const parsedBody = parseAnnouncementBody(announcement.body);
         const inTeams = announcement.teams.some((team) => teamIds.includes(team.teamId));
@@ -221,6 +242,7 @@ export class HomeService {
           title: announcement.title,
           body: parsedBody.summary,
           ...(parsedBody.blocks.length > 0 ? { content: { blocks: parsedBody.blocks } } : {}),
+          scheduleType: announcement.scheduleType,
           createdAt: announcement.createdAt.toISOString(),
           expiresAt: announcement.expiresAt.toISOString(),
           isNew: announcement.createdAt >= threeDaysAgo

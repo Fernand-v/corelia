@@ -55,6 +55,11 @@ enum NotificationEvent {
   SOLICITUD_RESUELTA
 }
 
+enum NotificationPriority {
+  NORMAL
+  URGENTE
+}
+
 enum RequestType {
   VACACIONES
   PERMISO
@@ -87,6 +92,14 @@ enum MessageKind {
   TEXT
   FILE
   CALL_INVITE
+  NOTA_VOZ
+  LLAMADA_PERDIDA
+  LLAMADA_FINALIZADA
+}
+
+enum MeetingCallType {
+  VIDEO
+  VOZ
 }
 
 enum DocumentType {
@@ -379,6 +392,7 @@ model User {
   externalCalendarConnections          ExternalCalendarConnection[]
   notificationPreferences              NotificationPreference[]
   notifications                        Notification[]
+  browserPushSubscriptions             BrowserPushSubscription[]
   announcementsCreated                 Announcement[]                 @relation("AnnouncementCreator")
   announcementsAudience                AnnouncementUser[]
   formRequests                         FormRequest[]                  @relation("FormRequester")
@@ -408,6 +422,7 @@ model User {
   reviewedSignupRequests               SignupRequest[]                @relation("SignupRequestReviewer")
   createdDynamicForms                  DynamicForm[]                  @relation("DynamicFormCreator")
   dynamicFormResponses                 DynamicFormResponse[]          @relation("DynamicFormResponder")
+  messageReceipts                      MessageReceipt[]
 
   @@index([baseRoleId])
   @@index([isActive])
@@ -929,6 +944,7 @@ model Message {
   author      User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
   meeting     Meeting?            @relation(fields: [meetingId], references: [id], onDelete: SetNull)
   attachments MessageAttachment[]
+  receipts    MessageReceipt[]
   decisionNotesLinkedMessage DecisionNote[] @relation("DecisionLinkedMessage")
   auditLogsTargetMessage    AuditLog[]      @relation("AuditTargetMessage")
 
@@ -965,6 +981,7 @@ model Meeting {
   endsAt               DateTime
   createdById          String        @db.Uuid
   status               MeetingStatus @default(PROGRAMADA)
+  callType             MeetingCallType @default(VIDEO)
   mediaRoomId          String?
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
@@ -1126,16 +1143,18 @@ model NotificationPreference {
 }
 
 model Notification {
-  id          String              @id @default(uuid()) @db.Uuid
-  userId      String              @db.Uuid
+  id          String               @id @default(uuid()) @db.Uuid
+  userId      String               @db.Uuid
   event       NotificationEvent
   channel     NotificationChannel
+  priority    NotificationPriority @default(NORMAL)
+  groupKey    String?
   title       String
   body        String
   sentAt      DateTime?
   deliveredAt DateTime?
   readAt      DateTime?
-  createdAt   DateTime            @default(now())
+  createdAt   DateTime             @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1144,16 +1163,47 @@ model Notification {
   @@index([readAt])
   @@index([deliveredAt])
   @@index([createdAt])
+  @@index([userId, groupKey])
+}
+
+model BrowserPushSubscription {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  endpoint       String    @unique
+  p256dh         String
+  auth           String
+  expirationTime DateTime?
+  userAgent      String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastSeenAt     DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([lastSeenAt])
+}
+
+enum TipoProgramacionAnuncio {
+  INMEDIATO
+  PROGRAMADO
+  CUMPLEANOS
 }
 
 model Announcement {
-  id          String   @id @default(uuid()) @db.Uuid
-  title       String
-  body        String
-  allCompany  Boolean  @default(false)
-  expiresAt   DateTime
-  createdById String   @db.Uuid
-  createdAt   DateTime @default(now())
+  id             String                   @id @default(uuid()) @db.Uuid
+  title          String
+  body           String
+  allCompany     Boolean                  @default(false)
+  scheduleType   TipoProgramacionAnuncio  @default(INMEDIATO)
+  startsAt       DateTime?
+  expiresAt      DateTime
+  recurringMonth Int?
+  recurringDay   Int?
+  createdById    String                   @db.Uuid
+  createdAt      DateTime                 @default(now())
 
   createdBy User               @relation("AnnouncementCreator", fields: [createdById], references: [id])
   teams     AnnouncementTeam[]
@@ -1163,6 +1213,7 @@ model Announcement {
 
   @@index([expiresAt])
   @@index([createdById])
+  @@index([scheduleType])
 }
 
 model AnnouncementTeam {
@@ -1973,4 +2024,29 @@ model Expense {
   @@index([projectDetailId])
   @@index([createdById])
   @@index([status])
+}
+
+enum MessageReceiptStatus {
+  ENVIADO
+  ENTREGADO
+  LEIDO
+}
+
+model MessageReceipt {
+  id          String               @id @default(uuid()) @db.Uuid
+  messageId   String               @db.Uuid
+  userId      String               @db.Uuid
+  status      MessageReceiptStatus @default(ENVIADO)
+  deliveredAt DateTime?
+  readAt      DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+  @@index([messageId, status])
 }

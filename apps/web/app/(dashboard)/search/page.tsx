@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Button, Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
+import { getContextFromSearchParams } from "@/lib/context";
 import { useFrontendSettings } from "@/lib/frontend-settings";
 
 type SearchResultItem = {
@@ -34,6 +36,8 @@ const sectionLabel: Record<keyof SearchResult, string> = {
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const dashboardContext = getContextFromSearchParams(searchParams);
   const { settings: frontendSettings } = useFrontendSettings();
 
   const searchMutation = useMutation({
@@ -42,7 +46,13 @@ export default function SearchPage() {
       if (cleanQuery.length < 2) {
         throw new Error("Ingresa al menos 2 caracteres");
       }
-      return apiRequest<SearchResult>(`/search?query=${encodeURIComponent(cleanQuery)}`);
+      const params = new URLSearchParams({
+        query: cleanQuery
+      });
+      if (dashboardContext.projectId) {
+        params.set("projectId", dashboardContext.projectId);
+      }
+      return apiRequest<SearchResult>(`/search?${params.toString()}`);
     }
   });
 
@@ -53,6 +63,11 @@ export default function SearchPage() {
         <p className="text-sm text-slate-600">
           Búsqueda global en {frontendSettings.organizationName}
         </p>
+        {dashboardContext.projectId ? (
+          <p className="text-xs text-slate-500">
+            Consulta acotada al proyecto activo.
+          </p>
+        ) : null}
       </header>
 
       <Card className="space-y-3">

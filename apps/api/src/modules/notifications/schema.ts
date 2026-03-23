@@ -1,4 +1,6 @@
 import {
+  browserPushSubscriptionDeleteSchema,
+  browserPushSubscriptionUpsertSchema,
   notificationPreferenceSchema,
   notificationSyncInputSchema,
   notificationMarkReadInputSchema
@@ -18,6 +20,8 @@ export const notificationSchemas = {
     }),
   syncQuerySchema: notificationSyncInputSchema,
   markReadSchema: notificationMarkReadInputSchema,
+  pushSubscribeSchema: browserPushSubscriptionUpsertSchema,
+  pushUnsubscribeSchema: browserPushSubscriptionDeleteSchema,
   unreadCountQuerySchema: z.object({
     since: z.string().datetime().optional()
   })

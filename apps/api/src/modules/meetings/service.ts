@@ -16,6 +16,10 @@ export class MeetingsService {
 
   constructor(private readonly app: FastifyInstance) {}
 
+  private syncTaskSearch(taskId: string) {
+    void this.app.searchIndex?.syncTask(taskId);
+  }
+
   private normalizeLegacyCode(input: {
     code?: string | null | undefined;
     text?: string | null | undefined;
@@ -210,7 +214,8 @@ export class MeetingsService {
           userId: participantId,
           event: "REUNION_PROGRAMADA",
           title: "Nueva reunión programada",
-          body: `${input.title} - ${input.startsAt.toISOString()}`
+          body: `${input.title} - ${input.startsAt.toISOString()}`,
+          groupKey: `meeting:scheduled:${participantId}`
         })
       )
     );
@@ -315,7 +320,7 @@ export class MeetingsService {
     projectId?: string;
     teamId?: string;
   }) {
-    return this.app.prisma.meeting.findMany({
+    const meetings = await this.app.prisma.meeting.findMany({
       where: {
         ...(input.from || input.to
           ? {
@@ -351,6 +356,23 @@ export class MeetingsService {
         participants: true
       }
     });
+
+    const now = new Date();
+    const enriched = await Promise.all(
+      meetings.map(async (meeting) => {
+        const expiryStatus = await resolveInstantCallExpiryStatus(this.app.prisma, {
+          meetingId: meeting.id,
+          meetingCreatedAt: meeting.createdAt,
+          now
+        });
+        if (expiryStatus.isInstantCall && expiryStatus.expired) {
+          return { ...meeting, status: "FINALIZADA" as const };
+        }
+        return meeting;
+      })
+    );
+
+    return enriched;
   }
 
   async getMeeting(meetingId: string, userId: string) {
@@ -457,7 +479,8 @@ export class MeetingsService {
           userId: created.assigneeId,
           event: "ACUERDO_ASIGNADO_TAREA",
           title: "Nuevo acuerdo asignado",
-          body: `Se creó una tarea desde reunión: ${created.title}`
+          body: `Se creó una tarea desde reunión: ${created.title}`,
+          groupKey: `agreement:task:${created.id}`
         });
       }
 
@@ -480,6 +503,8 @@ export class MeetingsService {
           })
         }).catch(() => undefined);
       }
+
+      this.syncTaskSearch(created.id);
     }
 
     const agreement = await this.app.prisma.meetingAgreement.create({

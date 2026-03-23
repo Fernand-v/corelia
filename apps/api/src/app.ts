@@ -10,6 +10,7 @@ import { socketPlugin } from "./plugins/socket.js";
 import { mediaPlugin } from "./plugins/media.js";
 import { storagePlugin } from "./plugins/storage.js";
 import { securityPlugin } from "./plugins/security.js";
+import { searchIndexPlugin } from "./plugins/search-index.js";
 import metricsPlugin from "./plugins/metrics.js";
 import { statusRouter } from "./modules/status/router.js";
 import { authRouter } from "./modules/auth/router.js";
@@ -89,6 +90,7 @@ export const createApp = async (): Promise<FastifyInstance> => {
   await app.register(prismaPlugin);
   await app.register(redisPlugin);
   await app.register(storagePlugin);
+  await app.register(searchIndexPlugin);
   await app.register(queuesPlugin);
   await app.register(authPlugin);
   await app.register(socketPlugin);

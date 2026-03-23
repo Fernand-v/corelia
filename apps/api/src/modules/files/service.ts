@@ -89,6 +89,10 @@ const sanitizeFileName = (value: string): string => {
 export class FileService {
   constructor(private readonly app: FastifyInstance) {}
 
+  private syncFileSearch(fileId: string) {
+    void this.app.searchIndex?.syncFile(fileId);
+  }
+
   async listProjectExplorer(input: {
     projectId: string;
     folderId?: string;
@@ -288,7 +292,7 @@ export class FileService {
       input.mimeType.trim() || DEFAULT_FILE_MIME
     );
 
-    return this.app.prisma.fileObject.create({
+    const file = await this.app.prisma.fileObject.create({
       data: {
         folderId: input.folderId,
         ownerId: input.ownerId,
@@ -298,6 +302,9 @@ export class FileService {
         minioPath: objectKey
       }
     });
+
+    this.syncFileSearch(file.id);
+    return file;
   }
 
   async createFolder(input: {
@@ -351,7 +358,7 @@ export class FileService {
       throw new Error("La carpeta especificada no existe");
     }
 
-    return this.app.prisma.fileObject.create({
+    const file = await this.app.prisma.fileObject.create({
       data: {
         folderId: input.folderId,
         ownerId: input.ownerId,
@@ -361,6 +368,9 @@ export class FileService {
         minioPath: input.minioPath
       }
     });
+
+    this.syncFileSearch(file.id);
+    return file;
   }
 
   async getFileContent(input: { fileId: string; userId: string }) {

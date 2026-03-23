@@ -2,7 +2,7 @@ import { z } from "zod";
 import { idSchema, timestampSchema } from "./common.js";
 import { channelScopeSchema } from "./enums.js";
 
-export const messageKindSchema = z.enum(["TEXT", "FILE", "CALL_INVITE"]);
+export const messageKindSchema = z.enum(["TEXT", "FILE", "CALL_INVITE", "NOTA_VOZ", "LLAMADA_PERDIDA", "LLAMADA_FINALIZADA"]);
 
 export const channelSchema = z.object({
   id: idSchema,
@@ -32,6 +32,7 @@ export const messageSchema = z.object({
   mentions: z.array(idSchema).default([]),
   meetingId: idSchema.nullable().optional(),
   attachments: z.array(messageAttachmentSchema).default([]),
+  aggregateStatus: z.enum(["sent", "delivered", "read"]).optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema
 });
@@ -82,7 +83,39 @@ export const messagingConversationsResponseSchema = z.object({
   privateItems: z.array(messagingConversationPrivateItemSchema)
 });
 
+export const messageReceiptStatusSchema = z.enum(["ENVIADO", "ENTREGADO", "LEIDO"]);
+
+export const messageAggregateStatusSchema = z.enum(["sent", "delivered", "read"]);
+
+export const markDeliveredInputSchema = z.object({
+  channelId: idSchema,
+  messageIds: z.array(idSchema).min(1).max(200)
+});
+
+export const markReadInputSchema = z.object({
+  channelId: idSchema,
+  upToMessageId: idSchema
+});
+
+export const messageReceiptInfoItemSchema = z.object({
+  userId: idSchema,
+  userName: z.string(),
+  status: messageReceiptStatusSchema,
+  deliveredAt: timestampSchema.nullable(),
+  readAt: timestampSchema.nullable()
+});
+
+export const messageReceiptInfoSchema = z.object({
+  messageId: idSchema,
+  receipts: z.array(messageReceiptInfoItemSchema)
+});
+
 export type Channel = z.infer<typeof channelSchema>;
 export type Message = z.infer<typeof messageSchema>;
 export type MessageAttachment = z.infer<typeof messageAttachmentSchema>;
 export type MessagingConversationsResponse = z.infer<typeof messagingConversationsResponseSchema>;
+export type MessageReceiptStatus = z.infer<typeof messageReceiptStatusSchema>;
+export type MessageAggregateStatus = z.infer<typeof messageAggregateStatusSchema>;
+export type MarkDeliveredInput = z.infer<typeof markDeliveredInputSchema>;
+export type MarkReadInput = z.infer<typeof markReadInputSchema>;
+export type MessageReceiptInfo = z.infer<typeof messageReceiptInfoSchema>;

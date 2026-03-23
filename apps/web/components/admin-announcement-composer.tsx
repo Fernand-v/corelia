@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AnnouncementContentBlock } from "@corelia/types";
+import type { AnnouncementContentBlock, AnnouncementScheduleType } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
 import { AnnouncementContent } from "@/components/announcement-content";
 import { resolveAnnouncementImageCandidates } from "@/components/announcement-content-state";
@@ -118,6 +118,12 @@ const futureDefault = () => {
   return toLocalDateTimeInput(date);
 };
 
+const farFutureDefault = () => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 10);
+  return toLocalDateTimeInput(date);
+};
+
 const createBlock = (type: AnnouncementContentBlock["type"]): EditorBlock => {
   const clientId = crypto.randomUUID();
   if (type === "TITLE" || type === "SUBTITLE" || type === "TEXT") {
@@ -208,6 +214,17 @@ const summaryFromBlocks = (
   return title.trim().slice(0, 4000) || "Anuncio";
 };
 
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
+const SCHEDULE_TYPE_LABELS: Record<AnnouncementScheduleType, string> = {
+  INMEDIATO: "Inmediato",
+  PROGRAMADO: "Programado",
+  CUMPLEANOS: "Cumpleaños"
+};
+
 export const AdminAnnouncementComposer = () => {
   const queryClient = useQueryClient();
   const apiBase = useMemo(() => getApiBaseUrl(), []);
@@ -215,7 +232,11 @@ export const AdminAnnouncementComposer = () => {
     "GLOBAL",
   );
   const [title, setTitle] = useState("");
+  const [scheduleType, setScheduleType] = useState<AnnouncementScheduleType>("INMEDIATO");
+  const [startsAt, setStartsAt] = useState("");
   const [expiresAt, setExpiresAt] = useState(futureDefault);
+  const [recurringMonth, setRecurringMonth] = useState(1);
+  const [recurringDay, setRecurringDay] = useState(1);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [teamFilter, setTeamFilter] = useState("");
@@ -261,7 +282,6 @@ export const AdminAnnouncementComposer = () => {
 
       const blockPayload = normalizeBlocksForSubmit(blocks, cleanTitle);
       const body = summaryFromBlocks(blockPayload, cleanTitle);
-      const expiresAtIso = new Date(expiresAt).toISOString();
 
       if (
         audienceMode === "SEGMENTADA" &&
@@ -272,6 +292,15 @@ export const AdminAnnouncementComposer = () => {
           "Selecciona equipos, usuarios o marca audiencia global",
         );
       }
+
+      if (scheduleType === "PROGRAMADO" && !startsAt) {
+        throw new Error("Selecciona una fecha y hora de inicio para el anuncio programado");
+      }
+
+      // Para cumpleaños, usar una expiración lejana ya que se repite anualmente
+      const effectiveExpiresAt = scheduleType === "CUMPLEANOS"
+        ? new Date(new Date().getFullYear() + 10, 11, 31).toISOString()
+        : new Date(expiresAt).toISOString();
 
       return apiRequest("/announcements", {
         method: "POST",
@@ -286,14 +315,22 @@ export const AdminAnnouncementComposer = () => {
             teamIds: audienceMode === "SEGMENTADA" ? selectedTeamIds : [],
             userIds: audienceMode === "SEGMENTADA" ? selectedUserIds : [],
           },
-          expiresAt: expiresAtIso,
+          scheduleType,
+          startsAt: scheduleType === "PROGRAMADO" ? new Date(startsAt).toISOString() : null,
+          expiresAt: effectiveExpiresAt,
+          recurringMonth: scheduleType === "CUMPLEANOS" ? recurringMonth : null,
+          recurringDay: scheduleType === "CUMPLEANOS" ? recurringDay : null,
         }),
       });
     },
     onSuccess: async () => {
       setAudienceMode("GLOBAL");
       setTitle("");
+      setScheduleType("INMEDIATO");
+      setStartsAt("");
       setExpiresAt(futureDefault());
+      setRecurringMonth(1);
+      setRecurringDay(1);
       setSelectedTeamIds([]);
       setSelectedUserIds([]);
       setTeamFilter("");
@@ -406,17 +443,104 @@ export const AdminAnnouncementComposer = () => {
             />
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Fecha de expiración
-            </span>
-            <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-              type="datetime-local"
-              value={expiresAt}
-              onChange={(event) => setExpiresAt(event.target.value)}
-            />
-          </label>
+          {/* Tipo de programación */}
+          <div className="space-y-2 rounded-xl border border-slate-200 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Programación
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {(["INMEDIATO", "PROGRAMADO", "CUMPLEANOS"] as const).map((type) => (
+                <label key={type} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="admin-announcement-schedule-type"
+                    checked={scheduleType === type}
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        setScheduleType(type);
+                        if (type === "CUMPLEANOS") {
+                          setExpiresAt(farFutureDefault());
+                        } else if (type === "INMEDIATO") {
+                          setExpiresAt(futureDefault());
+                        }
+                      }
+                    }}
+                  />
+                  {SCHEDULE_TYPE_LABELS[type]}
+                </label>
+              ))}
+            </div>
+
+            {scheduleType === "PROGRAMADO" ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="block space-y-1">
+                  <span className="text-xs text-slate-600">Fecha/hora de inicio</span>
+                  <input
+                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                    type="datetime-local"
+                    value={startsAt}
+                    onChange={(event) => setStartsAt(event.target.value)}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-xs text-slate-600">Fecha/hora de expiración</span>
+                  <input
+                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(event) => setExpiresAt(event.target.value)}
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            {scheduleType === "CUMPLEANOS" ? (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-600">
+                  Este anuncio se mostrará automáticamente cada año en la fecha seleccionada.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-slate-600">Mes</span>
+                    <select
+                      className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                      value={recurringMonth}
+                      onChange={(event) => setRecurringMonth(Number(event.target.value))}
+                    >
+                      {MONTH_NAMES.map((name, index) => (
+                        <option key={index + 1} value={index + 1}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-slate-600">Día</span>
+                    <input
+                      className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={recurringDay}
+                      onChange={(event) => setRecurringDay(Number(event.target.value))}
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : null}
+
+            {scheduleType === "INMEDIATO" ? (
+              <label className="block space-y-1">
+                <span className="text-xs text-slate-600">Fecha de expiración</span>
+                <input
+                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  type="datetime-local"
+                  value={expiresAt}
+                  onChange={(event) => setExpiresAt(event.target.value)}
+                />
+              </label>
+            ) : null}
+          </div>
 
           <div className="space-y-2 rounded-xl border border-slate-200 p-3">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">

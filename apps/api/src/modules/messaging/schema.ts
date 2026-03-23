@@ -1,8 +1,13 @@
-import { createMessageInputSchema } from "@corelia/types";
+import { createMessageInputSchema, markDeliveredInputSchema, markReadInputSchema } from "@corelia/types";
 import { z } from "zod";
 
 export const messagingSchemas = {
   createMessageInputSchema,
+  markDeliveredInputSchema,
+  markReadInputSchema,
+  messageIdParamsSchema: z.object({
+    messageId: z.string().uuid()
+  }),
   createFileMessageInputSchema: z.object({
     channelId: z.string().uuid(),
     content: z.string().max(10000).optional().default(""),
@@ -70,5 +75,12 @@ export const messagingSchemas = {
   }),
   attachmentContentQuerySchema: z.object({
     mode: z.enum(["inline", "attachment"]).default("attachment")
+  }),
+  createVoiceNoteInputSchema: z.object({
+    channelId: z.string().uuid(),
+    content: z.string().max(10000).optional().default("")
+  }),
+  instantCallBodySchema: z.object({
+    callType: z.enum(["VIDEO", "VOZ"]).default("VIDEO")
   })
 };

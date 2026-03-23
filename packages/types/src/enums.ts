@@ -32,6 +32,8 @@ export const notificationEventSchema = z.enum([
   "SOLICITUD_RESUELTA"
 ]);
 
+export const notificationPrioritySchema = z.enum(["NORMAL", "URGENTE"]);
+
 export const requestTypeSchema = z.enum([
   "VACACIONES",
   "PERMISO",

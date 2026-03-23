@@ -55,7 +55,11 @@ const createMockApp = () =>
         findUnique: vi.fn()
       },
       message: {
-        create: vi.fn()
+        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue(null)
+      },
+      frontendSettings: {
+        findUnique: vi.fn().mockResolvedValue(null)
       }
     },
     queues: {

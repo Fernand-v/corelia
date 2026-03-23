@@ -69,7 +69,13 @@ const formatDateTime = (value: string) =>
     timeStyle: "short"
   });
 
-export const NotificationsBadge = () => {
+export type NotificationToastPayload = {
+  title: string;
+  body: string;
+  priority: string;
+};
+
+export const NotificationsBadge = ({ onToast }: { onToast?: (payload: NotificationToastPayload) => void } = {}) => {
   const queryClient = useQueryClient();
   const token = useAuthStore((state) => state.accessToken);
   const [realtimeOnline, setRealtimeOnline] = useState(false);
@@ -189,8 +195,22 @@ export const NotificationsBadge = () => {
       setRealtimeOnline(false);
     };
 
-    const onNotification = () => {
+    const onNotification = (notification: { priority?: string; title?: string; body?: string }) => {
       lastSyncRef.current = new Date().toISOString();
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications", "latest"] });
+
+      if (notification?.title) {
+        onToast?.({
+          title: notification.title,
+          body: notification.body ?? "",
+          priority: notification.priority ?? "NORMAL"
+        });
+      }
+    };
+
+    const onReadSync = () => {
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
       void queryClient.invalidateQueries({ queryKey: ["notifications", "latest"] });
@@ -199,11 +219,13 @@ export const NotificationsBadge = () => {
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("notification:new", onNotification);
+    socket.on("notification:read-sync", onReadSync);
 
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("notification:new", onNotification);
+      socket.off("notification:read-sync", onReadSync);
     };
   }, [queryClient, token]);
 

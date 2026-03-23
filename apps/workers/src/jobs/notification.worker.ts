@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 import { PrismaClient } from "@prisma/client";
 import nodemailer from "nodemailer";
 import { connection } from "../lib/queues.js";
+import { sendBrowserPushNotifications } from "../lib/browser-push.js";
 import { env } from "../lib/env.js";
 import { runJobWithTrace } from "../lib/tracing.js";
 
@@ -45,6 +46,8 @@ export const notificationWorker = new Worker(
             text: notification.body
           });
         }
+
+        await sendBrowserPushNotifications(prisma, notification);
 
         await prisma.notification.update({
           where: { id: notificationId },

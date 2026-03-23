@@ -44,9 +44,10 @@ type ChatMessage = {
   senderName: string;
   content: string;
   createdAt: string;
-  kind?: "TEXT" | "FILE" | "CALL_INVITE";
+  kind?: "TEXT" | "FILE" | "CALL_INVITE" | "NOTA_VOZ" | "LLAMADA_PERDIDA" | "LLAMADA_FINALIZADA";
   meetingUrl?: string | null;
   callExpired?: boolean;
+  callType?: "VIDEO" | "VOZ";
   attachments?: ChatAttachment[];
   status?: "sent" | "delivered" | "read";
 };
@@ -116,6 +117,8 @@ export type MessagingModuleProps = {
   currentUser: CurrentUser;
   onOpenNewChat?: (() => void) | undefined;
   onStartCall?: (() => void) | undefined;
+  onStartVoiceCall?: (() => void) | undefined;
+  onUploadVoiceNote?: ((file: File) => void | Promise<void>) | undefined;
   actionError?: string | null | undefined;
   pendingFiles?: PendingFile[] | undefined;
   uploadProgress?: UploadProgress[] | undefined;
@@ -479,6 +482,272 @@ const ChatAudioAttachment = ({
   );
 };
 
+// ─── Voice Recorder ─────────────────────────────────────────────────────────
+
+const MAX_VOICE_RECORDING_SECONDS = 120;
+
+const VoiceRecorder = ({
+  onRecordingComplete,
+  disabled
+}: {
+  onRecordingComplete: (file: File) => void;
+  disabled?: boolean;
+}) => {
+  const [state, setState] = useState<"idle" | "recording" | "sending">("idle");
+  const [elapsed, setElapsed] = useState(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const cancelledRef = useRef(false);
+
+  const releaseResources = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (streamRef.current) {
+      for (const track of streamRef.current.getTracks()) {
+        track.stop();
+      }
+      streamRef.current = null;
+    }
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    cancelledRef.current = true;
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      recorderRef.current.stop();
+    }
+    releaseResources();
+    chunksRef.current = [];
+    setState("idle");
+    setElapsed(0);
+  }, [releaseResources]);
+
+  const sendRecording = useCallback(() => {
+    cancelledRef.current = false;
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      recorderRef.current.stop();
+    }
+    releaseResources();
+  }, [releaseResources]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      cancelledRef.current = false;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "audio/webm";
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        if (cancelledRef.current) {
+          chunksRef.current = [];
+          return;
+        }
+
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+        const file = new File([blob], `voice-note-${Date.now()}.${ext}`, {
+          type: mimeType,
+          lastModified: Date.now()
+        });
+        setState("sending");
+        onRecordingComplete(file);
+        setState("idle");
+        setElapsed(0);
+      };
+
+      recorder.start();
+      setState("recording");
+      setElapsed(0);
+
+      timerRef.current = setInterval(() => {
+        setElapsed((prev) => {
+          if (prev + 1 >= MAX_VOICE_RECORDING_SECONDS) {
+            sendRecording();
+            return 0;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch {
+      setState("idle");
+    }
+  }, [onRecordingComplete, sendRecording]);
+
+  useEffect(() => {
+    return () => {
+      cancelledRef.current = true;
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        recorderRef.current.stop();
+      }
+      releaseResources();
+    };
+  }, [releaseResources]);
+
+  const formatElapsed = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  if (state === "recording") {
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={cancelRecording}
+          className="rounded-full p-2 text-red-500 hover:bg-red-50"
+          title="Cancelar"
+        >
+          ✕
+        </button>
+        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+        <span className="text-xs font-medium text-red-600">{formatElapsed(elapsed)}</span>
+        <button
+          type="button"
+          onClick={sendRecording}
+          className="rounded-full bg-[#128c7e] p-2 text-white hover:bg-[#0f6f66]"
+          title="Enviar"
+        >
+          ⬆
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => { void startRecording(); }}
+      disabled={disabled || state === "sending"}
+      className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] disabled:cursor-not-allowed disabled:opacity-40"
+      title="Nota de voz"
+    >
+      🎤
+    </button>
+  );
+};
+
+// ─── Voice Note Player (WhatsApp style) ─────────────────────────────────────
+
+const VoiceNotePlayer = ({
+  attachment,
+  resolveUrl,
+  isMine
+}: {
+  attachment: ChatAttachment;
+  resolveUrl?: ((id: string) => Promise<string>) | undefined;
+  isMine: boolean;
+}) => {
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+    } else {
+      void audio.play();
+    }
+  };
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = pct * duration;
+  };
+
+  const formatSeconds = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <LazyMediaLoader attachmentId={attachment.id} resolveUrl={resolveUrl}>
+      {(url, loading) => {
+        if (loading) return <MediaSkeleton className="h-14 w-64" />;
+        if (!url) {
+          return (
+            <div className="flex h-14 w-64 items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-500">
+              Nota de voz no disponible
+            </div>
+          );
+        }
+        return (
+          <div className={`flex w-64 items-center gap-2 rounded-2xl p-2 ${isMine ? "bg-[#c5f0c0]" : "bg-slate-50"}`}>
+            <audio
+              ref={audioRef}
+              src={url}
+              preload="metadata"
+              onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+              onTimeUpdate={(e) => {
+                setCurrentTime(e.currentTarget.currentTime);
+                setProgress(duration > 0 ? (e.currentTarget.currentTime / duration) * 100 : 0);
+              }}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0); }}
+            />
+            <button
+              type="button"
+              onClick={togglePlay}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#128c7e] text-white"
+            >
+              {playing ? "⏸" : "▶"}
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <span className="text-[#128c7e]">🎤</span>
+                <div
+                  className="relative h-[5px] flex-1 cursor-pointer rounded-full bg-slate-300"
+                  onClick={handleSeek}
+                  role="progressbar"
+                  aria-valuenow={progress}
+                >
+                  <div
+                    className="h-full rounded-full bg-[#128c7e] transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                  <div
+                    className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[#128c7e] shadow"
+                    style={{ left: `calc(${progress}% - 5px)` }}
+                  />
+                </div>
+              </div>
+              <div className="mt-0.5 flex justify-between text-[10px] text-[#667781]">
+                <span>{formatSeconds(currentTime)}</span>
+                <span>{duration > 0 ? formatSeconds(duration) : "--:--"}</span>
+              </div>
+            </div>
+          </div>
+        );
+      }}
+    </LazyMediaLoader>
+  );
+};
+
 const ChatPdfAttachment = ({
   attachment,
   onPreview,
@@ -724,6 +993,8 @@ export const MessagingModule = ({
   currentUser,
   onOpenNewChat,
   onStartCall,
+  onStartVoiceCall,
+  onUploadVoiceNote,
   actionError = null,
   pendingFiles = [],
   uploadProgress = [],
@@ -974,8 +1245,8 @@ export const MessagingModule = ({
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button type="button" className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5]">📞</button>
-              <button type="button" onClick={() => onStartCall?.()} disabled={!activeConversation} className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] disabled:cursor-not-allowed disabled:opacity-40">🎥</button>
+              <button type="button" onClick={() => onStartVoiceCall?.()} disabled={!activeConversation} className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] disabled:cursor-not-allowed disabled:opacity-40" title="Llamada de voz">📞</button>
+              <button type="button" onClick={() => onStartCall?.()} disabled={!activeConversation} className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] disabled:cursor-not-allowed disabled:opacity-40" title="Videollamada">🎥</button>
               <button type="button" onClick={() => setMobileView("team")} className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] md:hidden">👥</button>
               <button type="button" className="hidden rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] md:block">⋯</button>
             </div>
@@ -1036,7 +1307,32 @@ export const MessagingModule = ({
                         </div>
                       ) : null}
 
-                      {message.content && !(message.kind === "FILE" && (message.attachments?.length ?? 0) > 0) ? (
+                      {/* Voice Note */}
+                      {message.kind === "NOTA_VOZ" && (message.attachments?.length ?? 0) > 0 ? (
+                        <VoiceNotePlayer
+                          attachment={message.attachments![0]!}
+                          resolveUrl={resolveAttachmentUrl}
+                          isMine={isMine}
+                        />
+                      ) : null}
+
+                      {/* Missed Call */}
+                      {message.kind === "LLAMADA_PERDIDA" ? (
+                        <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2">
+                          <span className="text-red-500">📞</span>
+                          <span className="text-xs font-semibold text-red-600">{message.content || "Llamada perdida"}</span>
+                        </div>
+                      ) : null}
+
+                      {/* Call Ended */}
+                      {message.kind === "LLAMADA_FINALIZADA" ? (
+                        <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2">
+                          <span className="text-slate-500">📞</span>
+                          <span className="text-xs font-medium text-slate-600">{message.content}</span>
+                        </div>
+                      ) : null}
+
+                      {message.content && !(message.kind === "FILE" && (message.attachments?.length ?? 0) > 0) && message.kind !== "NOTA_VOZ" && message.kind !== "LLAMADA_PERDIDA" && message.kind !== "LLAMADA_FINALIZADA" ? (
                         <p className="whitespace-pre-wrap break-words text-sm">{mentionNodes(message.content)}</p>
                       ) : null}
 
@@ -1050,16 +1346,20 @@ export const MessagingModule = ({
                             href={message.meetingUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-2 inline-flex rounded-full bg-[#128c7e] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6f66]"
+                            className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#128c7e] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6f66]"
                           >
-                            Unirme a llamada
+                            {message.callType === "VOZ" ? "📞" : "🎥"} Unirme a llamada
                           </a>
                         ) : null
                       ) : null}
 
                       <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#667781]">
                         <span>{formatTime(message.createdAt)}</span>
-                        {isMine ? <span className="text-[#53bdeb]">✓✓</span> : null}
+                        {isMine ? (
+                          <span className={message.status === "read" ? "text-[#53bdeb]" : "text-[#667781]"}>
+                            {message.status === "sent" || !message.status ? "✓" : "✓✓"}
+                          </span>
+                        ) : null}
                       </div>
                     </article>
                   </div>
@@ -1153,6 +1453,12 @@ export const MessagingModule = ({
                 >
                   ➤
                 </button>
+                {onUploadVoiceNote ? (
+                  <VoiceRecorder
+                    onRecordingComplete={(file) => { void onUploadVoiceNote(file); }}
+                    disabled={!activeConversation}
+                  />
+                ) : null}
               </div>
 
               {showMentionDropdown ? (

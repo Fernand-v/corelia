@@ -16,6 +16,7 @@ At minimum define:
 - `CORS_ALLOWED_ORIGINS` (lista de orígenes permitidos en producción)
 - `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
 - `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- `WEB_PUSH_VAPID_SUBJECT`, `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY` si habilitas push del navegador
 - `NGINX_SSL_CERT_PATH`, `NGINX_SSL_KEY_PATH`
 
 Solo si habilitas perfiles opcionales:
@@ -95,6 +96,12 @@ Start default stack:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
+```
+
+Manual rebuild of the Meilisearch index:
+
+```bash
+corepack pnpm search:reindex
 ```
 
 Start Corelia plus monitoring:

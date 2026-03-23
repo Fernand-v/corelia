@@ -183,9 +183,62 @@ export const startTaskLifecycleScheduler = () => {
   };
 };
 
+const handleMissedCallCheck = async (data: Record<string, unknown>) => {
+  const meetingId = data.meetingId as string;
+  const channelId = data.channelId as string;
+  const callType = (data.callType as string) ?? "VIDEO";
+
+  const meeting = await prisma.meeting.findUnique({
+    where: { id: meetingId },
+    select: {
+      id: true,
+      status: true,
+      createdById: true,
+      participants: {
+        select: { userId: true, joinedAt: true }
+      }
+    }
+  });
+
+  if (!meeting) return;
+  if (meeting.status === "FINALIZADA" || meeting.status === "CANCELADA") return;
+
+  const someoneJoined = meeting.participants.some(
+    (p) => p.joinedAt !== null && p.userId !== meeting.createdById
+  );
+
+  if (someoneJoined) return;
+
+  const label = callType === "VOZ" ? "Llamada de voz perdida" : "Videollamada perdida";
+
+  await prisma.message.create({
+    data: {
+      channelId,
+      authorId: meeting.createdById,
+      kind: "LLAMADA_PERDIDA",
+      content: label,
+      mentions: [],
+      meetingId
+    }
+  });
+
+  await prisma.meeting.update({
+    where: { id: meetingId },
+    data: { status: "FINALIZADA" }
+  });
+};
+
 export const automationWorker = new Worker(
   "automations",
   async (job) => {
+    if (job.name === "check-missed-call") {
+      return runJobWithTrace(
+        "worker.missed-call.check",
+        (job.data as Record<string, unknown>) ?? {},
+        () => handleMissedCallCheck(job.data as Record<string, unknown>)
+      );
+    }
+
     return runJobWithTrace(
       "worker.automations.apply",
       (job.data as Record<string, unknown>) ?? {},

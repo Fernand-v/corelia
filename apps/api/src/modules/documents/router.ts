@@ -910,6 +910,31 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
   );
 
   app.post(
+    "/:documentId/onlyoffice/forcesave",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "ARCHIVO_SUBIR",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(
+          documentSchemas.documentIdParamsSchema,
+          request.params,
+        );
+        const result = await service.forceSaveOnlyOffice({
+          documentId: params.documentId,
+          userId: request.authUser!.id,
+        });
+        return reply.send(result);
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+    },
+  );
+
+  app.post(
     "/:documentId/versions/:versionId/restore",
     {
       config: {

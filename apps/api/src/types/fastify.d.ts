@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
 import type { Server as SocketIOServer } from "socket.io";
+import type { SearchIndex } from "../modules/search/search-index.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -23,6 +24,9 @@ declare module "fastify" {
         eventName: string,
         payload: unknown
       ) => Promise<void>;
+      emitReceiptBatchUpdate: (channelId: string, payload: unknown) => Promise<void>;
+      emitNotificationReadSync: (userId: string, payload: unknown) => Promise<void>;
+      emitIncomingCall: (userIds: string[], payload: unknown) => Promise<void>;
     };
     media?: {
       getHealth: () => {
@@ -41,6 +45,7 @@ declare module "fastify" {
       getObjectStream: (objectKey: string) => Promise<NodeJS.ReadableStream>;
       removeObject: (objectKey: string) => Promise<void>;
     };
+    searchIndex?: SearchIndex;
   }
 
   interface FastifyRequest {

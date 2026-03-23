@@ -22,6 +22,10 @@ interface ExternalSyncEvent {
 export class CalendarService {
   constructor(private readonly app: FastifyInstance) {}
 
+  private syncTaskSearch(taskId: string) {
+    void this.app.searchIndex?.syncTask(taskId);
+  }
+
   async getPersonalEvents(input: { userId: string; from: string; to: string }) {
     const from = new Date(input.from);
     const to = new Date(input.to);
@@ -420,6 +424,7 @@ export class CalendarService {
       }
     });
 
+    this.syncTaskSearch(updated.id);
     return {
       task: updated,
       warnings

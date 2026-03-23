@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AnnouncementContentBlock } from "@corelia/types";
+import type { AnnouncementContentBlock, AnnouncementScheduleType } from "@corelia/types";
 import type { Route } from "next";
 import { Card } from "@corelia/ui";
 import { AnnouncementContent } from "@/components/announcement-content";
@@ -23,7 +23,11 @@ type AnnouncementItem = {
     teamIds: string[];
     userIds: string[];
   };
+  scheduleType?: AnnouncementScheduleType;
+  startsAt?: string | null;
   expiresAt: string;
+  recurringMonth?: number | null;
+  recurringDay?: number | null;
   createdAt: string;
 };
 
@@ -32,6 +36,16 @@ const formatDateTime = (value: string) =>
     dateStyle: "medium",
     timeStyle: "short"
   });
+
+const MONTH_NAMES_SHORT = [
+  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
+];
+
+const formatRecurringDate = (month?: number | null, day?: number | null) => {
+  if (month == null || day == null) return "";
+  return `${day} de ${MONTH_NAMES_SHORT[month - 1]}`;
+};
 
 export default function AnnouncementsPage() {
   const queryClient = useQueryClient();
@@ -108,6 +122,16 @@ export default function AnnouncementsPage() {
                     Usuarios: {item.audience.userIds.length}
                   </span>
                 ) : null}
+                {item.scheduleType === "PROGRAMADO" ? (
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
+                    Programado
+                  </span>
+                ) : null}
+                {item.scheduleType === "CUMPLEANOS" ? (
+                  <span className="rounded-full border border-pink-200 bg-pink-50 px-2 py-0.5 text-[11px] text-pink-700">
+                    Cumpleaños · {formatRecurringDate(item.recurringMonth, item.recurringDay)}
+                  </span>
+                ) : null}
                 {canCreate ? (
                   <button
                     type="button"
@@ -125,7 +149,16 @@ export default function AnnouncementsPage() {
               <AnnouncementContent blocks={item.content?.blocks} fallbackBody={item.body} />
 
               <p className="text-xs text-slate-500">
-                Publicado: {formatDateTime(item.createdAt)} · Expira: {formatDateTime(item.expiresAt)}
+                {item.scheduleType === "CUMPLEANOS" ? (
+                  <>Cada año el {formatRecurringDate(item.recurringMonth, item.recurringDay)}</>
+                ) : (
+                  <>
+                    {item.scheduleType === "PROGRAMADO" && item.startsAt
+                      ? `Inicio: ${formatDateTime(item.startsAt)} · `
+                      : `Publicado: ${formatDateTime(item.createdAt)} · `}
+                    Expira: {formatDateTime(item.expiresAt)}
+                  </>
+                )}
               </p>
             </li>
           ))}

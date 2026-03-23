@@ -1018,6 +1018,70 @@ export class DocumentsService {
     return { error: 0 as const };
   }
 
+  async forceSaveOnlyOffice(input: {
+    documentId: string;
+    userId: string;
+  }) {
+    const document = await this.getDocumentForUser({
+      documentId: input.documentId,
+      userId: input.userId
+    });
+
+    if (!isOnlyOfficeDocumentType(document.type)) {
+      throw new Error("Forcesave solo está disponible para documentos de ONLYOFFICE");
+    }
+
+    const documentServerUrl = this.getOnlyOfficeDocumentServerUrl();
+    if (!documentServerUrl) {
+      throw new Error("ONLYOFFICE no está configurado");
+    }
+
+    const latestVersion = await this.resolveOnlyOfficeLatestVersion(document.id);
+    if (!latestVersion) {
+      throw new Error("El documento no tiene archivo base");
+    }
+
+    const documentKey = buildOnlyOfficeDocumentKey({
+      documentId: document.id,
+      currentVersion: latestVersion.versionNumber,
+      updatedAt: document.updatedAt.toISOString()
+    });
+
+    const commandPayload: Record<string, unknown> = {
+      c: "forcesave",
+      key: documentKey
+    };
+
+    if (env.ONLYOFFICE_JWT_SECRET) {
+      commandPayload.token = await this.app.jwt.sign(commandPayload, {
+        key: env.ONLYOFFICE_JWT_SECRET
+      });
+    }
+
+    const commandUrl = `${documentServerUrl}/coauthoring/CommandService.ashx`;
+    const response = await fetch(commandUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(commandPayload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`ONLYOFFICE Command Service respondió con ${response.status}`);
+    }
+
+    const result = (await response.json()) as { error?: number };
+
+    // error 0 = OK, error 4 = no changes (documento sin modificar)
+    if (result.error !== 0 && result.error !== 4) {
+      throw new Error(`ONLYOFFICE forcesave falló con código ${result.error}`);
+    }
+
+    return {
+      saved: result.error === 0,
+      noChanges: result.error === 4
+    };
+  }
+
   private getDiagramSessionHeartbeatMs() {
     return env.DOCUMENTS_DIAGRAM_SESSION_HEARTBEAT_MS;
   }

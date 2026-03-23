@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
-import type { AnnouncementContentBlock } from "@corelia/types";
+import type { AnnouncementContentBlock, AnnouncementScheduleType } from "@corelia/types";
 import { parseAnnouncementBody, serializeAnnouncementBody } from "./content.js";
 
 const DEFAULT_ASSET_MIME = "application/octet-stream";
@@ -27,6 +27,35 @@ const sanitizeFileName = (value: string): string => {
     .replace(/\s+/g, " ");
 
   return safe.length > 0 ? safe.slice(0, 255) : "archivo";
+};
+
+/**
+ * Determina si un anuncio de tipo CUMPLEANOS está activo en la fecha actual.
+ * Compara mes y día del anuncio con la fecha actual.
+ * El anuncio se muestra durante el día del cumpleaños.
+ */
+const isBirthdayActiveToday = (recurringMonth: number | null, recurringDay: number | null): boolean => {
+  if (recurringMonth == null || recurringDay == null) {
+    return false;
+  }
+  const now = new Date();
+  return now.getMonth() + 1 === recurringMonth && now.getDate() === recurringDay;
+};
+
+type AnnouncementRow = {
+  id: string;
+  title: string;
+  body: string;
+  allCompany: boolean;
+  scheduleType: string;
+  startsAt: Date | null;
+  expiresAt: Date;
+  recurringMonth: number | null;
+  recurringDay: number | null;
+  createdById: string;
+  createdAt: Date;
+  teams: Array<{ teamId: string }>;
+  users: Array<{ userId: string }>;
 };
 
 export class AnnouncementService {
@@ -96,10 +125,15 @@ export class AnnouncementService {
     }
 
     const runCleanup = async () => {
+      const now = new Date();
       const expiredAnnouncements = await this.app.prisma.announcement.findMany({
         where: {
           expiresAt: {
-            lte: new Date()
+            lte: now
+          },
+          // No limpiar anuncios de cumpleaños que se repiten cada año
+          scheduleType: {
+            not: "CUMPLEANOS"
           }
         },
         select: {
@@ -168,17 +202,32 @@ export class AnnouncementService {
     }
   }
 
-  private mapAnnouncementForClient(input: {
-    id: string;
-    title: string;
-    body: string;
-    allCompany: boolean;
-    expiresAt: Date;
-    createdById: string;
-    createdAt: Date;
-    teams: Array<{ teamId: string }>;
-    users: Array<{ userId: string }>;
-  }) {
+  /**
+   * Determina si un anuncio es visible según su tipo de programación y fechas.
+   */
+  private isAnnouncementVisible(announcement: AnnouncementRow): boolean {
+    const now = new Date();
+
+    if (announcement.scheduleType === "CUMPLEANOS") {
+      return isBirthdayActiveToday(announcement.recurringMonth, announcement.recurringDay);
+    }
+
+    // Para PROGRAMADO, verificar que ya haya pasado startsAt
+    if (announcement.scheduleType === "PROGRAMADO" && announcement.startsAt) {
+      if (now < announcement.startsAt) {
+        return false;
+      }
+    }
+
+    // Para todos: verificar que no haya expirado
+    if (now > announcement.expiresAt) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private mapAnnouncementForClient(input: AnnouncementRow) {
     const parsedBody = parseAnnouncementBody(input.body);
     const audienceUserIds = [
       ...new Set(
@@ -198,7 +247,11 @@ export class AnnouncementService {
         teamIds: input.teams.map((team) => team.teamId),
         userIds: audienceUserIds
       },
+      scheduleType: input.scheduleType as AnnouncementScheduleType,
+      startsAt: input.startsAt?.toISOString() ?? null,
       expiresAt: input.expiresAt.toISOString(),
+      recurringMonth: input.recurringMonth,
+      recurringDay: input.recurringDay,
       createdById: input.createdById,
       createdAt: input.createdAt.toISOString()
     };
@@ -209,7 +262,11 @@ export class AnnouncementService {
     body: string;
     content?: { blocks: AnnouncementContentBlock[] };
     audience: { allCompany: boolean; teamIds: string[]; userIds: string[] };
+    scheduleType?: AnnouncementScheduleType;
+    startsAt?: string | null;
     expiresAt: string;
+    recurringMonth?: number | null;
+    recurringDay?: number | null;
     createdById: string;
   }) {
     await this.cleanupExpiredAnnouncementsAssets();
@@ -221,6 +278,25 @@ export class AnnouncementService {
       throw new Error("Selecciona audiencia global, equipos o usuarios específicos");
     }
 
+    const scheduleType = input.scheduleType ?? "INMEDIATO";
+
+    // Validaciones según tipo de programación
+    if (scheduleType === "PROGRAMADO" && !input.startsAt) {
+      throw new Error("Los anuncios programados requieren una fecha de inicio");
+    }
+
+    if (scheduleType === "CUMPLEANOS") {
+      if (input.recurringMonth == null || input.recurringDay == null) {
+        throw new Error("Los anuncios de cumpleaños requieren mes y día");
+      }
+      if (input.recurringMonth < 1 || input.recurringMonth > 12) {
+        throw new Error("El mes debe estar entre 1 y 12");
+      }
+      if (input.recurringDay < 1 || input.recurringDay > 31) {
+        throw new Error("El día debe estar entre 1 y 31");
+      }
+    }
+
     const announcement = await this.app.prisma.announcement.create({
       data: {
         title: input.title,
@@ -230,7 +306,11 @@ export class AnnouncementService {
           audienceUserIds: userIds
         }),
         allCompany: input.audience.allCompany,
+        scheduleType,
+        startsAt: input.startsAt ? new Date(input.startsAt) : null,
         expiresAt: new Date(input.expiresAt),
+        recurringMonth: scheduleType === "CUMPLEANOS" ? (input.recurringMonth ?? null) : null,
+        recurringDay: scheduleType === "CUMPLEANOS" ? (input.recurringDay ?? null) : null,
         createdById: input.createdById,
         teams: {
           create: teamIds.map((teamId) => ({ teamId }))
@@ -265,11 +345,20 @@ export class AnnouncementService {
     });
     const teamIds = teamMemberships.map((membership) => membership.teamId);
 
+    const now = new Date();
+
+    // Traer anuncios no expirados + anuncios de cumpleaños (que no expiran por fecha)
     const announcements = await this.app.prisma.announcement.findMany({
       where: {
-        expiresAt: {
-          gt: new Date()
-        }
+        OR: [
+          {
+            scheduleType: { not: "CUMPLEANOS" },
+            expiresAt: { gt: now }
+          },
+          {
+            scheduleType: "CUMPLEANOS"
+          }
+        ]
       },
       include: {
         teams: {
@@ -287,6 +376,7 @@ export class AnnouncementService {
     });
 
     const announcementsForUser = announcements
+      .filter((announcement) => this.isAnnouncementVisible(announcement))
       .map((announcement) => {
         const parsedBody = parseAnnouncementBody(announcement.body);
         const inTeams = announcement.teams.some((team) => teamIds.includes(team.teamId));

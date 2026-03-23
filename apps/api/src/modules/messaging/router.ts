@@ -181,6 +181,53 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
   );
 
   app.post(
+    "/messages/voice-note",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "MENSAJE_ESCRIBIR"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const upload = await request.file({
+          limits: {
+            files: 1,
+            fileSize: 10 * 1024 * 1024
+          }
+        });
+
+        if (!upload) {
+          return reply.code(400).send({ message: "No se recibió archivo de audio" });
+        }
+
+        if (!upload.mimetype.startsWith("audio/")) {
+          return reply.code(400).send({ message: "Solo se permiten archivos de audio" });
+        }
+
+        const payload = parseWithSchema(messagingSchemas.createVoiceNoteInputSchema, {
+          channelId: readMultipartField(upload.fields.channelId),
+          content: readMultipartField(upload.fields.content)
+        });
+
+        const message = await service.createFileMessage({
+          channelId: payload.channelId,
+          authorId: request.authUser!.id,
+          content: payload.content || "Nota de voz",
+          originalName: upload.filename || "voice-note.webm",
+          mimeType: upload.mimetype,
+          data: await upload.toBuffer(),
+          kind: "NOTA_VOZ"
+        });
+
+        return reply.code(201).send(message);
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
     "/channels/:channelId/instant-call",
     {
       config: {
@@ -191,9 +238,12 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       try {
         const params = parseWithSchema(messagingSchemas.channelParamsSchema, request.params);
+        const body = messagingSchemas.instantCallBodySchema.safeParse(request.body ?? {});
+        const callType = body.success ? body.data.callType : "VIDEO";
         const result = await service.createInstantCall({
           channelId: params.channelId,
-          authorId: request.authUser!.id
+          authorId: request.authUser!.id,
+          callType
         });
 
         request.auditEvent = {
@@ -201,9 +251,12 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
           entityId: result.meetingId,
           action: "PROGRAMAR_REUNION",
           reasonCatalogId: "INSTANT_CALL",
-          reason: "Videollamada instantánea iniciada desde mensajería",
+          reason: callType === "VOZ"
+            ? "Llamada de voz iniciada desde mensajería"
+            : "Videollamada instantánea iniciada desde mensajería",
           newDataText: {
             channelId: params.channelId,
+            callType,
             joinUrl: result.joinUrl
           }
         };
@@ -248,6 +301,76 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
             : message.toLowerCase().includes("no encontrado")
               ? 404
               : 400;
+        return reply.code(statusCode).send({ message });
+      }
+    }
+  );
+
+  app.post(
+    "/receipts/delivered",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(messagingSchemas.markDeliveredInputSchema, request.body);
+        await service.markMessagesDelivered({
+          channelId: payload.channelId,
+          messageIds: payload.messageIds,
+          userId: request.authUser!.id
+        });
+        return reply.send({ ok: true });
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.post(
+    "/receipts/read",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const payload = parseWithSchema(messagingSchemas.markReadInputSchema, request.body);
+        await service.markMessagesRead({
+          channelId: payload.channelId,
+          upToMessageId: payload.upToMessageId,
+          userId: request.authUser!.id
+        });
+        return reply.send({ ok: true });
+      } catch (error) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  app.get(
+    "/messages/:messageId/receipts",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "PROYECTO_LEER"
+      }
+    },
+    async (request, reply) => {
+      try {
+        const params = parseWithSchema(messagingSchemas.messageIdParamsSchema, request.params);
+        const info = await service.getMessageReceiptInfo({
+          messageId: params.messageId,
+          userId: request.authUser!.id
+        });
+        return reply.send(info);
+      } catch (error) {
+        const message = (error as Error).message;
+        const statusCode = message.toLowerCase().includes("autor") ? 403 : 400;
         return reply.code(statusCode).send({ message });
       }
     }

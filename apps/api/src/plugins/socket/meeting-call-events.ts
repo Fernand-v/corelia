@@ -1,3 +1,4 @@
+import type { FastifyInstance } from "fastify";
 import { env } from "../../config/env.js";
 import {
   meetingCallJoinInputSchema,
@@ -7,6 +8,81 @@ import {
 } from "./schemas.js";
 import { markSocketOffline } from "./presence.js";
 import type { CallRuntimeContext } from "./types.js";
+
+const formatCallDuration = (ms: number): string => {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+};
+
+const finalizeCallAndCreateEndMessage = async (app: FastifyInstance, meetingId: string) => {
+  const meeting = await app.prisma.meeting.findUnique({
+    where: { id: meetingId },
+    select: {
+      id: true,
+      status: true,
+      createdById: true,
+      callType: true,
+      participants: {
+        select: { joinedAt: true, leftAt: true },
+        where: { joinedAt: { not: null } }
+      }
+    }
+  });
+
+  if (!meeting || meeting.status === "FINALIZADA" || meeting.status === "CANCELADA") return;
+
+  // Find the channel via the CALL_INVITE message
+  const inviteMessage = await app.prisma.message.findFirst({
+    where: { meetingId, kind: "CALL_INVITE" },
+    select: { channelId: true }
+  });
+
+  if (!inviteMessage) return;
+
+  // Calculate duration
+  const joinTimes = meeting.participants
+    .map((p) => p.joinedAt?.getTime() ?? 0)
+    .filter((t) => t > 0);
+  const leaveTimes = meeting.participants
+    .map((p) => p.leftAt?.getTime() ?? Date.now())
+    .filter((t) => t > 0);
+
+  const firstJoin = joinTimes.length > 0 ? Math.min(...joinTimes) : Date.now();
+  const lastLeave = leaveTimes.length > 0 ? Math.max(...leaveTimes) : Date.now();
+  const durationMs = Math.max(0, lastLeave - firstJoin);
+  const durationLabel = formatCallDuration(durationMs);
+
+  const callTypeLabel = meeting.callType === "VOZ" ? "Llamada de voz" : "Videollamada";
+  const content = `${callTypeLabel} · ${durationLabel}`;
+
+  const channel = await app.prisma.channel.findUnique({
+    where: { id: inviteMessage.channelId },
+    include: { members: { select: { userId: true } } }
+  });
+
+  if (!channel) return;
+
+  const endMessage = await app.prisma.message.create({
+    data: {
+      channelId: channel.id,
+      authorId: meeting.createdById,
+      kind: "LLAMADA_FINALIZADA",
+      content,
+      mentions: [],
+      meetingId
+    },
+    include: { attachments: true }
+  });
+
+  await app.prisma.meeting.update({
+    where: { id: meetingId },
+    data: { status: "FINALIZADA" }
+  });
+
+  await app.realtime?.emitChannelMessage(channel.id, endMessage);
+};
 
 export const registerMeetingCallEvents = ({
   app,
@@ -168,6 +244,19 @@ export const registerMeetingCallEvents = ({
             userId: socket.data.user.id,
             leftAt: new Date().toISOString()
           });
+
+          // Check if all participants have left — finalize the call
+          const stillActive = await app.prisma.meetingParticipant.count({
+            where: {
+              meetingId: parsed.data.meetingId,
+              joinedAt: { not: null },
+              leftAt: null
+            }
+          });
+
+          if (stillActive === 0) {
+            void finalizeCallAndCreateEndMessage(app, parsed.data.meetingId);
+          }
 
           ack?.({ ok: true });
         }

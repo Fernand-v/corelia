@@ -31,4 +31,57 @@ export class AutomationService {
       orderBy: { createdAt: "desc" }
     });
   }
+
+  async getById(id: string) {
+    const rule = await this.app.prisma.automationRule.findUnique({
+      where: { id }
+    });
+
+    if (!rule) {
+      const error = new Error("Regla de automatización no encontrada");
+      error.name = "NotFoundError";
+      throw error;
+    }
+
+    return rule;
+  }
+
+  async update(
+    id: string,
+    input: {
+      name?: string;
+      event?: "TAREA_COMPLETADA" | "TAREA_SIN_MOVIMIENTO" | "TAREA_REASIGNADA" | "TAREA_VENCIDA" | "SOLICITUD_RESUELTA";
+      action?: "ENVIAR_NOTIFICACION" | "CREAR_AUDITORIA" | "CAMBIAR_ESTADO_TAREA";
+      config?: Record<string, unknown>;
+    }
+  ) {
+    await this.getById(id);
+
+    return this.app.prisma.automationRule.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.event !== undefined && { event: input.event }),
+        ...(input.action !== undefined && { action: input.action }),
+        ...(input.config !== undefined && { config: JSON.stringify(input.config) })
+      }
+    });
+  }
+
+  async delete(id: string) {
+    await this.getById(id);
+
+    await this.app.prisma.automationRule.delete({ where: { id } });
+
+    return { id, deleted: true };
+  }
+
+  async toggle(id: string, enabled: boolean) {
+    await this.getById(id);
+
+    return this.app.prisma.automationRule.update({
+      where: { id },
+      data: { enabled }
+    });
+  }
 }

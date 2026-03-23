@@ -43,6 +43,10 @@ const isInlinePreviewMime = (mimeType: string) => {
 export class MessagingService {
   constructor(private readonly app: FastifyInstance) {}
 
+  private syncMessageSearch(messageId: string) {
+    void this.app.searchIndex?.syncMessage(messageId);
+  }
+
   private async listMessagingProjectsForUser(userId: string) {
     return this.app.prisma.project.findMany({
       where: {
@@ -108,6 +112,18 @@ export class MessagingService {
 
     if (input.kind === "CALL_INVITE") {
       return "Videollamada instantánea iniciada";
+    }
+
+    if (input.kind === "NOTA_VOZ") {
+      return "Nota de voz";
+    }
+
+    if (input.kind === "LLAMADA_PERDIDA") {
+      return "Llamada perdida";
+    }
+
+    if (input.kind === "LLAMADA_FINALIZADA") {
+      return input.content || "Llamada finalizada";
     }
 
     return truncatePreview(input.content);
@@ -198,7 +214,8 @@ export class MessagingService {
             userId,
             event: "MENCION_MENSAJE",
             title: "Te mencionaron",
-            body: `Tienes una mención en ${input.channel.name}. Ruta: ${deepLink}`
+            body: `Tienes una mención en ${input.channel.name}. Ruta: ${deepLink}`,
+            groupKey: `mention:${input.channel.id}`
           })
         )
       );
@@ -259,6 +276,16 @@ export class MessagingService {
       }
     });
 
+    const recipientIds = input.channel.members
+      .map((m) => m.userId)
+      .filter((id) => id !== input.authorId);
+    if (recipientIds.length > 0) {
+      await this.app.prisma.messageReceipt.createMany({
+        data: recipientIds.map((userId) => ({ messageId: message.id, userId, status: "ENVIADO" as const })),
+        skipDuplicates: true
+      });
+    }
+
     await this.notifyChannelActivity({
       channel: input.channel,
       message: {
@@ -274,6 +301,7 @@ export class MessagingService {
     });
 
     await this.app.realtime?.emitChannelMessage(input.channel.id, message);
+    this.syncMessageSearch(message.id);
 
     return message;
   }
@@ -663,6 +691,7 @@ export class MessagingService {
     originalName: string;
     mimeType: string;
     data: Buffer;
+    kind?: "FILE" | "NOTA_VOZ";
   }) {
     if (!this.app.storage) {
       throw new Error("Servicio de almacenamiento no disponible");
@@ -687,7 +716,7 @@ export class MessagingService {
     return this.createMessageRecord({
       channel,
       authorId: input.authorId,
-      kind: "FILE",
+      kind: input.kind ?? "FILE",
       content,
       mentions: input.mentions ?? [],
       attachment: {
@@ -702,6 +731,7 @@ export class MessagingService {
   async createInstantCall(input: {
     channelId: string;
     authorId: string;
+    callType?: "VIDEO" | "VOZ";
   }) {
     const channel = await this.getChannelForMember(input.channelId, input.authorId);
 
@@ -715,16 +745,21 @@ export class MessagingService {
     const startsAt = new Date();
     const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
 
+    const callType = input.callType ?? "VIDEO";
+
     const meeting = await this.app.prisma.meeting.create({
       data: {
         title: `Llamada · ${channel.name}`.slice(0, 200),
-        description: "Videollamada instantánea iniciada desde mensajería",
+        description: callType === "VOZ"
+          ? "Llamada de voz iniciada desde mensajería"
+          : "Videollamada instantánea iniciada desde mensajería",
         projectId: channel.projectId,
         teamId: channel.teamId,
         startsAt,
         endsAt,
         createdById: input.authorId,
         status: "EN_CURSO",
+        callType,
         participants: {
           create: participantIds.map((userId) => ({
             userId,
@@ -735,7 +770,8 @@ export class MessagingService {
     });
 
     const joinParams = new URLSearchParams({
-      meetingId: meeting.id
+      meetingId: meeting.id,
+      callType
     });
 
     if (channel.projectId) {
@@ -744,35 +780,223 @@ export class MessagingService {
 
     const joinUrl = `/call?${joinParams.toString()}`;
 
+    const callContent = callType === "VOZ"
+      ? "Inició una llamada de voz"
+      : "Inició una videollamada instantánea";
+
     const callInvite = await this.createMessageRecord({
       channel,
       authorId: input.authorId,
       kind: "CALL_INVITE",
-      content: "Inició una videollamada instantánea",
+      content: callContent,
       mentions: [],
       meetingId: meeting.id
     });
 
+    // Emit incoming call notification to other channel members
+    const recipientIds = channel.members
+      .map((m) => m.userId)
+      .filter((id) => id !== input.authorId);
+    if (recipientIds.length > 0) {
+      await this.app.realtime?.emitIncomingCall(recipientIds, {
+        meetingId: meeting.id,
+        callType,
+        channelId: channel.id,
+        channelName: channel.name,
+        callerUserId: input.authorId,
+        joinUrl
+      });
+    }
+
+    // Enqueue missed-call check (30 seconds delay)
+    await this.app.queues?.automations.add(
+      "check-missed-call",
+      { meetingId: meeting.id, channelId: channel.id, callType },
+      { delay: 30000 }
+    );
+
     return {
       meetingId: meeting.id,
+      callType,
       joinUrl,
       message: callInvite
     };
   }
 
+  private computeAggregateStatus(receipts: Array<{ status: string }>): "sent" | "delivered" | "read" {
+    if (receipts.length === 0) return "sent";
+    const allRead = receipts.every((r) => r.status === "LEIDO");
+    if (allRead) return "read";
+    const allDelivered = receipts.every((r) => r.status === "LEIDO" || r.status === "ENTREGADO");
+    if (allDelivered) return "delivered";
+    return "sent";
+  }
+
+  async markMessagesDelivered(input: { channelId: string; messageIds: string[]; userId: string }) {
+    await this.getChannelForMember(input.channelId, input.userId);
+
+    await this.app.prisma.messageReceipt.updateMany({
+      where: {
+        messageId: { in: input.messageIds },
+        userId: input.userId,
+        status: "ENVIADO"
+      },
+      data: {
+        status: "ENTREGADO",
+        deliveredAt: new Date()
+      }
+    });
+
+    await this.app.realtime?.emitReceiptBatchUpdate(input.channelId, {
+      channelId: input.channelId,
+      userId: input.userId,
+      status: "ENTREGADO",
+      messageIds: input.messageIds,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  async markMessagesRead(input: { channelId: string; upToMessageId: string; userId: string }) {
+    const channel = await this.getChannelForMember(input.channelId, input.userId);
+
+    const targetMessage = await this.app.prisma.message.findUnique({
+      where: { id: input.upToMessageId },
+      select: { createdAt: true, channelId: true }
+    });
+
+    if (!targetMessage || targetMessage.channelId !== input.channelId) {
+      throw new Error("Mensaje no encontrado en este canal");
+    }
+
+    const messagesToMark = await this.app.prisma.message.findMany({
+      where: {
+        channelId: input.channelId,
+        createdAt: { lte: targetMessage.createdAt },
+        authorId: { not: input.userId }
+      },
+      select: { id: true }
+    });
+
+    const messageIds = messagesToMark.map((m) => m.id);
+    if (messageIds.length === 0) return;
+
+    const now = new Date();
+    await this.app.prisma.messageReceipt.updateMany({
+      where: {
+        messageId: { in: messageIds },
+        userId: input.userId,
+        status: { in: ["ENVIADO", "ENTREGADO"] }
+      },
+      data: {
+        status: "LEIDO",
+        readAt: now,
+        deliveredAt: now
+      }
+    });
+
+    await this.app.realtime?.emitReceiptBatchUpdate(input.channelId, {
+      channelId: input.channelId,
+      userId: input.userId,
+      status: "LEIDO",
+      messageIds,
+      timestamp: now.toISOString()
+    });
+  }
+
+  async getMessageReceiptInfo(input: { messageId: string; userId: string }) {
+    const message = await this.app.prisma.message.findUnique({
+      where: { id: input.messageId },
+      select: { id: true, authorId: true, channelId: true }
+    });
+
+    if (!message) {
+      throw new Error("Mensaje no encontrado");
+    }
+
+    if (message.authorId !== input.userId) {
+      throw new Error("Solo el autor puede ver el detalle de recibos");
+    }
+
+    const receipts = await this.app.prisma.messageReceipt.findMany({
+      where: { messageId: input.messageId },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true }
+        }
+      }
+    });
+
+    return {
+      messageId: input.messageId,
+      receipts: receipts.map((r) => ({
+        userId: r.user.id,
+        userName: this.formatUserName(r.user),
+        status: r.status,
+        deliveredAt: r.deliveredAt?.toISOString() ?? null,
+        readAt: r.readAt?.toISOString() ?? null
+      }))
+    };
+  }
+
+  async autoDeliverOnSubscribe(input: { channelId: string; userId: string }) {
+    const pendingReceipts = await this.app.prisma.messageReceipt.findMany({
+      where: {
+        userId: input.userId,
+        status: "ENVIADO",
+        message: { channelId: input.channelId }
+      },
+      select: { messageId: true }
+    });
+
+    if (pendingReceipts.length === 0) return;
+
+    const messageIds = pendingReceipts.map((r) => r.messageId);
+
+    await this.app.prisma.messageReceipt.updateMany({
+      where: {
+        messageId: { in: messageIds },
+        userId: input.userId,
+        status: "ENVIADO"
+      },
+      data: {
+        status: "ENTREGADO",
+        deliveredAt: new Date()
+      }
+    });
+
+    await this.app.realtime?.emitReceiptBatchUpdate(input.channelId, {
+      channelId: input.channelId,
+      userId: input.userId,
+      status: "ENTREGADO",
+      messageIds,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   async listMessages(channelId: string, userId: string) {
     await this.getChannelForMember(channelId, userId);
 
-    return this.app.prisma.message.findMany({
+    const messages = await this.app.prisma.message.findMany({
       where: { channelId },
       include: {
         attachments: {
           orderBy: {
             createdAt: "asc"
           }
+        },
+        receipts: {
+          select: { status: true }
         }
       },
       orderBy: { createdAt: "asc" }
+    });
+
+    return messages.map((message) => {
+      const { receipts, ...rest } = message;
+      return {
+        ...rest,
+        aggregateStatus: rest.authorId === userId ? this.computeAggregateStatus(receipts) : undefined
+      };
     });
   }
 

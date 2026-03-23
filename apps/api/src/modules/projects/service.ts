@@ -31,6 +31,10 @@ export class ProjectService {
     this.teamSync = new ProjectTeamSyncService(app);
   }
 
+  private syncProjectSearch(projectId: string) {
+    void this.app.searchIndex?.syncProject(projectId);
+  }
+
   private forbidden(message: string): Error {
     const error = new Error(message);
     error.name = "Forbidden";
@@ -227,7 +231,7 @@ export class ProjectService {
     startDate?: string;
     estimatedEndDate?: string;
   }) {
-    return this.app.prisma.$transaction(async (tx) => {
+    const project = await this.app.prisma.$transaction(async (tx) => {
       const [leaderRole, collaboratorRole] = await Promise.all([
         tx.role.findUnique({
           where: { key: "LIDER_PROYECTO" },
@@ -293,6 +297,9 @@ export class ProjectService {
 
       return project;
     });
+
+    this.syncProjectSearch(project.id);
+    return project;
   }
 
   async updateProjectPlanning(
@@ -302,7 +309,7 @@ export class ProjectService {
   ) {
     await this.ensureProjectScope(actorId, projectId, true);
 
-    return this.app.prisma.project.update({
+    const project = await this.app.prisma.project.update({
       where: { id: projectId },
       data: {
         ...(input.startDate !== undefined
@@ -313,6 +320,9 @@ export class ProjectService {
           : {})
       }
     });
+
+    this.syncProjectSearch(project.id);
+    return project;
   }
 
   async listProjects(userId: string) {

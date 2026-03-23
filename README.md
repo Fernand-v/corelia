@@ -37,6 +37,16 @@ Editar `.env` con valores reales, al menos:
 - `MINIO_ROOT_PASSWORD`
 - `SMTP_USER`
 - `SMTP_PASS`
+- `WEB_PUSH_VAPID_PUBLIC_KEY` y `WEB_PUSH_VAPID_PRIVATE_KEY` si activarás push del navegador
+
+Si quieres habilitar push del navegador, genera claves VAPID:
+
+```bash
+corepack pnpm push:generate-keys
+```
+
+Luego copia `publicKey` y `privateKey` al `.env`, define `WEB_PUSH_VAPID_SUBJECT` y activa `WEB_PUSH_ENABLED=true`.
+Las notificaciones push del navegador requieren `https://` o `http://localhost`.
 
 ## 3) Levantar todo el stack
 
@@ -59,6 +69,7 @@ Servicios principales:
 - API estado: `http://localhost/status`
 - API directa: `http://localhost:4000/api/v1`
 - MinIO consola: `http://localhost:9001`
+- Búsqueda: Meilisearch interno en `http://meilisearch:7700` dentro de Docker
 
 Servicios opcionales por perfil:
 
@@ -129,6 +140,12 @@ docker compose --env-file .env -f docker/docker-compose.yml restart web
 
 # Detener entorno sin borrar datos
 docker compose --env-file .env -f docker/docker-compose.yml down
+```
+
+Reconstrucción manual del índice de búsqueda:
+
+```bash
+corepack pnpm search:reindex
 ```
 
 ## Nota de despliegue

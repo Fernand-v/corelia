@@ -30,6 +30,10 @@ const envSchema = z.object({
   MINIO_SECRET_KEY: z.string().min(8),
   MINIO_BUCKET: z.string().min(3),
   DOCUMENTS_PURGE_INTERVAL_MINUTES: z.coerce.number().int().positive().default(60),
+  WEB_PUSH_ENABLED: envBoolean.default(false),
+  WEB_PUSH_VAPID_SUBJECT: z.string().default(""),
+  WEB_PUSH_VAPID_PUBLIC_KEY: z.string().default(""),
+  WEB_PUSH_VAPID_PRIVATE_KEY: z.string().default(""),
   OTEL_ENABLED: envBoolean.default(false),
   OTEL_SERVICE_NAME: z.string().default("corelia-workers"),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional().or(z.literal(""))

@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { idSchema, timestampSchema } from "./common.js";
 
+export const announcementScheduleTypeSchema = z.enum([
+  "INMEDIATO",
+  "PROGRAMADO",
+  "CUMPLEANOS"
+]);
+
+export type AnnouncementScheduleType = z.infer<typeof announcementScheduleTypeSchema>;
+
 export const announcementAudienceSchema = z.object({
   allCompany: z.boolean().default(false),
   teamIds: z.array(idSchema).default([]),
@@ -50,7 +58,11 @@ export const announcementSchema = z.object({
   body: z.string().min(1).max(4000),
   content: announcementContentSchema.optional(),
   audience: announcementAudienceSchema,
+  scheduleType: announcementScheduleTypeSchema.default("INMEDIATO"),
+  startsAt: timestampSchema.nullable().optional(),
   expiresAt: timestampSchema,
+  recurringMonth: z.number().int().min(1).max(12).nullable().optional(),
+  recurringDay: z.number().int().min(1).max(31).nullable().optional(),
   createdById: idSchema,
   createdAt: timestampSchema
 });
@@ -60,7 +72,11 @@ export const createAnnouncementInputSchema = z.object({
   body: z.string().min(1).max(4000),
   content: announcementContentSchema.optional(),
   audience: announcementAudienceSchema,
-  expiresAt: timestampSchema
+  scheduleType: announcementScheduleTypeSchema.default("INMEDIATO"),
+  startsAt: timestampSchema.nullable().optional(),
+  expiresAt: timestampSchema,
+  recurringMonth: z.number().int().min(1).max(12).nullable().optional(),
+  recurringDay: z.number().int().min(1).max(31).nullable().optional()
 });
 
 export type AnnouncementContentBlock = z.infer<typeof announcementContentBlockSchema>;

@@ -1,3 +1,4 @@
+import { MessagingService } from "../../modules/messaging/service.js";
 import type { SocketBaseContext } from "./types.js";
 
 export const registerSubscriptionEvents = ({
@@ -86,6 +87,12 @@ export const registerSubscriptionEvents = ({
         }
 
         socket.join(`channel:${channelId}`);
+
+        const messagingService = new MessagingService(app);
+        messagingService
+          .autoDeliverOnSubscribe({ channelId, userId: socket.data.user.id })
+          .catch(() => undefined);
+
         ack?.({ ok: true });
       }
     ).catch((error) => {

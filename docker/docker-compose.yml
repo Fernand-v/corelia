@@ -66,6 +66,18 @@ services:
       exit 0;
       "
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.14
+    container_name: corelia-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:-}
+    volumes:
+      - meilisearch_data:/meili_data
+    # ports:
+    #   - "${MEILISEARCH_PORT:-7700}:7700"
+
   prometheus:
     image: prom/prometheus:v2.51.0
     container_name: corelia-prometheus
@@ -156,6 +168,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      meilisearch:
+        condition: service_started
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -207,6 +221,15 @@ services:
       MICROSOFT_CALENDAR_REDIRECT_URI: ${MICROSOFT_CALENDAR_REDIRECT_URI:-}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
       TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:-}
+      WEB_PUSH_ENABLED: ${WEB_PUSH_ENABLED:-false}
+      WEB_PUSH_VAPID_SUBJECT: ${WEB_PUSH_VAPID_SUBJECT:-}
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${WEB_PUSH_VAPID_PRIVATE_KEY:-}
+      MEILISEARCH_ENABLED: ${MEILISEARCH_ENABLED:-true}
+      MEILISEARCH_URL: ${MEILISEARCH_URL_DOCKER:-http://meilisearch:7700}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:-}
+      MEILISEARCH_INDEX: ${MEILISEARCH_INDEX:-corelia-global-search}
+      MEILISEARCH_BOOTSTRAP_ON_START: ${MEILISEARCH_BOOTSTRAP_ON_START:-true}
       OTEL_ENABLED: ${OTEL_ENABLED_DOCKER:-false}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME_API:-corelia-api}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT_DOCKER:-http://tempo:4318}
@@ -299,6 +322,10 @@ services:
       SMTP_USER: ${SMTP_USER:?Set SMTP_USER}
       SMTP_PASS: ${SMTP_PASS:?Set SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM:?Set SMTP_FROM}
+      WEB_PUSH_ENABLED: ${WEB_PUSH_ENABLED:-false}
+      WEB_PUSH_VAPID_SUBJECT: ${WEB_PUSH_VAPID_SUBJECT:-}
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${WEB_PUSH_VAPID_PRIVATE_KEY:-}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_USE_SSL: false
@@ -331,6 +358,7 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  meilisearch_data:
   tempo_data:
   prometheus_data:
   grafana_data:

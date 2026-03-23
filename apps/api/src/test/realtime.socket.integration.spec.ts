@@ -194,6 +194,12 @@ describe("Socket realtime integration", () => {
           }
         ]),
         updateMany: vi.fn().mockResolvedValue({ count: 1 })
+      },
+      message: {
+        findFirst: vi.fn().mockResolvedValue(null)
+      },
+      frontendSettings: {
+        findUnique: vi.fn().mockResolvedValue(null)
       }
     };
 

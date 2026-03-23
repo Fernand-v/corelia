@@ -107,8 +107,20 @@ export const DynamicFormsModule = () => {
   const dashboardContext = useMemo(() => getContextFromSearchParams(searchParams), [searchParams]);
   const projectIdFromContext = dashboardContext.projectId ?? "";
 
-  const [view, setView] = useState<"list" | "create" | "edit">("list");
-  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "create" | "edit">(() => {
+    if (typeof window === "undefined") return "list";
+    const saved = sessionStorage.getItem("forms:editFormId");
+    return saved ? "edit" : "list";
+  });
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = sessionStorage.getItem("forms:editFormId");
+    if (saved) {
+      sessionStorage.removeItem("forms:editFormId");
+      return saved;
+    }
+    return null;
+  });
   const [builderError, setBuilderError] = useState<string | null>(null);
 
   const [createFormState, setCreateFormState] = useState({
@@ -490,12 +502,14 @@ export const DynamicFormsModule = () => {
               <>
                 <Link
                   href={linkWithContext(`/forms/${selectedForm.id}`)}
+                  onClick={() => sessionStorage.setItem("forms:editFormId", selectedForm.id)}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
                 >
                   Vista previa
                 </Link>
                 <Link
                   href={linkWithContext(`/forms/${selectedForm.id}/summary`)}
+                  onClick={() => sessionStorage.setItem("forms:editFormId", selectedForm.id)}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-600 shadow-sm hover:bg-indigo-50"
                 >
                   Respuestas ({selectedForm.totalResponses})

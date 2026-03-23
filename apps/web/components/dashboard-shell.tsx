@@ -10,6 +10,7 @@ import { useSession, useSessionMembershipSummary } from "@/lib/session";
 import { useFrontendSettings } from "@/lib/frontend-settings";
 import { EntryAnnouncementModal } from "@/components/entry-announcement-modal";
 import { NotificationsBadge } from "@/components/notifications-badge";
+import { NotificationToastContainer, useNotificationToast } from "@/components/notification-toast";
 import {
   getContextFromSearchParams,
   hasDirectDashboardContextParams,
@@ -84,6 +85,7 @@ const NAV_ITEMS: NavItem[] = [
     requiresProjectContext: true
   },
   { label: "Formularios", href: "/forms", roles: INTERNAL_ROLES, contextual: true },
+  { label: "Mis Métricas", href: "/metrics", roles: WORK_ROLES },
   { label: "Solicitudes", href: "/requests", roles: WORK_ROLES },
   { label: "Notificaciones", href: "/notifications", roles: ALL_ROLES },
   { label: "Buscar", href: "/search", roles: INTERNAL_ROLES }
@@ -91,6 +93,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const ADMIN_ITEMS: NavItem[] = [
   { label: "Panel de Admin", href: "/admin/panel", roles: ["ADMINISTRADOR"] },
+  { label: "Resumen", href: "/admin/overview", roles: ["ADMINISTRADOR"] },
   { label: "Equipos", href: "/admin/teams", roles: ["ADMINISTRADOR"] },
   { label: "Estado del Sistema", href: "/admin/system", roles: ["ADMINISTRADOR"] },
   { label: "Monitoreo", href: "/admin/monitoring", roles: ["ADMINISTRADOR"] }
@@ -175,6 +178,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
     typeof window === "undefined" ? {} : readStoredDashboardContext()
   );
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const { toasts, showToast, dismissToast } = useNotificationToast();
 
   useEffect(() => {
     if (!hydrated) {
@@ -464,7 +468,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             <div className="flex items-center gap-2">
-              <NotificationsBadge />
+              <NotificationsBadge onToast={showToast} />
               <div ref={userMenuRef} className="relative">
                 <button
                   type="button"
@@ -607,6 +611,8 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
           {children}
         </main>
       </div>
+
+      <NotificationToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };

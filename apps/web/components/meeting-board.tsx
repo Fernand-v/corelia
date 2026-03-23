@@ -298,15 +298,21 @@ export const MeetingBoard = () => {
                     >
                       {meetingStatusLabel(meeting.status)}
                     </span>
-                    <Button
-                      type="button"
-                      className="h-9 rounded-xl bg-[--teams-call-accent] px-3 text-xs text-white hover:bg-[--teams-call-accent-hover]"
-                      onClick={() => {
-                        openCallTab(meeting.id);
-                      }}
-                    >
-                      Entrar llamada
-                    </Button>
+                    {meeting.status === "FINALIZADA" || meeting.status === "CANCELADA" ? (
+                      <span className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-slate-100 px-3 text-xs font-medium text-slate-400">
+                        {meeting.status === "FINALIZADA" ? "Finalizada" : "Cancelada"}
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        className="h-9 rounded-xl bg-[--teams-call-accent] px-3 text-xs text-white hover:bg-[--teams-call-accent-hover]"
+                        onClick={() => {
+                          openCallTab(meeting.id);
+                        }}
+                      >
+                        Entrar llamada
+                      </Button>
+                    )}
                   </div>
                 </div>
               </li>

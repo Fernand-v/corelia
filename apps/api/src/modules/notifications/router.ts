@@ -5,6 +5,17 @@ import { notificationSchemas } from "./schema.js";
 
 export const notificationsRouter: FastifyPluginAsync = async (app) => {
   const service = new NotificationService(app);
+  const resolveUserAgent = (value: string | string[] | undefined) => {
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      return value[0] ?? null;
+    }
+
+    return null;
+  };
 
   app.put(
     "/preferences",
@@ -33,6 +44,54 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
     },
     async (request) => {
       return service.listPreferences(request.authUser!.id);
+    }
+  );
+
+  app.get(
+    "/push/config",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "NOTIFICACION_LEER"
+      }
+    },
+    async () => {
+      return service.getBrowserPushConfig();
+    }
+  );
+
+  app.post(
+    "/push/subscription",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "NOTIFICACION_LEER"
+      }
+    },
+    async (request) => {
+      const payload = parseWithSchema(notificationSchemas.pushSubscribeSchema, request.body);
+      return service.upsertBrowserPushSubscription({
+        userId: request.authUser!.id,
+        subscription: payload.subscription,
+        userAgent: resolveUserAgent(request.headers["user-agent"])
+      });
+    }
+  );
+
+  app.delete(
+    "/push/subscription",
+    {
+      config: {
+        requiresAuth: true,
+        requiredPermission: "NOTIFICACION_LEER"
+      }
+    },
+    async (request) => {
+      const payload = parseWithSchema(notificationSchemas.pushUnsubscribeSchema, request.body);
+      return service.removeBrowserPushSubscription({
+        userId: request.authUser!.id,
+        endpoint: payload.endpoint
+      });
     }
   );
 

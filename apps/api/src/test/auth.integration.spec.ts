@@ -127,7 +127,7 @@ describe("Auth integration flows", () => {
         firstName: "User",
         lastName: "Corelia"
       })
-    ).rejects.toThrowError("Ya existe una solicitud pendiente para este email");
+    ).rejects.toThrowError("No se pudo procesar la solicitud. Verifica los datos e intenta de nuevo.");
 
     expect(app.prisma.signupRequest.create).not.toHaveBeenCalled();
   });
@@ -243,7 +243,7 @@ describe("Auth integration flows", () => {
         currentPassword: "wrong-password",
         newPassword: "new-password-123"
       })
-    ).rejects.toThrowError("La contraseña actual no es válida");
+    ).rejects.toThrowError("Credenciales inválidas");
   });
 
   it("allows admin users to reset another user password", async () => {

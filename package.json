@@ -23,6 +23,8 @@
     "db:diagram:puml": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/generate-db-puml.ts",
     "db:diagram:render": "bash scripts/render-puml.sh",
     "db:diagram:check": "bash scripts/check-puml-up-to-date.sh",
+    "search:reindex": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/reindex-search.ts",
+    "push:generate-keys": "corepack pnpm --filter @corelia/workers exec web-push generate-vapid-keys",
     "backfill:project-general-channels": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/backfill-project-general-channels.ts",
     "bootstrap:admin": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/bootstrap-admin.ts",
     "prisma:generate": "pnpm --filter @corelia/api prisma:generate",

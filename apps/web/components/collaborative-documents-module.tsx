@@ -15,6 +15,7 @@ import { DocumentsEditorWhiteboard } from "@/components/documents-editor-whitebo
 import { CollaborativeDocumentsModuleV2 } from "@/components/collaborative-documents-module-v2";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { OnlyOfficeEditor } from "@/components/onlyoffice-editor";
+import { apiRequest } from "@/lib/api";
 import { exportDiagramV3ToDrawioDocument } from "@/lib/diagram/maxgraph/diagram-collab-v3";
 import { serializeMxfile } from "@/lib/diagram/maxgraph/xml-format";
 
@@ -657,7 +658,22 @@ export const CollaborativeDocumentsModule = ({
   );
 
   const saveManualVersion = async () => {
-    if (!activeDocument || savingVersion || isOnlyOfficeDocumentType(activeDocument.type)) {
+    if (!activeDocument || savingVersion) {
+      return;
+    }
+
+    // Para documentos OnlyOffice, usar el endpoint de forcesave
+    if (isOnlyOfficeDocumentType(activeDocument.type)) {
+      setSavingVersion(true);
+      try {
+        await apiRequest<{ saved: boolean; noChanges: boolean }>(
+          `/documents/${encodeURIComponent(activeDocument.id)}/onlyoffice/forcesave`,
+          { method: "POST" }
+        );
+        onLoadVersionsRef.current?.(activeDocument);
+      } finally {
+        setSavingVersion(false);
+      }
       return;
     }
 
@@ -890,7 +906,7 @@ export const CollaborativeDocumentsModule = ({
       connectionState={connectionState}
       syncLabel={syncLabelByState[syncState]}
       saveStatusBadge={saveStatusBadge}
-      supportsManualVersionSave={!activeDocument || !isOnlyOfficeDocumentType(activeDocument.type)}
+      supportsManualVersionSave={true}
       savingVersion={savingVersion}
       versionPanelOpen={versionPanelOpen}
       versions={versions}

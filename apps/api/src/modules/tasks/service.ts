@@ -29,6 +29,10 @@ export class TaskService {
 
   constructor(private readonly app: FastifyInstance) {}
 
+  private syncTaskSearch(taskId: string) {
+    void this.app.searchIndex?.syncTask(taskId);
+  }
+
   private isManagerRole(role: RoleCode): boolean {
     return TaskService.MANAGER_ROLES.includes(role);
   }
@@ -563,10 +567,12 @@ export class TaskService {
         userId: task.assigneeId,
         event: "TAREA_ASIGNADA",
         title: "Nueva tarea asignada",
-        body: `Se te asignó la tarea ${task.title}`
+        body: `Se te asignó la tarea ${task.title}`,
+        groupKey: `task:assign:${task.id}`
       });
     }
 
+    this.syncTaskSearch(task.id);
     return task;
   }
 
@@ -749,7 +755,8 @@ export class TaskService {
         userId: updated.assigneeId,
         event: "TAREA_ESTADO_CAMBIADO",
         title: "Cambio de estado de tarea",
-        body: `La tarea ${updated.title} cambió a ${updated.status}`
+        body: `La tarea ${updated.title} cambió a ${updated.status}`,
+        groupKey: `task:status:${updated.id}`
       });
     }
 
@@ -768,6 +775,7 @@ export class TaskService {
       });
     }
 
+    this.syncTaskSearch(updated.id);
     return updated;
   }
 
@@ -837,7 +845,7 @@ export class TaskService {
       throw new Error("La fecha desde no puede ser mayor que la fecha hasta");
     }
 
-    return this.app.prisma.$transaction(async (tx) => {
+    const updated = await this.app.prisma.$transaction(async (tx) => {
       const updated = await tx.task.update({
         where: { id: input.taskId },
         data: {
@@ -864,6 +872,9 @@ export class TaskService {
 
       return updated;
     });
+
+    this.syncTaskSearch(updated.id);
+    return updated;
   }
 
   async activateTask(input: {
@@ -937,11 +948,13 @@ export class TaskService {
           userId,
           event: "TAREA_ESTADO_CAMBIADO",
           title: "Tarea activada manualmente",
-          body: `La tarea ${task.title} fue activada y ahora está en PENDIENTE`
+          body: `La tarea ${task.title} fue activada y ahora está en PENDIENTE`,
+          groupKey: `task:status:${task.id}`
         })
       )
     );
 
+    this.syncTaskSearch(updated.id);
     return updated;
   }
 
@@ -1091,11 +1104,17 @@ export class TaskService {
             userId,
             event: "TAREA_ESTADO_CAMBIADO",
             title: "Siguiente tarea activada",
-            body: `Se activó la tarea ${nextTask.title} en ${nextTask.status}`
+            body: `Se activó la tarea ${nextTask.title} en ${nextTask.status}`,
+            groupKey: `task:status:${nextTask.id}`
           })
         )
       );
       notificationsSent = recipients.size;
+    }
+
+    this.syncTaskSearch(completedTask.id);
+    if (nextTask) {
+      this.syncTaskSearch(nextTask.id);
     }
 
     return {
@@ -1218,7 +1237,8 @@ export class TaskService {
           userId,
           event: "TAREA_REASIGNADA",
           title: "Tarea reasignada",
-          body: `La tarea ${task.title} cambió de responsable`
+          body: `La tarea ${task.title} cambió de responsable`,
+          groupKey: `task:reassign:${task.id}`
         })
       )
     );
@@ -1239,6 +1259,7 @@ export class TaskService {
       requestedById: input.requestedById
     });
 
+    this.syncTaskSearch(updated.id);
     return updated;
   }
 }

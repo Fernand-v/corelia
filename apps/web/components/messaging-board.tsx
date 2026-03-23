@@ -201,6 +201,15 @@ const previewText = (message: { content: string; kind: Message["kind"] }) => {
   if (message.kind === "FILE") {
     return message.content || "Archivo compartido";
   }
+  if (message.kind === "NOTA_VOZ") {
+    return "Nota de voz";
+  }
+  if (message.kind === "LLAMADA_PERDIDA") {
+    return "Llamada perdida";
+  }
+  if (message.kind === "LLAMADA_FINALIZADA") {
+    return message.content || "Llamada finalizada";
+  }
   return message.content;
 };
 
@@ -687,11 +696,39 @@ export const MessagingBoard = () => {
     }
   });
 
+  const uploadVoiceNoteMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("channelId", activeChannelId);
+      formData.append("file", file, file.name);
+
+      return apiRequest<Message>("/messaging/messages/voice-note", {
+        method: "POST",
+        body: formData
+      });
+    },
+    onSuccess: async () => {
+      setActionError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["messaging", "messages", activeChannelId] }),
+        queryClient.invalidateQueries({ queryKey: ["messaging", "conversations"] })
+      ]);
+    },
+    onError: (error) => {
+      if (!recoverProjectChannelAccess(error.message)) {
+        setActionError(error.message);
+      }
+    }
+  });
+
   const instantCallMutation = useMutation({
-    mutationFn: () =>
-      apiRequest<{ meetingId: string; joinUrl: string }>(
+    mutationFn: (callType: "VIDEO" | "VOZ" = "VIDEO") =>
+      apiRequest<{ meetingId: string; joinUrl: string; callType: string }>(
         `/messaging/channels/${encodeURIComponent(activeChannelId)}/instant-call`,
-        { method: "POST" }
+        {
+          method: "POST",
+          body: JSON.stringify({ callType })
+        }
       ),
     onSuccess: async (result) => {
       setActionError(null);
@@ -753,6 +790,8 @@ export const MessagingBoard = () => {
     };
 
     const onConnect = () => subscribe();
+    const currentUserId = session.data?.id ?? "";
+
     const onChannelMessage = (message: Message) => {
       if (message.channelId !== activeChannelId) {
         return;
@@ -764,6 +803,35 @@ export const MessagingBoard = () => {
         return [...deduped, message];
       });
       void queryClient.invalidateQueries({ queryKey: ["messaging", "conversations"] });
+
+      if (message.authorId !== currentUserId) {
+        socket.emit("channel:messages:delivered", {
+          channelId: activeChannelId,
+          messageIds: [message.id]
+        });
+      }
+    };
+
+    const onReceiptBatchUpdate = (data: {
+      channelId: string;
+      userId: string;
+      status: string;
+      messageIds: string[];
+    }) => {
+      if (data.channelId !== activeChannelId) return;
+      queryClient.setQueryData<Array<Message & { aggregateStatus?: string }>>(
+        ["messaging", "messages", activeChannelId],
+        (current) => {
+          if (!current) return current;
+          const affectedIds = new Set(data.messageIds);
+          return current.map((msg) => {
+            if (!affectedIds.has(msg.id) || msg.authorId !== currentUserId) return msg;
+            const newStatus =
+              data.status === "LEIDO" ? "read" : data.status === "ENTREGADO" ? "delivered" : "sent";
+            return { ...msg, aggregateStatus: newStatus };
+          });
+        }
+      );
     };
 
     const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -805,6 +873,7 @@ export const MessagingBoard = () => {
     socket.on("connect", onConnect);
     socket.on("channel:message", onChannelMessage);
     socket.on("channel:typing", onChannelTyping);
+    socket.on("channel:receipt:batch-update", onReceiptBatchUpdate);
 
     if (socket.connected) {
       subscribe();
@@ -814,13 +883,32 @@ export const MessagingBoard = () => {
       socket.off("connect", onConnect);
       socket.off("channel:message", onChannelMessage);
       socket.off("channel:typing", onChannelTyping);
+      socket.off("channel:receipt:batch-update", onReceiptBatchUpdate);
       for (const timer of typingTimers.values()) {
         clearTimeout(timer);
       }
       typingTimers.clear();
       setTypingUsers([]);
     };
-  }, [activeChannelId, authorNameById, queryClient, token]);
+  }, [activeChannelId, authorNameById, queryClient, session.data?.id, token]);
+
+  useEffect(() => {
+    if (!token || !activeChannelId || !messagesQuery.data?.length || !session.data?.id) {
+      return;
+    }
+
+    const messages = messagesQuery.data;
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage || lastMessage.authorId === session.data.id) {
+      return;
+    }
+
+    const socket = getRealtimeSocket(token);
+    socket.emit("channel:messages:read", {
+      channelId: activeChannelId,
+      upToMessageId: lastMessage.id
+    });
+  }, [activeChannelId, messagesQuery.data, session.data?.id, token]);
 
   useEffect(() => {
     if (!token) {
@@ -927,15 +1015,23 @@ export const MessagingBoard = () => {
         createdAt: message.createdAt,
         kind: message.kind,
         meetingUrl: message.meetingId
-          ? buildMaskedCallRoute({
-              meetingId: message.meetingId,
-              projectId: activeProjectId
-            })
+          ? (() => {
+              const base = buildMaskedCallRoute({
+                meetingId: message.meetingId,
+                projectId: activeProjectId
+              });
+              const isVoice = message.content?.toLowerCase().includes("voz");
+              return isVoice ? `${base}${base.includes("?") ? "&" : "?"}callType=VOZ` : base;
+            })()
           : null,
         callExpired:
           message.kind === "CALL_INVITE"
             ? isInstantCallInviteExpired(message.createdAt, frontendSettings.instantCallExpiryHours)
             : false,
+        callType: message.content?.includes("voz") ? "VOZ" as const : "VIDEO" as const,
+        ...((message as Message & { aggregateStatus?: "sent" | "delivered" | "read" }).aggregateStatus
+          ? { status: (message as Message & { aggregateStatus?: "sent" | "delivered" | "read" }).aggregateStatus }
+          : {}),
         attachments
       };
     });
@@ -1022,7 +1118,20 @@ export const MessagingBoard = () => {
           if (!activeChannelId || instantCallMutation.isPending) {
             return;
           }
-          instantCallMutation.mutate();
+          instantCallMutation.mutate("VIDEO");
+        }}
+        onStartVoiceCall={() => {
+          if (!activeChannelId || instantCallMutation.isPending) {
+            return;
+          }
+          instantCallMutation.mutate("VOZ");
+        }}
+        onUploadVoiceNote={(file) => {
+          if (!activeChannelId) {
+            setActionError("Selecciona una conversación antes de grabar");
+            return;
+          }
+          uploadVoiceNoteMutation.mutate(file);
         }}
         onSelectConversation={(conversationId) => {
           setActionError(null);

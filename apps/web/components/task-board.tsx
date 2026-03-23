@@ -246,6 +246,8 @@ export const TaskBoard = ({
   const [createStageModalOpen, setCreateStageModalOpen] = useState(false);
   const [selectedHistoryTaskId, setSelectedHistoryTaskId] = useState<string | null>(null);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [myTasksSearch, setMyTasksSearch] = useState("");
+  const [myTasksStatusFilter, setMyTasksStatusFilter] = useState<"all" | TaskStatus>("all");
   const taskStatusColors = frontendSettings.taskStatusColors;
 
   const dragStateRef = useRef<
@@ -527,6 +529,21 @@ export const TaskBoard = ({
     () => new Map((projectsQuery.data ?? []).map((project) => [project.id, project.name])),
     [projectsQuery.data]
   );
+
+  const filteredMyTasks = useMemo(() => {
+    return myTasks.filter((task) => {
+      if (myTasksStatusFilter !== "all" && task.status !== myTasksStatusFilter) {
+        return false;
+      }
+      if (myTasksSearch.trim()) {
+        const q = myTasksSearch.trim().toLowerCase();
+        const inTitle = task.title.toLowerCase().includes(q);
+        const inProject = (projectMap.get(task.projectId) ?? "").toLowerCase().includes(q);
+        return inTitle || inProject;
+      }
+      return true;
+    });
+  }, [myTasks, myTasksSearch, myTasksStatusFilter, projectMap]);
 
   const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
   const membersById = useMemo(
@@ -1114,16 +1131,59 @@ export const TaskBoard = ({
 
       {showPersonalPanels ? (
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Mis tareas pendientes</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-slate-900">Mis tareas pendientes</h2>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(["PENDIENTE", "EN_REVISION"] as const).map((status) => {
+                const count = myTasks.filter((task) => task.status === status).length;
+                return count > 0 ? (
+                  <span
+                    key={status}
+                    className="rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                    style={getTaskStatusBadgeStyle(status, taskStatusColors)}
+                  >
+                    {status === "PENDIENTE" ? "Pendiente" : "En revisión"}: {count}
+                  </span>
+                ) : null;
+              })}
+            </div>
+          </div>
+
+          {myTasks.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="search"
+                value={myTasksSearch}
+                onChange={(event) => setMyTasksSearch(event.target.value)}
+                placeholder="Buscar tarea o proyecto..."
+                className="h-9 flex-1 rounded-xl border border-slate-300 px-3 text-sm min-w-[180px]"
+              />
+              <select
+                value={myTasksStatusFilter}
+                onChange={(event) => setMyTasksStatusFilter(event.target.value as "all" | TaskStatus)}
+                className="h-9 rounded-xl border border-slate-300 px-3 text-sm"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="EN_REVISION">En revisión</option>
+              </select>
+            </div>
+          ) : null}
 
           {allTasksQuery.isLoading ? <p className="text-sm text-slate-500">Cargando...</p> : null}
           {allTasksQuery.error ? <p className="text-sm text-red-600">{allTasksQuery.error.message}</p> : null}
 
           {myTasks.length === 0 ? (
             <p className="text-sm text-slate-600">No tienes tareas pendientes asignadas.</p>
+          ) : filteredMyTasks.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Sin resultados para{" "}
+              {myTasksSearch ? `"${myTasksSearch}"` : "el filtro seleccionado"}.
+            </p>
           ) : (
+            <div className="max-h-[34rem] overflow-y-auto pr-1">
             <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {myTasks.map((task) => {
+              {filteredMyTasks.map((task) => {
                 const remaining = formatRemaining(task);
                 const stage = task.stageId ? stagesById.get(task.stageId) : null;
                 const stageName = stage?.name ?? task.stageName ?? "Sin etapa";
@@ -1204,6 +1264,7 @@ export const TaskBoard = ({
                 );
               })}
             </ul>
+            </div>
           )}
         </Card>
       ) : null}

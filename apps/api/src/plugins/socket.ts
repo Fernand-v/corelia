@@ -9,6 +9,8 @@ import { registerMeetingCallEvents } from "./socket/meeting-call-events.js";
 import { registerNotificationEvents } from "./socket/notification-events.js";
 import { markSocketOnline } from "./socket/presence.js";
 import { registerSubscriptionEvents } from "./socket/subscription-events.js";
+import { registerReceiptEvents } from "./socket/receipt-events.js";
+import { registerIncomingCallEvents } from "./socket/incoming-call-events.js";
 import { registerTypingEvents } from "./socket/typing-events.js";
 import { withSocketSpan } from "./socket/tracing.js";
 import type { SocketWithUser } from "./socket/types.js";
@@ -19,7 +21,10 @@ export const socketPlugin = fp(async (app) => {
       isEnabled: false,
       emitNotification: async () => undefined,
       emitChannelMessage: async () => undefined,
-      emitMeetingEvent: async () => undefined
+      emitMeetingEvent: async () => undefined,
+      emitReceiptBatchUpdate: async () => undefined,
+      emitNotificationReadSync: async () => undefined,
+      emitIncomingCall: async () => undefined
     });
     return;
   }
@@ -99,9 +104,11 @@ export const socketPlugin = fp(async (app) => {
 
     registerSubscriptionEvents(context);
     registerTypingEvents(context);
+    registerReceiptEvents(context);
     registerLegacyCallEvents(context);
     registerMeetingCallEvents(context);
     registerNotificationEvents(context);
+    registerIncomingCallEvents(context);
   });
 
   app.decorate("io", io);
@@ -115,6 +122,17 @@ export const socketPlugin = fp(async (app) => {
     },
     emitMeetingEvent: async (meetingId: string, eventName: string, payload: unknown) => {
       io.to(`meeting:${meetingId}`).emit(eventName, payload);
+    },
+    emitReceiptBatchUpdate: async (channelId: string, payload: unknown) => {
+      io.to(`channel:${channelId}`).emit("channel:receipt:batch-update", payload);
+    },
+    emitNotificationReadSync: async (userId: string, payload: unknown) => {
+      io.to(`user:${userId}`).emit("notification:read-sync", payload);
+    },
+    emitIncomingCall: async (userIds: string[], payload: unknown) => {
+      for (const id of userIds) {
+        io.to(`user:${id}`).emit("call:incoming", payload);
+      }
     }
   });
 

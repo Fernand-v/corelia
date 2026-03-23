@@ -2,7 +2,7 @@ import { MeetingCallRoom } from "@/components/meeting-call-room";
 import { decodeMaskedCallRef } from "@/lib/call-route-ref";
 
 type CallPageProps = {
-  searchParams?: Promise<{ meetingId?: string | string[]; projectId?: string | string[]; ref?: string | string[] }>;
+  searchParams?: Promise<{ meetingId?: string | string[]; projectId?: string | string[]; ref?: string | string[]; callType?: string | string[] }>;
 };
 
 const getParam = (value: string | string[] | undefined) => (Array.isArray(value) ? (value[0] ?? "") : (value ?? ""));
@@ -12,6 +12,7 @@ export default async function CallPage({ searchParams }: CallPageProps) {
   const directMeetingId = getParam(resolvedSearchParams.meetingId).trim();
   const directProjectId = getParam(resolvedSearchParams.projectId).trim();
   const maskedRef = getParam(resolvedSearchParams.ref).trim();
+  const callType = getParam(resolvedSearchParams.callType).trim() as "VIDEO" | "VOZ" | "";
 
   const callRoute = directMeetingId
     ? {
@@ -38,6 +39,7 @@ export default async function CallPage({ searchParams }: CallPageProps) {
     <MeetingCallRoom
       meetingId={callRoute.meetingId}
       {...(callRoute.projectId ? { projectId: callRoute.projectId } : {})}
+      {...(callType === "VOZ" ? { callType: "VOZ" } : {})}
     />
   );
 }

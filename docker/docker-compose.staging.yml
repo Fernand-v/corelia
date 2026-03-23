@@ -68,3 +68,10 @@ services:
         limits:
           cpus: "1"
           memory: 1G
+
+  meilisearch:
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G

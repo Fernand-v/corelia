@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
+import { BrowserPushCard } from "@/components/browser-push-card";
 
 type NotificationItem = {
   id: string;
@@ -121,6 +122,8 @@ export default function NotificationsPage() {
           </button>
         ) : null}
       </header>
+
+      <BrowserPushCard />
 
       <Card className="divide-y divide-slate-100 overflow-hidden p-0">
         {notificationsQuery.isLoading ? (
