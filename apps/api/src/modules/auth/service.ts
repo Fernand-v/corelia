@@ -3,20 +3,13 @@ import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { createOpaqueToken, hashOpaqueToken } from "../../lib/tokens.js";
 import { env } from "../../config/env.js";
 
-const resolveRoleKey = (
-  role: { key?: string | null; code?: string | number | null } | null | undefined
-): string | undefined => {
-  if (!role) {
-    return undefined;
-  }
-  if (typeof role.key === "string") {
-    return role.key;
-  }
-  if (typeof role.code === "string") {
-    return role.code;
-  }
-  return undefined;
-};
+import { resolveRoleKey } from "../../lib/rbac.js";
+
+export const TOKEN_REVOCATION_PREFIX = "auth:logout:";
+
+export function buildRevocationKey(userId: string): string {
+  return `${TOKEN_REVOCATION_PREFIX}${userId}`;
+}
 
 export class AuthService {
   constructor(private readonly app: FastifyInstance) {}
@@ -446,6 +439,15 @@ export class AuthService {
       where: { id: token.id },
       data: { revokedAt: new Date() }
     });
+
+    // Invalidar inmediatamente cualquier access token en vuelo
+    const ttl = env.ACCESS_TOKEN_TTL_MINUTES * 60;
+    await this.app.redis.set(
+      buildRevocationKey(token.userId),
+      String(Date.now()),
+      "EX",
+      ttl
+    );
 
     return token.userId;
   }

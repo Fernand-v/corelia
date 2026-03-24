@@ -11,6 +11,12 @@ const PRIVATE_IPV4_PATTERN =
   /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|169\.254\.)/;
 const PRIVATE_IPV6_PATTERN = /^(::1|fc|fd|fe80:)/i;
 
+// Validación básica de formato IP para evitar spoofing en x-forwarded-for
+const IPV4_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$/;
+const IPV6_PATTERN = /^[0-9a-fA-F:]{2,39}$/;
+
+const isValidIp = (ip: string): boolean => IPV4_PATTERN.test(ip) || IPV6_PATTERN.test(ip);
+
 const parseConfiguredCorsOrigins = () =>
   env.CORS_ALLOWED_ORIGINS.split(",")
     .map((entry) => entry.trim())
@@ -123,7 +129,7 @@ export const securityPlugin = fp(async (app) => {
       const forwarded = request.headers["x-forwarded-for"];
       if (typeof forwarded === "string") {
         const clientIp = forwarded.split(",")[0]?.trim();
-        if (clientIp) {
+        if (clientIp && isValidIp(clientIp)) {
           return clientIp;
         }
       }

@@ -24,8 +24,7 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(report);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -50,8 +49,7 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
         reply.header("Content-Disposition", `attachment; filename="${file.filename}"`);
         return reply.send(file.buffer);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -76,8 +74,7 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
         reply.header("Content-Disposition", `attachment; filename="${file.filename}"`);
         return reply.send(file.buffer);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

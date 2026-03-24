@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { codeValueSchema, idSchema, timestampSchema } from "./common.js";
+import { idSchema, timestampSchema } from "./common.js";
 import { actionTypeSchema, entityTypeSchema } from "./enums.js";
 
 export const auditLogSchema = z.object({
@@ -11,7 +11,7 @@ export const auditLogSchema = z.object({
   previousDataText: z.record(z.string(), z.unknown()).nullable(),
   newDataText: z.record(z.string(), z.unknown()).nullable(),
   reason: z.string().max(500).nullable(),
-  reasonCatalogId: codeValueSchema.nullable().optional(),
+  reasonCatalogId: idSchema.nullable().optional(),
   createdAt: timestampSchema
 });
 
@@ -30,7 +30,7 @@ export const createAuditLogInputSchema = auditLogSchema
     previousDataText: z.record(z.string(), z.unknown()).nullable().optional(),
     newDataText: z.record(z.string(), z.unknown()).nullable().optional(),
     reason: z.string().max(500).optional(),
-    reasonCatalogId: codeValueSchema.optional()
+    reasonCatalogId: idSchema.optional()
   });
 
 export type AuditLog = z.infer<typeof auditLogSchema>;

@@ -1,20 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { getMostRestrictiveRole, getPermissionsForRole } from "../../lib/rbac.js";
-
-const resolveRoleKey = (
-  role: { key?: string | null; code?: string | number | null } | null | undefined
-): string | undefined => {
-  if (!role) {
-    return undefined;
-  }
-  if (typeof role.key === "string") {
-    return role.key;
-  }
-  if (typeof role.code === "string") {
-    return role.code;
-  }
-  return undefined;
-};
+import { getMostRestrictiveRole, getPermissionsForRole, resolveRoleKey } from "../../lib/rbac.js";
 
 export class IdentityService {
   private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
@@ -347,10 +332,7 @@ export class IdentityService {
           userId: input.userId,
           transferToUserId: input.transferToUserId,
           reason: input.reason,
-          reasonCatalogId: this.normalizeLegacyCode({
-            code: input.reasonCatalogId,
-            text: input.reason
-          }),
+          reasonCatalogId: input.reasonCatalogId ?? null,
           archivedAt: input.archiveHistory ? new Date() : null
         }
       });

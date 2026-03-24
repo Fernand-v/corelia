@@ -2,32 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import type { AnnouncementContentBlock, AnnouncementScheduleType } from "@corelia/types";
 import { parseAnnouncementBody, serializeAnnouncementBody } from "./content.js";
+import { sanitizeFileName } from "../../lib/sanitize.js";
 
 const DEFAULT_ASSET_MIME = "application/octet-stream";
 const ANNOUNCEMENT_ASSET_TOKEN_TYPE = "announcement_asset";
 const ANNOUNCEMENT_ASSET_PATH_PATTERN = /^\/(?:api\/v1\/)?announcements\/assets\/content$/i;
 const ANNOUNCEMENT_CLEANUP_LOCK_KEY = "announcements:cleanup:expired-assets";
 const ANNOUNCEMENT_CLEANUP_LOCK_TTL_SECONDS = 5 * 60;
-
-const stripControlChars = (input: string): string =>
-  Array.from(input)
-    .filter((char) => {
-      const code = char.charCodeAt(0);
-      return code >= 32 && code !== 127;
-    })
-    .join("");
-
-const sanitizeFileName = (value: string): string => {
-  const normalized = value
-    .trim()
-    .replace(/\s+/g, " ");
-
-  const safe = stripControlChars(normalized)
-    .replace(/[/\\?%*:|"<>]/g, "-")
-    .replace(/\s+/g, " ");
-
-  return safe.length > 0 ? safe.slice(0, 255) : "archivo";
-};
 
 /**
  * Determina si un anuncio de tipo CUMPLEANOS está activo en la fecha actual.

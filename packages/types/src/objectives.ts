@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { codeValueSchema, idSchema, timestampSchema } from "./common.js";
+import { idSchema, timestampSchema } from "./common.js";
 
 export const objectiveScopeSchema = z.enum(["EQUIPO", "PROYECTO"]);
 
@@ -10,7 +10,7 @@ export const objectiveSchema = z.object({
   projectId: idSchema.nullable(),
   title: z.string().min(3).max(160),
   description: z.string().max(2000).nullable(),
-  descriptionCatalogId: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: idSchema.nullable().optional(),
   descriptionLabel: z.string().nullable().optional(),
   ownerId: idSchema,
   targetDate: timestampSchema,

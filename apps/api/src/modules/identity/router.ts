@@ -67,7 +67,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
           baseRole: payload.baseRole
         });
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -96,7 +96,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
         const query = parseWithSchema(identitySchemas.userPresenceQuerySchema, request.query ?? {});
         return reply.send(await service.getPresenceForUsers(query.userIds));
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -145,7 +145,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(checklist);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -170,7 +170,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
         };
         return reply.code(201).send(run);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -189,7 +189,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
         const step = await service.completeOnboardingStep(payload);
         return reply.send(step);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -220,7 +220,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -271,7 +271,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
           expiresAt: invite.expiresAt
         });
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

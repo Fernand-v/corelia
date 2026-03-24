@@ -38,10 +38,7 @@ export class ObjectiveService {
         projectId: input.projectId ?? null,
         title: input.title,
         description: input.description ?? null,
-        descriptionCatalogId: this.normalizeLegacyCode({
-          code: input.descriptionCatalogId,
-          text: input.description ?? null
-        }),
+        descriptionCatalogId: input.descriptionCatalogId ?? null,
         ownerId: input.ownerId,
         targetDate: new Date(input.targetDate),
         progressPct: input.progressPct

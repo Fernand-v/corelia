@@ -20,7 +20,7 @@ export const availabilityRouter: FastifyPluginAsync = async (app) => {
         const block = await service.createBlock(payload);
         return reply.code(201).send(block);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -39,7 +39,7 @@ export const availabilityRouter: FastifyPluginAsync = async (app) => {
         const schedule = await service.upsertSchedule(payload);
         return reply.send(schedule);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -67,7 +67,7 @@ export const availabilityRouter: FastifyPluginAsync = async (app) => {
         }
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

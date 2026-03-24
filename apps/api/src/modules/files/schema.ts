@@ -4,7 +4,9 @@ import { z } from "zod";
 export const fileSchemas = {
   explorerQuerySchema: z.object({
     projectId: z.string().uuid(),
-    folderId: z.string().uuid().optional()
+    folderId: z.string().uuid().optional(),
+    cursor: z.string().uuid().optional(),
+    pageSize: z.coerce.number().int().min(1).max(200).default(50)
   }),
   historyQuerySchema: z.object({
     projectId: z.string().uuid(),

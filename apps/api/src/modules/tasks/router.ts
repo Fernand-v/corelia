@@ -19,7 +19,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         const query = parseWithSchema(taskSchemas.taskListQuerySchema, request.query ?? {});
         return service.listTasks(request.authUser!.id, query);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -38,8 +38,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         const members = await service.listProjectMembers(request.authUser!.id, query.projectId);
         return reply.send(members);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -74,8 +73,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -110,7 +108,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(task);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -167,8 +165,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(task);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -205,8 +202,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(task);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -242,8 +238,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(task);
       } catch (error) {
-        const status = (error as Error).name === "ValidationError" ? 400 : 409;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -279,8 +274,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(task);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -299,7 +293,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         const dependency = await service.addDependency(payload);
         return reply.code(201).send(dependency);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

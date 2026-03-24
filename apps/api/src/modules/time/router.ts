@@ -23,7 +23,7 @@ export const timeRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.code(201).send(entry);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

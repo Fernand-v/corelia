@@ -20,6 +20,7 @@ import {
   inferOnlyOfficeMimeType,
   isOnlyOfficeDocumentType
 } from "./onlyoffice.js";
+import { sanitizeFileName, stripControlChars } from "../../lib/sanitize.js";
 
 const DOCUMENTS_ROOT_FOLDER = "documentos";
 
@@ -83,25 +84,6 @@ type SessionEventType =
   | "ERROR"
   | "MIGRATION";
 
-const stripControlChars = (input: string): string =>
-  Array.from(input)
-    .filter((char) => {
-      const code = char.charCodeAt(0);
-      return code >= 32 && code !== 127;
-    })
-    .join("");
-
-const sanitizeFileName = (value: string): string => {
-  const normalized = value
-    .trim()
-    .replace(/\s+/g, " ");
-
-  const safe = stripControlChars(normalized)
-    .replace(/[/\\?%*:|"<>]/g, "-")
-    .replace(/\s+/g, " ");
-
-  return safe.length > 0 ? safe.slice(0, 255) : "snapshot.json";
-};
 
 const streamToBuffer = async (stream: NodeJS.ReadableStream): Promise<Buffer> => {
   const chunks: Buffer[] = [];
@@ -329,6 +311,20 @@ export class DocumentsService {
       return value.replace(/\/+$/g, "");
     }
     return "/onlyoffice";
+  }
+
+  /** URL interna (Docker) usada para llamadas server-side a la Command API de OnlyOffice */
+  private getOnlyOfficeInternalUrl() {
+    const configured = env.ONLYOFFICE_INTERNAL_URL.trim();
+    if (configured) {
+      return configured.replace(/\/+$/g, "");
+    }
+    // Fallback: si hay URL pública configurada, usarla también para comandos internos
+    const pub = env.ONLYOFFICE_DOCUMENT_SERVER_URL.trim();
+    if (pub) {
+      return pub.replace(/\/+$/g, "");
+    }
+    return "http://onlyoffice";
   }
 
   private getOnlyOfficeApiBaseUrl() {
@@ -898,9 +894,13 @@ export class DocumentsService {
           id: input.userId,
           name: userName
         },
+        region: "es",
         customization: {
           autosave: true,
-          forcesave: true
+          forcesave: true,
+          spellcheck: true,
+          compactHeader: false,
+          toolbarNoTabs: false
         }
       }
     } as Record<string, unknown>;
@@ -1031,10 +1031,7 @@ export class DocumentsService {
       throw new Error("Forcesave solo está disponible para documentos de ONLYOFFICE");
     }
 
-    const documentServerUrl = this.getOnlyOfficeDocumentServerUrl();
-    if (!documentServerUrl) {
-      throw new Error("ONLYOFFICE no está configurado");
-    }
+    const internalUrl = this.getOnlyOfficeInternalUrl();
 
     const latestVersion = await this.resolveOnlyOfficeLatestVersion(document.id);
     if (!latestVersion) {
@@ -1058,15 +1055,31 @@ export class DocumentsService {
       });
     }
 
-    const commandUrl = `${documentServerUrl}/coauthoring/CommandService.ashx`;
-    const response = await fetch(commandUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(commandPayload)
-    });
+    const commandUrls = [
+      `${internalUrl}/command`,
+      `${internalUrl}/coauthoring/CommandService.ashx`
+    ];
+    let response: Response | null = null;
 
-    if (!response.ok) {
-      throw new Error(`ONLYOFFICE Command Service respondió con ${response.status}`);
+    for (const commandUrl of commandUrls) {
+      const currentResponse = await fetch(commandUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(commandPayload)
+      });
+
+      if (currentResponse.ok) {
+        response = currentResponse;
+        break;
+      }
+
+      if (currentResponse.status !== 404 && currentResponse.status !== 405) {
+        throw new Error(`ONLYOFFICE Command Service respondió con ${currentResponse.status}`);
+      }
+    }
+
+    if (!response) {
+      throw new Error("ONLYOFFICE Command Service no está disponible en /command ni en /coauthoring/CommandService.ashx");
     }
 
     const result = (await response.json()) as { error?: number };
@@ -1630,7 +1643,7 @@ export class DocumentsService {
         }
         nextRevision = session.revision + 1;
         const snapshotPath =
-          `documents/${document.projectId}/${document.id}/sessions/${session.id}` +
+          `documents/${document.projectId}/documentos/diagrama/${document.id}/sessions/${session.id}` +
           `/r${nextRevision}-${Date.now()}-${randomUUID()}.drawio`;
         await this.app.storage.putObject(snapshotPath, contentBuffer, DOCUMENT_DIAGRAM_SNAPSHOT_MIME);
 
@@ -1983,7 +1996,7 @@ export class DocumentsService {
     const nextVersion = (latest?.versionNumber ?? 0) + 1;
     const safeName = sanitizeFileName(input.fileName || "snapshot.json");
     const safeMime = input.mimeType.trim() || DEFAULT_VERSION_MIME;
-    const snapshotPath = `documents/${document.projectId}/${document.id}/v${nextVersion}-${input.kind.toLowerCase()}-${Date.now()}-${safeName}`;
+    const snapshotPath = `documents/${document.projectId}/documentos/${document.type.toLowerCase()}/${document.id}/v${nextVersion}-${input.kind.toLowerCase()}-${Date.now()}-${safeName}`;
 
     await this.app.storage.putObject(snapshotPath, input.data, safeMime);
 
@@ -2441,7 +2454,7 @@ export class DocumentsService {
             copiedFallbackName,
             created.type as DocumentType
           );
-          const snapshotPath = `documents/${created.projectId}/${created.id}/v1-manual-${Date.now()}-${sanitizeFileName(copiedFileName)}`;
+          const snapshotPath = `documents/${created.projectId}/documentos/${created.type.toLowerCase()}/${created.id}/v1-manual-${Date.now()}-${sanitizeFileName(copiedFileName)}`;
           await this.app.storage.putObject(
             snapshotPath,
             buffer,

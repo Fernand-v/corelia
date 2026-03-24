@@ -108,10 +108,7 @@ export class DecisionService {
       data: {
         title: input.title,
         description: input.description,
-        descriptionCatalogId: this.normalizeLegacyCode({
-          code: input.descriptionCatalogId,
-          text: input.description
-        }),
+        descriptionCatalogId: input.descriptionCatalogId ?? null,
         ...buildDecisionTargetCreateData(input.linkedEntityType, input.linkedEntityId),
         authorId: input.authorId
       }

@@ -24,7 +24,7 @@ export const homeRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(dashboard);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

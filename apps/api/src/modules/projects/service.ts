@@ -1,21 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { RoleCode } from "@corelia/types";
+import { resolveRoleKey } from "../../lib/rbac.js";
 import { ProjectTeamSyncService } from "./team-sync-service.js";
-
-const resolveRoleKey = (
-  role: { key?: string | null; code?: string | number | null } | null | undefined
-): string | undefined => {
-  if (!role) {
-    return undefined;
-  }
-  if (typeof role.key === "string") {
-    return role.key;
-  }
-  if (typeof role.code === "string") {
-    return role.code;
-  }
-  return undefined;
-};
 
 const projectManagerRoles = new Set<RoleCode>([
   "ADMINISTRADOR",
@@ -250,10 +236,7 @@ export class ProjectService {
         data: {
           name: input.name,
           description: input.description ?? null,
-          descriptionCatalogId: this.normalizeLegacyCode({
-            code: input.descriptionCatalogId,
-            text: input.description
-          }),
+          descriptionCatalogId: input.descriptionCatalogId ?? null,
           template: input.template,
           ownerId: input.ownerId,
           startDate: input.startDate ? new Date(input.startDate) : null,

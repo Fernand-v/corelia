@@ -268,10 +268,7 @@ export class MeetingsService {
       data: {
         title: input.title,
         description: input.description ?? null,
-        descriptionCatalogId: this.normalizeLegacyCode({
-          code: input.descriptionCatalogId,
-          text: input.description
-        }),
+        descriptionCatalogId: input.descriptionCatalogId ?? null,
         projectId: input.projectId ?? null,
         teamId: input.teamId ?? null,
         startsAt,
@@ -459,10 +456,7 @@ export class MeetingsService {
           projectId: input.createTask.projectId,
           title: input.createTask.title,
           description: input.createTask.description ?? null,
-          descriptionCatalogId: this.normalizeLegacyCode({
-            code: input.createTask.descriptionCatalogId,
-            text: input.createTask.description
-          }),
+          descriptionCatalogId: input.createTask.descriptionCatalogId ?? null,
           assigneeId: input.createTask.assigneeId ?? null,
           dueDate: input.createTask.dueDate ? new Date(input.createTask.dueDate) : null,
           createdById: input.userId,
@@ -512,10 +506,7 @@ export class MeetingsService {
         meetingId: input.meetingId,
         title: input.title,
         description: input.description ?? null,
-        descriptionCatalogId: this.normalizeLegacyCode({
-          code: input.descriptionCatalogId,
-          text: input.description
-        }),
+        descriptionCatalogId: input.descriptionCatalogId ?? null,
         authorId: input.userId,
         taskId: linkedTaskId,
         createdTask,

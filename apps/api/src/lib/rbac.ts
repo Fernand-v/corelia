@@ -47,3 +47,16 @@ export const canReopenCompletedTask = (roleCode: string): boolean => {
   const rank = getRoleRank(roleCode);
   return rank >= 4;
 };
+
+/**
+ * Extrae la clave de rol de un objeto que puede tener `key` o `code`.
+ * Centralizado aquí para evitar duplicación entre módulos.
+ */
+export const resolveRoleKey = (
+  role: { key?: string | null; code?: string | number | null } | null | undefined
+): string | undefined => {
+  if (!role) return undefined;
+  if (typeof role.key === "string") return role.key;
+  if (typeof role.code === "string") return role.code;
+  return undefined;
+};

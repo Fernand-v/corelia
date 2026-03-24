@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { colorHexSchema, codeValueSchema, idSchema, timestampSchema } from "./common.js";
+import { colorHexSchema, idSchema, timestampSchema } from "./common.js";
 import { projectTemplateSchema } from "./enums.js";
 import { roleCodeSchema } from "./rbac.js";
 
@@ -9,7 +9,7 @@ export const projectSchema = z.object({
   id: idSchema,
   name: z.string().min(3).max(160),
   description: z.string().max(2000).nullable(),
-  descriptionCatalogId: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: idSchema.nullable().optional(),
   template: projectTemplateSchema,
   ownerId: idSchema,
   startDate: timestampSchema.nullable().optional(),
@@ -41,7 +41,7 @@ export const projectStageSchema = z.object({
 export const createProjectInputSchema = z.object({
   name: z.string().min(3).max(160),
   description: z.string().max(2000).optional(),
-  descriptionCatalogId: codeValueSchema.optional(),
+  descriptionCatalogId: idSchema.optional(),
   template: projectTemplateSchema,
   memberIds: z.array(idSchema).default([]),
   startDate: timestampSchema.optional(),

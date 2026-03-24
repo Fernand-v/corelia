@@ -41,6 +41,7 @@ const envSchema = z.object({
   DOCUMENTS_DIAGRAM_SESSION_SNAPSHOT_MS: z.coerce.number().int().min(10_000).max(600_000).default(30_000),
   DOCUMENTS_DIAGRAM_SESSION_IDLE_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
   ONLYOFFICE_DOCUMENT_SERVER_URL: z.string().optional().or(z.literal("")).default(""),
+  ONLYOFFICE_INTERNAL_URL: z.string().optional().or(z.literal("")).default(""),
   ONLYOFFICE_JWT_SECRET: z.string().min(16).optional().or(z.literal("")).default(""),
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(587),

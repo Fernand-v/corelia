@@ -41,8 +41,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -69,7 +68,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -107,8 +106,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -135,8 +133,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -161,8 +158,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -188,8 +184,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -217,8 +212,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -267,8 +261,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(created);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -293,8 +286,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -319,8 +311,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 404;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -346,8 +337,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(token);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 404;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -379,8 +369,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -413,8 +402,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -450,8 +438,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -484,8 +471,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -511,8 +497,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -552,8 +537,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(updated);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -587,8 +571,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(deleted);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -621,8 +604,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(versions);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -664,8 +646,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(asset);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -698,11 +679,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         reply.header("Cross-Origin-Resource-Policy", "cross-origin");
         return reply.send(content.stream);
       } catch (error) {
-        const message = (error as Error).message;
-        const status = message.toLowerCase().includes("no encontrado")
-          ? 404
-          : 400;
-        return reply.code(status).send({ message });
+        throw error;
       }
     },
   );
@@ -761,8 +738,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -801,9 +777,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         reply.header("X-Content-Type-Options", "nosniff");
         return reply.send(content.stream);
       } catch (error) {
-        const message = (error as Error).message;
-        const status = (error as Error).name === "Forbidden" ? 403 : 404;
-        return reply.code(status).send({ message });
+        throw error;
       }
     },
   );
@@ -832,8 +806,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -869,9 +842,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         reply.header("Cross-Origin-Resource-Policy", "cross-origin");
         return reply.send(content.stream);
       } catch (error) {
-        const message = (error as Error).message;
-        const status = message.toLowerCase().includes("inválido") ? 400 : 404;
-        return reply.code(status).send({ message });
+        throw error;
       }
     },
   );
@@ -904,7 +875,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -929,7 +900,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -967,8 +938,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -1000,8 +970,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -1037,8 +1006,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(restored);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -1076,8 +1044,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(duplicated);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -1104,8 +1071,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -1130,8 +1096,7 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );

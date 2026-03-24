@@ -23,7 +23,7 @@ export const messagesRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.code(201).send(message);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -42,7 +42,7 @@ export const messagesRouter: FastifyPluginAsync = async (app) => {
         const messages = await service.listMessages(query.channelId, request.authUser!.id);
         return reply.send(messages);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

@@ -54,7 +54,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
         const channels = await service.listChannels(request.authUser!.id, query);
         return reply.send(channels);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -94,7 +94,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.code(201).send(channel);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -156,7 +156,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(message);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -175,7 +175,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
         const messages = await service.listMessages(params.channelId, request.authUser!.id);
         return reply.send(messages);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -222,7 +222,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(message);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -263,7 +263,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -294,14 +294,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(content.stream);
       } catch (error) {
-        const message = (error as Error).message;
-        const statusCode =
-          message.toLowerCase().includes("acceso")
-            ? 403
-            : message.toLowerCase().includes("no encontrado")
-              ? 404
-              : 400;
-        return reply.code(statusCode).send({ message });
+        throw error;
       }
     }
   );
@@ -324,7 +317,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send({ ok: true });
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -347,7 +340,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send({ ok: true });
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -369,9 +362,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(info);
       } catch (error) {
-        const message = (error as Error).message;
-        const statusCode = message.toLowerCase().includes("autor") ? 403 : 400;
-        return reply.code(statusCode).send({ message });
+        throw error;
       }
     }
   );
@@ -389,7 +380,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
         const data = await service.getConversations(request.authUser!.id);
         return reply.send(data);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -411,9 +402,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(channel);
       } catch (error) {
-        const message = (error as Error).message;
-        const statusCode = message.toLowerCase().includes("acceso") ? 403 : 400;
-        return reply.code(statusCode).send({ message });
+        throw error;
       }
     }
   );

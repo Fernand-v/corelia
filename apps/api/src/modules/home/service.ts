@@ -251,60 +251,69 @@ export class HomeService {
       .filter((item): item is NonNullable<typeof item> => Boolean(item));
   }
 
-  private async computeProjectProgress(projectId: string, projectName: string, userId: string) {
+  // Batched version: 2 queries total regardless of number of projects (replaces 6N queries)
+  private async batchComputeProjectProgress(
+    projects: { id: string; name: string }[],
+    userId: string
+  ) {
+    if (projects.length === 0) return [];
+
+    const projectIds = projects.map((p) => p.id);
     const now = new Date();
 
-    const [totalTasks, completedTasks, blockedTasks, involvedBlockedTasks, overdueOpenTasks, nextMilestone] =
-      await Promise.all([
-        this.app.prisma.task.count({ where: { projectId } }),
-        this.app.prisma.task.count({ where: { projectId, status: "COMPLETADA" } }),
-        this.app.prisma.task.count({ where: { projectId, status: "EN_REVISION" } }),
-        this.app.prisma.task.count({
-          where: {
-            projectId,
-            status: "EN_REVISION",
-            assigneeId: userId
-          }
-        }),
-        this.app.prisma.task.count({
-          where: {
-            projectId,
-            status: { in: ACTIVE_TASK_STATUSES },
-            dueDate: { lt: now }
-          }
-        }),
-        this.app.prisma.objective.findFirst({
-          where: {
-            projectId,
-            targetDate: { gte: now }
-          },
-          orderBy: { targetDate: "asc" },
-          select: {
-            title: true,
-            targetDate: true
-          }
-        })
-      ]);
+    const [tasks, milestones] = await Promise.all([
+      this.app.prisma.task.findMany({
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true, status: true, assigneeId: true, dueDate: true }
+      }),
+      this.app.prisma.objective.findMany({
+        where: { projectId: { in: projectIds }, targetDate: { gte: now } },
+        orderBy: { targetDate: "asc" },
+        select: { projectId: true, title: true, targetDate: true }
+      })
+    ]);
 
-    const completionPct = percentage(completedTasks, totalTasks);
-    const blockedPct = percentage(blockedTasks, totalTasks);
+    // Index milestones by projectId (first = nearest due to orderBy asc)
+    const milestoneByProject = new Map<string, (typeof milestones)[0]>();
+    for (const m of milestones) {
+      if (m.projectId && !milestoneByProject.has(m.projectId)) {
+        milestoneByProject.set(m.projectId, m);
+      }
+    }
 
-    return {
-      projectId,
-      name: projectName,
-      completionPct,
-      involvedBlockedTasks,
-      blockedPct,
-      overdueOpenTasks,
-      nextMilestone: nextMilestone
-        ? {
-            title: nextMilestone.title,
-            targetDate: nextMilestone.targetDate.toISOString(),
-            daysRemaining: daysUntil(nextMilestone.targetDate)
-          }
-        : null,
-      risk: blockedPct > 20 || overdueOpenTasks > 0
-    };
+    return projects.map((project) => {
+      const projectTasks = tasks.filter((t) => t.projectId === project.id);
+      const totalTasks = projectTasks.length;
+      const completedTasks = projectTasks.filter((t) => t.status === "COMPLETADA").length;
+      const blockedTasks = projectTasks.filter((t) => t.status === "EN_REVISION").length;
+      const involvedBlockedTasks = projectTasks.filter(
+        (t) => t.status === "EN_REVISION" && t.assigneeId === userId
+      ).length;
+      const overdueOpenTasks = projectTasks.filter(
+        (t) => ACTIVE_TASK_STATUSES.includes(t.status as (typeof ACTIVE_TASK_STATUSES)[number]) && t.dueDate && t.dueDate < now
+      ).length;
+      const nextMilestone = milestoneByProject.get(project.id) ?? null;
+
+      const completionPct = percentage(completedTasks, totalTasks);
+      const blockedPct = percentage(blockedTasks, totalTasks);
+
+      return {
+        projectId: project.id,
+        name: project.name,
+        completionPct,
+        involvedBlockedTasks,
+        blockedPct,
+        overdueOpenTasks,
+        nextMilestone: nextMilestone
+          ? {
+              title: nextMilestone.title,
+              targetDate: nextMilestone.targetDate.toISOString(),
+              daysRemaining: daysUntil(nextMilestone.targetDate)
+            }
+          : null,
+        risk: blockedPct > 20 || overdueOpenTasks > 0
+      };
+    });
   }
 
   private async listProjectsForUser(userId: string) {
@@ -426,9 +435,7 @@ export class HomeService {
         })
       ]);
 
-    const myProjects = await Promise.all(
-      projects.map((project) => this.computeProjectProgress(project.id, project.name, userId))
-    );
+    const myProjects = await this.batchComputeProjectProgress(projects, userId);
 
     const normalizedTaskChanges = [
       ...recentStatusChanges.map((change) => ({
@@ -725,9 +732,7 @@ export class HomeService {
       }
     });
 
-    const projectStatus = await Promise.all(
-      leadProjects.map((project) => this.computeProjectProgress(project.id, project.name, userId))
-    );
+    const projectStatus = await this.batchComputeProjectProgress(leadProjects, userId);
 
     const projectIds = leadProjects.map((project) => project.id);
     const [pendingForms, pendingAgreements] = await Promise.all([
@@ -927,9 +932,7 @@ export class HomeService {
     const projects = await this.listProjectsForUser(userId);
     const projectIds = projects.map((project) => project.id);
 
-    const myProjects = await Promise.all(
-      projects.map((project) => this.computeProjectProgress(project.id, project.name, userId))
-    );
+    const myProjects = await this.batchComputeProjectProgress(projects, userId);
 
     const latestTaskChanges =
       projectIds.length === 0

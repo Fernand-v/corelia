@@ -1,10 +1,12 @@
 import jwt from "@fastify/jwt";
 import fp from "fastify-plugin";
 import { env } from "../config/env.js";
+import { buildRevocationKey } from "../modules/auth/service.js";
 
 interface AccessTokenPayload {
   id: string;
   email: string;
+  iat?: number;
 }
 
 export const authPlugin = fp(async (app) => {
@@ -23,6 +25,17 @@ export const authPlugin = fp(async (app) => {
 
     try {
       const payload = await request.jwtVerify<AccessTokenPayload>();
+
+      // Comprobar blacklist: si el usuario hizo logout después de que el token fue emitido
+      const revocationRaw = await app.redis.get(buildRevocationKey(payload.id));
+      if (revocationRaw) {
+        const logoutAt = Number(revocationRaw);
+        const tokenIssuedAt = (payload.iat ?? 0) * 1000;
+        if (tokenIssuedAt < logoutAt) {
+          return reply.code(401).send({ message: "Unauthorized" });
+        }
+      }
+
       request.authUser = {
         id: payload.id,
         email: payload.email

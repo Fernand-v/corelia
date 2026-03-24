@@ -37,7 +37,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(created);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -59,7 +59,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(meetings);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -78,8 +78,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
         const meeting = await service.getMeeting(params.meetingId, request.authUser!.id);
         return reply.send(meeting);
       } catch (error) {
-        const message = (error as Error).message;
-        return reply.code(message.includes("No tienes acceso") ? 403 : 404).send({ message });
+        throw error;
       }
     }
   );
@@ -106,7 +105,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.code(201).send(note);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -149,7 +148,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(agreement);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -173,7 +172,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(updated);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -192,7 +191,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
         const pending = await service.listPendingFollowUp(params.meetingId, request.authUser!.id);
         return reply.send(pending);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -214,7 +213,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
         );
         return reply.send(capabilities);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

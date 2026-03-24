@@ -30,11 +30,13 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
         const query = parseWithSchema(fileSchemas.explorerQuerySchema, request.query ?? {});
         const result = await service.listProjectExplorer({
           projectId: query.projectId,
-          folderId: query.folderId
+          folderId: query.folderId,
+          cursor: query.cursor,
+          pageSize: query.pageSize
         });
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -56,7 +58,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -77,7 +79,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -137,7 +139,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(file);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -202,9 +204,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
         reply.header("X-Content-Type-Options", "nosniff");
         return reply.send(content.stream);
       } catch (error) {
-        const err = error as Error;
-        const statusCode = err.name === "NotFoundError" ? 404 : 400;
-        return reply.code(statusCode).send({ message: err.message });
+        throw error;
       }
     }
   );

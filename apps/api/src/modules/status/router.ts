@@ -64,7 +64,7 @@ export const statusRouter: FastifyPluginAsync = async (app) => {
         };
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

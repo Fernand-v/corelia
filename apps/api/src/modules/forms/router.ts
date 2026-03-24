@@ -84,9 +84,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const created = await service.createDynamicForm(request.authUser!.id, payload);
         return reply.code(201).send(created);
       } catch (error) {
-        const known = error as Error;
-        const status = known.name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -105,9 +103,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const forms = await service.listDynamicForms(request.authUser!.id, query);
         return reply.send(forms);
       } catch (error) {
-        const known = error as Error;
-        const status = known.name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -126,14 +122,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const form = await service.getDynamicFormById(request.authUser!.id, params.id);
         return reply.send(form);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Formulario no encontrado"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -153,14 +142,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const updated = await service.updateDynamicForm(request.authUser!.id, params.id, payload);
         return reply.send(updated);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Formulario no encontrado" || known.message === "Proyecto no encontrado"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -179,14 +161,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const result = await service.deleteDynamicForm(request.authUser!.id, params.id);
         return reply.send(result);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Formulario no encontrado"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -206,14 +181,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const question = await service.addDynamicQuestion(request.authUser!.id, params.id, payload);
         return reply.code(201).send(question);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Formulario no encontrado" || known.message === "Proyecto no encontrado"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -233,14 +201,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const question = await service.updateDynamicQuestion(request.authUser!.id, params.id, payload);
         return reply.send(question);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Pregunta no encontrada"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -259,14 +220,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const removed = await service.removeDynamicQuestion(request.authUser!.id, params.id);
         return reply.send(removed);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Pregunta no encontrada"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -303,8 +257,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send({ path: objectKey, originalName: data.filename, mimeType: data.mimetype, sizeBytes: buffer.length });
       } catch (error) {
-        const known = error as Error;
-        return reply.code(400).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -323,14 +276,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const submitted = await service.submitDynamicForm(request.authUser!.id, params.id, payload);
         return reply.code(201).send(submitted);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Formulario no encontrado"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -349,14 +295,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const responses = await service.listDynamicFormResponses(request.authUser!.id, params.id);
         return reply.send(responses);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Formulario no encontrado"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );
@@ -375,14 +314,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
         const summary = await service.getDynamicFormSummary(request.authUser!.id, params.id);
         return reply.send(summary);
       } catch (error) {
-        const known = error as Error;
-        const status =
-          known.name === "Forbidden"
-            ? 403
-            : known.message === "Formulario no encontrado"
-              ? 404
-              : 400;
-        return reply.code(status).send({ message: known.message });
+        throw error;
       }
     }
   );

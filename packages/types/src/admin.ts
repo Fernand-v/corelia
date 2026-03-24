@@ -204,7 +204,7 @@ export const adminTeamListItemSchema = z.object({
   id: idSchema,
   name: z.string().min(1),
   description: z.string().nullable(),
-  descriptionCatalogId: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: idSchema.nullable().optional(),
   descriptionLabel: z.string().nullable().optional(),
   coordinator: z
     .object({
@@ -224,7 +224,7 @@ export const adminTeamsListSchema = z.object({
 export const adminCreateTeamInputSchema = z.object({
   name: z.string().min(2).max(120),
   description: z.string().max(400).optional(),
-  descriptionCatalogId: codeValueSchema.optional(),
+  descriptionCatalogId: idSchema.optional(),
   coordinatorUserId: idSchema.optional(),
   memberIds: z.array(idSchema).default([])
 });
@@ -232,7 +232,7 @@ export const adminCreateTeamInputSchema = z.object({
 export const adminUpdateTeamInputSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   description: z.string().max(400).nullable().optional(),
-  descriptionCatalogId: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: idSchema.nullable().optional(),
   coordinatorUserId: idSchema.nullable().optional(),
   memberIds: z.array(idSchema).optional()
 });

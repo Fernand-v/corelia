@@ -63,15 +63,21 @@ export const createApp = async (): Promise<FastifyInstance> => {
 
     const statusCode = isValidationError
       ? 400
-      : prismaCode === "P2025"
-        ? 404
-        : prismaCode === "P2002" || knownError.name === "Conflict"
-          ? 409
-      : typeof knownError.statusCode === "number" &&
-          knownError.statusCode >= 400 &&
-          knownError.statusCode <= 599
-        ? knownError.statusCode
-        : 500;
+      : knownError.name === "Forbidden"
+        ? 403
+        : knownError.name === "NotFoundError" || prismaCode === "P2025"
+          ? 404
+          : knownError.name === "Conflict" || prismaCode === "P2002"
+            ? 409
+            : knownError.name === "ServiceUnavailable"
+              ? 503
+              : knownError.name === "Unauthorized"
+                ? 401
+                : typeof knownError.statusCode === "number" &&
+                    knownError.statusCode >= 400 &&
+                    knownError.statusCode <= 599
+                  ? knownError.statusCode
+                  : 500;
 
     if (statusCode >= 500) {
       app.log.error(knownError);

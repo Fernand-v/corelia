@@ -436,6 +436,34 @@ export const MaxGraphEditorShell = memo(({
     };
   }, []);
 
+  // Scroll wheel sin Ctrl/Meta → pan del canvas en lugar de nada
+  // Scroll wheel con Ctrl/Meta → MaxGraph maneja el zoom (no interceptamos)
+  useEffect(() => {
+    const wrapper = canvasWrapperRef.current;
+    if (!wrapper) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) return; // dejar que MaxGraph maneje el zoom
+      const graph = graphRef.current;
+      if (!graph) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      // deltaMode: 0 = px, 1 = lines (~30px), 2 = pages (~300px)
+      const factor = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? 300 : 1;
+      const dx = e.deltaX * factor;
+      const dy = e.deltaY * factor;
+
+      const view = graph.getView();
+      const t = view.translate;
+      view.setTranslate(t.x - dx, t.y - dy);
+    };
+
+    wrapper.addEventListener("wheel", onWheel, { passive: false });
+    return () => wrapper.removeEventListener("wheel", onWheel);
+  }, [canvasWrapperRef, graphRef]);
+
   const paletteViewModel = {
     kind: currentKind,
     libraries: allLibraries,

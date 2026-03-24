@@ -24,7 +24,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(events);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -43,7 +43,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
         const events = await service.getSharedEvents(query);
         return reply.send(events);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -76,7 +76,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -95,7 +95,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
         const rows = await service.getTeamCapacity(query);
         return reply.send(rows);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -113,7 +113,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
         const query = parseWithSchema(calendarSchemas.externalOauthUrlQuerySchema, request.query);
         return reply.send({ url: service.getExternalOAuthUrl(query.provider) });
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -135,7 +135,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.code(201).send(connection);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -157,7 +157,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

@@ -39,8 +39,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           })
         );
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -70,8 +69,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(created);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -99,8 +97,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(updated);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -119,8 +116,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         const preview = await service.previewOffboarding(request.authUser!.id, payload.userId);
         return reply.send(preview);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -151,8 +147,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -174,8 +169,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           })
         );
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -207,8 +201,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -240,8 +233,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -259,8 +251,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         const result = await service.listInternalInvites(request.authUser!.id);
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -291,8 +282,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(invite);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -321,8 +311,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -356,8 +345,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -375,8 +363,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         const result = await service.listGuestInvites(request.authUser!.id);
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -407,8 +394,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(invite);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -437,8 +423,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -468,8 +453,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -487,8 +471,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         const teams = await service.listTeams(request.authUser!.id);
         return reply.send(teams);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -517,8 +500,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(team);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -537,8 +519,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         const team = await service.getTeam(request.authUser!.id, params.id);
         return reply.send(team);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -566,8 +547,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -593,8 +573,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -611,8 +590,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       try {
         return reply.send(await service.getFrontendSettings(request.authUser!.id));
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -639,8 +617,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(updated);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -670,8 +647,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(updated);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -688,8 +664,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       try {
         return reply.send(await service.getSystemStatus(request.authUser!.id));
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -719,8 +694,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           recentChanges: result.recentChanges
         });
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -737,8 +711,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       try {
         return reply.send(await service.listRoles(request.authUser!.id));
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -756,8 +729,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         const params = parseWithSchema(adminSchemas.adminRoleIdParamsSchema, request.params);
         return reply.send(await service.getRole(request.authUser!.id, params.id));
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -788,8 +760,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(role);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -817,8 +788,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(role);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -852,13 +822,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(role);
       } catch (error) {
-        const status =
-          (error as Error).name === "Forbidden"
-            ? 403
-            : (error as Error).name === "Conflict"
-              ? 409
-              : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -884,13 +848,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status =
-          (error as Error).name === "Forbidden"
-            ? 403
-            : (error as Error).name === "Conflict"
-              ? 409
-              : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -907,8 +865,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       try {
         return reply.send(await service.listPermissions(request.authUser!.id));
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -925,8 +882,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       try {
         return reply.send(await service.listPermissionCategories(request.authUser!.id));
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -943,8 +899,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       try {
         return reply.send(await service.getRolesMatrix(request.authUser!.id));
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -962,8 +917,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         const query = parseWithSchema(adminSchemas.adminAccessByResourceQuerySchema, request.query ?? {});
         return reply.send(await service.getAccessByResource(request.authUser!.id, query));
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -982,8 +936,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         const result = await service.listCodeCatalogs(request.authUser!.id, query);
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -1014,8 +967,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(created);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -1051,8 +1003,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(updated);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -1082,8 +1033,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(updated);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -1107,8 +1057,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         });
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -1143,15 +1092,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         reply.header("Cache-Control", "no-store");
         return reply.send(backup.content);
       } catch (error) {
-        const status =
-          (error as Error).name === "Forbidden"
-            ? 403
-            : (error as Error).name === "Unauthorized"
-              ? 401
-              : (error as Error).name === "Internal"
-                ? 500
-                : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -1178,8 +1119,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
         );
         return reply.send(result.csv);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -1213,8 +1153,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
 
         return reply.send(result);
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -1237,8 +1176,7 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
           })
         );
       } catch (error) {
-        const status = (error as Error).name === "Forbidden" ? 403 : 400;
-        return reply.code(status).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );

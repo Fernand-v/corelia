@@ -183,7 +183,7 @@ export const startTaskLifecycleScheduler = () => {
   };
 };
 
-const handleMissedCallCheck = async (data: Record<string, unknown>) => {
+export const handleMissedCallCheck = async (data: Record<string, unknown>) => {
   const meetingId = data.meetingId as string;
   const channelId = data.channelId as string;
   const callType = (data.callType as string) ?? "VIDEO";

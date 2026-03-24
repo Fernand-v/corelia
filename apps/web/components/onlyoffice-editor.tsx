@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentType } from "@corelia/types";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, useAuthStore } from "@/lib/api";
 
 type OnlyOfficeEditorProps = {
   documentId: string;
@@ -83,6 +83,7 @@ export const OnlyOfficeEditor = ({
   const [configResponse, setConfigResponse] = useState<OnlyOfficeConfigResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const token = useAuthStore((s) => s.accessToken);
 
   const titleLabel = useMemo(() => {
     if (documentType === "TEXTO") {
@@ -126,6 +127,21 @@ export const OnlyOfficeEditor = ({
       cancelled = true;
     };
   }, [documentId]);
+
+  useEffect(() => {
+    if (!configResponse || !token) return;
+
+    const handleBeforeUnload = () => {
+      fetch(`/api/v1/documents/${encodeURIComponent(documentId)}/onlyoffice/forcesave`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        keepalive: true
+      });
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [configResponse, documentId, token]);
 
   useEffect(() => {
     if (!configResponse) {

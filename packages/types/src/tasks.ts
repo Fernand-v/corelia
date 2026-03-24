@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { codeValueSchema, idSchema, timestampSchema } from "./common.js";
+import { idSchema, timestampSchema } from "./common.js";
 import { taskStatusSchema } from "./enums.js";
 import { roleCodeSchema } from "./rbac.js";
 
@@ -12,7 +12,7 @@ export const taskSchema = z.object({
   stageColor: z.string().nullable().optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(4000).nullable(),
-  descriptionCatalogId: codeValueSchema.nullable().optional(),
+  descriptionCatalogId: idSchema.nullable().optional(),
   descriptionLabel: z.string().nullable().optional(),
   assigneeId: idSchema.nullable(),
   assigneeName: z.string().nullable().optional(),
@@ -21,7 +21,7 @@ export const taskSchema = z.object({
   status: taskStatusSchema,
   dueDate: z.string().datetime().nullable(),
   blockedReason: z.string().max(500).nullable(),
-  blockedReasonCatalogId: codeValueSchema.nullable().optional(),
+  blockedReasonCatalogId: idSchema.nullable().optional(),
   blockedReasonLabel: z.string().nullable().optional(),
   blockingTaskId: idSchema.nullable(),
   createdById: idSchema,
@@ -35,7 +35,7 @@ export const createTaskInputSchema = z.object({
   stageId: idSchema.optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(4000).optional(),
-  descriptionCatalogId: codeValueSchema.optional(),
+  descriptionCatalogId: idSchema.optional(),
   assigneeId: idSchema.optional(),
   startDate: z.string().datetime().optional(),
   dueDate: z.string().datetime().optional(),
@@ -46,17 +46,17 @@ export const taskStatusTransitionInputSchema = z.object({
   taskId: idSchema,
   status: taskStatusSchema,
   reason: z.string().min(3).max(500),
-  reasonCatalogId: codeValueSchema.optional(),
+  reasonCatalogId: idSchema.optional(),
   blockingTaskId: idSchema.optional(),
   blockedReason: z.string().min(5).max(500).optional(),
-  blockedReasonCatalogId: codeValueSchema.optional()
+  blockedReasonCatalogId: idSchema.optional()
 });
 
 export const taskReassignmentInputSchema = z.object({
   taskId: idSchema,
   newAssigneeId: idSchema,
   reason: z.string().min(5).max(500),
-  reasonCatalogId: codeValueSchema.optional(),
+  reasonCatalogId: idSchema.optional(),
   reopenIfCompleted: z.boolean().default(false)
 });
 
@@ -70,7 +70,7 @@ export const updateTaskScheduleInputSchema = z
     startDate: z.string().datetime().nullable().optional(),
     dueDate: z.string().datetime().nullable().optional(),
     reason: z.string().min(3).max(500),
-    reasonCatalogId: codeValueSchema.optional()
+    reasonCatalogId: idSchema.optional()
   })
   .superRefine((input, ctx) => {
     if (!input.startDate || !input.dueDate) {
@@ -89,13 +89,13 @@ export const updateTaskScheduleInputSchema = z
 export const finalizeAndAdvanceInputSchema = z.object({
   taskId: idSchema,
   reason: z.string().min(3).max(500).optional(),
-  reasonCatalogId: codeValueSchema.optional()
+  reasonCatalogId: idSchema.optional()
 });
 
 export const activateTaskInputSchema = z.object({
   taskId: idSchema,
   reason: z.string().min(3).max(500),
-  reasonCatalogId: codeValueSchema.optional()
+  reasonCatalogId: idSchema.optional()
 });
 
 export const taskScheduleHistoryItemSchema = z.object({
@@ -106,7 +106,7 @@ export const taskScheduleHistoryItemSchema = z.object({
   newStartDate: z.string().datetime().nullable(),
   newDueDate: z.string().datetime().nullable(),
   reason: z.string().min(1),
-  reasonCatalogId: codeValueSchema.nullable().optional(),
+  reasonCatalogId: idSchema.nullable().optional(),
   reasonLabel: z.string().nullable().optional(),
   changedById: idSchema,
   changedByName: z.string().nullable().optional(),

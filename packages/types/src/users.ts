@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { codeValueSchema, contactSchema, idSchema, timestampSchema, windowScheduleSchema } from "./common.js";
+import { contactSchema, idSchema, timestampSchema, windowScheduleSchema } from "./common.js";
 import { systemRoleCodeSchema } from "./rbac.js";
 
 export const userPresenceStatusSchema = z.enum(["EN_LINEA", "DESCONECTADO", "EN_REUNION"]);
@@ -71,7 +71,7 @@ export const offboardingInputSchema = z.object({
   userId: idSchema,
   transferToUserId: idSchema,
   reason: z.string().min(5).max(500),
-  reasonCatalogId: codeValueSchema.optional(),
+  reasonCatalogId: idSchema.optional(),
   archiveHistory: z.boolean().default(true)
 });
 

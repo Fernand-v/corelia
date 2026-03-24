@@ -11,9 +11,13 @@ const isLoopbackHost = (hostname: string) =>
 
 export const registerBrowserPushServiceWorker = async () => {
   try {
-    return await navigator.serviceWorker.register("/notifications-sw.js", {
+    // Registrar el SW (puede ya estar registrado)
+    await navigator.serviceWorker.register("/notifications-sw.js", {
       scope: "/"
     });
+    // Esperar a que haya un SW activo antes de llamar pushManager.subscribe()
+    // navigator.serviceWorker.ready resuelve solo cuando el SW está en estado "activated"
+    return await navigator.serviceWorker.ready;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 

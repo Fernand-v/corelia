@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
+import { sanitizeFileName } from "../../lib/sanitize.js";
 
 const notFound = (message: string): Error => {
   const error = new Error(message);
@@ -66,25 +67,6 @@ const toSafeNumber = (value: bigint): number => {
   return Number(value);
 };
 
-const stripControlChars = (input: string): string =>
-  Array.from(input)
-    .filter((char) => {
-      const code = char.charCodeAt(0);
-      return code >= 32 && code !== 127;
-    })
-    .join("");
-
-const sanitizeFileName = (value: string): string => {
-  const normalized = value
-    .trim()
-    .replace(/\s+/g, " ");
-
-  const safe = stripControlChars(normalized)
-    .replace(/[/\\?%*:|"<>]/g, "-")
-    .replace(/\s+/g, " ");
-
-  return safe.length > 0 ? safe.slice(0, 255) : "archivo";
-};
 
 export class FileService {
   constructor(private readonly app: FastifyInstance) {}
@@ -96,6 +78,8 @@ export class FileService {
   async listProjectExplorer(input: {
     projectId: string;
     folderId?: string;
+    cursor?: string;
+    pageSize?: number;
   }) {
     const project = await this.app.prisma.project.findUnique({
       where: { id: input.projectId },
@@ -183,8 +167,9 @@ export class FileService {
               folderId: currentFolder.id,
               deletedAt: null
             },
-            orderBy: [{ createdAt: "desc" }],
-            take: 100,
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            take: (input.pageSize ?? 50) + 1,
+            ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
             select: {
               id: true,
               folderId: true,
@@ -210,6 +195,11 @@ export class FileService {
         : Promise.resolve([])
     ]);
 
+    const pageSize = input.pageSize ?? 50;
+    const hasMore = files.length > pageSize;
+    const pageFiles = hasMore ? files.slice(0, pageSize) : files;
+    const nextCursor = hasMore ? (pageFiles[pageFiles.length - 1]?.id ?? null) : null;
+
     return {
       project: {
         id: project.id,
@@ -223,13 +213,15 @@ export class FileService {
           }
         : null,
       breadcrumbs,
+      hasMore,
+      nextCursor,
       folders: folders.map((folder) => ({
         id: folder.id,
         name: folder.name,
         parentId: folder.parentId,
         createdAt: folder.createdAt.toISOString()
       })),
-      files: files.map((file) => ({
+      files: pageFiles.map((file) => ({
         id: file.id,
         folderId: file.folderId,
         ownerId: file.ownerId,
@@ -345,7 +337,21 @@ export class FileService {
       throw new Error("El tipo MIME del archivo no está permitido");
     }
 
-    if (/\.\./.test(input.minioPath) || input.minioPath.startsWith("/")) {
+    const decodedPath = (() => {
+      try {
+        return decodeURIComponent(input.minioPath);
+      } catch {
+        return input.minioPath;
+      }
+    })();
+    // Normalizar con posix para resolver .., . y dobles slashes
+    const { posix } = await import("path");
+    const normalized = posix.normalize(decodedPath);
+    if (
+      normalized.startsWith("..") ||
+      normalized.startsWith("/") ||
+      /\.\./.test(normalized)
+    ) {
       throw new Error("La ruta del archivo no es válida");
     }
 

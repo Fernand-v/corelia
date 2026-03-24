@@ -81,7 +81,14 @@ const loadRoleContext = async (
   return payload;
 };
 
+// Cached in process memory — INVITADO_EXTERNO never changes at runtime
+let cachedGuestRoleId: string | null = null;
+
 const getGuestRole = async (app: FastifyInstance) => {
+  if (cachedGuestRoleId) {
+    return { id: cachedGuestRoleId };
+  }
+
   const guestRole = await app.prisma.role.findUnique({
     where: {
       key: "INVITADO_EXTERNO"
@@ -95,10 +102,16 @@ const getGuestRole = async (app: FastifyInstance) => {
     throw new Error("Rol base INVITADO_EXTERNO no configurado");
   }
 
+  cachedGuestRoleId = guestRole.id;
   return guestRole;
 };
 
 export const rbacPlugin = fp(async (app) => {
+  // Warm up guest role cache on startup
+  app.addHook("onReady", async () => {
+    await getGuestRole(app);
+  });
+
   app.addHook("preHandler", async (request, reply) => {
     const config = request.routeOptions.config as
       | { requiresAuth?: boolean; requiredPermission?: Permission }

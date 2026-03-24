@@ -86,11 +86,7 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
           deleted: true,
         });
       } catch (error) {
-        const message = (error as Error).message;
-        const statusCode = message.toLowerCase().includes("no encontrado")
-          ? 404
-          : 400;
-        return reply.code(statusCode).send({ message });
+        throw error;
       }
     },
   );
@@ -127,7 +123,7 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
 
         return reply.code(201).send(asset);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     },
   );
@@ -160,11 +156,7 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
         reply.header("Cross-Origin-Resource-Policy", "cross-origin");
         return reply.send(content.stream);
       } catch (error) {
-        const message = (error as Error).message;
-        const statusCode = message.toLowerCase().includes("not found")
-          ? 404
-          : 400;
-        return reply.code(statusCode).send({ message });
+        throw error;
       }
     },
   );

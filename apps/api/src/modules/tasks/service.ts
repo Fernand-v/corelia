@@ -1,23 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { RoleCode, TaskStatus } from "@corelia/types";
-import { canReassign, canReopenCompletedTask } from "../../lib/rbac.js";
+import { canReassign, canReopenCompletedTask, resolveRoleKey } from "../../lib/rbac.js";
 import { createAndDispatchNotification } from "../../lib/notifications.js";
 import { attachTraceContext } from "../../lib/tracing.js";
-
-const resolveRoleKey = (
-  role: { key?: string | null; code?: string | number | null } | null | undefined
-): string | undefined => {
-  if (!role) {
-    return undefined;
-  }
-  if (typeof role.key === "string") {
-    return role.key;
-  }
-  if (typeof role.code === "string") {
-    return role.code;
-  }
-  return undefined;
-};
 
 export class TaskService {
   private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
@@ -549,10 +534,7 @@ export class TaskService {
         stageId: input.stageId ?? null,
         title: input.title,
         description: input.description ?? null,
-        descriptionCatalogId: this.normalizeLegacyCode({
-          code: input.descriptionCatalogId,
-          text: input.description
-        }),
+        descriptionCatalogId: input.descriptionCatalogId ?? null,
         assigneeId: input.assigneeId ?? null,
         startDate: parsedStartDate,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
@@ -742,10 +724,7 @@ export class TaskService {
         fromStatus: task.status,
         toStatus: input.status,
         reason: input.reason,
-        reasonCatalogId: this.normalizeLegacyCode({
-          code: input.reasonCatalogId,
-          text: input.reason
-        }),
+        reasonCatalogId: input.reasonCatalogId ?? null,
         changedById: input.changedById
       }
     });
@@ -862,10 +841,7 @@ export class TaskService {
           newStartDate: startDate,
           newDueDate: dueDate,
           reason: input.reason,
-          reasonCatalogId: this.normalizeLegacyCode({
-            code: input.reasonCatalogId,
-            text: input.reason
-          }),
+          reasonCatalogId: input.reasonCatalogId ?? null,
           changedById: input.changedById
         }
       });
@@ -917,10 +893,7 @@ export class TaskService {
         fromStatus: task.status,
         toStatus: "PENDIENTE",
         reason: input.reason,
-        reasonCatalogId: this.normalizeLegacyCode({
-          code: input.reasonCatalogId,
-          text: input.reason
-        }),
+        reasonCatalogId: input.reasonCatalogId ?? null,
         changedById: input.changedById
       }
     });
@@ -985,10 +958,7 @@ export class TaskService {
     };
 
     const reason = input.reason?.trim() || "Finalización desde Mis Tareas";
-    const reasonCatalogId = this.normalizeLegacyCode({
-      code: input.reasonCatalogId,
-      text: reason
-    });
+    const reasonCatalogId = input.reasonCatalogId ?? null;
 
     const { completedTask, nextTask } = await this.app.prisma.$transaction(async (tx) => {
       const completedTask =
@@ -1189,10 +1159,7 @@ export class TaskService {
           previousAssigneeId: task.assigneeId,
           newAssigneeId: input.newAssigneeId,
           reason: input.reason,
-          reasonCatalogId: this.normalizeLegacyCode({
-            code: input.reasonCatalogId,
-            text: input.reason
-          }),
+          reasonCatalogId: input.reasonCatalogId ?? null,
           reassignedById: input.requestedById
         }
       });

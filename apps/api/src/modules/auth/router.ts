@@ -49,7 +49,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         };
         return reply.code(201).send(created);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -77,7 +77,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         };
         return reply.send(tokens);
       } catch (error) {
-        return reply.code(401).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -108,7 +108,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         };
         return reply.send(tokens);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -131,7 +131,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         const tokens = await service.refresh(payload);
         return reply.send(tokens);
       } catch (error) {
-        return reply.code(401).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -157,7 +157,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         }
         return reply.code(204).send();
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
@@ -190,9 +190,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         };
         return reply.send(result);
       } catch (error) {
-        const message = (error as Error).message;
-        const status = message === "La contraseña actual no es válida" ? 401 : 400;
-        return reply.code(status).send({ message });
+        throw error;
       }
     }
   );
@@ -222,14 +220,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         };
         return reply.send(result);
       } catch (error) {
-        const knownError = error as Error;
-        let status = 400;
-        if (knownError.name === "Forbidden") {
-          status = 403;
-        } else if (knownError.message === "Usuario objetivo no encontrado") {
-          status = 404;
-        }
-        return reply.code(status).send({ message: knownError.message });
+        throw error;
       }
     }
   );
@@ -246,7 +237,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         const summary = await service.getMembershipSummary(request.authUser!.id);
         return reply.send(summary);
       } catch (error) {
-        return reply.code(400).send({ message: (error as Error).message });
+        throw error;
       }
     }
   );
