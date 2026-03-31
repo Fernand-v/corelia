@@ -7,6 +7,7 @@ import { isAdminRole } from "../lib/rbac.js";
 type CachedRoleContext = {
   roleId: string;
   role: string;
+  displayName: string;
   rank: number;
   permissions: Permission[];
 };
@@ -25,6 +26,7 @@ const parseCachedRoleContext = (raw: string | null): CachedRoleContext | null =>
     if (
       typeof parsed.roleId !== "string" ||
       typeof parsed.role !== "string" ||
+      typeof parsed.displayName !== "string" ||
       typeof parsed.rank !== "number" ||
       !Array.isArray(parsed.permissions)
     ) {
@@ -52,6 +54,7 @@ const loadRoleContext = async (
     select: {
       id: true,
       key: true,
+      displayName: true,
       rank: true,
       rolePermissions: {
         select: {
@@ -72,6 +75,7 @@ const loadRoleContext = async (
   const payload: CachedRoleContext = {
     roleId: role.id,
     role: role.key,
+    displayName: role.displayName,
     rank: role.rank,
     permissions: role.rolePermissions.map((entry) => entry.permission.key as Permission)
   };
@@ -167,6 +171,8 @@ export const rbacPlugin = fp(async (app) => {
       projectId: projectId ?? null,
       activeRoleId: roleContext.roleId,
       activeRole: roleContext.role,
+      roleDisplayName: roleContext.displayName,
+      rank: roleContext.rank,
       permissions: roleContext.permissions
     };
 

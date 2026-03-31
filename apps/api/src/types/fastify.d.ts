@@ -57,6 +57,8 @@ declare module "fastify" {
       projectId: string | null;
       activeRoleId: string;
       activeRole: RoleCode;
+      roleDisplayName: string;
+      rank: number;
       permissions: Permission[];
     };
     auditEvent?: {

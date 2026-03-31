@@ -57,7 +57,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         const result = await service.finalizeAndAdvance({
           ...payload,
           changedById: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole
+          activeRole: request.accessContext!.activeRole,
+          activeRoleRank: request.accessContext!.rank
         });
 
         request.auditEvent = {
@@ -186,7 +187,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           reason: payload.reason,
           reasonCatalogId: payload.reasonCatalogId,
           changedById: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole
+          activeRole: request.accessContext!.activeRole,
+          activeRoleRank: request.accessContext!.rank
         });
 
         request.auditEvent = {
@@ -221,7 +223,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         const task = await service.changeStatus({
           ...payload,
           changedById: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole
+          activeRole: request.accessContext!.activeRole,
+          activeRoleRank: request.accessContext!.rank
         });
 
         request.auditEvent = {
@@ -258,6 +261,7 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
           ...payload,
           requestedById: request.authUser!.id,
           activeRole: request.accessContext!.activeRole,
+          activeRoleRank: request.accessContext!.rank,
           projectContextId: request.accessContext?.projectId
         });
 

@@ -13,6 +13,8 @@ export interface SessionUser {
   baseRole: RoleCode;
   isActive: boolean;
   activeRole: RoleCode;
+  roleDisplayName?: string;
+  activeRoleRank?: number;
   permissions: Permission[];
 }
 

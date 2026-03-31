@@ -276,6 +276,8 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         ...user,
         baseRole: baseRoleKey,
         activeRole: request.accessContext?.activeRole,
+        roleDisplayName: request.accessContext?.roleDisplayName,
+        activeRoleRank: request.accessContext?.rank,
         permissions: request.accessContext?.permissions ?? []
       });
     }

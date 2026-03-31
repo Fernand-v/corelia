@@ -22,7 +22,10 @@ export const homeRouter: FastifyPluginAsync = async (app) => {
           projectId: request.accessContext?.projectId ?? query.projectId,
           teamId: query.teamId
         });
-        return reply.send(dashboard);
+        return reply.send({
+          ...dashboard,
+          roleDisplayName: request.accessContext?.roleDisplayName
+        });
       } catch (error) {
         throw error;
       }

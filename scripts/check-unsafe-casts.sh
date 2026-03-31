@@ -19,17 +19,32 @@ trap cleanup EXIT
 
 collect_matches() {
   {
-    rg -n --no-heading "as never|as unknown as" \
-      "${ROOT_DIR}/apps/api/src" \
-      "${ROOT_DIR}/apps/workers/src" \
-      "${ROOT_DIR}/apps/web/app" \
-      "${ROOT_DIR}/apps/web/components" \
-      "${ROOT_DIR}/apps/web/lib" \
-      -g'!**/*.spec.ts' \
-      -g'!**/*.spec.tsx' \
-      -g'!**/node_modules/**' \
-      -g'!**/.next/**' \
-      || true
+    if command -v rg &>/dev/null; then
+      rg -n --no-heading "as never|as unknown as" \
+        "${ROOT_DIR}/apps/api/src" \
+        "${ROOT_DIR}/apps/workers/src" \
+        "${ROOT_DIR}/apps/web/app" \
+        "${ROOT_DIR}/apps/web/components" \
+        "${ROOT_DIR}/apps/web/lib" \
+        -g'!**/*.spec.ts' \
+        -g'!**/*.spec.tsx' \
+        -g'!**/node_modules/**' \
+        -g'!**/.next/**' \
+        || true
+    else
+      grep -rn --include='*.ts' --include='*.tsx' \
+        -E 'as never|as unknown as' \
+        "${ROOT_DIR}/apps/api/src" \
+        "${ROOT_DIR}/apps/workers/src" \
+        "${ROOT_DIR}/apps/web/app" \
+        "${ROOT_DIR}/apps/web/components" \
+        "${ROOT_DIR}/apps/web/lib" \
+        --exclude='*.spec.ts' \
+        --exclude='*.spec.tsx' \
+        --exclude-dir='node_modules' \
+        --exclude-dir='.next' \
+        || true
+    fi
   } | sed "s#${ROOT_DIR}/##" | sort
 }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Permission, RoleCode } from "@corelia/types";
+import type { Permission } from "@corelia/types";
 import type { Route } from "next";
 import { apiRequest, useAuthStore } from "@/lib/api";
 import { useSession, useSessionMembershipSummary } from "@/lib/session";
@@ -22,7 +22,6 @@ import {
 type NavItem = {
   label: string;
   href: string;
-  roles: RoleCode[];
   requiredAnyPermissions?: Permission[];
   disabled?: boolean;
   phase?: string;
@@ -36,77 +35,43 @@ type DashboardContext = {
   teamId: string | null;
 };
 
-const ALL_ROLES: RoleCode[] = [
-  "ADMINISTRADOR",
-  "LIDER_PROYECTO",
-  "COORDINADOR_EQUIPO",
-  "COLABORADOR",
-  "OBSERVADOR",
-  "INVITADO_EXTERNO"
-];
-
-const INTERNAL_ROLES: RoleCode[] = [
-  "ADMINISTRADOR",
-  "LIDER_PROYECTO",
-  "COORDINADOR_EQUIPO",
-  "COLABORADOR",
-  "OBSERVADOR"
-];
-
-const WORK_ROLES: RoleCode[] = [
-  "ADMINISTRADOR",
-  "LIDER_PROYECTO",
-  "COORDINADOR_EQUIPO",
-  "COLABORADOR"
-];
-
 const NAV_ITEMS: NavItem[] = [
-  { label: "Home", href: "/home", roles: ALL_ROLES, contextual: true },
-  { label: "Mensajes", href: "/messaging", roles: WORK_ROLES },
-  { label: "Mis Proyectos", href: "/projects", roles: WORK_ROLES, contextual: true },
-  { label: "Anuncios", href: "/announcements", roles: ALL_ROLES },
-  { label: "Mis Tareas", href: "/tasks", roles: WORK_ROLES, contextual: true },
-  { label: "Reportes", href: "/reports", roles: WORK_ROLES },
+  { label: "Home", href: "/home", contextual: true },
+  { label: "Mensajes", href: "/messaging", requiredAnyPermissions: ["MENSAJE_ESCRIBIR"] },
+  { label: "Mis Proyectos", href: "/projects", requiredAnyPermissions: ["PROYECTO_LEER"], contextual: true },
+  { label: "Anuncios", href: "/announcements" },
+  { label: "Mis Tareas", href: "/tasks", requiredAnyPermissions: ["TAREA_LEER"], contextual: true },
+  { label: "Reportes", href: "/reports", requiredAnyPermissions: ["PROYECTO_LEER"] },
   {
     label: "Presupuesto",
     href: "/projects/:projectId/budget",
-    roles: WORK_ROLES,
     requiresProjectContext: true,
     requiredAnyPermissions: ["PRESUPUESTO_LEER", "PRESUPUESTO_GESTIONAR"]
   },
-  { label: "Calendario", href: "/calendar", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
-  { label: "Reuniones", href: "/meetings", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
-  { label: "Archivos", href: "/files", roles: WORK_ROLES, contextual: true, requiresProjectContext: true },
+  { label: "Calendario", href: "/calendar", requiredAnyPermissions: ["CALENDARIO_LEER"], contextual: true, requiresProjectContext: true },
+  { label: "Reuniones", href: "/meetings", requiredAnyPermissions: ["REUNION_LEER"], contextual: true, requiresProjectContext: true },
+  { label: "Archivos", href: "/files", requiredAnyPermissions: ["ARCHIVO_SUBIR"], contextual: true, requiresProjectContext: true },
   {
     label: "Documentos",
     href: "/documents",
-    roles: WORK_ROLES,
+    requiredAnyPermissions: ["PROYECTO_LEER"],
     contextual: true,
     requiresProjectContext: true
   },
-  { label: "Formularios", href: "/forms", roles: INTERNAL_ROLES, contextual: true },
-  { label: "Mis Métricas", href: "/metrics", roles: WORK_ROLES },
-  { label: "Solicitudes", href: "/requests", roles: WORK_ROLES },
-  { label: "Notificaciones", href: "/notifications", roles: ALL_ROLES },
-  { label: "Buscar", href: "/search", roles: INTERNAL_ROLES }
+  { label: "Formularios", href: "/forms", requiredAnyPermissions: ["PROYECTO_LEER"], contextual: true },
+  { label: "Mis Métricas", href: "/metrics", requiredAnyPermissions: ["TAREA_LEER"] },
+  { label: "Solicitudes", href: "/requests", requiredAnyPermissions: ["PROYECTO_LEER"] },
+  { label: "Notificaciones", href: "/notifications" },
+  { label: "Buscar", href: "/search", requiredAnyPermissions: ["USUARIO_LEER"] }
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
-  { label: "Panel de Admin", href: "/admin/panel", roles: ["ADMINISTRADOR"] },
-  { label: "Resumen", href: "/admin/overview", roles: ["ADMINISTRADOR"] },
-  { label: "Equipos", href: "/admin/teams", roles: ["ADMINISTRADOR"] },
-  { label: "Estado del Sistema", href: "/admin/system", roles: ["ADMINISTRADOR"] },
-  { label: "Monitoreo", href: "/admin/monitoring", roles: ["ADMINISTRADOR"] }
+  { label: "Panel de Admin", href: "/admin/panel", requiredAnyPermissions: ["USUARIO_GESTIONAR"] },
+  { label: "Resumen", href: "/admin/overview", requiredAnyPermissions: ["USUARIO_GESTIONAR"] },
+  { label: "Equipos", href: "/admin/teams", requiredAnyPermissions: ["USUARIO_GESTIONAR"] },
+  { label: "Estado del Sistema", href: "/admin/system", requiredAnyPermissions: ["USUARIO_GESTIONAR"] },
+  { label: "Monitoreo", href: "/admin/monitoring", requiredAnyPermissions: ["USUARIO_GESTIONAR"] }
 ];
-
-const roleLabel: Record<RoleCode, string> = {
-  ADMINISTRADOR: "Administrador",
-  LIDER_PROYECTO: "Líder de Proyecto",
-  COORDINADOR_EQUIPO: "Coordinador de Equipo",
-  COLABORADOR: "Colaborador",
-  OBSERVADOR: "Observador",
-  INVITADO_EXTERNO: "Invitado Externo"
-};
 
 const formatContextLabel = (
   projectId: string | null,
@@ -126,8 +91,6 @@ const formatContextLabel = (
 
   return "Global";
 };
-
-const includesRole = (item: NavItem, role: RoleCode) => item.roles.includes(role);
 
 const hasRequiredPermission = (item: NavItem, permissions: Permission[]) => {
   if (!item.requiredAnyPermissions || item.requiredAnyPermissions.length === 0) {
@@ -303,7 +266,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
     const hasProjectContext = Boolean(dashboardContext.projectId);
 
     return NAV_ITEMS.filter((item) => {
-      if (!includesRole(item, activeRole)) {
+      if (!hasRequiredPermission(item, activePermissions)) {
         return false;
       }
 
@@ -323,21 +286,14 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
 
-      if (!hasRequiredPermission(item, activePermissions)) {
-        return false;
-      }
-
       return true;
     });
   }, [activeRole, dashboardContext.projectId, session.data?.permissions]);
 
   const adminItems = useMemo(() => {
-    if (!activeRole) {
-      return [];
-    }
-
-    return ADMIN_ITEMS.filter((item) => includesRole(item, activeRole));
-  }, [activeRole]);
+    const activePermissions = session.data?.permissions ?? [];
+    return ADMIN_ITEMS.filter((item) => hasRequiredPermission(item, activePermissions));
+  }, [session.data?.permissions]);
 
   if (!hydrated || (accessToken && session.isLoading)) {
     return (
@@ -385,7 +341,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         <div className="mb-5 px-2 space-y-0.5">
           <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Organización</p>
           <h1 className="text-lg font-semibold text-slate-900 tracking-tight">{organizationName}</h1>
-          <p className="text-xs text-slate-500">{roleLabel[activeRole]}</p>
+          <p className="text-xs text-slate-500">{session.data?.roleDisplayName ?? activeRole}</p>
         </div>
 
         <nav className="space-y-0.5">
@@ -463,7 +419,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
             <div>
               <p className="text-[11px] text-slate-400 font-medium tracking-wide">Contexto activo</p>
               <p className="text-sm font-semibold text-slate-800 tracking-tight">
-                {organizationName} · {contextLabel} · {roleLabel[activeRole]}
+                {organizationName} · {contextLabel} · {session.data?.roleDisplayName ?? activeRole}
               </p>
             </div>
 
@@ -519,7 +475,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
                   <div className="space-y-0.5 border-b border-[rgba(0,0,0,0.07)] pb-3">
                     <p className="truncate text-sm font-semibold text-slate-900">{fullName || "Usuario"}</p>
                     <p className="truncate text-xs text-slate-500">{session.data?.email}</p>
-                    <p className="text-[11px] text-slate-400">{roleLabel[activeRole]}</p>
+                    <p className="text-[11px] text-slate-400">{session.data?.roleDisplayName ?? activeRole}</p>
                   </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">

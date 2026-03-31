@@ -8,6 +8,12 @@ const notFound = (message: string): Error => {
   return error;
 };
 
+const badRequest = (message: string): Error => {
+  const error = new Error(message);
+  error.name = "ValidationError";
+  return error;
+};
+
 const TRASH_RETENTION_DAYS = 30;
 const DEFAULT_FILE_MIME = "application/octet-stream";
 const DEFAULT_PROJECT_STORAGE_LIMIT_BYTES = 10 * 1024 * 1024 * 1024;
@@ -90,7 +96,7 @@ export class FileService {
     });
 
     if (!project) {
-      throw new Error("Proyecto no encontrado");
+      throw notFound("Proyecto no encontrado");
     }
 
     let currentFolder:
@@ -116,7 +122,7 @@ export class FileService {
       });
 
       if (!currentFolder) {
-        throw new Error("Carpeta no encontrada en el proyecto");
+        throw notFound("Carpeta no encontrada en el proyecto");
       }
     }
 
@@ -256,7 +262,7 @@ export class FileService {
     });
 
     if (!folder) {
-      throw new Error("La carpeta no existe para el proyecto seleccionado");
+      throw notFound("La carpeta no existe para el proyecto seleccionado");
     }
 
     if (!this.app.storage) {
@@ -264,17 +270,17 @@ export class FileService {
     }
 
     if (input.data.length <= 0) {
-      throw new Error("El archivo está vacío");
+      throw badRequest("El archivo está vacío");
     }
 
     const originalName = sanitizeFileName(input.originalName);
 
     if (isBlockedExtension(originalName)) {
-      throw new Error("El tipo de archivo no está permitido por razones de seguridad");
+      throw badRequest("El tipo de archivo no está permitido por razones de seguridad");
     }
 
     if (!isAllowedMimeType(input.mimeType)) {
-      throw new Error("El tipo MIME del archivo no está permitido");
+      throw badRequest("El tipo MIME del archivo no está permitido");
     }
     const objectKey = `project/${input.projectId}/${input.folderId}/${Date.now()}-${randomUUID()}-${originalName}`;
 
@@ -330,11 +336,11 @@ export class FileService {
     const sanitizedName = sanitizeFileName(input.originalName);
 
     if (isBlockedExtension(sanitizedName)) {
-      throw new Error("El tipo de archivo no está permitido por razones de seguridad");
+      throw badRequest("El tipo de archivo no está permitido por razones de seguridad");
     }
 
     if (!isAllowedMimeType(input.mimeType)) {
-      throw new Error("El tipo MIME del archivo no está permitido");
+      throw badRequest("El tipo MIME del archivo no está permitido");
     }
 
     const decodedPath = (() => {
@@ -352,7 +358,7 @@ export class FileService {
       normalized.startsWith("/") ||
       /\.\./.test(normalized)
     ) {
-      throw new Error("La ruta del archivo no es válida");
+      throw badRequest("La ruta del archivo no es válida");
     }
 
     const folder = await this.app.prisma.folder.findUnique({
@@ -361,7 +367,7 @@ export class FileService {
     });
 
     if (!folder) {
-      throw new Error("La carpeta especificada no existe");
+      throw notFound("La carpeta especificada no existe");
     }
 
     const file = await this.app.prisma.fileObject.create({
@@ -456,7 +462,7 @@ export class FileService {
     });
 
     if (!project) {
-      throw new Error("Proyecto no encontrado");
+      throw notFound("Proyecto no encontrado");
     }
 
     const limit = input.limit ?? 50;
@@ -572,11 +578,11 @@ export class FileService {
     });
 
     if (!file) {
-      throw new Error("Archivo no encontrado en el proyecto");
+      throw notFound("Archivo no encontrado en el proyecto");
     }
 
     if (file.deletedAt) {
-      throw new Error("El archivo ya fue eliminado");
+      throw badRequest("El archivo ya fue eliminado");
     }
 
     return this.app.prisma.$transaction(async (tx) => {
@@ -634,7 +640,7 @@ export class FileService {
     });
 
     if (!project) {
-      throw new Error("Proyecto no encontrado");
+      throw notFound("Proyecto no encontrado");
     }
 
     const usageAggregate = await this.app.prisma.fileObject.aggregate({

@@ -2,25 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { ReportsExecutiveResponse, RoleCode } from "@corelia/types";
+import type { ReportsExecutiveResponse } from "@corelia/types";
 import { apiRequest, getApiBaseUrl, getAuthToken } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
-const REPORT_ALLOWED_ROLES = new Set<RoleCode>([
-  "COLABORADOR",
-  "COORDINADOR_EQUIPO",
-  "LIDER_PROYECTO",
-  "ADMINISTRADOR"
-]);
-
-const roleLabel: Record<RoleCode, string> = {
-  ADMINISTRADOR: "Administrador",
-  LIDER_PROYECTO: "Lider de Proyecto",
-  COORDINADOR_EQUIPO: "Coordinador de Equipo",
-  COLABORADOR: "Colaborador",
-  OBSERVADOR: "Observador",
-  INVITADO_EXTERNO: "Invitado Externo"
-};
 
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString("es-ES", {
@@ -205,8 +190,8 @@ export const ReportsDashboardView = () => {
   const [downloading, setDownloading] = useState<"pdf" | "xlsx" | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  const activeRole = session.data?.activeRole ?? null;
-  const roleCanAccessReports = activeRole ? REPORT_ALLOWED_ROLES.has(activeRole) : false;
+  const permissions = session.data?.permissions ?? [];
+  const roleCanAccessReports = permissions.includes("PROYECTO_LEER");
 
   const reportQuery = useQuery({
     queryKey: ["reports-executive", appliedFilters.from, appliedFilters.to, appliedFilters.projectId, appliedFilters.teamId],
@@ -299,7 +284,7 @@ export const ReportsDashboardView = () => {
               <h1 className="text-xl font-bold">Reporte Ejecutivo</h1>
             </div>
             <p className="text-sm text-indigo-200">
-              {roleLabel[session.data.activeRole]} — KPIs de productividad, SLA, carga y avance
+              {session.data.roleDisplayName ?? session.data.activeRole} — KPIs de productividad, SLA, carga y avance
             </p>
             {report && (
               <p className="text-xs text-indigo-300 mt-1">

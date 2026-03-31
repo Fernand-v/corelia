@@ -107,14 +107,6 @@ type ProjectItem = {
   name: string;
 };
 
-const ROLE_OPTIONS: RoleCode[] = [
-  "COLABORADOR",
-  "COORDINADOR_EQUIPO",
-  "LIDER_PROYECTO",
-  "OBSERVADOR",
-  "INVITADO_EXTERNO",
-  "ADMINISTRADOR"
-];
 
 const TASK_STATUS_OPTIONS: Array<{ status: keyof TaskStatusColors; label: string }> = [
   { status: "PENDIENTE", label: "Pendiente" },
@@ -323,6 +315,12 @@ export const AdminPanelView = () => {
     queryKey: ["admin-roles-matrix"],
     queryFn: () => apiRequest<RolesMatrixItem[]>("/admin/roles-matrix")
   });
+
+  const availableRolesQuery = useQuery({
+    queryKey: ["available-roles"],
+    queryFn: () => apiRequest<Array<{ id: string; key: string; displayName: string; rank: number; isSystem: boolean; scope: string }>>("/identity/roles")
+  });
+  const roleOptions = useMemo(() => availableRolesQuery.data ?? [], [availableRolesQuery.data]);
 
   const overviewQuery = useQuery({
     queryKey: ["admin-overview"],
@@ -1285,9 +1283,9 @@ export const AdminPanelView = () => {
               value={createUserForm.baseRole}
               onChange={(event) => setCreateUserForm((prev) => ({ ...prev, baseRole: event.target.value as RoleCode }))}
             >
-              {ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>
-                  {role}
+              {roleOptions.map((role) => (
+                <option key={role.key} value={role.key}>
+                  {role.displayName}
                 </option>
               ))}
             </select>
@@ -1662,9 +1660,9 @@ export const AdminPanelView = () => {
               value={internalInviteForm.baseRole}
               onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, baseRole: event.target.value as RoleCode }))}
             >
-              {ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>
-                  {role}
+              {roleOptions.map((role) => (
+                <option key={role.key} value={role.key}>
+                  {role.displayName}
                 </option>
               ))}
             </select>

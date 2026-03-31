@@ -49,7 +49,9 @@ const createMockApp = () => {
         create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
       },
       notification: {
-        create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
+        create: vi.fn().mockResolvedValue({ id: crypto.randomUUID() }),
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn().mockResolvedValue({ id: crypto.randomUUID() })
       },
       $transaction: vi.fn()
     }
@@ -223,7 +225,8 @@ describe("Task integration flows", () => {
       status: "EN_REVISION",
       reason: "Inicio",
       changedById: crypto.randomUUID(),
-      activeRole: "ADMINISTRADOR"
+      activeRole: "ADMINISTRADOR",
+      activeRoleRank: 5
     });
 
     expect(app.prisma.taskStatusHistory.create).toHaveBeenCalledTimes(1);
@@ -246,7 +249,8 @@ describe("Task integration flows", () => {
         status: "COMPLETADA",
         reason: "Intento inválido",
         changedById: crypto.randomUUID(),
-        activeRole: "COLABORADOR"
+        activeRole: "COLABORADOR",
+        activeRoleRank: 2
       })
     ).rejects.toThrowError("Transición de estado no permitida");
   });
@@ -266,7 +270,8 @@ describe("Task integration flows", () => {
       status: "EN_REVISION",
       reason: "Inicio",
       changedById: crypto.randomUUID(),
-      activeRole: "ADMINISTRADOR"
+      activeRole: "ADMINISTRADOR",
+      activeRoleRank: 5
     });
 
     expect(updated).toHaveProperty("id");
@@ -339,7 +344,8 @@ describe("Task integration flows", () => {
         taskId: crypto.randomUUID(),
         reason: "No autorizado",
         changedById: crypto.randomUUID(),
-        activeRole: "COLABORADOR"
+        activeRole: "COLABORADOR",
+        activeRoleRank: 2
       })
     ).rejects.toThrowError("Solo administrador, líder o coordinador pueden activar tareas manualmente");
   });
@@ -361,7 +367,8 @@ describe("Task integration flows", () => {
       taskId,
       reason: "Sin cambios",
       changedById: crypto.randomUUID(),
-      activeRole: "ADMINISTRADOR"
+      activeRole: "ADMINISTRADOR",
+      activeRoleRank: 5
     });
 
     expect(task.id).toBe(taskId);
@@ -426,7 +433,8 @@ describe("Task integration flows", () => {
     const result = await service.finalizeAndAdvance({
       taskId,
       changedById: assigneeId,
-      activeRole: "COLABORADOR"
+      activeRole: "COLABORADOR",
+      activeRoleRank: 2
     });
 
     expect(result.completedTask.status).toBe("COMPLETADA");
@@ -450,7 +458,8 @@ describe("Task integration flows", () => {
       service.finalizeAndAdvance({
         taskId: crypto.randomUUID(),
         changedById: crypto.randomUUID(),
-        activeRole: "COLABORADOR"
+        activeRole: "COLABORADOR",
+        activeRoleRank: 2
       })
     ).rejects.toThrowError("No puedes finalizar una tarea asignada a otro usuario");
   });
@@ -474,7 +483,8 @@ describe("Task integration flows", () => {
         reason: "Cambio",
         reopenIfCompleted: false,
         requestedById: crypto.randomUUID(),
-        activeRole: "ADMINISTRADOR"
+        activeRole: "ADMINISTRADOR",
+        activeRoleRank: 5
       })
     ).rejects.toThrowError("No se puede reasignar una tarea completada");
   });
@@ -512,6 +522,7 @@ describe("Task integration flows", () => {
         reopenIfCompleted: true,
         requestedById: coordinatorId,
         activeRole: "COORDINADOR_EQUIPO",
+        activeRoleRank: 3,
         projectContextId: projectId
       })
     ).rejects.toThrowError("Solo Líder o Administrador pueden reabrir tareas completadas");
@@ -528,7 +539,8 @@ describe("Task integration flows", () => {
         reason: "Cambio",
         reopenIfCompleted: true,
         requestedById: crypto.randomUUID(),
-        activeRole: "COLABORADOR"
+        activeRole: "COLABORADOR",
+        activeRoleRank: 2
       })
     ).rejects.toThrowError("No tienes permiso para reasignar");
   });
@@ -567,7 +579,8 @@ describe("Task integration flows", () => {
       reason: "Cambio aprobado",
       reopenIfCompleted: true,
       requestedById: crypto.randomUUID(),
-      activeRole: "ADMINISTRADOR"
+      activeRole: "ADMINISTRADOR",
+      activeRoleRank: 5
     });
 
     expect(task.status).toBe("PENDIENTE");

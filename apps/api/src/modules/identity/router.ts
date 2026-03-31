@@ -9,6 +9,16 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
   const service = new IdentityService(app);
 
   app.get(
+    "/roles",
+    {
+      config: {
+        requiresAuth: true
+      }
+    },
+    async () => service.listAvailableRoles()
+  );
+
+  app.get(
     "/active-role",
     {
       config: {

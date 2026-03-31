@@ -73,7 +73,8 @@ const envSchema = z.object({
   OTEL_ENABLED: envBoolean.default(false),
   OTEL_SERVICE_NAME: z.string().default("corelia-api"),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional().or(z.literal("")),
-  GRAFANA_URL: z.string().default("/grafana")
+  GRAFANA_URL: z.string().default("/grafana"),
+  METRICS_SECRET: z.string().min(16).optional()
 });
 
 export type Env = z.infer<typeof envSchema>;

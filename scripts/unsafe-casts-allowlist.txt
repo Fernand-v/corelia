@@ -1,16 +1,22 @@
-apps/api/src/modules/admin/router.ts:1135:          newDataText: result as unknown as Record<string, unknown>
+apps/api/src/modules/admin/router.ts:1151:          newDataText: result as unknown as Record<string, unknown>
 apps/api/src/modules/admin/router.ts:545:          newDataText: payload as unknown as Record<string, unknown>
 apps/api/src/modules/admin/router.ts:615:          newDataText: payload as unknown as Record<string, unknown>
-apps/api/src/modules/admin/router.ts:790:          newDataText: payload as unknown as Record<string, unknown>
+apps/api/src/modules/admin/router.ts:786:          newDataText: payload as unknown as Record<string, unknown>
 apps/api/src/modules/admin/router.ts:95:          newDataText: payload as unknown as Record<string, unknown>
-apps/api/src/modules/admin/service.ts:131:    const valid = CODE_CATALOG_FIELDS[domain].includes(field as never);
-apps/api/src/modules/admin/service.ts:2712:      ...(input.field ? { field: input.field as never } : {}),
-apps/api/src/modules/admin/service.ts:2816:      field: input.field as never,
-apps/api/src/modules/decisions/service.ts:56:        ...(input.linkedEntityType ? { linkedEntityType: input.linkedEntityType as never } : {}),
+apps/api/src/modules/admin/services/catalogs-settings-overview.ts:134:      field: input.field as never,
+apps/api/src/modules/admin/services/catalogs-settings-overview.ts:28:      ...(input.field ? { field: input.field as never } : {}),
+apps/api/src/modules/admin/services/common.ts:117:    const legacyCode = (actor?.baseRole as unknown as { code?: unknown } | undefined)?.code;
+apps/api/src/modules/admin/services/common.ts:135:    const valid = CODE_CATALOG_FIELDS[domain].includes(field as never);
+apps/api/src/modules/forms/service.ts:1000:          ? { conditionalLogic: input.conditionalLogic ? (input.conditionalLogic as unknown as Prisma.InputJsonValue) : Prisma.JsonNull }
+apps/api/src/modules/forms/service.ts:143:      return obj as unknown as ConditionalLogic;
+apps/api/src/modules/forms/service.ts:372:        return Number.isNaN(numeric) ? (null as unknown as Prisma.JsonValue) : numeric;
+apps/api/src/modules/forms/service.ts:917:        ...(input.conditionalLogic ? { conditionalLogic: input.conditionalLogic as unknown as Prisma.InputJsonValue } : {}),
 apps/api/src/modules/identity/router.ts:143:          newDataText: checklist as unknown as Record<string, unknown>
-apps/api/src/modules/meetings/service.ts:375:        content: input.content as never
-apps/api/src/plugins/audit.ts:17:        previousDataText: request.auditEvent.previousDataText as never,
-apps/api/src/plugins/audit.ts:18:        newDataText: request.auditEvent.newDataText as never,
-apps/web/components/task-board.tsx:1075:                                          event as unknown as ReactPointerEvent<HTMLDivElement>,
+apps/api/src/modules/meetings/service.ts:409:        content: input.content as never
+apps/web/components/diagram/maxgraph/maxgraph-editor-runtime.ts:1405:    const providerState = provider as unknown as { synced?: boolean; status?: string };
 apps/web/components/task-board.tsx:1092:                                          event as unknown as ReactPointerEvent<HTMLDivElement>,
-apps/workers/src/jobs/webhook.worker.ts:46:            payload: payload as never,
+apps/web/components/task-board.tsx:1109:                                          event as unknown as ReactPointerEvent<HTMLDivElement>,
+apps/web/lib/call-route-ref.ts:17:  const maybeGlobal = globalThis as unknown as {
+apps/web/lib/context.ts:31:  const maybeGlobal = globalThis as unknown as {
+apps/web/lib/documents-editor-route-ref.ts:15:  const maybeGlobal = globalThis as unknown as {
+apps/workers/src/jobs/webhook.worker.ts:62:            payload: payload as never,

@@ -56,28 +56,28 @@ export const createApp = async (): Promise<FastifyInstance> => {
     };
     const prismaCode = typeof knownError.code === "string" ? knownError.code : null;
 
-    const isValidationError =
-      knownError.name === "ValidationError" ||
-      knownError.name === "ZodError" ||
-      Boolean(knownError.validation);
+    const resolveStatusCode = (): number => {
+      if (
+        knownError.name === "ValidationError" ||
+        knownError.name === "ZodError" ||
+        Boolean(knownError.validation)
+      )
+        return 400;
+      if (knownError.name === "Unauthorized") return 401;
+      if (knownError.name === "Forbidden") return 403;
+      if (knownError.name === "NotFoundError" || prismaCode === "P2025") return 404;
+      if (knownError.name === "Conflict" || prismaCode === "P2002") return 409;
+      if (knownError.name === "ServiceUnavailable") return 503;
+      if (
+        typeof knownError.statusCode === "number" &&
+        knownError.statusCode >= 400 &&
+        knownError.statusCode <= 599
+      )
+        return knownError.statusCode;
+      return 500;
+    };
 
-    const statusCode = isValidationError
-      ? 400
-      : knownError.name === "Forbidden"
-        ? 403
-        : knownError.name === "NotFoundError" || prismaCode === "P2025"
-          ? 404
-          : knownError.name === "Conflict" || prismaCode === "P2002"
-            ? 409
-            : knownError.name === "ServiceUnavailable"
-              ? 503
-              : knownError.name === "Unauthorized"
-                ? 401
-                : typeof knownError.statusCode === "number" &&
-                    knownError.statusCode >= 400 &&
-                    knownError.statusCode <= 599
-                  ? knownError.statusCode
-                  : 500;
+    const statusCode = resolveStatusCode();
 
     if (statusCode >= 500) {
       app.log.error(knownError);
@@ -146,6 +146,8 @@ export const createApp = async (): Promise<FastifyInstance> => {
   await app.register(homeRouter, { prefix: "/api/v1/home" });
   await app.register(adminRouter, { prefix: "/api/v1/admin" });
   await app.register(reportsRouter, { prefix: "/api/v1/reports" });
+  // Expenses routes are intentionally scoped under /api/v1/projects/:projectId/
+  // because all endpoints are project-level resources (budget details, expenses, summary).
   await app.register(expensesRouter, { prefix: "/api/v1" });
 
   return app;

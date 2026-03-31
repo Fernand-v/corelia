@@ -10,14 +10,6 @@ import { apiRequest } from "@/lib/api";
 import { getContextFromSearchParams, withDashboardContext } from "@/lib/context";
 import { AnnouncementContent } from "@/components/announcement-content";
 
-const roleLabel: Record<HomeDashboard["role"], string> = {
-  ADMINISTRADOR: "Administrador",
-  LIDER_PROYECTO: "Líder de Proyecto",
-  COORDINADOR_EQUIPO: "Coordinador de Equipo",
-  COLABORADOR: "Colaborador",
-  OBSERVADOR: "Observador",
-  INVITADO_EXTERNO: "Invitado Externo"
-};
 
 const serviceLabel: Record<string, string> = {
   api: "API",
@@ -176,7 +168,7 @@ export const HomeDashboardView = () => {
       {/* Hero card */}
       <Card className="space-y-1.5">
         <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Home</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{roleLabel[dashboard.role]}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{(dashboard as { roleDisplayName?: string }).roleDisplayName ?? dashboard.role}</h1>
         <p className="text-sm text-slate-500">
           {dashboard.organizationName} · {contextLabel(dashboard)}
         </p>

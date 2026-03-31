@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { getMostRestrictiveRole, getPermissionsForRole, resolveRoleKey } from "../../lib/rbac.js";
+import type { Permission } from "@corelia/types";
+import { resolveRoleKey } from "../../lib/rbac.js";
 
 export class IdentityService {
   private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
@@ -112,16 +113,36 @@ export class IdentityService {
     return null;
   }
 
+  private async loadPermissionsForRole(roleId: string): Promise<Permission[]> {
+    const role = await this.app.prisma.role.findUnique({
+      where: { id: roleId },
+      select: {
+        rolePermissions: {
+          select: {
+            permission: {
+              select: { key: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!role) return [];
+    return role.rolePermissions.map((rp) => rp.permission.key as Permission);
+  }
+
+  async listAvailableRoles() {
+    const roles = await this.app.prisma.role.findMany({
+      select: { id: true, key: true, displayName: true, rank: true, isSystem: true, scope: true },
+      orderBy: [{ rank: "desc" }, { displayName: "asc" }]
+    });
+    return roles;
+  }
+
   async resolveActiveRole(userId: string, projectId?: string) {
     const guestRole = await this.app.prisma.role.findUnique({
-      where: {
-        key: "INVITADO_EXTERNO"
-      },
-      select: {
-        id: true,
-        key: true,
-        code: true
-      }
+      where: { key: "INVITADO_EXTERNO" },
+      select: { id: true, key: true, rank: true }
     });
 
     if (!guestRole) {
@@ -133,11 +154,7 @@ export class IdentityService {
         where: { projectId, userId },
         select: {
           role: {
-            select: {
-              id: true,
-              key: true,
-              code: true
-            }
+            select: { id: true, key: true, rank: true }
           }
         }
       });
@@ -149,61 +166,20 @@ export class IdentityService {
         projectId,
         roleId: role.id,
         role: roleKey,
-        permissions: getPermissionsForRole(roleKey)
+        permissions: await this.loadPermissionsForRole(role.id)
       };
     }
 
-    const memberships = await this.app.prisma.projectMember.findMany({
-      where: { userId },
-      select: {
-        role: {
-          select: {
-            id: true,
-            key: true,
-            code: true
-          }
-        }
-      }
-    });
     const user = await this.app.prisma.user.findUnique({
       where: { id: userId },
       select: {
         baseRole: {
-          select: {
-            id: true,
-            key: true,
-            code: true
-          }
+          select: { id: true, key: true, rank: true }
         }
       }
     });
 
-    const roles = memberships
-      .map((m) => resolveRoleKey(m.role))
-      .filter((role): role is string => Boolean(role));
-    if (user?.baseRole) {
-      const baseRoleKey = resolveRoleKey(user.baseRole);
-      if (baseRoleKey) {
-        roles.push(baseRoleKey);
-      }
-    }
-
-    const role = getMostRestrictiveRole(roles.length ? roles : ["INVITADO_EXTERNO"]);
-    const resolvedRole =
-      memberships.find((membership) => resolveRoleKey(membership.role) === role)?.role ??
-      (resolveRoleKey(user?.baseRole) === role ? user?.baseRole ?? null : null) ??
-      (await this.app.prisma.role.findUnique({
-        where: {
-          key: role
-        },
-        select: {
-          id: true,
-          key: true,
-          code: true
-        }
-      })) ??
-      guestRole;
-
+    const resolvedRole = user?.baseRole ?? guestRole;
     const resolvedRoleKey = resolveRoleKey(resolvedRole) ?? "INVITADO_EXTERNO";
 
     return {
@@ -211,7 +187,7 @@ export class IdentityService {
       projectId: null,
       roleId: resolvedRole.id,
       role: resolvedRoleKey,
-      permissions: getPermissionsForRole(resolvedRoleKey)
+      permissions: await this.loadPermissionsForRole(resolvedRole.id)
     };
   }
 

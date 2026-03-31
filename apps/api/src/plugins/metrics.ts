@@ -1,6 +1,7 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import client from "prom-client";
+import { env } from "../config/env.js";
 
 const metricsPlugin = async (app: FastifyInstance) => {
   const register = new client.Registry();
@@ -50,7 +51,20 @@ const metricsPlugin = async (app: FastifyInstance) => {
         skipMaintenance: true
       }
     },
-    async (_request, reply) => {
+    async (request, reply) => {
+      if (env.METRICS_SECRET) {
+        const authHeader = request.headers.authorization;
+        if (!authHeader || authHeader !== `Bearer ${env.METRICS_SECRET}`) {
+          return reply.code(401).send({ message: "No autorizado" });
+        }
+      } else {
+        const ip = request.ip;
+        const isLocal = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+        if (!isLocal) {
+          return reply.code(403).send({ message: "Acceso restringido a red local" });
+        }
+      }
+
       const metrics = await register.metrics();
       return reply.type(register.contentType).send(metrics);
     }

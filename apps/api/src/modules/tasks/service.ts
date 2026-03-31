@@ -1,25 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import type { RoleCode, TaskStatus } from "@corelia/types";
-import { canReassign, canReopenCompletedTask, resolveRoleKey } from "../../lib/rbac.js";
+import { canReassign, canReopenCompletedTask, isManagerOrAbove, resolveRoleKey } from "../../lib/rbac.js";
 import { createAndDispatchNotification } from "../../lib/notifications.js";
 import { attachTraceContext } from "../../lib/tracing.js";
 
 export class TaskService {
   private static readonly LEGACY_UNMAPPED_CODE = "LEGACY_UNMAPPED";
-  private static readonly MANAGER_ROLES: RoleCode[] = [
-    "ADMINISTRADOR",
-    "LIDER_PROYECTO",
-    "COORDINADOR_EQUIPO"
-  ];
 
   constructor(private readonly app: FastifyInstance) {}
 
   private syncTaskSearch(taskId: string) {
     void this.app.searchIndex?.syncTask(taskId);
-  }
-
-  private isManagerRole(role: RoleCode): boolean {
-    return TaskService.MANAGER_ROLES.includes(role);
   }
 
   private normalizeLegacyCode(input: {
@@ -370,10 +361,11 @@ export class TaskService {
     currentAssigneeId: string | null;
     newAssigneeId: string;
     requestedById: string;
-    activeRole: RoleCode;
+    activeRoleRank: number;
     projectContextId?: string | null;
   }) {
-    if (input.activeRole === "ADMINISTRADOR") {
+    // Admins (rank 5) bypass all scope checks
+    if (input.activeRoleRank >= 5) {
       return;
     }
 
@@ -390,17 +382,18 @@ export class TaskService {
         role: {
           select: {
             key: true,
-            code: true
+            rank: true
           }
         }
       }
     });
 
-    if (!member || resolveRoleKey(member.role) !== input.activeRole) {
+    if (!member) {
       throw this.forbidden("No tienes permisos sobre este proyecto para reasignar");
     }
 
-    if (input.activeRole !== "COORDINADOR_EQUIPO") {
+    // Only coordinators (rank 3) have team-scope restrictions
+    if (member.role.rank !== 3) {
       return;
     }
 
@@ -678,6 +671,7 @@ export class TaskService {
     blockedReasonCatalogId?: string;
     changedById: string;
     activeRole: RoleCode;
+    activeRoleRank: number;
   }) {
     const task = await this.app.prisma.task.findUnique({ where: { id: input.taskId } });
     if (!task) {
@@ -688,7 +682,7 @@ export class TaskService {
       return task;
     }
 
-    const isManager = this.isManagerRole(input.activeRole);
+    const isManager = isManagerOrAbove(input.activeRoleRank);
     const isAssignee = task.assigneeId === input.changedById;
 
     const transition = `${task.status}->${input.status}`;
@@ -859,8 +853,9 @@ export class TaskService {
     reasonCatalogId?: string;
     changedById: string;
     activeRole: RoleCode;
+    activeRoleRank: number;
   }) {
-    if (!this.isManagerRole(input.activeRole)) {
+    if (!isManagerOrAbove(input.activeRoleRank)) {
       throw this.forbidden("Solo administrador, líder o coordinador pueden activar tareas manualmente");
     }
 
@@ -937,6 +932,7 @@ export class TaskService {
     reasonCatalogId?: string;
     changedById: string;
     activeRole: RoleCode;
+    activeRoleRank: number;
   }) {
     const task = await this.app.prisma.task.findUnique({
       where: { id: input.taskId }
@@ -945,9 +941,7 @@ export class TaskService {
       throw new Error("Tarea no encontrada");
     }
 
-    const canManageForeignTask = ["ADMINISTRADOR", "LIDER_PROYECTO", "COORDINADOR_EQUIPO"].includes(
-      input.activeRole
-    );
+    const canManageForeignTask = isManagerOrAbove(input.activeRoleRank);
     if (task.assigneeId && task.assigneeId !== input.changedById && !canManageForeignTask) {
       throw this.forbidden("No puedes finalizar una tarea asignada a otro usuario");
     }
@@ -1102,9 +1096,10 @@ export class TaskService {
     reopenIfCompleted: boolean;
     requestedById: string;
     activeRole: RoleCode;
+    activeRoleRank: number;
     projectContextId?: string | null;
   }) {
-    if (!canReassign(input.activeRole)) {
+    if (!canReassign(input.activeRoleRank)) {
       throw new Error("No tienes permiso para reasignar esta tarea");
     }
 
@@ -1118,7 +1113,7 @@ export class TaskService {
       currentAssigneeId: task.assigneeId,
       newAssigneeId: input.newAssigneeId,
       requestedById: input.requestedById,
-      activeRole: input.activeRole,
+      activeRoleRank: input.activeRoleRank,
       ...(input.projectContextId !== undefined
         ? { projectContextId: input.projectContextId }
         : {})
@@ -1128,7 +1123,7 @@ export class TaskService {
       if (!input.reopenIfCompleted) {
         throw this.forbidden("No se puede reasignar una tarea completada sin reapertura autorizada");
       }
-      if (!canReopenCompletedTask(input.activeRole)) {
+      if (!canReopenCompletedTask(input.activeRoleRank)) {
         throw this.forbidden("Solo Líder o Administrador pueden reabrir tareas completadas");
       }
     }
