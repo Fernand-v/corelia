@@ -1,3 +1,4 @@
+import { createHmac } from "crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("bullmq", () => ({
@@ -74,13 +75,16 @@ describe("webhookWorker logic", () => {
     const { webhookWorker } = await import("./webhook.worker.js");
     const handler = (webhookWorker as unknown as { _handler: (job: unknown) => Promise<void> })._handler;
 
-    await handler({ data: { endpointId: "ep-1", payload: { event: "task.created", taskId: "t-1" } } });
+    const payload = { event: "task.created", taskId: "t-1" };
+    await handler({ data: { endpointId: "ep-1", payload } });
+
+    const expectedSignature = `sha256=${createHmac("sha256", "s3cret").update(JSON.stringify(payload)).digest("hex")}`;
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://example.com/hook",
       expect.objectContaining({
         method: "POST",
-        headers: expect.objectContaining({ "x-corelia-signature": "s3cret" })
+        headers: expect.objectContaining({ "x-corelia-signature": expectedSignature })
       })
     );
     expect(mockPrisma.webhookDelivery.create).toHaveBeenCalledWith(

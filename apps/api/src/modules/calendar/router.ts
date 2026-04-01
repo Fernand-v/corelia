@@ -11,6 +11,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "CALENDARIO",
         requiredPermission: "CALENDARIO_LEER"
       }
     },
@@ -34,6 +35,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "CALENDARIO",
         requiredPermission: "CALENDARIO_LEER"
       }
     },
@@ -53,6 +55,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "CALENDARIO",
         requiredPermission: "CALENDARIO_GESTIONAR"
       }
     },
@@ -86,6 +89,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "CALENDARIO",
         requiredPermission: "CALENDARIO_LEER"
       }
     },
@@ -105,6 +109,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "CALENDARIO",
         requiredPermission: "CALENDARIO_GESTIONAR"
       }
     },
@@ -123,6 +128,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "CALENDARIO",
         requiredPermission: "CALENDARIO_GESTIONAR"
       }
     },
@@ -145,6 +151,7 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "CALENDARIO",
         requiredPermission: "CALENDARIO_GESTIONAR"
       }
     },

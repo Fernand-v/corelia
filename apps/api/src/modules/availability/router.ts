@@ -11,6 +11,7 @@ export const availabilityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "DISPONIBILIDAD",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -30,6 +31,7 @@ export const availabilityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "DISPONIBILIDAD",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -49,6 +51,7 @@ export const availabilityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "DISPONIBILIDAD",
         requiredPermission: "TAREA_GESTIONAR"
       }
     },

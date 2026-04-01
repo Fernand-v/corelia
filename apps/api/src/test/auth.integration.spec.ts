@@ -46,6 +46,9 @@ const createMockApp = () => {
     },
     jwt: {
       sign: vi.fn().mockResolvedValue("access-token")
+    },
+    redis: {
+      set: vi.fn().mockResolvedValue("OK")
     }
   } as unknown as ConstructorParameters<typeof AuthService>[0];
 };

@@ -44,6 +44,7 @@ export type SystemOverallStatus = "OK" | "ERROR";
 
 export const SYSTEM_STATUS_ENTITY_ID = "11111111-1111-4111-8111-111111111111";
 export const SYSTEM_STATUS_REASON_CODE = "SYSTEM_STATUS_CHANGE";
+const RBAC_CACHE_VERSION_KEY = "rbac:version";
 
 type AuditTargetFields = {
   targetUserId: string | null;
@@ -79,8 +80,12 @@ export class AdminCommonService {
     return error;
   }
 
-  protected async invalidateRoleCache(roleId: string) {
-    await this.app.redis.del(`rbac:role:${roleId}:v1`);
+  protected async invalidateRoleCache(_roleId: string) {
+    await this.app.redis.incr(RBAC_CACHE_VERSION_KEY);
+  }
+
+  protected async invalidateRbacCache() {
+    await this.app.redis.incr(RBAC_CACHE_VERSION_KEY);
   }
 
   protected normalizeRoleCode(input: { code?: string; displayName: string }) {

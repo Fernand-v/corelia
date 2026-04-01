@@ -68,10 +68,6 @@ export const webhookWorker = new Worker(
     );
   },
   {
-    connection,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: "exponential", delay: 5_000 }
-    }
+    connection
   }
 );

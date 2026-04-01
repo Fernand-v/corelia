@@ -11,6 +11,7 @@ export const searchRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "BUSQUEDA",
         requiredPermission: "PROYECTO_LEER"
       }
     },

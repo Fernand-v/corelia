@@ -11,6 +11,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "REUNIONES",
         requiredPermission: "REUNION_GESTIONAR"
       }
     },
@@ -47,6 +48,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "REUNIONES",
         requiredPermission: "REUNION_LEER"
       }
     },
@@ -69,6 +71,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "REUNIONES",
         requiredPermission: "REUNION_LEER"
       }
     },
@@ -88,6 +91,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "REUNIONES",
         requiredPermission: "REUNION_GESTIONAR"
       }
     },
@@ -115,6 +119,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "REUNIONES",
         requiredPermission: "REUNION_GESTIONAR"
       }
     },
@@ -158,6 +163,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "REUNIONES",
         requiredPermission: "REUNION_GESTIONAR"
       }
     },
@@ -182,6 +188,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "REUNIONES",
         requiredPermission: "REUNION_LEER"
       }
     },
@@ -201,6 +208,7 @@ export const meetingsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "REUNIONES",
         requiredPermission: "REUNION_LEER"
       }
     },

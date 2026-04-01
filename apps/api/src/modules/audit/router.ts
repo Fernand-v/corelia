@@ -11,6 +11,7 @@ export const auditRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "AUDITORIA",
         requiredPermission: "AUDITORIA_LEER"
       }
     },

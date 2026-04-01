@@ -53,7 +53,7 @@ const protectedPosts = [
 test.describe("API — Endpoints protegidos (GET sin auth → 401)", () => {
   for (const { path, name } of protectedGets) {
     test(`GET ${path} (${name}) rechaza sin token`, async ({ request }) => {
-      const res = await request.get(path);
+      const res = await request.get(path.replace(/^\//, ""));
       expect(res.status()).toBe(401);
     });
   }
@@ -62,7 +62,7 @@ test.describe("API — Endpoints protegidos (GET sin auth → 401)", () => {
 test.describe("API — Endpoints protegidos (POST sin auth → 401)", () => {
   for (const { path, name } of protectedPosts) {
     test(`POST ${path} (${name}) rechaza sin token`, async ({ request }) => {
-      const res = await request.post(path, { data: {} });
+      const res = await request.post(path.replace(/^\//, ""), { data: {} });
       expect(res.status()).toBe(401);
     });
   }

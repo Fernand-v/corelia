@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import {
+  RBAC_PROGRAMS,
   RBAC_PERMISSION_CATEGORIES,
   RBAC_PERMISSIONS,
   RBAC_ROLE_PERMISSION_MATRIX,
@@ -9,6 +10,30 @@ import {
 const prisma = new PrismaClient();
 
 async function main() {
+  for (const [index, program] of RBAC_PROGRAMS.entries()) {
+    await prisma.program.upsert({
+      where: { key: program.code },
+      update: {
+        code: index + 1,
+        key: program.code,
+        displayName: program.displayName,
+        description: program.description,
+        sortOrder: program.sortOrder,
+        isSystem: true,
+        isActive: true
+      },
+      create: {
+        code: index + 1,
+        key: program.code,
+        displayName: program.displayName,
+        description: program.description,
+        sortOrder: program.sortOrder,
+        isSystem: true,
+        isActive: true
+      }
+    });
+  }
+
   for (const [index, category] of RBAC_PERMISSION_CATEGORIES.entries()) {
     await prisma.permissionCategory.upsert({
       where: { key: category.code },
@@ -35,12 +60,23 @@ async function main() {
       key: true
     }
   });
+  const programs = await prisma.program.findMany({
+    select: {
+      id: true,
+      key: true
+    }
+  });
   const categoryIdByKey = new Map(categories.map((category) => [category.key, category.id]));
+  const programIdByKey = new Map(programs.map((program) => [program.key, program.id]));
 
   for (const [index, permission] of RBAC_PERMISSIONS.entries()) {
     const categoryId = categoryIdByKey.get(permission.categoryCode);
     if (!categoryId) {
       throw new Error(`Categoria de permiso no encontrada: ${permission.categoryCode}`);
+    }
+    const programId = programIdByKey.get(permission.programCode);
+    if (!programId) {
+      throw new Error(`Programa no encontrado para permiso: ${permission.programCode}`);
     }
 
     await prisma.permission.upsert({
@@ -50,14 +86,20 @@ async function main() {
         key: permission.code,
         displayName: permission.displayName,
         description: permission.description,
-        categoryId
+        categoryId,
+        programId,
+        isSystem: true,
+        isActive: true
       },
       create: {
         code: index + 1,
         key: permission.code,
         displayName: permission.displayName,
         description: permission.description,
-        categoryId
+        categoryId,
+        programId,
+        isSystem: true,
+        isActive: true
       }
     });
   }
@@ -86,11 +128,22 @@ async function main() {
     });
   }
 
-  const [roles, permissions] = await Promise.all([
+  const [roles, programs, permissions] = await Promise.all([
     prisma.role.findMany({
       where: {
         key: {
           in: RBAC_SYSTEM_ROLES.map((role) => role.code)
+        }
+      },
+      select: {
+        id: true,
+        key: true
+      }
+    }),
+    prisma.program.findMany({
+      where: {
+        key: {
+          in: RBAC_PROGRAMS.map((program) => program.code)
         }
       },
       select: {
@@ -112,7 +165,11 @@ async function main() {
   ]);
 
   const roleIdByKey = new Map(roles.map((role) => [role.key, role.id]));
+  const programIdBySeedKey = new Map(programs.map((program) => [program.key, program.id]));
   const permissionIdByKey = new Map(permissions.map((permission) => [permission.key, permission.id]));
+  const permissionProgramCodeByPermissionCode = new Map(
+    RBAC_PERMISSIONS.map((permission) => [permission.code, permission.programCode])
+  );
 
   for (const role of RBAC_SYSTEM_ROLES) {
     const roleId = roleIdByKey.get(role.code);
@@ -128,26 +185,62 @@ async function main() {
       }
     });
 
-    if (permissionCodes.length === 0) {
-      continue;
+    await prisma.programRole.deleteMany({
+      where: {
+        roleId
+      }
+    });
+
+    if (permissionCodes.length > 0) {
+      const rolePermissionRows = permissionCodes.map((permissionCode) => {
+        const permissionId = permissionIdByKey.get(permissionCode);
+        if (!permissionId) {
+          throw new Error(`Permiso no encontrado para role matrix: ${permissionCode}`);
+        }
+
+        return {
+          roleId,
+          permissionId
+        };
+      });
+
+      await prisma.rolePermission.createMany({
+        data: rolePermissionRows,
+        skipDuplicates: true
+      });
     }
 
-    const rolePermissionRows = permissionCodes.map((permissionCode) => {
-      const permissionId = permissionIdByKey.get(permissionCode);
-      if (!permissionId) {
-        throw new Error(`Permiso no encontrado para role matrix: ${permissionCode}`);
+    const programCodesForRole = new Set<string>();
+    if (role.code === "ADMINISTRADOR") {
+      for (const program of RBAC_PROGRAMS) {
+        programCodesForRole.add(program.code);
       }
+    } else {
+      for (const permissionCode of permissionCodes) {
+        const programCode = permissionProgramCodeByPermissionCode.get(permissionCode);
+        if (programCode) {
+          programCodesForRole.add(programCode);
+        }
+      }
+    }
 
+    const roleProgramRows = [...programCodesForRole].map((programCode) => {
+      const programId = programIdBySeedKey.get(programCode);
+      if (!programId) {
+        throw new Error(`Programa no encontrado para asignar a rol: ${programCode}`);
+      }
       return {
         roleId,
-        permissionId
+        programId
       };
     });
 
-    await prisma.rolePermission.createMany({
-      data: rolePermissionRows,
-      skipDuplicates: true
-    });
+    if (roleProgramRows.length > 0) {
+      await prisma.programRole.createMany({
+        data: roleProgramRows,
+        skipDuplicates: true
+      });
+    }
   }
 
   console.log("RBAC seed completado");

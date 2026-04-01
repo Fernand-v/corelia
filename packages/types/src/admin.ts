@@ -2,14 +2,19 @@ import { z } from "zod";
 import { codeValueSchema, idSchema, paginationSchema, timestampSchema, windowScheduleSchema } from "./common.js";
 import { signupRequestStatusSchema } from "./auth.js";
 import { requestStatusSchema } from "./enums.js";
-import { permissionSchema, roleCodeSchema, systemRoleCodeSchema } from "./rbac.js";
+import {
+  permissionCategoryCodeSchema,
+  permissionSchema,
+  programCodeSchema,
+  roleCodeSchema
+} from "./rbac.js";
 import { serviceHealthSchema } from "./status.js";
 
 export const adminUserStateSchema = z.enum(["ACTIVO", "INACTIVO", "ONBOARDING", "OFFBOARDING"]);
 
 export const adminUsersQuerySchema = z.object({
   search: z.string().trim().min(1).max(120).optional(),
-  role: systemRoleCodeSchema.optional(),
+  role: roleCodeSchema.optional(),
   teamId: idSchema.optional(),
   state: adminUserStateSchema.optional()
 });
@@ -18,7 +23,7 @@ export const adminUserListItemSchema = z.object({
   id: idSchema,
   fullName: z.string().min(1),
   email: z.string().email(),
-  role: systemRoleCodeSchema,
+  role: roleCodeSchema,
   teamId: idSchema.nullable(),
   teamName: z.string().nullable(),
   state: adminUserStateSchema,
@@ -36,7 +41,7 @@ export const adminCreateUserInputSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   password: z.string().min(8).max(128).optional(),
-  baseRole: systemRoleCodeSchema,
+  baseRole: roleCodeSchema,
   teamId: idSchema.optional(),
   workSchedule: windowScheduleSchema.optional(),
   startOnboarding: z.boolean().default(false),
@@ -47,7 +52,7 @@ export const adminUpdateUserInputSchema = z.object({
   firstName: z.string().min(1).max(100).optional(),
   lastName: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
-  baseRole: systemRoleCodeSchema.optional(),
+  baseRole: roleCodeSchema.optional(),
   teamId: idSchema.nullable().optional(),
   isActive: z.boolean().optional(),
   workSchedule: windowScheduleSchema.optional()
@@ -138,7 +143,7 @@ export const adminExtendInviteInputSchema = z.object({
 
 export const adminCreateInternalInviteInputSchema = z.object({
   email: z.string().email(),
-  baseRole: systemRoleCodeSchema,
+  baseRole: roleCodeSchema,
   teamId: idSchema.optional(),
   expiresAt: timestampSchema
 });
@@ -146,7 +151,7 @@ export const adminCreateInternalInviteInputSchema = z.object({
 export const adminInternalInviteItemSchema = z.object({
   id: idSchema,
   email: z.string().email(),
-  baseRole: systemRoleCodeSchema,
+  baseRole: roleCodeSchema,
   teamId: idSchema.nullable(),
   teamName: z.string().nullable(),
   expiresAt: timestampSchema,
@@ -191,7 +196,7 @@ export const adminSignupRequestListSchema = z.object({
 });
 
 export const adminApproveSignupRequestInputSchema = z.object({
-  baseRole: systemRoleCodeSchema.default("COLABORADOR"),
+  baseRole: roleCodeSchema.default("COLABORADOR"),
   teamId: idSchema.optional(),
   expiresAt: timestampSchema.optional()
 });
@@ -282,9 +287,110 @@ export const adminUpdateCodeCatalogInputSchema = z.object({
   isActive: z.boolean().optional()
 });
 
-export const adminRolePermissionSchema = z.object({
+export const adminProgramSchema = z.object({
+  id: idSchema,
+  code: programCodeSchema,
+  numericCode: z.number().int().min(1),
+  displayName: z.string().min(1).max(120),
+  description: z.string().max(500).nullable(),
+  sortOrder: z.number().int().min(0),
+  isSystem: z.boolean(),
+  isActive: z.boolean(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema
+});
+
+export const adminCreateProgramInputSchema = z.object({
+  code: programCodeSchema.optional(),
+  displayName: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(500).nullable().optional(),
+  sortOrder: z.number().int().min(0).max(1000).optional(),
+  isActive: z.boolean().optional()
+});
+
+export const adminUpdateProgramInputSchema = z
+  .object({
+    displayName: z.string().trim().min(2).max(120).optional(),
+    description: z.string().trim().max(500).nullable().optional(),
+    sortOrder: z.number().int().min(0).max(1000).optional(),
+    isActive: z.boolean().optional()
+  })
+  .refine(
+    (payload) =>
+      payload.displayName !== undefined ||
+      payload.description !== undefined ||
+      payload.sortOrder !== undefined ||
+      payload.isActive !== undefined,
+    {
+      message: "Debe enviar al menos un campo para actualizar"
+    }
+  );
+
+export const adminListProgramsQuerySchema = z.object({
+  includeInactive: z.coerce.boolean().optional().default(false)
+});
+
+export const adminPermissionSchema = z.object({
+  id: idSchema,
+  code: permissionSchema,
+  displayName: z.string().min(1).max(160),
+  description: z.string().max(500).nullable(),
+  categoryId: idSchema,
+  categoryCode: permissionCategoryCodeSchema,
+  categoryDisplayName: z.string().min(1).max(120),
+  categorySortOrder: z.number().int().min(0),
+  programId: idSchema,
+  programCode: programCodeSchema,
+  programDisplayName: z.string().min(1).max(120),
+  isSystem: z.boolean(),
+  isActive: z.boolean(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema
+});
+
+export const adminCreatePermissionInputSchema = z.object({
+  code: permissionSchema.optional(),
+  displayName: z.string().trim().min(2).max(160),
+  description: z.string().trim().max(500).nullable().optional(),
+  categoryCode: permissionCategoryCodeSchema,
+  programCode: programCodeSchema
+});
+
+export const adminUpdatePermissionInputSchema = z
+  .object({
+    displayName: z.string().trim().min(2).max(160).optional(),
+    description: z.string().trim().max(500).nullable().optional(),
+    categoryCode: permissionCategoryCodeSchema.optional(),
+    programCode: programCodeSchema.optional(),
+    isActive: z.boolean().optional()
+  })
+  .refine(
+    (payload) =>
+      payload.displayName !== undefined ||
+      payload.description !== undefined ||
+      payload.categoryCode !== undefined ||
+      payload.programCode !== undefined ||
+      payload.isActive !== undefined,
+    {
+      message: "Debe enviar al menos un campo para actualizar"
+    }
+  );
+
+export const adminListPermissionsQuerySchema = z.object({
+  includeInactive: z.coerce.boolean().optional().default(false)
+});
+
+export const adminRoleAccessSchema = z.object({
   role: roleCodeSchema,
+  programs: z.array(programCodeSchema),
   permissions: z.array(permissionSchema)
+});
+
+export const adminRolePermissionSchema = adminRoleAccessSchema;
+
+export const adminReplaceRoleAccessInputSchema = z.object({
+  programCodes: z.array(programCodeSchema).default([]),
+  permissionCodes: z.array(permissionSchema).default([])
 });
 
 export const adminAccessByResourceQuerySchema = z.object({

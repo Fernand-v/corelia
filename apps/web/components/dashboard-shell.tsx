@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Permission } from "@corelia/types";
+import type { Permission, ProgramCode } from "@corelia/types";
 import type { Route } from "next";
 import { apiRequest, useAuthStore } from "@/lib/api";
 import { useSession, useSessionMembershipSummary } from "@/lib/session";
@@ -22,6 +22,7 @@ import {
 type NavItem = {
   label: string;
   href: string;
+  requiredProgram?: ProgramCode;
   requiredAnyPermissions?: Permission[];
   disabled?: boolean;
   phase?: string;
@@ -37,40 +38,142 @@ type DashboardContext = {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/home", contextual: true },
-  { label: "Mensajes", href: "/messaging", requiredAnyPermissions: ["MENSAJE_ESCRIBIR"] },
-  { label: "Mis Proyectos", href: "/projects", requiredAnyPermissions: ["PROYECTO_LEER"], contextual: true },
-  { label: "Anuncios", href: "/announcements" },
-  { label: "Mis Tareas", href: "/tasks", requiredAnyPermissions: ["TAREA_LEER"], contextual: true },
-  { label: "Reportes", href: "/reports", requiredAnyPermissions: ["PROYECTO_LEER"] },
+  {
+    label: "Mensajes",
+    href: "/messaging",
+    requiredProgram: "MENSAJERIA",
+    requiredAnyPermissions: ["MENSAJE_ESCRIBIR"]
+  },
+  {
+    label: "Mis Proyectos",
+    href: "/projects",
+    requiredProgram: "PROYECTOS",
+    requiredAnyPermissions: ["PROYECTO_LEER"],
+    contextual: true
+  },
+  {
+    label: "Anuncios",
+    href: "/announcements",
+    requiredProgram: "ANUNCIOS",
+    requiredAnyPermissions: ["USUARIO_LEER"]
+  },
+  {
+    label: "Mis Tareas",
+    href: "/tasks",
+    requiredProgram: "TAREAS",
+    requiredAnyPermissions: ["TAREA_LEER"],
+    contextual: true
+  },
+  {
+    label: "Reportes",
+    href: "/reports",
+    requiredProgram: "REPORTES",
+    requiredAnyPermissions: ["PROYECTO_LEER"]
+  },
   {
     label: "Presupuesto",
     href: "/projects/:projectId/budget",
+    requiredProgram: "PRESUPUESTO",
     requiresProjectContext: true,
     requiredAnyPermissions: ["PRESUPUESTO_LEER", "PRESUPUESTO_GESTIONAR"]
   },
-  { label: "Calendario", href: "/calendar", requiredAnyPermissions: ["CALENDARIO_LEER"], contextual: true, requiresProjectContext: true },
-  { label: "Reuniones", href: "/meetings", requiredAnyPermissions: ["REUNION_LEER"], contextual: true, requiresProjectContext: true },
-  { label: "Archivos", href: "/files", requiredAnyPermissions: ["ARCHIVO_SUBIR"], contextual: true, requiresProjectContext: true },
+  {
+    label: "Calendario",
+    href: "/calendar",
+    requiredProgram: "CALENDARIO",
+    requiredAnyPermissions: ["CALENDARIO_LEER"],
+    contextual: true,
+    requiresProjectContext: true
+  },
+  {
+    label: "Reuniones",
+    href: "/meetings",
+    requiredProgram: "REUNIONES",
+    requiredAnyPermissions: ["REUNION_LEER"],
+    contextual: true,
+    requiresProjectContext: true
+  },
+  {
+    label: "Archivos",
+    href: "/files",
+    requiredProgram: "ARCHIVOS",
+    requiredAnyPermissions: ["ARCHIVO_SUBIR"],
+    contextual: true,
+    requiresProjectContext: true
+  },
   {
     label: "Documentos",
     href: "/documents",
+    requiredProgram: "DOCUMENTOS",
     requiredAnyPermissions: ["PROYECTO_LEER"],
     contextual: true,
     requiresProjectContext: true
   },
-  { label: "Formularios", href: "/forms", requiredAnyPermissions: ["PROYECTO_LEER"], contextual: true },
+  {
+    label: "Formularios",
+    href: "/forms",
+    requiredProgram: "FORMULARIOS",
+    requiredAnyPermissions: ["USUARIO_LEER"],
+    contextual: true
+  },
   { label: "Mis Métricas", href: "/metrics", requiredAnyPermissions: ["TAREA_LEER"] },
-  { label: "Solicitudes", href: "/requests", requiredAnyPermissions: ["PROYECTO_LEER"] },
-  { label: "Notificaciones", href: "/notifications" },
-  { label: "Buscar", href: "/search", requiredAnyPermissions: ["USUARIO_LEER"] }
+  {
+    label: "Solicitudes",
+    href: "/requests",
+    requiredProgram: "FORMULARIOS",
+    requiredAnyPermissions: ["USUARIO_LEER"]
+  },
+  {
+    label: "Notificaciones",
+    href: "/notifications",
+    requiredProgram: "NOTIFICACIONES",
+    requiredAnyPermissions: ["NOTIFICACION_LEER"]
+  },
+  {
+    label: "Buscar",
+    href: "/search",
+    requiredProgram: "BUSQUEDA",
+    requiredAnyPermissions: ["PROYECTO_LEER"]
+  }
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
-  { label: "Panel de Admin", href: "/admin/panel", requiredAnyPermissions: ["USUARIO_GESTIONAR"] },
-  { label: "Resumen", href: "/admin/overview", requiredAnyPermissions: ["USUARIO_GESTIONAR"] },
-  { label: "Equipos", href: "/admin/teams", requiredAnyPermissions: ["USUARIO_GESTIONAR"] },
-  { label: "Estado del Sistema", href: "/admin/system", requiredAnyPermissions: ["USUARIO_GESTIONAR"] },
-  { label: "Monitoreo", href: "/admin/monitoring", requiredAnyPermissions: ["USUARIO_GESTIONAR"] }
+  {
+    label: "Panel de Admin",
+    href: "/admin/panel",
+    requiredProgram: "ADMINISTRACION",
+    requiredAnyPermissions: ["USUARIO_GESTIONAR"]
+  },
+  {
+    label: "Accesos",
+    href: "/admin/access",
+    requiredProgram: "ADMINISTRACION",
+    requiredAnyPermissions: ["USUARIO_GESTIONAR"]
+  },
+  {
+    label: "Resumen",
+    href: "/admin/overview",
+    requiredProgram: "ADMINISTRACION",
+    requiredAnyPermissions: ["USUARIO_GESTIONAR"]
+  },
+  {
+    label: "Equipos",
+    href: "/admin/teams",
+    requiredProgram: "ADMINISTRACION",
+    requiredAnyPermissions: ["USUARIO_GESTIONAR"]
+  },
+  {
+    label: "Estado del Sistema",
+    href: "/admin/system",
+    requiredProgram: "ADMINISTRACION",
+    requiredAnyPermissions: ["USUARIO_GESTIONAR"]
+  },
+  {
+    label: "Monitoreo",
+    href: "/admin/monitoring",
+    requiredProgram: "ADMINISTRACION",
+    requiredAnyPermissions: ["USUARIO_GESTIONAR"]
+  }
 ];
 
 const formatContextLabel = (
@@ -98,6 +201,13 @@ const hasRequiredPermission = (item: NavItem, permissions: Permission[]) => {
   }
 
   return item.requiredAnyPermissions.some((permission) => permissions.includes(permission));
+};
+
+const hasRequiredProgram = (item: NavItem, programs: ProgramCode[]) => {
+  if (!item.requiredProgram) {
+    return true;
+  }
+  return programs.includes(item.requiredProgram);
 };
 
 const resolveNavHref = (item: NavItem, dashboardContext: DashboardContext) => {
@@ -263,9 +373,14 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
     }
 
     const activePermissions = session.data?.permissions ?? [];
+    const activePrograms = session.data?.programs ?? [];
     const hasProjectContext = Boolean(dashboardContext.projectId);
 
     return NAV_ITEMS.filter((item) => {
+      if (!hasRequiredProgram(item, activePrograms)) {
+        return false;
+      }
+
       if (!hasRequiredPermission(item, activePermissions)) {
         return false;
       }
@@ -288,12 +403,15 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
       return true;
     });
-  }, [activeRole, dashboardContext.projectId, session.data?.permissions]);
+  }, [activeRole, dashboardContext.projectId, session.data?.permissions, session.data?.programs]);
 
   const adminItems = useMemo(() => {
     const activePermissions = session.data?.permissions ?? [];
-    return ADMIN_ITEMS.filter((item) => hasRequiredPermission(item, activePermissions));
-  }, [session.data?.permissions]);
+    const activePrograms = session.data?.programs ?? [];
+    return ADMIN_ITEMS.filter(
+      (item) => hasRequiredProgram(item, activePrograms) && hasRequiredPermission(item, activePermissions)
+    );
+  }, [session.data?.permissions, session.data?.programs]);
 
   if (!hydrated || (accessToken && session.isLoading)) {
     return (

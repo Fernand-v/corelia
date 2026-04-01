@@ -23,13 +23,22 @@ const buildMockApp = () => {
         findUnique: vi.fn((args: { where: { key?: string; id?: string } }) => {
           if (args.where.key === "INVITADO_EXTERNO") return Promise.resolve(guestRole);
           if (args.where.id === "role-guest") {
-            return Promise.resolve({ id: "role-guest", key: "INVITADO_EXTERNO", rank: 0, rolePermissions: [] });
+            return Promise.resolve({
+              id: "role-guest",
+              key: "INVITADO_EXTERNO",
+              displayName: "Invitado Externo",
+              rank: 0,
+              programRoles: [],
+              rolePermissions: []
+            });
           }
           if (args.where.id === "role-admin") {
             return Promise.resolve({
               id: "role-admin",
               key: "ADMINISTRADOR",
+              displayName: "Administrador",
               rank: 5,
+              programRoles: [{ program: { key: "ADMINISTRACION" } }],
               rolePermissions: [{ permission: { key: "PROYECTO_LEER" } }, { permission: { key: "ARCHIVO_SUBIR" } }]
             });
           }
@@ -37,7 +46,9 @@ const buildMockApp = () => {
             return Promise.resolve({
               id: "role-member",
               key: "COLABORADOR",
+              displayName: "Colaborador",
               rank: 2,
+              programRoles: [{ program: { key: "PROYECTOS" } }],
               rolePermissions: [{ permission: { key: "PROYECTO_LEER" } }]
             });
           }
@@ -219,7 +230,14 @@ describe("rbacPlugin — preHandler middleware", () => {
     });
     // Redis has cached role
     app.redis.get = vi.fn().mockResolvedValue(
-      JSON.stringify({ roleId: "role-admin", role: "ADMINISTRADOR", rank: 5, permissions: ["PROYECTO_LEER"] })
+      JSON.stringify({
+        roleId: "role-admin",
+        role: "ADMINISTRADOR",
+        displayName: "Administrador",
+        rank: 5,
+        programs: ["ADMINISTRACION"],
+        permissions: ["PROYECTO_LEER"]
+      })
     );
     await loadPlugin(app);
 

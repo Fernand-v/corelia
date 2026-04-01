@@ -27,6 +27,11 @@ const createMockApp = () =>
         create: vi.fn(),
         findMany: vi.fn()
       },
+      messageReceipt: {
+        createMany: vi.fn().mockResolvedValue({ count: 0 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        findMany: vi.fn().mockResolvedValue([])
+      },
       meeting: {
         create: vi.fn()
       },
@@ -38,6 +43,8 @@ const createMockApp = () =>
         findUnique: vi.fn()
       },
       notification: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
         create: vi.fn().mockResolvedValue({
           id: crypto.randomUUID()
         })
@@ -115,6 +122,8 @@ describe("MessagingService", () => {
         content: "Hola",
         authorId: "u-1",
         mentions: [],
+        attachments: [],
+        receipts: [],
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -130,6 +139,11 @@ describe("MessagingService", () => {
         attachments: {
           orderBy: {
             createdAt: "asc"
+          }
+        },
+        receipts: {
+          select: {
+            status: true
           }
         }
       },

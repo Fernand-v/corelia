@@ -45,6 +45,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -64,6 +65,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "MENSAJE_ESCRIBIR"
       }
     },
@@ -82,6 +84,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "MENSAJE_ESCRIBIR"
       }
     },
@@ -104,6 +107,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "MENSAJE_ESCRIBIR"
       }
     },
@@ -122,6 +126,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "MENSAJE_ESCRIBIR"
       }
     },
@@ -166,6 +171,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -185,6 +191,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "MENSAJE_ESCRIBIR"
       }
     },
@@ -232,6 +239,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "MENSAJE_ESCRIBIR"
       }
     },
@@ -273,6 +281,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -304,6 +313,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -327,6 +337,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -350,6 +361,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -372,6 +384,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -390,6 +403,7 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "MENSAJERIA",
         requiredPermission: "MENSAJE_ESCRIBIR"
       }
     },

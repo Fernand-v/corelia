@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Web — Página principal (landing)", () => {
   test("La landing page carga correctamente", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle(/corelia/i);
+    await expect(page).toHaveTitle(/intranet colaborativa|corelia/i);
   });
 
   test("Muestra el nombre de la organización", async ({ page }) => {

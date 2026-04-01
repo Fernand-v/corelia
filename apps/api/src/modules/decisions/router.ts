@@ -11,6 +11,7 @@ export const decisionsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "DECISIONES",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -29,6 +30,7 @@ export const decisionsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "DECISIONES",
         requiredPermission: "PROYECTO_LEER"
       }
     },

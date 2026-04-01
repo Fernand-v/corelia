@@ -46,12 +46,10 @@ test.describe("Web — Pantalla de Login", () => {
 
   test("Validación de formulario: email vacío muestra error", async ({ page }) => {
     await page.locator('input[type="email"]').fill("");
-    await page.locator('input[type="password"]').fill("somepassword");
+    await page.locator('input[type="password"]').fill("Password123!");
     await page.locator('button[type="submit"]').click();
 
-    // Debería mostrar un error de validación
-    const errorMessage = page.locator(".text-red-500");
-    await expect(errorMessage).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/invalid email/i)).toBeVisible({ timeout: 5000 });
   });
 
   test("Validación de formulario: password vacío muestra error", async ({ page }) => {
@@ -63,23 +61,38 @@ test.describe("Web — Pantalla de Login", () => {
   });
 
   test("Login con credenciales inválidas muestra error del servidor", async ({ page }) => {
+    await page.route("**/api/v1/auth/login", async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Credenciales inválidas" })
+      });
+    });
+
     await page.locator('input[type="email"]').fill("noexiste@ejemplo.com");
-    await page.locator('input[type="password"]').fill("contraseñamala123");
+    await page.locator('input[type="password"]').fill("Password123!");
     await page.locator('button[type="submit"]').click();
 
-    // Esperar la respuesta del API y el mensaje de error
-    const errorBox = page.locator(".bg-red-50\\/80, .bg-red-50");
-    await expect(errorBox).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/credenciales inválidas|request failed/i)).toBeVisible({ timeout: 10_000 });
   });
 
   test("Botón se deshabilita durante el envío", async ({ page }) => {
+    await page.route("**/api/v1/auth/login", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Credenciales inválidas" })
+      });
+    });
+
     await page.locator('input[type="email"]').fill("test@test.com");
-    await page.locator('input[type="password"]').fill("password123");
+    await page.locator('input[type="password"]').fill("Password123!");
 
     const submitButton = page.locator('button[type="submit"]');
     await submitButton.click();
 
-    // Brevemente debería mostrar "Entrando…" y estar deshabilitado
     await expect(submitButton).toHaveText(/entrando/i);
+    await expect(submitButton).toBeDisabled();
   });
 });

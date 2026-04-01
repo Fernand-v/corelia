@@ -104,11 +104,16 @@ export class DecisionService {
     linkedEntityId: string;
     authorId: string;
   }) {
+    const descriptionCatalogId = this.normalizeLegacyCode({
+      code: input.descriptionCatalogId,
+      text: input.description
+    });
+
     const note = await this.app.prisma.decisionNote.create({
       data: {
         title: input.title,
         description: input.description,
-        descriptionCatalogId: input.descriptionCatalogId ?? null,
+        descriptionCatalogId,
         ...buildDecisionTargetCreateData(input.linkedEntityType, input.linkedEntityId),
         authorId: input.authorId
       }

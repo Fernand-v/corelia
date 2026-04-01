@@ -302,20 +302,45 @@ model PermissionCategory {
   @@index([sortOrder])
 }
 
+model Program {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        Int      @default(autoincrement()) @unique
+  key         String   @unique
+  displayName String
+  description String?
+  sortOrder   Int      @default(0)
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions Permission[]
+  programRoles ProgramRole[]
+
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
 model Permission {
   id          String   @id @default(uuid()) @db.Uuid
   code        Int      @default(autoincrement()) @unique
   key         String   @unique
   displayName String
   description String?
+  programId   String   @db.Uuid
   categoryId  String   @db.Uuid
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  program         Program            @relation(fields: [programId], references: [id], onDelete: Restrict)
   category        PermissionCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   rolePermissions RolePermission[]
 
+  @@index([programId])
   @@index([categoryId])
+  @@index([isActive])
 }
 
 model Role {
@@ -335,6 +360,7 @@ model Role {
   internalInvites     InternalInvite[]     @relation("InternalInviteBaseRole")
   meetingParticipants MeetingParticipant[] @relation("MeetingParticipantRole")
   rolePermissions     RolePermission[]
+  programRoles        ProgramRole[]
 
   @@index([isSystem])
   @@index([scope])
@@ -350,6 +376,18 @@ model RolePermission {
 
   @@id([roleId, permissionId])
   @@index([permissionId])
+}
+
+model ProgramRole {
+  programId  String   @db.Uuid
+  roleId     String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  role    Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([programId, roleId])
+  @@index([roleId])
 }
 
 model User {

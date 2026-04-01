@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { AuthMembershipSummary, Permission, RoleCode } from "@corelia/types";
+import type { AuthMembershipSummary, Permission, ProgramCode, RoleCode } from "@corelia/types";
 import { apiRequest, useAuthStore } from "@/lib/api";
 
 export interface SessionUser {
@@ -15,6 +15,7 @@ export interface SessionUser {
   activeRole: RoleCode;
   roleDisplayName?: string;
   activeRoleRank?: number;
+  programs: ProgramCode[];
   permissions: Permission[];
 }
 
@@ -33,6 +34,13 @@ const coerceRoleCode = (value: unknown): RoleCode | null => {
   }
 
   return null;
+};
+
+const coerceProgramCodes = (value: unknown): ProgramCode[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is ProgramCode => typeof item === "string");
 };
 
 export const useAuthBootstrap = () => {
@@ -56,19 +64,22 @@ export const useSession = () => {
     queryKey: ["session", accessToken],
     queryFn: async () => {
       const payload = await apiRequest<
-        Omit<SessionUser, "baseRole" | "activeRole"> & {
+        Omit<SessionUser, "baseRole" | "activeRole" | "programs"> & {
           baseRole: unknown;
           activeRole: unknown;
+          programs?: unknown;
         }
       >("/auth/me");
 
       const baseRole = coerceRoleCode(payload.baseRole) ?? "INVITADO_EXTERNO";
       const activeRole = coerceRoleCode(payload.activeRole) ?? baseRole;
+      const programs = coerceProgramCodes(payload.programs);
 
       return {
         ...payload,
         baseRole,
-        activeRole
+        activeRole,
+        programs
       };
     },
     enabled: hydrated && Boolean(accessToken),

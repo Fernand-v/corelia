@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { contactSchema, idSchema, timestampSchema, windowScheduleSchema } from "./common.js";
-import { systemRoleCodeSchema } from "./rbac.js";
+import { roleCodeSchema } from "./rbac.js";
 
 export const userPresenceStatusSchema = z.enum(["EN_LINEA", "DESCONECTADO", "EN_REUNION"]);
 
@@ -9,7 +9,7 @@ export const userSchema = z.object({
   email: z.string().email(),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
-  baseRole: systemRoleCodeSchema,
+  baseRole: roleCodeSchema,
   isActive: z.boolean(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema
@@ -20,13 +20,13 @@ export const createUserInputSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   password: z.string().min(8).max(128),
-  baseRole: systemRoleCodeSchema.default("COLABORADOR")
+  baseRole: roleCodeSchema.default("COLABORADOR")
 });
 
 export const personDirectoryProfileSchema = z.object({
   userId: idSchema,
   fullName: z.string().min(1),
-  activeRole: systemRoleCodeSchema,
+  activeRole: roleCodeSchema,
   presence: userPresenceStatusSchema.default("DESCONECTADO"),
   teamName: z.string().nullable(),
   schedule: windowScheduleSchema.nullable(),

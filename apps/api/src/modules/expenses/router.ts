@@ -13,6 +13,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_GESTIONAR"
       }
     },
@@ -45,6 +46,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_LEER"
       }
     },
@@ -64,6 +66,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_GESTIONAR"
       }
     },
@@ -89,6 +92,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_GESTIONAR"
       }
     },
@@ -114,6 +118,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_GESTIONAR"
       }
     },
@@ -150,6 +155,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_LEER"
       }
     },
@@ -177,6 +183,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_GESTIONAR"
       }
     },
@@ -202,6 +209,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_GESTIONAR"
       }
     },
@@ -225,6 +233,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_GESTIONAR"
       }
     },
@@ -263,6 +272,7 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "PRESUPUESTO",
         requiredPermission: "PRESUPUESTO_LEER"
       }
     },

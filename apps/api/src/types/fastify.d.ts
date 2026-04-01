@@ -1,4 +1,4 @@
-import type { ActionType, EntityType, Permission, RoleCode } from "@corelia/types";
+import type { ActionType, EntityType, Permission, ProgramCode, RoleCode } from "@corelia/types";
 import type { PrismaClient } from "@prisma/client";
 import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
@@ -59,6 +59,7 @@ declare module "fastify" {
       activeRole: RoleCode;
       roleDisplayName: string;
       rank: number;
+      programs: ProgramCode[];
       permissions: Permission[];
     };
     auditEvent?: {
@@ -74,6 +75,7 @@ declare module "fastify" {
 
   interface FastifyContextConfig {
     requiresAuth?: boolean;
+    requiredProgram?: ProgramCode;
     requiredPermission?: Permission;
     skipMaintenance?: boolean;
     rateLimit?: {

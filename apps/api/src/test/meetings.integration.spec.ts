@@ -46,10 +46,17 @@ const createMockApp = () =>
         create: vi.fn()
       },
       notification: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
         create: vi.fn(),
         findMany: vi.fn(),
         count: vi.fn(),
         updateMany: vi.fn()
+      },
+      messageReceipt: {
+        createMany: vi.fn().mockResolvedValue({ count: 0 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        findMany: vi.fn().mockResolvedValue([])
       },
       channel: {
         findUnique: vi.fn()

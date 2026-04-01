@@ -13,6 +13,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -32,6 +33,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "SOLICITUD_APROBAR"
       }
     },
@@ -62,6 +64,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -75,6 +78,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -94,6 +98,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -113,6 +118,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -132,6 +138,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -152,6 +159,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -171,6 +179,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -191,6 +200,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -211,6 +221,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -229,7 +240,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     "/:id/upload",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredProgram: "FORMULARIOS"
       }
     },
     async (request, reply) => {
@@ -266,7 +278,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     "/:id/submit",
     {
       config: {
-        requiresAuth: true
+        requiresAuth: true,
+        requiredProgram: "FORMULARIOS"
       }
     },
     async (request, reply) => {
@@ -286,6 +299,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -305,6 +319,7 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "FORMULARIOS",
         requiredPermission: "USUARIO_LEER"
       }
     },

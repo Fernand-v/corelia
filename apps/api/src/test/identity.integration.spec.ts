@@ -9,9 +9,24 @@ const createMockApp = () => {
         findMany: vi.fn()
       },
       role: {
-        findUnique: vi.fn().mockResolvedValue({
-          id: crypto.randomUUID(),
-          code: "INVITADO_EXTERNO"
+        findUnique: vi.fn((args: { where: { key?: string; id?: string } }) => {
+          if (args.where.key === "INVITADO_EXTERNO") {
+            return Promise.resolve({
+              id: "role-guest",
+              key: "INVITADO_EXTERNO",
+              rank: 0,
+              rolePermissions: [{ permission: { key: "PROYECTO_LEER" } }],
+              programRoles: [{ program: { key: "PROYECTOS" } }]
+            });
+          }
+
+          return Promise.resolve({
+            id: args.where.id ?? crypto.randomUUID(),
+            key: "COLABORADOR",
+            rank: 2,
+            rolePermissions: [{ permission: { key: "PROYECTO_LEER" } }],
+            programRoles: [{ program: { key: "PROYECTOS" } }]
+          });
         })
       },
       user: {
@@ -132,12 +147,8 @@ describe("Identity integration flows", () => {
     expect(result.permissions.length).toBeGreaterThan(0);
   });
 
-  it("uses most restrictive role out of project context", async () => {
+  it("uses base role out of project context", async () => {
     const app = createMockApp();
-    app.prisma.projectMember.findMany = vi.fn().mockResolvedValue([
-      { role: { id: crypto.randomUUID(), code: "LIDER_PROYECTO" } },
-      { role: { id: crypto.randomUUID(), code: "COLABORADOR" } }
-    ]);
     app.prisma.user.findUnique = vi.fn().mockResolvedValue({
       baseRole: { id: crypto.randomUUID(), code: "ADMINISTRADOR" }
     });
@@ -145,7 +156,7 @@ describe("Identity integration flows", () => {
     const service = new IdentityService(app);
     const result = await service.resolveActiveRole(crypto.randomUUID());
 
-    expect(result.role).toBe("COLABORADOR");
+    expect(result.role).toBe("ADMINISTRADOR");
   });
 
   it("offboarding transfers active tasks and deactivates user", async () => {

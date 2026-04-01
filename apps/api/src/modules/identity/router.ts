@@ -36,6 +36,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -87,6 +88,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -98,6 +100,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -116,6 +119,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_LEER"
       }
     },
@@ -127,6 +131,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -165,6 +170,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -190,6 +196,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -209,6 +216,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -240,6 +248,7 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IDENTIDAD",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },

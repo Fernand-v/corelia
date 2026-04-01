@@ -17,6 +17,7 @@ export const integrationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "INTEGRACIONES",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -38,6 +39,7 @@ export const integrationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "INTEGRACIONES",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -49,6 +51,7 @@ export const integrationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "INTEGRACIONES",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -64,6 +67,7 @@ export const integrationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "INTEGRACIONES",
         requiredPermission: "PROYECTO_LEER"
       }
     },

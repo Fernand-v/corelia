@@ -11,6 +11,7 @@ export const timeRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "TIEMPO",
         requiredPermission: "TAREA_LEER"
       }
     },
@@ -33,6 +34,7 @@ export const timeRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "TIEMPO",
         requiredPermission: "TAREA_LEER"
       }
     },

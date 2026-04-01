@@ -200,6 +200,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
         rateLimit: {
           max: 10,
           timeWindow: "15 minutes"
@@ -278,6 +279,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         activeRole: request.accessContext?.activeRole,
         roleDisplayName: request.accessContext?.roleDisplayName,
         activeRoleRank: request.accessContext?.rank,
+        programs: request.accessContext?.programs ?? [],
         permissions: request.accessContext?.permissions ?? []
       });
     }

@@ -1,20 +1,23 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
-import { type Permission } from "@corelia/types";
+import { type Permission, type ProgramCode, type RoleCode } from "@corelia/types";
 import { getProjectIdFromRequest } from "../lib/http.js";
 import { isAdminRole } from "../lib/rbac.js";
 
 type CachedRoleContext = {
   roleId: string;
-  role: string;
+  role: RoleCode;
   displayName: string;
   rank: number;
+  programs: ProgramCode[];
   permissions: Permission[];
 };
 
 const ROLE_CACHE_TTL_SECONDS = 300;
+const RBAC_CACHE_VERSION_KEY = "rbac:version";
+const RBAC_CACHE_DEFAULT_VERSION = 1;
 
-const buildRoleCacheKey = (roleId: string) => `rbac:role:${roleId}:v1`;
+const buildRoleCacheKey = (roleId: string, version: number) => `rbac:role:${roleId}:v${version}`;
 
 const parseCachedRoleContext = (raw: string | null): CachedRoleContext | null => {
   if (!raw) {
@@ -22,27 +25,57 @@ const parseCachedRoleContext = (raw: string | null): CachedRoleContext | null =>
   }
 
   try {
-    const parsed = JSON.parse(raw) as CachedRoleContext;
+    const parsed = JSON.parse(raw) as {
+      roleId?: unknown;
+      role?: unknown;
+      displayName?: unknown;
+      rank?: unknown;
+      programs?: unknown;
+      permissions?: unknown;
+    };
     if (
       typeof parsed.roleId !== "string" ||
       typeof parsed.role !== "string" ||
       typeof parsed.displayName !== "string" ||
       typeof parsed.rank !== "number" ||
-      !Array.isArray(parsed.permissions)
+      !Array.isArray(parsed.permissions) ||
+      !parsed.permissions.every((permission) => typeof permission === "string")
     ) {
       return null;
     }
-    return parsed;
+
+    const rawPrograms = Array.isArray(parsed.programs) ? parsed.programs : [];
+    const programs = rawPrograms.filter((program): program is ProgramCode => typeof program === "string");
+
+    return {
+      roleId: parsed.roleId,
+      role: parsed.role as RoleCode,
+      displayName: parsed.displayName,
+      rank: parsed.rank,
+      programs,
+      permissions: parsed.permissions as Permission[]
+    };
   } catch {
     return null;
   }
 };
 
+const getRbacCacheVersion = async (app: FastifyInstance): Promise<number> => {
+  const raw = await app.redis.get(RBAC_CACHE_VERSION_KEY);
+  const parsed = Number.parseInt(raw ?? "", 10);
+  if (Number.isInteger(parsed) && parsed > 0) {
+    return parsed;
+  }
+  await app.redis.set(RBAC_CACHE_VERSION_KEY, String(RBAC_CACHE_DEFAULT_VERSION));
+  return RBAC_CACHE_DEFAULT_VERSION;
+};
+
 const loadRoleContext = async (
   app: FastifyInstance,
-  roleId: string
+  roleId: string,
+  cacheVersion: number
 ): Promise<CachedRoleContext> => {
-  const cacheKey = buildRoleCacheKey(roleId);
+  const cacheKey = buildRoleCacheKey(roleId, cacheVersion);
   const cached = parseCachedRoleContext(await app.redis.get(cacheKey));
 
   if (cached) {
@@ -56,7 +89,26 @@ const loadRoleContext = async (
       key: true,
       displayName: true,
       rank: true,
+      programRoles: {
+        where: {
+          program: {
+            isActive: true
+          }
+        },
+        select: {
+          program: {
+            select: {
+              key: true
+            }
+          }
+        }
+      },
       rolePermissions: {
+        where: {
+          permission: {
+            isActive: true
+          }
+        },
         select: {
           permission: {
             select: {
@@ -74,9 +126,10 @@ const loadRoleContext = async (
 
   const payload: CachedRoleContext = {
     roleId: role.id,
-    role: role.key,
+    role: role.key as RoleCode,
     displayName: role.displayName,
     rank: role.rank,
+    programs: [...new Set(role.programRoles.map((entry) => entry.program.key as ProgramCode))],
     permissions: role.rolePermissions.map((entry) => entry.permission.key as Permission)
   };
 
@@ -114,11 +167,12 @@ export const rbacPlugin = fp(async (app) => {
   // Warm up guest role cache on startup
   app.addHook("onReady", async () => {
     await getGuestRole(app);
+    await getRbacCacheVersion(app);
   });
 
   app.addHook("preHandler", async (request, reply) => {
     const config = request.routeOptions.config as
-      | { requiresAuth?: boolean; requiredPermission?: Permission }
+      | { requiresAuth?: boolean; requiredProgram?: ProgramCode; requiredPermission?: Permission }
       | undefined;
 
     if (config?.requiresAuth === false || !request.authUser) {
@@ -165,7 +219,8 @@ export const rbacPlugin = fp(async (app) => {
       }
     }
 
-    const roleContext = await loadRoleContext(app, activeRoleId);
+    const cacheVersion = await getRbacCacheVersion(app);
+    const roleContext = await loadRoleContext(app, activeRoleId, cacheVersion);
 
     request.accessContext = {
       projectId: projectId ?? null,
@@ -173,8 +228,13 @@ export const rbacPlugin = fp(async (app) => {
       activeRole: roleContext.role,
       roleDisplayName: roleContext.displayName,
       rank: roleContext.rank,
+      programs: roleContext.programs,
       permissions: roleContext.permissions
     };
+
+    if (config?.requiredProgram && !roleContext.programs.includes(config.requiredProgram)) {
+      return reply.code(403).send({ message: "Forbidden" });
+    }
 
     if (config?.requiredPermission && !roleContext.permissions.includes(config.requiredPermission)) {
       return reply.code(403).send({ message: "Forbidden" });

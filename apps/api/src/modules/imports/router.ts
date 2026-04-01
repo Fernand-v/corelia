@@ -11,6 +11,7 @@ export const importsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IMPORTACIONES",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -29,6 +30,7 @@ export const importsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IMPORTACIONES",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -44,6 +46,7 @@ export const importsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IMPORTACIONES",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },
@@ -59,6 +62,7 @@ export const importsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "IMPORTACIONES",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },

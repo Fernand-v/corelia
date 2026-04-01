@@ -22,7 +22,14 @@ const createMockApp = () =>
       message: {
         create: vi.fn()
       },
+      messageReceipt: {
+        createMany: vi.fn().mockResolvedValue({ count: 0 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        findMany: vi.fn().mockResolvedValue([])
+      },
       notification: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
         create: vi.fn()
       },
       task: {

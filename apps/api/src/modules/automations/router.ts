@@ -11,6 +11,7 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "AUTOMATIZACIONES",
         requiredPermission: "AUTOMATIZACION_GESTIONAR"
       }
     },
@@ -29,6 +30,7 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "AUTOMATIZACIONES",
         requiredPermission: "AUTOMATIZACION_GESTIONAR"
       }
     },
@@ -43,6 +45,7 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "AUTOMATIZACIONES",
         requiredPermission: "AUTOMATIZACION_GESTIONAR"
       }
     },
@@ -65,6 +68,7 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "AUTOMATIZACIONES",
         requiredPermission: "AUTOMATIZACION_GESTIONAR"
       }
     },
@@ -88,6 +92,7 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "AUTOMATIZACIONES",
         requiredPermission: "AUTOMATIZACION_GESTIONAR"
       }
     },
@@ -110,6 +115,7 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "AUTOMATIZACIONES",
         requiredPermission: "AUTOMATIZACION_GESTIONAR"
       }
     },

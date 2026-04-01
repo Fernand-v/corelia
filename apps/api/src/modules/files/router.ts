@@ -22,6 +22,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -46,6 +47,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -68,6 +70,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -89,6 +92,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "ARCHIVO_SUBIR"
       }
     },
@@ -107,6 +111,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "ARCHIVO_SUBIR"
       }
     },
@@ -149,6 +154,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "ARCHIVO_SUBIR"
       }
     },
@@ -167,6 +173,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "ARCHIVO_SUBIR"
       }
     },
@@ -186,6 +193,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "PROYECTO_LEER"
       }
     },
@@ -214,6 +222,7 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
     {
       config: {
         requiresAuth: true,
+        requiredProgram: "ARCHIVOS",
         requiredPermission: "USUARIO_GESTIONAR"
       }
     },

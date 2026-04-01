@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { Permission } from "@corelia/types";
+import type { Permission, ProgramCode } from "@corelia/types";
 import { resolveRoleKey } from "../../lib/rbac.js";
 
 export class IdentityService {
@@ -118,6 +118,11 @@ export class IdentityService {
       where: { id: roleId },
       select: {
         rolePermissions: {
+          where: {
+            permission: {
+              isActive: true
+            }
+          },
           select: {
             permission: {
               select: { key: true }
@@ -128,7 +133,30 @@ export class IdentityService {
     });
 
     if (!role) return [];
-    return role.rolePermissions.map((rp) => rp.permission.key as Permission);
+    return (role.rolePermissions ?? []).map((rp) => rp.permission.key as Permission);
+  }
+
+  private async loadProgramsForRole(roleId: string): Promise<ProgramCode[]> {
+    const role = await this.app.prisma.role.findUnique({
+      where: { id: roleId },
+      select: {
+        programRoles: {
+          where: {
+            program: {
+              isActive: true
+            }
+          },
+          select: {
+            program: {
+              select: { key: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!role) return [];
+    return (role.programRoles ?? []).map((rp) => rp.program.key as ProgramCode);
   }
 
   async listAvailableRoles() {
@@ -166,6 +194,7 @@ export class IdentityService {
         projectId,
         roleId: role.id,
         role: roleKey,
+        programs: await this.loadProgramsForRole(role.id),
         permissions: await this.loadPermissionsForRole(role.id)
       };
     }
@@ -187,6 +216,7 @@ export class IdentityService {
       projectId: null,
       roleId: resolvedRole.id,
       role: resolvedRoleKey,
+      programs: await this.loadProgramsForRole(resolvedRole.id),
       permissions: await this.loadPermissionsForRole(resolvedRole.id)
     };
   }
