@@ -50,6 +50,9 @@ const createMockApp = () =>
           count: 0
         })
       }
+    },
+    redis: {
+      del: vi.fn().mockResolvedValue(1)
     }
   }) as unknown as ConstructorParameters<typeof ProjectService>[0];
 

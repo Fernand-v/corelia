@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { RoleCode } from "@corelia/types";
 import { resolveRoleKey } from "../../lib/rbac.js";
+import { invalidateMembershipCache } from "../../plugins/rbac.js";
 import { ProjectTeamSyncService } from "./team-sync-service.js";
 
 const projectManagerRoles = new Set<RoleCode>([
@@ -433,6 +434,8 @@ export class ProjectService {
       }
     });
 
+    await invalidateMembershipCache(this.app, input.userId, input.projectId);
+
     await this.syncProjectChannelsForMember({
       projectId: input.projectId,
       userId: input.userId,
@@ -471,6 +474,8 @@ export class ProjectService {
         userId
       }
     });
+
+    await invalidateMembershipCache(this.app, userId, projectId);
 
     await this.syncProjectChannelsForMember({
       projectId,

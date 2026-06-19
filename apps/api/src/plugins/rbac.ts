@@ -17,7 +17,84 @@ const ROLE_CACHE_TTL_SECONDS = 300;
 const RBAC_CACHE_VERSION_KEY = "rbac:version";
 const RBAC_CACHE_DEFAULT_VERSION = 1;
 
+// TTL corto para el contexto de usuario y la membresía: actúa como backstop si
+// se pierde una invalidación explícita. Los puntos que mutan baseRole/membresías
+// llaman a invalidateUserAccessCache / invalidateMembershipCache.
+const USER_CONTEXT_TTL_SECONDS = 30;
+const MEMBERSHIP_TTL_SECONDS = 30;
+const NO_MEMBERSHIP = "__none__";
+
 const buildRoleCacheKey = (roleId: string, version: number) => `rbac:role:${roleId}:v${version}`;
+const buildUserContextKey = (userId: string) => `rbac:userctx:${userId}`;
+const buildMembershipKey = (userId: string, projectId: string) => `rbac:member:${userId}:${projectId}`;
+
+type UserContext = { baseRoleId: string | null; baseRoleKey: string | null };
+
+const loadUserContext = async (app: FastifyInstance, userId: string): Promise<UserContext> => {
+  const cacheKey = buildUserContextKey(userId);
+  const cached = await app.redis.get(cacheKey);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached) as UserContext;
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch {
+      // cache corrupto → recargar de DB
+    }
+  }
+
+  const user = await app.prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      baseRoleId: true,
+      baseRole: { select: { key: true } }
+    }
+  });
+
+  const context: UserContext = {
+    baseRoleId: user?.baseRoleId ?? null,
+    baseRoleKey: user?.baseRole?.key ?? null
+  };
+
+  await app.redis.set(cacheKey, JSON.stringify(context), "EX", USER_CONTEXT_TTL_SECONDS);
+  return context;
+};
+
+const loadMembershipRoleId = async (
+  app: FastifyInstance,
+  userId: string,
+  projectId: string
+): Promise<string | null> => {
+  const cacheKey = buildMembershipKey(userId, projectId);
+  const cached = await app.redis.get(cacheKey);
+  if (cached) {
+    return cached === NO_MEMBERSHIP ? null : cached;
+  }
+
+  const membership = await app.prisma.projectMember.findFirst({
+    where: { projectId, userId },
+    select: { roleId: true }
+  });
+
+  const roleId = membership?.roleId ?? null;
+  await app.redis.set(cacheKey, roleId ?? NO_MEMBERSHIP, "EX", MEMBERSHIP_TTL_SECONDS);
+  return roleId;
+};
+
+/** Invalida el contexto de rol base cacheado de un usuario. */
+export const invalidateUserAccessCache = async (app: FastifyInstance, userId: string): Promise<void> => {
+  await app.redis.del(buildUserContextKey(userId));
+};
+
+/** Invalida la membresía cacheada de un usuario en un proyecto. */
+export const invalidateMembershipCache = async (
+  app: FastifyInstance,
+  userId: string,
+  projectId: string
+): Promise<void> => {
+  await app.redis.del(buildMembershipKey(userId, projectId));
+};
 
 const parseCachedRoleContext = (raw: string | null): CachedRoleContext | null => {
   if (!raw) {
@@ -181,41 +258,19 @@ export const rbacPlugin = fp(async (app) => {
 
     const projectId = getProjectIdFromRequest(request);
 
-    const user = await app.prisma.user.findUnique({
-      where: { id: request.authUser.id },
-      select: {
-        baseRoleId: true,
-        baseRole: {
-          select: {
-            key: true
-          }
-        }
-      }
-    });
+    const user = await loadUserContext(app, request.authUser.id);
 
     const guestRole = await getGuestRole(app);
 
-    let activeRoleId = user?.baseRoleId ?? guestRole.id;
+    let activeRoleId = user.baseRoleId ?? guestRole.id;
 
     if (projectId) {
-      const membership = await app.prisma.projectMember.findFirst({
-        where: {
-          projectId,
-          userId: request.authUser.id
-        },
-        select: {
-          roleId: true
-        }
-      });
+      const membershipRoleId = await loadMembershipRoleId(app, request.authUser.id, projectId);
 
-      if (membership?.roleId) {
-        activeRoleId = membership.roleId;
-      } else {
-        activeRoleId = guestRole.id;
-      }
+      activeRoleId = membershipRoleId ?? guestRole.id;
 
-      if (isAdminRole(user?.baseRole.key)) {
-        activeRoleId = user!.baseRoleId;
+      if (isAdminRole(user.baseRoleKey) && user.baseRoleId) {
+        activeRoleId = user.baseRoleId;
       }
     }
 
