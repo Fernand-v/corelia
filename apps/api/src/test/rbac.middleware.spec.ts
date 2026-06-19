@@ -222,6 +222,54 @@ describe("rbacPlugin — preHandler middleware", () => {
     expect(reply.send).toHaveBeenCalledWith({ message: "Forbidden" });
   });
 
+  it("resolves project role from body.projectId (closes header/body mismatch)", async () => {
+    const { app, hooks } = buildMockApp();
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({
+      baseRoleId: "role-member",
+      baseRole: { key: "COLABORADOR" }
+    });
+    app.prisma.projectMember.findFirst = vi.fn().mockResolvedValue(null);
+    app.redis.get = vi.fn().mockResolvedValue(null);
+    await loadPlugin(app);
+
+    // Atacante intenta elevar con header de un proyecto donde sí es miembro,
+    // pero el recurso (body) apunta a otro proyecto. El body debe ganar.
+    const request = buildRequest({
+      headers: { "x-project-id": "project-where-member" },
+      body: { projectId: "project-x" }
+    });
+    const reply = buildReply();
+
+    await hooks["preHandler"]!(request, reply);
+
+    expect(app.prisma.projectMember.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { projectId: "project-x", userId: "user-1" } })
+    );
+  });
+
+  it("denies project permission to a non-member even if base role grants it", async () => {
+    const { app, hooks } = buildMockApp();
+    // El rol base (COLABORADOR) tiene PROYECTO_LEER, pero el usuario no es
+    // miembro del proyecto del body → cae a rol invitado → 403.
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({
+      baseRoleId: "role-member",
+      baseRole: { key: "COLABORADOR" }
+    });
+    app.prisma.projectMember.findFirst = vi.fn().mockResolvedValue(null);
+    app.redis.get = vi.fn().mockResolvedValue(null);
+    await loadPlugin(app);
+
+    const request = buildRequest({
+      routeOptions: { config: { requiresAuth: true, requiredPermission: "PROYECTO_LEER" } },
+      body: { projectId: "project-x" }
+    });
+    const reply = buildReply();
+
+    await hooks["preHandler"]!(request, reply);
+
+    expect(reply.code).toHaveBeenCalledWith(403);
+  });
+
   it("uses cached role from Redis without hitting Prisma role table", async () => {
     const { app, hooks } = buildMockApp();
     app.prisma.user.findUnique = vi.fn().mockResolvedValue({
