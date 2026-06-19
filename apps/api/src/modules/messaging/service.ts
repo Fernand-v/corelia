@@ -327,12 +327,15 @@ export class MessagingService {
       }>();
     }
 
+    // DISTINCT ON (channelId) ordenado por fecha descendente: trae solo el
+    // último mensaje de cada canal en vez de escanear todo el historial.
     const rows = await this.app.prisma.message.findMany({
       where: {
         channelId: {
           in: channelIds
         }
       },
+      distinct: ["channelId"],
       include: {
         attachments: {
           select: {
@@ -344,9 +347,9 @@ export class MessagingService {
           take: 1
         }
       },
-      orderBy: {
-        createdAt: "desc"
-      }
+      // channelId primero (requisito de DISTINCT ON), createdAt desc para
+      // quedarnos con el mensaje más reciente de cada canal.
+      orderBy: [{ channelId: "asc" }, { createdAt: "desc" }]
     });
 
     const latestByChannel = new Map<string, (typeof rows)[number]>();
