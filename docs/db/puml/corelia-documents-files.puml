@@ -45,6 +45,8 @@ entity "CollaborativeDocument" as CollaborativeDocument {
     updatedAt: DateTime
     versions: CollaborativeDocumentVersion[]
     assets: DocumentAsset[]
+    collabSessions: DocumentCollabSession[]
+    favorites: DocumentFavorite[]
 }
 
 entity "CollaborativeDocumentVersion" as CollaborativeDocumentVersion {

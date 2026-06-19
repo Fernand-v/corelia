@@ -21,7 +21,10 @@ entity "Permission" as Permission {
     key: String
     displayName: String
     description: String?
+    programId: String
     categoryId: String
+    isSystem: Boolean
+    isActive: Boolean
     createdAt: DateTime
     updatedAt: DateTime
     rolePermissions: RolePermission[]
@@ -39,6 +42,7 @@ entity "Role" as Role {
     createdAt: DateTime
     updatedAt: DateTime
     rolePermissions: RolePermission[]
+    programRoles: ProgramRole[]
 }
 
 entity "RolePermission" as RolePermission {
@@ -70,9 +74,11 @@ entity "User" as User {
     externalCalendarConnections: ExternalCalendarConnection[]
     notificationPreferences: NotificationPreference[]
     notifications: Notification[]
+    browserPushSubscriptions: BrowserPushSubscription[]
     announcementsAudience: AnnouncementUser[]
     refreshTokens: RefreshToken[]
     auditLogs: AuditLog[]
+    messageReceipts: MessageReceipt[]
 }
 
 entity "ProjectMember" as ProjectMember {

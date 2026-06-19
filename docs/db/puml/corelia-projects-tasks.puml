@@ -27,6 +27,8 @@ entity "Project" as Project {
     stages: ProjectStage[]
     teamLinks: ProjectTeamLink[]
     details: ProjectDetail[]
+    documentTemplates: DocumentTemplate[]
+    dynamicForms: DynamicForm[]
 }
 
 entity "ProjectMember" as ProjectMember {

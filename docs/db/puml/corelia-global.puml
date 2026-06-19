@@ -15,13 +15,31 @@ entity "PermissionCategory" as PermissionCategory {
     permissions: Permission[]
 }
 
+entity "Program" as Program {
+  * id: String
+    code: Int
+    key: String
+    displayName: String
+    description: String?
+    sortOrder: Int
+    isSystem: Boolean
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+    permissions: Permission[]
+    programRoles: ProgramRole[]
+}
+
 entity "Permission" as Permission {
   * id: String
     code: Int
     key: String
     displayName: String
     description: String?
+    programId: String
     categoryId: String
+    isSystem: Boolean
+    isActive: Boolean
     createdAt: DateTime
     updatedAt: DateTime
     rolePermissions: RolePermission[]
@@ -39,11 +57,18 @@ entity "Role" as Role {
     createdAt: DateTime
     updatedAt: DateTime
     rolePermissions: RolePermission[]
+    programRoles: ProgramRole[]
 }
 
 entity "RolePermission" as RolePermission {
     roleId: String
     permissionId: String
+    createdAt: DateTime
+}
+
+entity "ProgramRole" as ProgramRole {
+    programId: String
+    roleId: String
     createdAt: DateTime
 }
 
@@ -70,9 +95,11 @@ entity "User" as User {
     externalCalendarConnections: ExternalCalendarConnection[]
     notificationPreferences: NotificationPreference[]
     notifications: Notification[]
+    browserPushSubscriptions: BrowserPushSubscription[]
     announcementsAudience: AnnouncementUser[]
     refreshTokens: RefreshToken[]
     auditLogs: AuditLog[]
+    messageReceipts: MessageReceipt[]
 }
 
 entity "Team" as Team {
@@ -124,6 +151,8 @@ entity "Project" as Project {
     stages: ProjectStage[]
     teamLinks: ProjectTeamLink[]
     details: ProjectDetail[]
+    documentTemplates: DocumentTemplate[]
+    dynamicForms: DynamicForm[]
 }
 
 entity "ProjectMember" as ProjectMember {
@@ -386,6 +415,7 @@ entity "Message" as Message {
     createdAt: DateTime
     updatedAt: DateTime
     attachments: MessageAttachment[]
+    receipts: MessageReceipt[]
 }
 
 entity "MessageAttachment" as MessageAttachment {
@@ -409,6 +439,7 @@ entity "Meeting" as Meeting {
     endsAt: DateTime
     createdById: String
     status: MeetingStatus
+    callType: MeetingCallType
     mediaRoomId: String?
     createdAt: DateTime
     updatedAt: DateTime
@@ -506,6 +537,8 @@ entity "Notification" as Notification {
     userId: String
     event: NotificationEvent
     channel: NotificationChannel
+    priority: NotificationPriority
+    groupKey: String?
     title: String
     body: String
     sentAt: DateTime?
@@ -514,12 +547,30 @@ entity "Notification" as Notification {
     createdAt: DateTime
 }
 
+entity "BrowserPushSubscription" as BrowserPushSubscription {
+  * id: String
+    userId: String
+    endpoint: String
+    p256dh: String
+    auth: String
+    expirationTime: DateTime?
+    userAgent: String?
+    isActive: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+    lastSeenAt: DateTime
+}
+
 entity "Announcement" as Announcement {
   * id: String
     title: String
     body: String
     allCompany: Boolean
+    scheduleType: TipoProgramacionAnuncio
+    startsAt: DateTime?
     expiresAt: DateTime
+    recurringMonth: Int?
+    recurringDay: Int?
     createdById: String
     createdAt: DateTime
     teams: AnnouncementTeam[]
@@ -548,6 +599,50 @@ entity "FormRequest" as FormRequest {
     comment: String?
     createdAt: DateTime
     updatedAt: DateTime
+}
+
+entity "DynamicForm" as DynamicForm {
+  * id: String
+    title: String
+    description: String?
+    createdById: String
+    projectId: String?
+    isActive: Boolean
+    allowMultipleSubmissions: Boolean
+    isAnonymous: Boolean
+    createdAt: DateTime
+    updatedAt: DateTime
+    questions: DynamicFormQuestion[]
+    responses: DynamicFormResponse[]
+}
+
+entity "DynamicFormQuestion" as DynamicFormQuestion {
+  * id: String
+    formId: String
+    type: DynamicFormQuestionType
+    label: String
+    required: Boolean
+    options: Json?
+    order: Int
+    conditionalLogic: Json?
+    createdAt: DateTime
+    updatedAt: DateTime
+    answers: DynamicFormAnswer[]
+}
+
+entity "DynamicFormResponse" as DynamicFormResponse {
+  * id: String
+    formId: String
+    userId: String?
+    submittedAt: DateTime
+    answers: DynamicFormAnswer[]
+}
+
+entity "DynamicFormAnswer" as DynamicFormAnswer {
+  * id: String
+    responseId: String
+    questionId: String
+    value: Json
 }
 
 entity "Folder" as Folder {
@@ -592,6 +687,8 @@ entity "CollaborativeDocument" as CollaborativeDocument {
     updatedAt: DateTime
     versions: CollaborativeDocumentVersion[]
     assets: DocumentAsset[]
+    collabSessions: DocumentCollabSession[]
+    favorites: DocumentFavorite[]
 }
 
 entity "CollaborativeDocumentVersion" as CollaborativeDocumentVersion {
@@ -613,6 +710,62 @@ entity "DocumentAsset" as DocumentAsset {
     mimeType: String
     sizeBytes: Int
     minioPath: String
+    createdAt: DateTime
+}
+
+entity "DocumentFavorite" as DocumentFavorite {
+  * id: String
+    documentId: String
+    userId: String
+    createdAt: DateTime
+}
+
+entity "DocumentTemplate" as DocumentTemplate {
+  * id: String
+    projectId: String?
+    type: DocumentType
+    name: String
+    description: String?
+    snapshotPath: String
+    createdById: String
+    createdAt: DateTime
+}
+
+entity "DocumentCollabSession" as DocumentCollabSession {
+  * id: String
+    documentId: String
+    roomName: String
+    status: DocumentCollabSessionStatus
+    revision: Int
+    latestSnapshotPath: String?
+    latestSnapshotHash: String?
+    latestSnapshotSizeBytes: Int?
+    latestSnapshotAt: DateTime?
+    startedAt: DateTime
+    lastActivityAt: DateTime
+    endedAt: DateTime?
+    participants: DocumentCollabParticipant[]
+    events: DocumentCollabEvent[]
+}
+
+entity "DocumentCollabParticipant" as DocumentCollabParticipant {
+  * id: String
+    sessionId: String
+    userId: String
+    clientId: String
+    status: DocumentCollabParticipantStatus
+    joinedAt: DateTime
+    leftAt: DateTime?
+    lastHeartbeatAt: DateTime?
+}
+
+entity "DocumentCollabEvent" as DocumentCollabEvent {
+  * id: String
+    sessionId: String
+    userId: String?
+    clientId: String?
+    type: DocumentCollabEventType
+    payload: Json?
     createdAt: DateTime
 }
 
@@ -883,6 +1036,7 @@ entity "FrontendSettings" as FrontendSettings {
     taskStatusColorPending: String
     taskStatusColorInReview: String
     taskStatusColorCompleted: String
+    instantCallExpiryHours: Int
     updatedAt: DateTime
 }
 
@@ -912,9 +1066,23 @@ entity "Expense" as Expense {
     updatedAt: DateTime
 }
 
+entity "MessageReceipt" as MessageReceipt {
+  * id: String
+    messageId: String
+    userId: String
+    status: MessageReceiptStatus
+    deliveredAt: DateTime?
+    readAt: DateTime?
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
+Permission }o--|| Program : programId
 Permission }o--|| PermissionCategory : categoryId
 RolePermission }o--|| Role : roleId
 RolePermission }o--|| Permission : permissionId
+ProgramRole }o--|| Program : programId
+ProgramRole }o--|| Role : roleId
 User }o--|| Role : baseRoleId
 Team }o--|| TeamCodeCatalog : descriptionCatalogId
 TeamMember }o--|| Team : teamId
@@ -995,6 +1163,7 @@ ExternalCalendarEvent }o--|| Project : projectId
 ExternalCalendarEvent }o--|| Team : teamId
 NotificationPreference }o--|| User : userId
 Notification }o--|| User : userId
+BrowserPushSubscription }o--|| User : userId
 Announcement }o--|| User : createdById
 AnnouncementTeam }o--|| Announcement : announcementId
 AnnouncementTeam }o--|| Team : teamId
@@ -1002,6 +1171,13 @@ AnnouncementUser }o--|| Announcement : announcementId
 AnnouncementUser }o--|| User : userId
 FormRequest }o--|| User : requesterId
 FormRequest }o--|| User : approverId
+DynamicForm }o--|| User : createdById
+DynamicForm }o--|| Project : projectId
+DynamicFormQuestion }o--|| DynamicForm : formId
+DynamicFormResponse }o--|| DynamicForm : formId
+DynamicFormResponse }o--|| User : userId
+DynamicFormAnswer }o--|| DynamicFormResponse : responseId
+DynamicFormAnswer }o--|| DynamicFormQuestion : questionId
 Folder }o--|| Team : teamId
 Folder }o--|| Project : projectId
 Folder }o--|| Folder : parentId
@@ -1014,6 +1190,15 @@ CollaborativeDocumentVersion }o--|| CollaborativeDocument : documentId
 CollaborativeDocumentVersion }o--|| User : createdById
 DocumentAsset }o--|| CollaborativeDocument : documentId
 DocumentAsset }o--|| User : createdById
+DocumentFavorite }o--|| CollaborativeDocument : documentId
+DocumentFavorite }o--|| User : userId
+DocumentTemplate }o--|| Project : projectId
+DocumentTemplate }o--|| User : createdById
+DocumentCollabSession }o--|| CollaborativeDocument : documentId
+DocumentCollabParticipant }o--|| DocumentCollabSession : sessionId
+DocumentCollabParticipant }o--|| User : userId
+DocumentCollabEvent }o--|| DocumentCollabSession : sessionId
+DocumentCollabEvent }o--|| User : userId
 FileObject }o--|| Folder : folderId
 FileObject }o--|| User : ownerId
 FileTrash }o--|| FileObject : fileId
@@ -1067,5 +1252,7 @@ ProjectDetail }o--|| User : createdById
 Expense }o--|| ProjectDetail : projectDetailId
 Expense }o--|| User : approvedById
 Expense }o--|| User : createdById
+MessageReceipt }o--|| Message : messageId
+MessageReceipt }o--|| User : userId
 
 @enduml

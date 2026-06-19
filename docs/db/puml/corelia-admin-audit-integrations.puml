@@ -140,6 +140,7 @@ entity "FrontendSettings" as FrontendSettings {
     taskStatusColorPending: String
     taskStatusColorInReview: String
     taskStatusColorCompleted: String
+    instantCallExpiryHours: Int
     updatedAt: DateTime
 }
 
