@@ -3,18 +3,16 @@ import { randomUUID } from "node:crypto";
 import type { MessageKind } from "@prisma/client";
 import { createAndDispatchNotification } from "../../lib/notifications.js";
 import { sanitizeFileName } from "../../lib/sanitize.js";
+import {
+  buildDeepLink,
+  computeAggregateStatus,
+  formatUserName,
+  mapPreviewMessage
+} from "./message-helpers.js";
 
 const DEFAULT_FILE_MIME = "application/octet-stream";
 const MAX_INSTANT_CALL_PARTICIPANTS = 20;
 
-const truncatePreview = (input: string, max = 120): string => {
-  const trimmed = input.trim().replace(/\s+/g, " ");
-  if (trimmed.length <= max) {
-    return trimmed;
-  }
-
-  return `${trimmed.slice(0, max - 1)}…`;
-};
 
 const isInlinePreviewMime = (mimeType: string) => {
   const safeMime = mimeType.toLowerCase();
@@ -54,61 +52,6 @@ export class MessagingService {
     });
   }
 
-  private formatUserName(input: { firstName: string; lastName: string }) {
-    return `${input.firstName} ${input.lastName}`.trim();
-  }
-
-  private buildDeepLink(input: {
-    channelId: string;
-    messageId: string;
-    projectId: string | null;
-    teamId: string | null;
-  }) {
-    const params = new URLSearchParams({
-      channelId: input.channelId,
-      messageId: input.messageId
-    });
-
-    if (input.projectId) {
-      params.set("projectId", input.projectId);
-    }
-
-    if (input.teamId) {
-      params.set("teamId", input.teamId);
-    }
-
-    return `/messaging?${params.toString()}`;
-  }
-
-  private formatMessagePreview(input: {
-    kind: MessageKind;
-    content: string;
-    attachmentName?: string | null;
-  }) {
-    if (input.kind === "FILE") {
-      return input.attachmentName
-        ? `Archivo compartido: ${input.attachmentName}`
-        : "Archivo compartido";
-    }
-
-    if (input.kind === "CALL_INVITE") {
-      return "Videollamada instantánea iniciada";
-    }
-
-    if (input.kind === "NOTA_VOZ") {
-      return "Nota de voz";
-    }
-
-    if (input.kind === "LLAMADA_PERDIDA") {
-      return "Llamada perdida";
-    }
-
-    if (input.kind === "LLAMADA_FINALIZADA") {
-      return input.content || "Llamada finalizada";
-    }
-
-    return truncatePreview(input.content);
-  }
 
   private async getChannelForMember(channelId: string, userId: string) {
     const channel = await this.app.prisma.channel.findUnique({
@@ -179,7 +122,7 @@ export class MessagingService {
     };
     mentions: string[];
   }) {
-    const deepLink = this.buildDeepLink({
+    const deepLink = buildDeepLink({
       channelId: input.channel.id,
       messageId: input.message.id,
       projectId: input.channel.projectId,
@@ -287,32 +230,6 @@ export class MessagingService {
     return message;
   }
 
-  private mapPreviewMessage(
-    message: {
-      id: string;
-      content: string;
-      kind: MessageKind;
-      createdAt: Date;
-      authorId: string;
-      attachments?: Array<{ originalName: string }>;
-    } | null
-  ) {
-    if (!message) {
-      return null;
-    }
-
-    return {
-      messageId: message.id,
-      content: this.formatMessagePreview({
-        kind: message.kind,
-        content: message.content,
-        attachmentName: message.attachments?.[0]?.originalName ?? null
-      }).slice(0, 160),
-      kind: message.kind,
-      createdAt: message.createdAt.toISOString(),
-      authorId: message.authorId
-    };
-  }
 
   private async getLatestMessagesByChannel(channelIds: string[]) {
     if (channelIds.length === 0) {
@@ -631,7 +548,7 @@ export class MessagingService {
       return existing;
     }
 
-    const sortedNames = users.map((user) => this.formatUserName(user)).sort((a, b) => a.localeCompare(b));
+    const sortedNames = users.map((user) => formatUserName(user)).sort((a, b) => a.localeCompare(b));
     const channelName = `Directo · ${sortedNames.join(" / ")}`.slice(0, 120);
 
     return this.app.prisma.channel.create({
@@ -807,14 +724,6 @@ export class MessagingService {
     };
   }
 
-  private computeAggregateStatus(receipts: Array<{ status: string }>): "sent" | "delivered" | "read" {
-    if (receipts.length === 0) return "sent";
-    const allRead = receipts.every((r) => r.status === "LEIDO");
-    if (allRead) return "read";
-    const allDelivered = receipts.every((r) => r.status === "LEIDO" || r.status === "ENTREGADO");
-    if (allDelivered) return "delivered";
-    return "sent";
-  }
 
   async markMessagesDelivered(input: { channelId: string; messageIds: string[]; userId: string }) {
     await this.getChannelForMember(input.channelId, input.userId);
@@ -914,7 +823,7 @@ export class MessagingService {
       messageId: input.messageId,
       receipts: receipts.map((r) => ({
         userId: r.user.id,
-        userName: this.formatUserName(r.user),
+        userName: formatUserName(r.user),
         status: r.status,
         deliveredAt: r.deliveredAt?.toISOString() ?? null,
         readAt: r.readAt?.toISOString() ?? null
@@ -979,7 +888,7 @@ export class MessagingService {
       const { receipts, ...rest } = message;
       return {
         ...rest,
-        aggregateStatus: rest.authorId === userId ? this.computeAggregateStatus(receipts) : undefined
+        aggregateStatus: rest.authorId === userId ? computeAggregateStatus(receipts) : undefined
       };
     });
   }
@@ -1092,13 +1001,13 @@ export class MessagingService {
       : [];
 
     const peerNameById = new Map(
-      peers.map((peer) => [peer.id, this.formatUserName({ firstName: peer.firstName, lastName: peer.lastName })])
+      peers.map((peer) => [peer.id, formatUserName({ firstName: peer.firstName, lastName: peer.lastName })])
     );
 
     const projectItems = projects.map((project) => {
       const channel = projectGeneralChannelByProject.get(project.id) ?? null;
       const latest = channel ? latestByChannel.get(channel.id) ?? null : null;
-      const lastMessage = this.mapPreviewMessage(latest ?? null);
+      const lastMessage = mapPreviewMessage(latest ?? null);
 
       return {
         projectId: project.id,
@@ -1113,7 +1022,7 @@ export class MessagingService {
     const privateItems = strictPrivateChannels.map((channel) => {
       const peerUserId = channel.members.find((member) => member.userId !== userId)?.userId ?? null;
       const latest = latestByChannel.get(channel.id) ?? null;
-      const lastMessage = this.mapPreviewMessage(latest);
+      const lastMessage = mapPreviewMessage(latest);
 
       return {
         channelId: channel.id,
