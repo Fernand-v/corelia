@@ -838,7 +838,7 @@ export class MessagingService {
   }
 
   async markMessagesRead(input: { channelId: string; upToMessageId: string; userId: string }) {
-    const channel = await this.getChannelForMember(input.channelId, input.userId);
+    await this.getChannelForMember(input.channelId, input.userId);
 
     const targetMessage = await this.app.prisma.message.findUnique({
       where: { id: input.upToMessageId },

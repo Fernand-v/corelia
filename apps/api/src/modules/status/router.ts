@@ -42,31 +42,27 @@ export const statusRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(statusSchemas.maintenanceToggleSchema, request.body);
-        const currentStatus = await service.getSystemStatus();
-        const result = await service.setMaintenance(payload);
-        request.auditEvent = {
-          entityType: "AUTOMATIZACION",
-          entityId: String(result.id),
-          action: "ACTUALIZAR",
-          reasonCatalogId: "MAINTENANCE_TOGGLE",
-          reason: payload.enabled
-            ? "Activación de modo mantenimiento"
-            : "Desactivación de modo mantenimiento",
-          previousDataText: {
-            enabled: currentStatus.maintenance.enabled,
-            message: currentStatus.maintenance.message
-          },
-          newDataText: {
-            enabled: result.enabled,
-            message: result.message
-          }
-        };
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(statusSchemas.maintenanceToggleSchema, request.body);
+      const currentStatus = await service.getSystemStatus();
+      const result = await service.setMaintenance(payload);
+      request.auditEvent = {
+        entityType: "AUTOMATIZACION",
+        entityId: String(result.id),
+        action: "ACTUALIZAR",
+        reasonCatalogId: "MAINTENANCE_TOGGLE",
+        reason: payload.enabled
+          ? "Activación de modo mantenimiento"
+          : "Desactivación de modo mantenimiento",
+        previousDataText: {
+          enabled: currentStatus.maintenance.enabled,
+          message: currentStatus.maintenance.message
+        },
+        newDataText: {
+          enabled: result.enabled,
+          message: result.message
+        }
+      };
+      return reply.send(result);
     }
   );
 };

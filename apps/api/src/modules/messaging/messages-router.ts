@@ -16,16 +16,12 @@ export const messagesRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(messagingSchemas.createMessageInputSchema, request.body);
-        const message = await service.createMessage({
-          ...payload,
-          authorId: request.authUser!.id
-        });
-        return reply.code(201).send(message);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(messagingSchemas.createMessageInputSchema, request.body);
+      const message = await service.createMessage({
+        ...payload,
+        authorId: request.authUser!.id
+      });
+      return reply.code(201).send(message);
     }
   );
 
@@ -39,13 +35,9 @@ export const messagesRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(messagingSchemas.listMessagesQuerySchema, request.query ?? {});
-        const messages = await service.listMessages(query.channelId, request.authUser!.id);
-        return reply.send(messages);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(messagingSchemas.listMessagesQuerySchema, request.query ?? {});
+      const messages = await service.listMessages(query.channelId, request.authUser!.id);
+      return reply.send(messages);
     }
   );
 };

@@ -50,13 +50,9 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(messagingSchemas.listChannelsQuerySchema, request.query ?? {});
-        const channels = await service.listChannels(request.authUser!.id, query);
-        return reply.send(channels);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(messagingSchemas.listChannelsQuerySchema, request.query ?? {});
+      const channels = await service.listChannels(request.authUser!.id, query);
+      return reply.send(channels);
     }
   );
 
@@ -89,16 +85,12 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(messagingSchemas.createDirectChannelSchema, request.body);
-        const channel = await service.createDirectChannel({
-          creatorId: request.authUser!.id,
-          targetUserId: payload.targetUserId
-        });
-        return reply.code(201).send(channel);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(messagingSchemas.createDirectChannelSchema, request.body);
+      const channel = await service.createDirectChannel({
+        creatorId: request.authUser!.id,
+        targetUserId: payload.targetUserId
+      });
+      return reply.code(201).send(channel);
     }
   );
 
@@ -131,38 +123,34 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const upload = await request.file({
-          limits: {
-            files: 1,
-            fileSize: MAX_ATTACHMENT_SIZE
-          }
-        });
-
-        if (!upload) {
-          return reply.code(400).send({ message: "No se recibió archivo para enviar" });
+      const upload = await request.file({
+        limits: {
+          files: 1,
+          fileSize: MAX_ATTACHMENT_SIZE
         }
+      });
 
-        const payload = parseWithSchema(messagingSchemas.createFileMessageInputSchema, {
-          channelId: readMultipartField(upload.fields.channelId),
-          content: readMultipartField(upload.fields.content),
-          mentions: parseMentionsField(upload.fields.mentions)
-        });
-
-        const message = await service.createFileMessage({
-          channelId: payload.channelId,
-          authorId: request.authUser!.id,
-          content: payload.content,
-          mentions: payload.mentions,
-          originalName: upload.filename,
-          mimeType: upload.mimetype,
-          data: await upload.toBuffer()
-        });
-
-        return reply.code(201).send(message);
-      } catch (error) {
-        throw error;
+      if (!upload) {
+        return reply.code(400).send({ message: "No se recibió archivo para enviar" });
       }
+
+      const payload = parseWithSchema(messagingSchemas.createFileMessageInputSchema, {
+        channelId: readMultipartField(upload.fields.channelId),
+        content: readMultipartField(upload.fields.content),
+        mentions: parseMentionsField(upload.fields.mentions)
+      });
+
+      const message = await service.createFileMessage({
+        channelId: payload.channelId,
+        authorId: request.authUser!.id,
+        content: payload.content,
+        mentions: payload.mentions,
+        originalName: upload.filename,
+        mimeType: upload.mimetype,
+        data: await upload.toBuffer()
+      });
+
+      return reply.code(201).send(message);
     }
   );
 
@@ -176,13 +164,9 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(messagingSchemas.channelParamsSchema, request.params);
-        const messages = await service.listMessages(params.channelId, request.authUser!.id);
-        return reply.send(messages);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(messagingSchemas.channelParamsSchema, request.params);
+      const messages = await service.listMessages(params.channelId, request.authUser!.id);
+      return reply.send(messages);
     }
   );
 
@@ -196,41 +180,37 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const upload = await request.file({
-          limits: {
-            files: 1,
-            fileSize: 10 * 1024 * 1024
-          }
-        });
-
-        if (!upload) {
-          return reply.code(400).send({ message: "No se recibió archivo de audio" });
+      const upload = await request.file({
+        limits: {
+          files: 1,
+          fileSize: 10 * 1024 * 1024
         }
+      });
 
-        if (!upload.mimetype.startsWith("audio/")) {
-          return reply.code(400).send({ message: "Solo se permiten archivos de audio" });
-        }
-
-        const payload = parseWithSchema(messagingSchemas.createVoiceNoteInputSchema, {
-          channelId: readMultipartField(upload.fields.channelId),
-          content: readMultipartField(upload.fields.content)
-        });
-
-        const message = await service.createFileMessage({
-          channelId: payload.channelId,
-          authorId: request.authUser!.id,
-          content: payload.content || "Nota de voz",
-          originalName: upload.filename || "voice-note.webm",
-          mimeType: upload.mimetype,
-          data: await upload.toBuffer(),
-          kind: "NOTA_VOZ"
-        });
-
-        return reply.code(201).send(message);
-      } catch (error) {
-        throw error;
+      if (!upload) {
+        return reply.code(400).send({ message: "No se recibió archivo de audio" });
       }
+
+      if (!upload.mimetype.startsWith("audio/")) {
+        return reply.code(400).send({ message: "Solo se permiten archivos de audio" });
+      }
+
+      const payload = parseWithSchema(messagingSchemas.createVoiceNoteInputSchema, {
+        channelId: readMultipartField(upload.fields.channelId),
+        content: readMultipartField(upload.fields.content)
+      });
+
+      const message = await service.createFileMessage({
+        channelId: payload.channelId,
+        authorId: request.authUser!.id,
+        content: payload.content || "Nota de voz",
+        originalName: upload.filename || "voice-note.webm",
+        mimeType: upload.mimetype,
+        data: await upload.toBuffer(),
+        kind: "NOTA_VOZ"
+      });
+
+      return reply.code(201).send(message);
     }
   );
 
@@ -244,35 +224,31 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(messagingSchemas.channelParamsSchema, request.params);
-        const body = messagingSchemas.instantCallBodySchema.safeParse(request.body ?? {});
-        const callType = body.success ? body.data.callType : "VIDEO";
-        const result = await service.createInstantCall({
+      const params = parseWithSchema(messagingSchemas.channelParamsSchema, request.params);
+      const body = messagingSchemas.instantCallBodySchema.safeParse(request.body ?? {});
+      const callType = body.success ? body.data.callType : "VIDEO";
+      const result = await service.createInstantCall({
+        channelId: params.channelId,
+        authorId: request.authUser!.id,
+        callType
+      });
+
+      request.auditEvent = {
+        entityType: "REUNION",
+        entityId: result.meetingId,
+        action: "PROGRAMAR_REUNION",
+        reasonCatalogId: "INSTANT_CALL",
+        reason: callType === "VOZ"
+          ? "Llamada de voz iniciada desde mensajería"
+          : "Videollamada instantánea iniciada desde mensajería",
+        newDataText: {
           channelId: params.channelId,
-          authorId: request.authUser!.id,
-          callType
-        });
+          callType,
+          joinUrl: result.joinUrl
+        }
+      };
 
-        request.auditEvent = {
-          entityType: "REUNION",
-          entityId: result.meetingId,
-          action: "PROGRAMAR_REUNION",
-          reasonCatalogId: "INSTANT_CALL",
-          reason: callType === "VOZ"
-            ? "Llamada de voz iniciada desde mensajería"
-            : "Videollamada instantánea iniciada desde mensajería",
-          newDataText: {
-            channelId: params.channelId,
-            callType,
-            joinUrl: result.joinUrl
-          }
-        };
-
-        return reply.code(201).send(result);
-      } catch (error) {
-        throw error;
-      }
+      return reply.code(201).send(result);
     }
   );
 
@@ -286,25 +262,21 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(messagingSchemas.attachmentParamsSchema, request.params);
-        const query = parseWithSchema(messagingSchemas.attachmentContentQuerySchema, request.query ?? {});
-        const content = await service.getAttachmentContent({
-          attachmentId: params.attachmentId,
-          userId: request.authUser!.id
-        });
+      const params = parseWithSchema(messagingSchemas.attachmentParamsSchema, request.params);
+      const query = parseWithSchema(messagingSchemas.attachmentContentQuerySchema, request.query ?? {});
+      const content = await service.getAttachmentContent({
+        attachmentId: params.attachmentId,
+        userId: request.authUser!.id
+      });
 
-        const encodedFileName = encodeURIComponent(content.attachment.originalName);
-        const disposition = query.mode;
+      const encodedFileName = encodeURIComponent(content.attachment.originalName);
+      const disposition = query.mode;
 
-        reply.header("Content-Type", content.attachment.mimeType || "application/octet-stream");
-        reply.header("Content-Disposition", `${disposition}; filename*=UTF-8''${encodedFileName}`);
-        reply.header("X-Content-Type-Options", "nosniff");
+      reply.header("Content-Type", content.attachment.mimeType || "application/octet-stream");
+      reply.header("Content-Disposition", `${disposition}; filename*=UTF-8''${encodedFileName}`);
+      reply.header("X-Content-Type-Options", "nosniff");
 
-        return reply.send(content.stream);
-      } catch (error) {
-        throw error;
-      }
+      return reply.send(content.stream);
     }
   );
 
@@ -318,17 +290,13 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(messagingSchemas.markDeliveredInputSchema, request.body);
-        await service.markMessagesDelivered({
-          channelId: payload.channelId,
-          messageIds: payload.messageIds,
-          userId: request.authUser!.id
-        });
-        return reply.send({ ok: true });
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(messagingSchemas.markDeliveredInputSchema, request.body);
+      await service.markMessagesDelivered({
+        channelId: payload.channelId,
+        messageIds: payload.messageIds,
+        userId: request.authUser!.id
+      });
+      return reply.send({ ok: true });
     }
   );
 
@@ -342,17 +310,13 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(messagingSchemas.markReadInputSchema, request.body);
-        await service.markMessagesRead({
-          channelId: payload.channelId,
-          upToMessageId: payload.upToMessageId,
-          userId: request.authUser!.id
-        });
-        return reply.send({ ok: true });
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(messagingSchemas.markReadInputSchema, request.body);
+      await service.markMessagesRead({
+        channelId: payload.channelId,
+        upToMessageId: payload.upToMessageId,
+        userId: request.authUser!.id
+      });
+      return reply.send({ ok: true });
     }
   );
 
@@ -366,16 +330,12 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(messagingSchemas.messageIdParamsSchema, request.params);
-        const info = await service.getMessageReceiptInfo({
-          messageId: params.messageId,
-          userId: request.authUser!.id
-        });
-        return reply.send(info);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(messagingSchemas.messageIdParamsSchema, request.params);
+      const info = await service.getMessageReceiptInfo({
+        messageId: params.messageId,
+        userId: request.authUser!.id
+      });
+      return reply.send(info);
     }
   );
 
@@ -389,12 +349,8 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const data = await service.getConversations(request.authUser!.id);
-        return reply.send(data);
-      } catch (error) {
-        throw error;
-      }
+      const data = await service.getConversations(request.authUser!.id);
+      return reply.send(data);
     }
   );
 
@@ -408,16 +364,12 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(messagingSchemas.projectParamsSchema, request.params);
-        const channel = await service.ensureProjectGeneralChannel({
-          projectId: params.projectId,
-          requesterId: request.authUser!.id
-        });
-        return reply.send(channel);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(messagingSchemas.projectParamsSchema, request.params);
+      const channel = await service.ensureProjectGeneralChannel({
+        projectId: params.projectId,
+        requesterId: request.authUser!.id
+      });
+      return reply.send(channel);
     }
   );
 };

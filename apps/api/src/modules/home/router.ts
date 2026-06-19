@@ -14,21 +14,17 @@ export const homeRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(homeSchemas.homeQuerySchema, request.query ?? {});
-        const dashboard = await service.getDashboard({
-          userId: request.authUser!.id,
-          role: request.accessContext?.activeRole ?? "INVITADO_EXTERNO",
-          projectId: request.accessContext?.projectId ?? query.projectId,
-          teamId: query.teamId
-        });
-        return reply.send({
-          ...dashboard,
-          roleDisplayName: request.accessContext?.roleDisplayName
-        });
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(homeSchemas.homeQuerySchema, request.query ?? {});
+      const dashboard = await service.getDashboard({
+        userId: request.authUser!.id,
+        role: request.accessContext?.activeRole ?? "INVITADO_EXTERNO",
+        projectId: request.accessContext?.projectId ?? query.projectId,
+        teamId: query.teamId
+      });
+      return reply.send({
+        ...dashboard,
+        roleDisplayName: request.accessContext?.roleDisplayName
+      });
     }
   );
 };

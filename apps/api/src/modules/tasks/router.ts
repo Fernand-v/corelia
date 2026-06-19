@@ -15,13 +15,9 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         requiredPermission: "TAREA_LEER"
       }
     },
-    async (request, reply) => {
-      try {
-        const query = parseWithSchema(taskSchemas.taskListQuerySchema, request.query ?? {});
-        return service.listTasks(request.authUser!.id, query);
-      } catch (error) {
-        throw error;
-      }
+    async (request) => {
+      const query = parseWithSchema(taskSchemas.taskListQuerySchema, request.query ?? {});
+      return service.listTasks(request.authUser!.id, query);
     }
   );
 
@@ -35,13 +31,9 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(taskSchemas.projectMembersQuerySchema, request.query ?? {});
-        const members = await service.listProjectMembers(request.authUser!.id, query.projectId);
-        return reply.send(members);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(taskSchemas.projectMembersQuerySchema, request.query ?? {});
+      const members = await service.listProjectMembers(request.authUser!.id, query.projectId);
+      return reply.send(members);
     }
   );
 
@@ -55,30 +47,26 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(taskSchemas.finalizeAndAdvanceInputSchema, request.body);
-        const result = await service.finalizeAndAdvance({
-          ...payload,
-          changedById: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole,
-          activeRoleRank: request.accessContext!.rank
-        });
+      const payload = parseWithSchema(taskSchemas.finalizeAndAdvanceInputSchema, request.body);
+      const result = await service.finalizeAndAdvance({
+        ...payload,
+        changedById: request.authUser!.id,
+        activeRole: request.accessContext!.activeRole,
+        activeRoleRank: request.accessContext!.rank
+      });
 
-        request.auditEvent = {
-          entityType: "TAREA",
-          entityId: payload.taskId,
-          action: "CAMBIO_ESTADO_TAREA",
-          reason: payload.reason,
-          newDataText: {
-            completedTaskId: result.completedTask.id,
-            nextTaskId: result.nextTask?.id ?? null
-          }
-        };
+      request.auditEvent = {
+        entityType: "TAREA",
+        entityId: payload.taskId,
+        action: "CAMBIO_ESTADO_TAREA",
+        reason: payload.reason,
+        newDataText: {
+          completedTaskId: result.completedTask.id,
+          nextTaskId: result.nextTask?.id ?? null
+        }
+      };
 
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      return reply.send(result);
     }
   );
 
@@ -92,29 +80,25 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(taskSchemas.createTaskInputSchema, request.body);
-        const task = await service.createTask({
-          ...payload,
-          createdById: request.authUser!.id,
-          confirmOutOfSchedule: payload.confirmOutOfSchedule ?? false
-        });
+      const payload = parseWithSchema(taskSchemas.createTaskInputSchema, request.body);
+      const task = await service.createTask({
+        ...payload,
+        createdById: request.authUser!.id,
+        confirmOutOfSchedule: payload.confirmOutOfSchedule ?? false
+      });
 
-        request.auditEvent = {
-          entityType: "TAREA",
-          entityId: task.id,
-          action: "CREAR",
-          newDataText: {
-            title: task.title,
-            projectId: task.projectId,
-            assigneeId: task.assigneeId
-          }
-        };
+      request.auditEvent = {
+        entityType: "TAREA",
+        entityId: task.id,
+        action: "CREAR",
+        newDataText: {
+          title: task.title,
+          projectId: task.projectId,
+          assigneeId: task.assigneeId
+        }
+      };
 
-        return reply.code(201).send(task);
-      } catch (error) {
-        throw error;
-      }
+      return reply.code(201).send(task);
     }
   );
 
@@ -147,33 +131,29 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(taskSchemas.taskIdParamsSchema, request.params);
-        const payload = parseWithSchema(taskSchemas.updateTaskScheduleInputSchema, request.body);
-        const task = await service.updateSchedule({
-          taskId: params.taskId,
-          startDate: payload.startDate,
-          dueDate: payload.dueDate,
-          reason: payload.reason,
-          reasonCatalogId: payload.reasonCatalogId,
-          changedById: request.authUser!.id
-        });
+      const params = parseWithSchema(taskSchemas.taskIdParamsSchema, request.params);
+      const payload = parseWithSchema(taskSchemas.updateTaskScheduleInputSchema, request.body);
+      const task = await service.updateSchedule({
+        taskId: params.taskId,
+        startDate: payload.startDate,
+        dueDate: payload.dueDate,
+        reason: payload.reason,
+        reasonCatalogId: payload.reasonCatalogId,
+        changedById: request.authUser!.id
+      });
 
-        request.auditEvent = {
-          entityType: "TAREA",
-          entityId: params.taskId,
-          action: "ACTUALIZAR",
-          reason: payload.reason,
-          newDataText: {
-            startDate: task.startDate,
-            dueDate: task.dueDate
-          }
-        };
+      request.auditEvent = {
+        entityType: "TAREA",
+        entityId: params.taskId,
+        action: "ACTUALIZAR",
+        reason: payload.reason,
+        newDataText: {
+          startDate: task.startDate,
+          dueDate: task.dueDate
+        }
+      };
 
-        return reply.send(task);
-      } catch (error) {
-        throw error;
-      }
+      return reply.send(task);
     }
   );
 
@@ -187,32 +167,28 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(taskSchemas.activateTaskInputSchema, request.body);
-        const task = await service.activateTask({
-          taskId: payload.taskId,
-          reason: payload.reason,
-          reasonCatalogId: payload.reasonCatalogId,
-          changedById: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole,
-          activeRoleRank: request.accessContext!.rank
-        });
+      const payload = parseWithSchema(taskSchemas.activateTaskInputSchema, request.body);
+      const task = await service.activateTask({
+        taskId: payload.taskId,
+        reason: payload.reason,
+        reasonCatalogId: payload.reasonCatalogId,
+        changedById: request.authUser!.id,
+        activeRole: request.accessContext!.activeRole,
+        activeRoleRank: request.accessContext!.rank
+      });
 
-        request.auditEvent = {
-          entityType: "TAREA",
-          entityId: payload.taskId,
-          action: "CAMBIO_ESTADO_TAREA",
-          reason: payload.reason,
-          newDataText: {
-            status: task.status,
-            activatedManually: true
-          }
-        };
+      request.auditEvent = {
+        entityType: "TAREA",
+        entityId: payload.taskId,
+        action: "CAMBIO_ESTADO_TAREA",
+        reason: payload.reason,
+        newDataText: {
+          status: task.status,
+          activatedManually: true
+        }
+      };
 
-        return reply.send(task);
-      } catch (error) {
-        throw error;
-      }
+      return reply.send(task);
     }
   );
 
@@ -226,31 +202,27 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(taskSchemas.taskStatusTransitionInputSchema, request.body);
-        const task = await service.changeStatus({
-          ...payload,
-          changedById: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole,
-          activeRoleRank: request.accessContext!.rank
-        });
+      const payload = parseWithSchema(taskSchemas.taskStatusTransitionInputSchema, request.body);
+      const task = await service.changeStatus({
+        ...payload,
+        changedById: request.authUser!.id,
+        activeRole: request.accessContext!.activeRole,
+        activeRoleRank: request.accessContext!.rank
+      });
 
-        request.auditEvent = {
-          entityType: "TAREA",
-          entityId: payload.taskId,
-          action: "CAMBIO_ESTADO_TAREA",
-          reason: payload.reason,
-          newDataText: {
-            status: payload.status,
-            blockingTaskId: payload.blockingTaskId,
-            blockedReason: payload.blockedReason
-          }
-        };
+      request.auditEvent = {
+        entityType: "TAREA",
+        entityId: payload.taskId,
+        action: "CAMBIO_ESTADO_TAREA",
+        reason: payload.reason,
+        newDataText: {
+          status: payload.status,
+          blockingTaskId: payload.blockingTaskId,
+          blockedReason: payload.blockedReason
+        }
+      };
 
-        return reply.send(task);
-      } catch (error) {
-        throw error;
-      }
+      return reply.send(task);
     }
   );
 
@@ -264,31 +236,27 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(taskSchemas.taskReassignmentInputSchema, request.body);
-        const task = await service.reassign({
-          ...payload,
-          requestedById: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole,
-          activeRoleRank: request.accessContext!.rank,
-          projectContextId: request.accessContext?.projectId
-        });
+      const payload = parseWithSchema(taskSchemas.taskReassignmentInputSchema, request.body);
+      const task = await service.reassign({
+        ...payload,
+        requestedById: request.authUser!.id,
+        activeRole: request.accessContext!.activeRole,
+        activeRoleRank: request.accessContext!.rank,
+        projectContextId: request.accessContext?.projectId
+      });
 
-        request.auditEvent = {
-          entityType: "TAREA",
-          entityId: payload.taskId,
-          action: "REASIGNAR_TAREA",
-          reason: payload.reason,
-          newDataText: {
-            newAssigneeId: payload.newAssigneeId,
-            reopenIfCompleted: payload.reopenIfCompleted
-          }
-        };
+      request.auditEvent = {
+        entityType: "TAREA",
+        entityId: payload.taskId,
+        action: "REASIGNAR_TAREA",
+        reason: payload.reason,
+        newDataText: {
+          newAssigneeId: payload.newAssigneeId,
+          reopenIfCompleted: payload.reopenIfCompleted
+        }
+      };
 
-        return reply.send(task);
-      } catch (error) {
-        throw error;
-      }
+      return reply.send(task);
     }
   );
 
@@ -302,13 +270,9 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(taskSchemas.taskDependencyInputSchema, request.body);
-        const dependency = await service.addDependency(payload);
-        return reply.code(201).send(dependency);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(taskSchemas.taskDependencyInputSchema, request.body);
+      const dependency = await service.addDependency(payload);
+      return reply.code(201).send(dependency);
     }
   );
 

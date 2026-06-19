@@ -27,18 +27,14 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(fileSchemas.explorerQuerySchema, request.query ?? {});
-        const result = await service.listProjectExplorer({
-          projectId: query.projectId,
-          folderId: query.folderId,
-          cursor: query.cursor,
-          pageSize: query.pageSize
-        });
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(fileSchemas.explorerQuerySchema, request.query ?? {});
+      const result = await service.listProjectExplorer({
+        projectId: query.projectId,
+        folderId: query.folderId,
+        cursor: query.cursor,
+        pageSize: query.pageSize
+      });
+      return reply.send(result);
     }
   );
 
@@ -52,16 +48,12 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(fileSchemas.historyQuerySchema, request.query ?? {});
-        const result = await service.listProjectChanges({
-          projectId: query.projectId,
-          limit: query.limit
-        });
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(fileSchemas.historyQuerySchema, request.query ?? {});
+      const result = await service.listProjectChanges({
+        projectId: query.projectId,
+        limit: query.limit
+      });
+      return reply.send(result);
     }
   );
 
@@ -75,15 +67,11 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(fileSchemas.storageSummaryQuerySchema, request.query ?? {});
-        const result = await service.getProjectStorageSummary({
-          projectId: query.projectId
-        });
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(fileSchemas.storageSummaryQuerySchema, request.query ?? {});
+      const result = await service.getProjectStorageSummary({
+        projectId: query.projectId
+      });
+      return reply.send(result);
     }
   );
 
@@ -116,36 +104,32 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(fileSchemas.projectQuerySchema, request.query ?? {});
-        const upload = await request.file({
-          limits: {
-            files: 1,
-            fileSize: 50 * 1024 * 1024
-          }
-        });
-
-        if (!upload) {
-          return reply.code(400).send({ message: "No se recibió archivo para subir" });
+      const query = parseWithSchema(fileSchemas.projectQuerySchema, request.query ?? {});
+      const upload = await request.file({
+        limits: {
+          files: 1,
+          fileSize: 50 * 1024 * 1024
         }
+      });
 
-        const body = parseWithSchema(fileSchemas.uploadFileBodySchema, {
-          folderId: readMultipartField(upload.fields.folderId)
-        });
-
-        const file = await service.uploadProjectFile({
-          projectId: query.projectId,
-          folderId: body.folderId,
-          ownerId: request.authUser!.id,
-          originalName: upload.filename,
-          mimeType: upload.mimetype,
-          data: await upload.toBuffer()
-        });
-
-        return reply.code(201).send(file);
-      } catch (error) {
-        throw error;
+      if (!upload) {
+        return reply.code(400).send({ message: "No se recibió archivo para subir" });
       }
+
+      const body = parseWithSchema(fileSchemas.uploadFileBodySchema, {
+        folderId: readMultipartField(upload.fields.folderId)
+      });
+
+      const file = await service.uploadProjectFile({
+        projectId: query.projectId,
+        folderId: body.folderId,
+        ownerId: request.authUser!.id,
+        originalName: upload.filename,
+        mimeType: upload.mimetype,
+        data: await upload.toBuffer()
+      });
+
+      return reply.code(201).send(file);
     }
   );
 
@@ -198,22 +182,18 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(fileSchemas.fileIdParamSchema, request.params);
-        const query = parseWithSchema(fileSchemas.fileContentQuerySchema, request.query ?? {});
-        const content = await service.getFileContent({ fileId: params.fileId, userId: request.authUser!.id });
-        const encodedFileName = encodeURIComponent(content.file.originalName);
+      const params = parseWithSchema(fileSchemas.fileIdParamSchema, request.params);
+      const query = parseWithSchema(fileSchemas.fileContentQuerySchema, request.query ?? {});
+      const content = await service.getFileContent({ fileId: params.fileId, userId: request.authUser!.id });
+      const encodedFileName = encodeURIComponent(content.file.originalName);
 
-        reply.header("Content-Type", content.file.mimeType || "application/octet-stream");
-        reply.header(
-          "Content-Disposition",
-          `${query.mode}; filename*=UTF-8''${encodedFileName}`
-        );
-        reply.header("X-Content-Type-Options", "nosniff");
-        return reply.send(content.stream);
-      } catch (error) {
-        throw error;
-      }
+      reply.header("Content-Type", content.file.mimeType || "application/octet-stream");
+      reply.header(
+        "Content-Disposition",
+        `${query.mode}; filename*=UTF-8''${encodedFileName}`
+      );
+      reply.header("X-Content-Type-Options", "nosniff");
+      return reply.send(content.stream);
     }
   );
 

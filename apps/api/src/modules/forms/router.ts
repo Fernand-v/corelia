@@ -83,13 +83,9 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(formSchemas.createDynamicFormInputSchema, request.body);
-        const created = await service.createDynamicForm(request.authUser!.id, payload);
-        return reply.code(201).send(created);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(formSchemas.createDynamicFormInputSchema, request.body);
+      const created = await service.createDynamicForm(request.authUser!.id, payload);
+      return reply.code(201).send(created);
     }
   );
 
@@ -103,13 +99,9 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(formSchemas.dynamicFormListQuerySchema, request.query ?? {});
-        const forms = await service.listDynamicForms(request.authUser!.id, query);
-        return reply.send(forms);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(formSchemas.dynamicFormListQuerySchema, request.query ?? {});
+      const forms = await service.listDynamicForms(request.authUser!.id, query);
+      return reply.send(forms);
     }
   );
 
@@ -123,13 +115,9 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
-        const form = await service.getDynamicFormById(request.authUser!.id, params.id);
-        return reply.send(form);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+      const form = await service.getDynamicFormById(request.authUser!.id, params.id);
+      return reply.send(form);
     }
   );
 
@@ -143,14 +131,10 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
-        const payload = parseWithSchema(formSchemas.updateDynamicFormInputSchema, request.body);
-        const updated = await service.updateDynamicForm(request.authUser!.id, params.id, payload);
-        return reply.send(updated);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+      const payload = parseWithSchema(formSchemas.updateDynamicFormInputSchema, request.body);
+      const updated = await service.updateDynamicForm(request.authUser!.id, params.id, payload);
+      return reply.send(updated);
     }
   );
 
@@ -164,13 +148,9 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
-        const result = await service.deleteDynamicForm(request.authUser!.id, params.id);
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+      const result = await service.deleteDynamicForm(request.authUser!.id, params.id);
+      return reply.send(result);
     }
   );
 
@@ -184,14 +164,10 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
-        const payload = parseWithSchema(formSchemas.addDynamicFormQuestionInputSchema, request.body);
-        const question = await service.addDynamicQuestion(request.authUser!.id, params.id, payload);
-        return reply.code(201).send(question);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+      const payload = parseWithSchema(formSchemas.addDynamicFormQuestionInputSchema, request.body);
+      const question = await service.addDynamicQuestion(request.authUser!.id, params.id, payload);
+      return reply.code(201).send(question);
     }
   );
 
@@ -205,14 +181,10 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormQuestionIdParamsSchema, request.params);
-        const payload = parseWithSchema(formSchemas.updateDynamicFormQuestionInputSchema, request.body);
-        const question = await service.updateDynamicQuestion(request.authUser!.id, params.id, payload);
-        return reply.send(question);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormQuestionIdParamsSchema, request.params);
+      const payload = parseWithSchema(formSchemas.updateDynamicFormQuestionInputSchema, request.body);
+      const question = await service.updateDynamicQuestion(request.authUser!.id, params.id, payload);
+      return reply.send(question);
     }
   );
 
@@ -226,13 +198,9 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormQuestionIdParamsSchema, request.params);
-        const removed = await service.removeDynamicQuestion(request.authUser!.id, params.id);
-        return reply.send(removed);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormQuestionIdParamsSchema, request.params);
+      const removed = await service.removeDynamicQuestion(request.authUser!.id, params.id);
+      return reply.send(removed);
     }
   );
 
@@ -245,32 +213,28 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
-        const data = await request.file();
-        if (!data) {
-          return reply.code(400).send({ message: "No se envió ningún archivo" });
-        }
-
-        if (!app.storage) {
-          return reply.code(503).send({ message: "Servicio de almacenamiento no disponible" });
-        }
-
-        const buffer = await data.toBuffer();
-        const maxSize = 10 * 1024 * 1024; // 10MB
-        if (buffer.length > maxSize) {
-          return reply.code(400).send({ message: "El archivo excede el tamaño máximo de 10MB" });
-        }
-
-        const sanitizedName = data.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const objectKey = `form-uploads/${params.id}/${Date.now()}-${sanitizedName}`;
-
-        await app.storage.putObject(objectKey, buffer, data.mimetype);
-
-        return reply.code(201).send({ path: objectKey, originalName: data.filename, mimeType: data.mimetype, sizeBytes: buffer.length });
-      } catch (error) {
-        throw error;
+      const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+      const data = await request.file();
+      if (!data) {
+        return reply.code(400).send({ message: "No se envió ningún archivo" });
       }
+
+      if (!app.storage) {
+        return reply.code(503).send({ message: "Servicio de almacenamiento no disponible" });
+      }
+
+      const buffer = await data.toBuffer();
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (buffer.length > maxSize) {
+        return reply.code(400).send({ message: "El archivo excede el tamaño máximo de 10MB" });
+      }
+
+      const sanitizedName = data.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const objectKey = `form-uploads/${params.id}/${Date.now()}-${sanitizedName}`;
+
+      await app.storage.putObject(objectKey, buffer, data.mimetype);
+
+      return reply.code(201).send({ path: objectKey, originalName: data.filename, mimeType: data.mimetype, sizeBytes: buffer.length });
     }
   );
 
@@ -283,14 +247,10 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
-        const payload = parseWithSchema(formSchemas.submitDynamicFormInputSchema, request.body);
-        const submitted = await service.submitDynamicForm(request.authUser!.id, params.id, payload);
-        return reply.code(201).send(submitted);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+      const payload = parseWithSchema(formSchemas.submitDynamicFormInputSchema, request.body);
+      const submitted = await service.submitDynamicForm(request.authUser!.id, params.id, payload);
+      return reply.code(201).send(submitted);
     }
   );
 
@@ -304,13 +264,9 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
-        const responses = await service.listDynamicFormResponses(request.authUser!.id, params.id);
-        return reply.send(responses);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+      const responses = await service.listDynamicFormResponses(request.authUser!.id, params.id);
+      return reply.send(responses);
     }
   );
 
@@ -324,13 +280,9 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
-        const summary = await service.getDynamicFormSummary(request.authUser!.id, params.id);
-        return reply.send(summary);
-      } catch (error) {
-        throw error;
-      }
+      const params = parseWithSchema(formSchemas.dynamicFormIdParamsSchema, request.params);
+      const summary = await service.getDynamicFormSummary(request.authUser!.id, params.id);
+      return reply.send(summary);
     }
   );
 };

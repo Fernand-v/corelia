@@ -1,5 +1,3 @@
-import type { RoleCode } from "@corelia/types";
-
 export const isAdminRole = (roleCode: string | null | undefined): boolean => {
   return roleCode === "ADMINISTRADOR";
 };

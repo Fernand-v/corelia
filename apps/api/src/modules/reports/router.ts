@@ -16,17 +16,13 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(reportsSchemas.reportsExecutiveQuerySchema, request.query ?? {});
-        const report = await service.getExecutiveReport({
-          actorId: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole,
-          ...query
-        });
-        return reply.send(report);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(reportsSchemas.reportsExecutiveQuerySchema, request.query ?? {});
+      const report = await service.getExecutiveReport({
+        actorId: request.authUser!.id,
+        activeRole: request.accessContext!.activeRole,
+        ...query
+      });
+      return reply.send(report);
     }
   );
 
@@ -40,19 +36,15 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(reportsSchemas.reportsExecutiveQuerySchema, request.query ?? {});
-        const file = await service.exportExecutiveXlsx({
-          actorId: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole,
-          ...query
-        });
-        reply.header("Content-Type", file.contentType);
-        reply.header("Content-Disposition", `attachment; filename="${file.filename}"`);
-        return reply.send(file.buffer);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(reportsSchemas.reportsExecutiveQuerySchema, request.query ?? {});
+      const file = await service.exportExecutiveXlsx({
+        actorId: request.authUser!.id,
+        activeRole: request.accessContext!.activeRole,
+        ...query
+      });
+      reply.header("Content-Type", file.contentType);
+      reply.header("Content-Disposition", `attachment; filename="${file.filename}"`);
+      return reply.send(file.buffer);
     }
   );
 
@@ -66,19 +58,15 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(reportsSchemas.reportsExecutiveQuerySchema, request.query ?? {});
-        const file = await service.exportExecutivePdf({
-          actorId: request.authUser!.id,
-          activeRole: request.accessContext!.activeRole,
-          ...query
-        });
-        reply.header("Content-Type", file.contentType);
-        reply.header("Content-Disposition", `attachment; filename="${file.filename}"`);
-        return reply.send(file.buffer);
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(reportsSchemas.reportsExecutiveQuerySchema, request.query ?? {});
+      const file = await service.exportExecutivePdf({
+        actorId: request.authUser!.id,
+        activeRole: request.accessContext!.activeRole,
+        ...query
+      });
+      reply.header("Content-Type", file.contentType);
+      reply.header("Content-Disposition", `attachment; filename="${file.filename}"`);
+      return reply.send(file.buffer);
     }
   );
 };

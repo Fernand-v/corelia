@@ -1,6 +1,6 @@
 import type { SocketBaseContext } from "./types.js";
 
-export const registerTypingEvents = ({ app, socket }: SocketBaseContext) => {
+export const registerTypingEvents = ({ socket }: SocketBaseContext) => {
   socket.on("channel:typing:start", (channelId: string) => {
     if (!channelId) {
       return;

@@ -38,6 +38,7 @@ const textEncoder = new TextEncoder();
 
 const XML_HEADER = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 
+// eslint-disable-next-line no-control-regex -- intencional: valida que todo el rango sea ASCII
 const isAscii = (value: string) => /^[\x00-\x7F]*$/.test(value);
 
 export const isOnlyOfficeDocumentType = (

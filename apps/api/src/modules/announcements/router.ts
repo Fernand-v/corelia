@@ -65,32 +65,28 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
       },
     },
     async (request, reply) => {
-      try {
-        const params = parseWithSchema(
-          announcementSchemas.announcementIdParamSchema,
-          request.params,
-        );
-        const deleted = await service.deleteById({
-          announcementId: params.announcementId,
-        });
+      const params = parseWithSchema(
+        announcementSchemas.announcementIdParamSchema,
+        request.params,
+      );
+      const deleted = await service.deleteById({
+        announcementId: params.announcementId,
+      });
 
-        request.auditEvent = {
-          entityType: "ANUNCIO",
-          entityId: deleted.id,
-          action: "ELIMINAR",
-          previousDataText: {
-            title: deleted.title,
-            expiresAt: deleted.expiresAt,
-          },
-        };
+      request.auditEvent = {
+        entityType: "ANUNCIO",
+        entityId: deleted.id,
+        action: "ELIMINAR",
+        previousDataText: {
+          title: deleted.title,
+          expiresAt: deleted.expiresAt,
+        },
+      };
 
-        return reply.send({
-          id: deleted.id,
-          deleted: true,
-        });
-      } catch (error) {
-        throw error;
-      }
+      return reply.send({
+        id: deleted.id,
+        deleted: true,
+      });
     },
   );
 
@@ -104,31 +100,27 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
       },
     },
     async (request, reply) => {
-      try {
-        const upload = await request.file({
-          limits: {
-            files: 1,
-            fileSize: 50 * 1024 * 1024,
-          },
-        });
+      const upload = await request.file({
+        limits: {
+          files: 1,
+          fileSize: 50 * 1024 * 1024,
+        },
+      });
 
-        if (!upload) {
-          return reply
-            .code(400)
-            .send({ message: "No se recibió archivo para subir" });
-        }
-
-        const asset = await service.uploadAsset({
-          createdById: request.authUser!.id,
-          originalName: upload.filename,
-          mimeType: upload.mimetype,
-          data: await upload.toBuffer(),
-        });
-
-        return reply.code(201).send(asset);
-      } catch (error) {
-        throw error;
+      if (!upload) {
+        return reply
+          .code(400)
+          .send({ message: "No se recibió archivo para subir" });
       }
+
+      const asset = await service.uploadAsset({
+        createdById: request.authUser!.id,
+        originalName: upload.filename,
+        mimeType: upload.mimetype,
+        data: await upload.toBuffer(),
+      });
+
+      return reply.code(201).send(asset);
     },
   );
 
@@ -140,28 +132,24 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
       },
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(
-          announcementSchemas.announcementAssetContentQuerySchema,
-          request.query ?? {},
-        );
-        const content = await service.getAssetContent({ token: query.token });
-        const encodedFileName = encodeURIComponent(content.fileName);
+      const query = parseWithSchema(
+        announcementSchemas.announcementAssetContentQuerySchema,
+        request.query ?? {},
+      );
+      const content = await service.getAssetContent({ token: query.token });
+      const encodedFileName = encodeURIComponent(content.fileName);
 
-        reply.header(
-          "Content-Type",
-          content.mimeType || "application/octet-stream",
-        );
-        reply.header(
-          "Content-Disposition",
-          `${query.mode}; filename*=UTF-8''${encodedFileName}`,
-        );
-        reply.header("X-Content-Type-Options", "nosniff");
-        reply.header("Cross-Origin-Resource-Policy", "cross-origin");
-        return reply.send(content.stream);
-      } catch (error) {
-        throw error;
-      }
+      reply.header(
+        "Content-Type",
+        content.mimeType || "application/octet-stream",
+      );
+      reply.header(
+        "Content-Disposition",
+        `${query.mode}; filename*=UTF-8''${encodedFileName}`,
+      );
+      reply.header("X-Content-Type-Options", "nosniff");
+      reply.header("Cross-Origin-Resource-Policy", "cross-origin");
+      return reply.send(content.stream);
     },
   );
 };

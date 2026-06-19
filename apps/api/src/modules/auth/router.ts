@@ -33,24 +33,20 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(authSchemas.registerRequestInputSchema, request.body);
-        const created = await service.createSignupRequest(payload);
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: created.id,
-          action: "CREAR",
-          reasonCatalogId: "SIGNUP_REQUEST",
-          newDataText: {
-            email: payload.email,
-            firstName: payload.firstName,
-            lastName: payload.lastName
-          }
-        };
-        return reply.code(201).send(created);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(authSchemas.registerRequestInputSchema, request.body);
+      const created = await service.createSignupRequest(payload);
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: created.id,
+        action: "CREAR",
+        reasonCatalogId: "SIGNUP_REQUEST",
+        newDataText: {
+          email: payload.email,
+          firstName: payload.firstName,
+          lastName: payload.lastName
+        }
+      };
+      return reply.code(201).send(created);
     }
   );
 
@@ -67,18 +63,14 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(authSchemas.loginInputSchema, request.body);
-        const tokens = await service.login(payload);
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: tokens.userId,
-          action: "LOGIN"
-        };
-        return reply.send(tokens);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(authSchemas.loginInputSchema, request.body);
+      const tokens = await service.login(payload);
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: tokens.userId,
+        action: "LOGIN"
+      };
+      return reply.send(tokens);
     }
   );
 
@@ -95,21 +87,17 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(authSchemas.activateInviteInputSchema, request.body);
-        const tokens = await service.activateInternalInvite(payload);
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: tokens.userId,
-          action: "CREAR",
-          newDataText: {
-            source: "INTERNAL_INVITE_ACTIVATION"
-          }
-        };
-        return reply.send(tokens);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(authSchemas.activateInviteInputSchema, request.body);
+      const tokens = await service.activateInternalInvite(payload);
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: tokens.userId,
+        action: "CREAR",
+        newDataText: {
+          source: "INTERNAL_INVITE_ACTIVATION"
+        }
+      };
+      return reply.send(tokens);
     }
   );
 
@@ -126,13 +114,9 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(authSchemas.refreshInputSchema, request.body);
-        const tokens = await service.refresh(payload);
-        return reply.send(tokens);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(authSchemas.refreshInputSchema, request.body);
+      const tokens = await service.refresh(payload);
+      return reply.send(tokens);
     }
   );
 
@@ -145,20 +129,16 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(authSchemas.logoutInputSchema, request.body);
-        const userId = await service.logout(payload);
-        if (userId) {
-          request.auditEvent = {
-            entityType: "USUARIO",
-            entityId: userId,
-            action: "LOGOUT"
-          };
-        }
-        return reply.code(204).send();
-      } catch (error) {
-        throw error;
+      const payload = parseWithSchema(authSchemas.logoutInputSchema, request.body);
+      const userId = await service.logout(payload);
+      if (userId) {
+        request.auditEvent = {
+          entityType: "USUARIO",
+          entityId: userId,
+          action: "LOGOUT"
+        };
       }
+      return reply.code(204).send();
     }
   );
 
@@ -174,24 +154,20 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(authSchemas.changePasswordInputSchema, request.body);
-        const result = await service.changePassword(request.authUser!.id, payload);
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: request.authUser!.id,
-          action: "ACTUALIZAR",
-          reasonCatalogId: "PASSWORD_CHANGE",
-          reason: "Cambio de contraseña desde perfil",
-          newDataText: {
-            passwordChanged: true,
-            source: "PROFILE_MODAL"
-          }
-        };
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(authSchemas.changePasswordInputSchema, request.body);
+      const result = await service.changePassword(request.authUser!.id, payload);
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: request.authUser!.id,
+        action: "ACTUALIZAR",
+        reasonCatalogId: "PASSWORD_CHANGE",
+        reason: "Cambio de contraseña desde perfil",
+        newDataText: {
+          passwordChanged: true,
+          source: "PROFILE_MODAL"
+        }
+      };
+      return reply.send(result);
     }
   );
 
@@ -208,21 +184,17 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(authSchemas.adminResetPasswordInputSchema, request.body);
-        const result = await service.adminResetPassword(request.authUser!.id, payload);
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: payload.userId,
-          action: "ACTUALIZAR",
-          newDataText: {
-            passwordResetBy: request.authUser!.id
-          }
-        };
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(authSchemas.adminResetPasswordInputSchema, request.body);
+      const result = await service.adminResetPassword(request.authUser!.id, payload);
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: payload.userId,
+        action: "ACTUALIZAR",
+        newDataText: {
+          passwordResetBy: request.authUser!.id
+        }
+      };
+      return reply.send(result);
     }
   );
 
@@ -234,12 +206,8 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const summary = await service.getMembershipSummary(request.authUser!.id);
-        return reply.send(summary);
-      } catch (error) {
-        throw error;
-      }
+      const summary = await service.getMembershipSummary(request.authUser!.id);
+      return reply.send(summary);
     }
   );
 

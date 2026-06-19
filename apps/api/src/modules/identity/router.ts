@@ -41,45 +41,41 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(createUserInputSchema, request.body);
-        const user = await app.prisma.user.create({
-          data: {
-            email: payload.email,
-            firstName: payload.firstName,
-            lastName: payload.lastName,
-            baseRole: {
-              connect: {
-                key: payload.baseRole
-              }
-            },
-            passwordHash: await hashPassword(payload.password)
-          }
-        });
+      const payload = parseWithSchema(createUserInputSchema, request.body);
+      const user = await app.prisma.user.create({
+        data: {
+          email: payload.email,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          baseRole: {
+            connect: {
+              key: payload.baseRole
+            }
+          },
+          passwordHash: await hashPassword(payload.password)
+        }
+      });
 
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: user.id,
-          action: "CREAR",
-          newDataText: {
-            id: user.id,
-            email: user.email,
-            baseRoleId: user.baseRoleId,
-            baseRole: payload.baseRole
-          }
-        };
-
-        return reply.code(201).send({
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: user.id,
+        action: "CREAR",
+        newDataText: {
           id: user.id,
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
           baseRoleId: user.baseRoleId,
           baseRole: payload.baseRole
-        });
-      } catch (error) {
-        throw error;
-      }
+        }
+      };
+
+      return reply.code(201).send({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        baseRoleId: user.baseRoleId,
+        baseRole: payload.baseRole
+      });
     }
   );
 
@@ -105,12 +101,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const query = parseWithSchema(identitySchemas.userPresenceQuerySchema, request.query ?? {});
-        return reply.send(await service.getPresenceForUsers(query.userIds));
-      } catch (error) {
-        throw error;
-      }
+      const query = parseWithSchema(identitySchemas.userPresenceQuerySchema, request.query ?? {});
+      return reply.send(await service.getPresenceForUsers(query.userIds));
     }
   );
 
@@ -136,32 +128,28 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(
-          identitySchemas.createOnboardingChecklistSchema,
-          request.body
-        );
-        const checklist = await service.createOnboardingChecklist({
-          name: payload.name,
-          items: payload.items.map((item: (typeof payload.items)[number]) => ({
-            key: item.key,
-            label: item.label,
-            required: item.required,
-            order: item.order
-          }))
-        });
+      const payload = parseWithSchema(
+        identitySchemas.createOnboardingChecklistSchema,
+        request.body
+      );
+      const checklist = await service.createOnboardingChecklist({
+        name: payload.name,
+        items: payload.items.map((item: (typeof payload.items)[number]) => ({
+          key: item.key,
+          label: item.label,
+          required: item.required,
+          order: item.order
+        }))
+      });
 
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: checklist.id,
-          action: "CREAR",
-          newDataText: checklist as unknown as Record<string, unknown>
-        };
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: checklist.id,
+        action: "CREAR",
+        newDataText: checklist as unknown as Record<string, unknown>
+      };
 
-        return reply.code(201).send(checklist);
-      } catch (error) {
-        throw error;
-      }
+      return reply.code(201).send(checklist);
     }
   );
 
@@ -175,19 +163,15 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(identitySchemas.onboardingStartSchema, request.body);
-        const run = await service.startOnboardingRun(payload);
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: run.userId,
-          action: "ACTUALIZAR",
-          newDataText: { onboardingRunId: run.id }
-        };
-        return reply.code(201).send(run);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(identitySchemas.onboardingStartSchema, request.body);
+      const run = await service.startOnboardingRun(payload);
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: run.userId,
+        action: "ACTUALIZAR",
+        newDataText: { onboardingRunId: run.id }
+      };
+      return reply.code(201).send(run);
     }
   );
 
@@ -201,13 +185,9 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(identitySchemas.onboardingStepCompleteSchema, request.body);
-        const step = await service.completeOnboardingStep(payload);
-        return reply.send(step);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(identitySchemas.onboardingStepCompleteSchema, request.body);
+      const step = await service.completeOnboardingStep(payload);
+      return reply.send(step);
     }
   );
 
@@ -221,25 +201,21 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(offboardingInputSchema, request.body);
-        const result = await service.offboard(payload);
+      const payload = parseWithSchema(offboardingInputSchema, request.body);
+      const result = await service.offboard(payload);
 
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: payload.userId,
-          action: "ACTUALIZAR",
-          reason: payload.reason,
-          newDataText: {
-            transferToUserId: payload.transferToUserId,
-            archived: payload.archiveHistory
-          }
-        };
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: payload.userId,
+        action: "ACTUALIZAR",
+        reason: payload.reason,
+        newDataText: {
+          transferToUserId: payload.transferToUserId,
+          archived: payload.archiveHistory
+        }
+      };
 
-        return reply.send(result);
-      } catch (error) {
-        throw error;
-      }
+      return reply.send(result);
     }
   );
 
@@ -253,45 +229,41 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(identitySchemas.guestInviteInputSchema, request.body);
-        const invite = await service.createGuestInvite({
-          email: payload.email,
-          resourceScopeType: payload.resourceScopeType,
-          resourceScopeId: payload.resourceScopeId,
-          expiresAt: payload.expiresAt,
-          createdById: request.authUser!.id
-        });
+      const payload = parseWithSchema(identitySchemas.guestInviteInputSchema, request.body);
+      const invite = await service.createGuestInvite({
+        email: payload.email,
+        resourceScopeType: payload.resourceScopeType,
+        resourceScopeId: payload.resourceScopeId,
+        expiresAt: payload.expiresAt,
+        createdById: request.authUser!.id
+      });
 
-        request.auditEvent = {
-          entityType: "USUARIO",
-          entityId: invite.id,
-          action: "CREAR",
-          newDataText: {
-            email: invite.email,
-            resourceScopeType: invite.projectId
-              ? "PROYECTO"
-              : invite.fileId
-                ? "ARCHIVO"
-                : "DOCUMENTO",
-            expiresAt: invite.expiresAt.toISOString()
-          }
-        };
-
-        return reply.code(201).send({
-          id: invite.id,
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: invite.id,
+        action: "CREAR",
+        newDataText: {
           email: invite.email,
           resourceScopeType: invite.projectId
             ? "PROYECTO"
             : invite.fileId
               ? "ARCHIVO"
               : "DOCUMENTO",
-          resourceScopeId: invite.projectId ?? invite.fileId ?? invite.documentId ?? "",
-          expiresAt: invite.expiresAt
-        });
-      } catch (error) {
-        throw error;
-      }
+          expiresAt: invite.expiresAt.toISOString()
+        }
+      };
+
+      return reply.code(201).send({
+        id: invite.id,
+        email: invite.email,
+        resourceScopeType: invite.projectId
+          ? "PROYECTO"
+          : invite.fileId
+            ? "ARCHIVO"
+            : "DOCUMENTO",
+        resourceScopeId: invite.projectId ?? invite.fileId ?? invite.documentId ?? "",
+        expiresAt: invite.expiresAt
+      });
     }
   );
 };

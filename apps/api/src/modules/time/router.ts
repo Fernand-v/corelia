@@ -16,16 +16,12 @@ export const timeRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      try {
-        const payload = parseWithSchema(timeSchemas.createTimeEntryInputSchema, request.body);
-        const entry = await service.createEntry({
-          ...payload,
-          userId: request.authUser!.id
-        });
-        return reply.code(201).send(entry);
-      } catch (error) {
-        throw error;
-      }
+      const payload = parseWithSchema(timeSchemas.createTimeEntryInputSchema, request.body);
+      const entry = await service.createEntry({
+        ...payload,
+        userId: request.authUser!.id
+      });
+      return reply.code(201).send(entry);
     }
   );
 
