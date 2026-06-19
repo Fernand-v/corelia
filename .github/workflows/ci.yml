@@ -22,11 +22,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client & build shared packages
+        run: |
+          pnpm prisma:generate
+          pnpm --filter @corelia/types build
+          pnpm --filter @corelia/ui build
 
       - name: Check compose secrets
         run: pnpm security:check-compose
@@ -63,6 +69,9 @@ jobs:
           pnpm --filter @corelia/types test
           pnpm --filter @corelia/ui test
           pnpm --filter @corelia/hocuspocus test
+
+      - name: Build
+        run: pnpm build
 
       - name: Runtime audit (high+critical)
         run: pnpm security:audit

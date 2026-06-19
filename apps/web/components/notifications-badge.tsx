@@ -81,6 +81,8 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
   const [realtimeOnline, setRealtimeOnline] = useState(false);
   const [open, setOpen] = useState(false);
   const lastSyncRef = useRef<string>(new Date().toISOString());
+  const onToastRef = useRef(onToast);
+  onToastRef.current = onToast;
 
   const pollingMs = useMemo(() => (realtimeOnline ? false : 30_000), [realtimeOnline]);
 
@@ -202,7 +204,7 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
       void queryClient.invalidateQueries({ queryKey: ["notifications", "latest"] });
 
       if (notification?.title) {
-        onToast?.({
+        onToastRef.current?.({
           title: notification.title,
           body: notification.body ?? "",
           priority: notification.priority ?? "NORMAL"

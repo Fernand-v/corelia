@@ -306,12 +306,13 @@ export const MessagingBoard = () => {
   }, [clearPreviewUrl]);
 
   useEffect(() => {
+    const blobCache = blobCacheRef.current;
     return () => {
       clearPreviewUrl();
-      for (const url of blobCacheRef.current.values()) {
+      for (const url of blobCache.values()) {
         URL.revokeObjectURL(url);
       }
-      blobCacheRef.current.clear();
+      blobCache.clear();
       for (const pf of pendingFiles) {
         if (pf.previewUrl) URL.revokeObjectURL(pf.previewUrl);
       }

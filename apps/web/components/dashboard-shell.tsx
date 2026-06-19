@@ -307,7 +307,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   }, [userMenuOpen]);
 
   const activeRole = session.data?.activeRole;
-  const queryContext = getContextFromSearchParams(params);
+  const queryContext = useMemo(() => getContextFromSearchParams(params), [params]);
 
   useEffect(() => {
     if (!hasDirectDashboardContextParams(params)) {
@@ -327,7 +327,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
     if (maskedHref !== currentHref) {
       router.replace(maskedHref as Route);
     }
-  }, [params, pathname, queryContext.projectId, queryContext.projectName, queryContext.teamId, router]);
+  }, [params, pathname, queryContext, router]);
 
   const dashboardContext = useMemo(
     () => ({

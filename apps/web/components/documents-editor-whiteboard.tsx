@@ -80,6 +80,9 @@ export const DocumentsEditorWhiteboard = ({
     const raw = value || yText.toString();
     const parsed = parseData(raw);
     return parsed ?? { elements: [] as unknown[] };
+    // Solo se calcula al montar: el estado inicial del editor no debe recomputarse
+    // cuando cambian value/yText (las actualizaciones posteriores van por CRDT).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
