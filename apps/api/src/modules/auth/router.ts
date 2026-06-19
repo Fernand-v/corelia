@@ -69,7 +69,7 @@ export const authRouter: FastifyPluginAsync = async (app) => {
         requiresAuth: false,
         skipMaintenance: true,
         rateLimit: {
-          max: 10,
+          max: 5,
           timeWindow: "1 minute"
         }
       }

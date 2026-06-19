@@ -48,7 +48,11 @@ const createMockApp = () => {
       sign: vi.fn().mockResolvedValue("access-token")
     },
     redis: {
-      set: vi.fn().mockResolvedValue("OK")
+      set: vi.fn().mockResolvedValue("OK"),
+      get: vi.fn().mockResolvedValue(null),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      del: vi.fn().mockResolvedValue(1)
     }
   } as unknown as ConstructorParameters<typeof AuthService>[0];
 };
@@ -78,6 +82,38 @@ describe("Auth integration flows", () => {
 
     expect(result.accessToken).toBe("access-token");
     expect(result.refreshToken.length).toBeGreaterThan(20);
+  });
+
+  it("blocks login after too many failed attempts", async () => {
+    const app = createMockApp();
+    // El contador en Redis ya alcanzó el máximo permitido.
+    app.redis.get = vi.fn().mockResolvedValue("5");
+
+    const service = new AuthService(app);
+    await expect(
+      service.login({ email: "user@corelia.local", password: "whatever123" })
+    ).rejects.toMatchObject({ name: "TooManyRequests", statusCode: 429 });
+
+    // No debe siquiera consultar al usuario si está bloqueado.
+    expect(app.prisma.user.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("increments failure counter on invalid credentials", async () => {
+    const app = createMockApp();
+    app.prisma.user.findFirst = vi.fn().mockResolvedValue({
+      id: crypto.randomUUID(),
+      email: "user@corelia.local",
+      isActive: true,
+      passwordHash: "any-hash"
+    });
+    vi.mocked(verifyPassword).mockResolvedValue(false);
+
+    const service = new AuthService(app);
+    await expect(
+      service.login({ email: "user@corelia.local", password: "wrongpass123" })
+    ).rejects.toThrow("Credenciales inválidas");
+
+    expect(app.redis.incr).toHaveBeenCalledTimes(1);
   });
 
   it("creates signup requests with normalized data", async () => {

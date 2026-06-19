@@ -11,6 +11,14 @@ export function buildRevocationKey(userId: string): string {
   return `${TOKEN_REVOCATION_PREFIX}${userId}`;
 }
 
+const LOGIN_FAIL_PREFIX = "auth:login:fail:";
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCK_SECONDS = 15 * 60;
+
+export function buildLoginFailKey(email: string): string {
+  return `${LOGIN_FAIL_PREFIX}${email}`;
+}
+
 export class AuthService {
   constructor(private readonly app: FastifyInstance) {}
 
@@ -181,8 +189,29 @@ export class AuthService {
     };
   }
 
+  private tooManyRequests(message: string): Error {
+    const error = new Error(message) as Error & { statusCode?: number };
+    error.name = "TooManyRequests";
+    error.statusCode = 429;
+    return error;
+  }
+
+  private async registerLoginFailure(failKey: string): Promise<void> {
+    const count = await this.app.redis.incr(failKey);
+    if (count === 1) {
+      await this.app.redis.expire(failKey, LOGIN_LOCK_SECONDS);
+    }
+  }
+
   async login(input: { email: string; password: string }) {
     const email = this.normalizeEmail(input.email);
+    const failKey = buildLoginFailKey(email);
+
+    const attempts = Number(await this.app.redis.get(failKey)) || 0;
+    if (attempts >= MAX_LOGIN_ATTEMPTS) {
+      throw this.tooManyRequests("Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos.");
+    }
+
     const user = await this.app.prisma.user.findFirst({
       where: {
         email: {
@@ -193,13 +222,18 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
+      await this.registerLoginFailure(failKey);
       throw new Error("Credenciales inválidas");
     }
 
     const validPassword = await verifyPassword(input.password, user.passwordHash);
     if (!validPassword) {
+      await this.registerLoginFailure(failKey);
       throw new Error("Credenciales inválidas");
     }
+
+    // Login correcto: limpiar el contador de fallos.
+    await this.app.redis.del(failKey);
 
     return this.createSessionTokens({
       id: user.id,
