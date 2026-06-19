@@ -110,6 +110,28 @@ Start Corelia plus monitoring:
 docker compose --profile monitoring -f docker/docker-compose.yml up -d
 ```
 
+## Migraciones de base de datos en producción
+
+Por defecto `AUTO_MIGRATE_ON_START=true`: la API ejecuta `prisma migrate deploy`
+al arrancar. Es cómodo para una sola instancia o desarrollo, pero con **varias
+instancias** de la API arrancando a la vez se pueden producir carreras de
+migración.
+
+Para producción multi-instancia:
+
+1. Establece `AUTO_MIGRATE_ON_START=false` en el entorno de la API.
+2. Ejecuta las migraciones como **paso dedicado del despliegue**, antes de
+   levantar las instancias de la API:
+
+   ```bash
+   pnpm --filter @corelia/api prisma:migrate:deploy
+   ```
+
+3. Rollback: Prisma no revierte automáticamente. Para deshacer una migración
+   aplicada, crea una migración correctiva (`prisma migrate dev` en un entorno
+   de desarrollo) y despliégala, o restaura desde backup de la base de datos
+   antes de re-aplicar. Mantén siempre un backup previo al despliegue.
+
 ## Quick validation metrics
 
 Check image sizes:
