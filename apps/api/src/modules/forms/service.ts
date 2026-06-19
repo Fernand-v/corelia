@@ -2,6 +2,15 @@ import { Prisma } from "@prisma/client";
 import type { ConditionalLogic, DynamicFormQuestionType, RoleCode } from "@corelia/types";
 import type { FastifyInstance } from "fastify";
 import { attachTraceContext } from "../../lib/tracing.js";
+import {
+  mapDynamicForm,
+  mapDynamicQuestion,
+  normalizeAnswerValue,
+  normalizeOptions,
+  parseOptions,
+  shouldShowQuestion,
+  toInputJson
+} from "./form-helpers.js";
 
 const formManagerRoles = new Set<RoleCode>([
   "ADMINISTRADOR",
@@ -51,125 +60,6 @@ export class FormService {
     }
 
     return role;
-  }
-
-  private normalizeOptions(options?: string[]): string[] | null {
-    if (!options || options.length === 0) {
-      return null;
-    }
-
-    const normalized = Array.from(
-      new Set(options.map((option) => option.trim()).filter((option) => option.length > 0))
-    );
-
-    return normalized.length > 0 ? normalized : null;
-  }
-
-  private parseOptions(options: Prisma.JsonValue | null): string[] | null {
-    if (!Array.isArray(options)) {
-      return null;
-    }
-
-    const parsed = options
-      .filter((item): item is string => typeof item === "string")
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0);
-
-    return parsed.length > 0 ? parsed : null;
-  }
-
-  private toInputJson(value: Prisma.JsonValue) {
-    if (value === null) {
-      return Prisma.JsonNull;
-    }
-
-    return value as Prisma.InputJsonValue;
-  }
-
-  private mapDynamicForm(
-    form: {
-      id: string;
-      title: string;
-      description: string | null;
-      createdById: string;
-      projectId: string | null;
-      isActive: boolean;
-      allowMultipleSubmissions: boolean;
-      isAnonymous: boolean;
-      createdAt: Date;
-      updatedAt: Date;
-      createdBy?: { id: string; firstName: string; lastName: string } | null;
-      project?: { id: string; name: string } | null;
-      _count?: { questions?: number; responses?: number };
-      responses?: Array<{ id: string }>;
-    }
-  ) {
-    return {
-      id: form.id,
-      title: form.title,
-      description: form.description,
-      createdById: form.createdById,
-      projectId: form.projectId,
-      isActive: form.isActive,
-      allowMultipleSubmissions: form.allowMultipleSubmissions,
-      isAnonymous: form.isAnonymous,
-      createdAt: form.createdAt.toISOString(),
-      updatedAt: form.updatedAt.toISOString(),
-      createdBy: form.createdBy
-        ? {
-            id: form.createdBy.id,
-            fullName: `${form.createdBy.firstName} ${form.createdBy.lastName}`.trim()
-          }
-        : null,
-      project: form.project
-        ? {
-            id: form.project.id,
-            name: form.project.name
-          }
-        : null,
-      questionCount: form._count?.questions ?? 0,
-      responseCount: form._count?.responses ?? 0,
-      submittedByMe: form.responses ? form.responses.length > 0 : false
-    };
-  }
-
-  private parseConditionalLogic(value: Prisma.JsonValue | null): ConditionalLogic | null {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return null;
-    }
-
-    const obj = value as Record<string, unknown>;
-    if (typeof obj.questionId === "string" && typeof obj.operator === "string" && typeof obj.action === "string") {
-      return obj as unknown as ConditionalLogic;
-    }
-
-    return null;
-  }
-
-  private mapDynamicQuestion(question: {
-    id: string;
-    formId: string;
-    type: string;
-    label: string;
-    required: boolean;
-    options: Prisma.JsonValue | null;
-    conditionalLogic?: Prisma.JsonValue | null;
-    order: number;
-    createdAt: Date;
-    updatedAt: Date;
-  }) {
-    return {
-      id: question.id,
-      formId: question.formId,
-      type: question.type,
-      label: question.label,
-      required: question.required,
-      options: this.parseOptions(question.options),
-      conditionalLogic: this.parseConditionalLogic(question.conditionalLogic ?? null),
-      order: question.order,
-      createdAt: question.createdAt.toISOString(),
-      updatedAt: question.updatedAt.toISOString()
-    };
   }
 
   private async ensureProjectAccess(actorId: string, actorRole: RoleCode, projectId: string) {
@@ -243,200 +133,6 @@ export class FormService {
     }
 
     throw this.forbidden("El formulario no está publicado");
-  }
-
-  private normalizeAnswerValue(
-    question: {
-      type: string;
-      label: string;
-      required: boolean;
-      options: Prisma.JsonValue | null;
-    },
-    rawValue: unknown
-  ): Prisma.JsonValue {
-    const options = this.parseOptions(question.options) ?? [];
-
-    switch (question.type) {
-      case "short_text": {
-        if (typeof rawValue !== "string") {
-          throw new Error(`La respuesta para "${question.label}" debe ser texto`);
-        }
-        const value = rawValue.trim();
-        if (question.required && value.length === 0) {
-          throw new Error(`La pregunta "${question.label}" es obligatoria`);
-        }
-        if (value.length > 500) {
-          throw new Error(`La respuesta para "${question.label}" excede el máximo de 500 caracteres`);
-        }
-        return value;
-      }
-      case "long_text": {
-        if (typeof rawValue !== "string") {
-          throw new Error(`La respuesta para "${question.label}" debe ser texto`);
-        }
-        const value = rawValue.trim();
-        if (question.required && value.length === 0) {
-          throw new Error(`La pregunta "${question.label}" es obligatoria`);
-        }
-        if (value.length > 5000) {
-          throw new Error(`La respuesta para "${question.label}" excede el máximo de 5000 caracteres`);
-        }
-        return value;
-      }
-      case "multiple_choice": {
-        if (typeof rawValue !== "string") {
-          throw new Error(`La respuesta para "${question.label}" debe ser una opción`);
-        }
-        const value = rawValue.trim();
-        if (question.required && value.length === 0) {
-          throw new Error(`La pregunta "${question.label}" es obligatoria`);
-        }
-        if (value && !options.includes(value)) {
-          throw new Error(`La opción seleccionada en "${question.label}" no es válida`);
-        }
-        return value;
-      }
-      case "checkbox": {
-        if (!Array.isArray(rawValue)) {
-          throw new Error(`La respuesta para "${question.label}" debe ser una lista de opciones`);
-        }
-        const values = Array.from(
-          new Set(
-            rawValue
-              .filter((item): item is string => typeof item === "string")
-              .map((item) => item.trim())
-              .filter((item) => item.length > 0)
-          )
-        );
-
-        const invalid = values.find((item) => !options.includes(item));
-        if (invalid) {
-          throw new Error(`La opción "${invalid}" no es válida en "${question.label}"`);
-        }
-
-        if (question.required && values.length === 0) {
-          throw new Error(`La pregunta "${question.label}" es obligatoria`);
-        }
-
-        return values;
-      }
-      case "rating": {
-        const numeric =
-          typeof rawValue === "number"
-            ? rawValue
-            : typeof rawValue === "string"
-              ? Number(rawValue)
-              : Number.NaN;
-
-        if (!Number.isInteger(numeric) || numeric < 1 || numeric > 5) {
-          throw new Error(`La valoración de "${question.label}" debe estar entre 1 y 5`);
-        }
-
-        return numeric;
-      }
-      case "date": {
-        if (typeof rawValue !== "string") {
-          throw new Error(`La respuesta para "${question.label}" debe ser una fecha`);
-        }
-
-        const value = rawValue.trim();
-        if (question.required && value.length === 0) {
-          throw new Error(`La pregunta "${question.label}" es obligatoria`);
-        }
-
-        if (value.length > 0) {
-          const parsedDate = new Date(value);
-          if (Number.isNaN(parsedDate.valueOf())) {
-            throw new Error(`La fecha ingresada en "${question.label}" no es válida`);
-          }
-        }
-
-        return value;
-      }
-      case "nps": {
-        const numeric =
-          typeof rawValue === "number"
-            ? rawValue
-            : typeof rawValue === "string"
-              ? Number(rawValue)
-              : Number.NaN;
-
-        if (question.required && Number.isNaN(numeric)) {
-          throw new Error(`La pregunta "${question.label}" es obligatoria`);
-        }
-
-        if (!Number.isNaN(numeric) && (!Number.isInteger(numeric) || numeric < 0 || numeric > 10)) {
-          throw new Error(`La puntuación NPS de "${question.label}" debe estar entre 0 y 10`);
-        }
-
-        return Number.isNaN(numeric) ? (null as unknown as Prisma.JsonValue) : numeric;
-      }
-      case "file_upload": {
-        if (typeof rawValue !== "string") {
-          throw new Error(`La respuesta para "${question.label}" debe ser una ruta de archivo`);
-        }
-
-        const value = rawValue.trim();
-        if (question.required && value.length === 0) {
-          throw new Error(`La pregunta "${question.label}" es obligatoria`);
-        }
-
-        if (value.length > 1000) {
-          throw new Error(`La ruta de archivo para "${question.label}" excede el máximo permitido`);
-        }
-
-        return value;
-      }
-      default:
-        return rawValue as Prisma.JsonValue;
-    }
-  }
-
-  private evaluateCondition(
-    condition: ConditionalLogic,
-    answersByQuestion: Map<string, unknown>
-  ): boolean {
-    const answer = answersByQuestion.get(condition.questionId);
-    if (answer === undefined || answer === null) {
-      return false;
-    }
-
-    const answerStr = String(answer);
-    const condValueStr = String(condition.value);
-
-    switch (condition.operator) {
-      case "equals":
-        return answerStr === condValueStr;
-      case "not_equals":
-        return answerStr !== condValueStr;
-      case "contains":
-        return answerStr.toLowerCase().includes(condValueStr.toLowerCase());
-      case "greater_than": {
-        const a = Number(answer);
-        const b = Number(condition.value);
-        return !Number.isNaN(a) && !Number.isNaN(b) && a > b;
-      }
-      case "less_than": {
-        const a = Number(answer);
-        const b = Number(condition.value);
-        return !Number.isNaN(a) && !Number.isNaN(b) && a < b;
-      }
-      default:
-        return false;
-    }
-  }
-
-  private shouldShowQuestion(
-    question: { conditionalLogic?: Prisma.JsonValue | null },
-    answersByQuestion: Map<string, unknown>
-  ): boolean {
-    const logic = this.parseConditionalLogic(question.conditionalLogic ?? null);
-    if (!logic) {
-      return true;
-    }
-
-    const result = this.evaluateCondition(logic, answersByQuestion);
-    return logic.action === "show" ? result : !result;
   }
 
   private async enqueueNotification(notificationId: string) {
@@ -632,7 +328,7 @@ export class FormService {
       }
     });
 
-    return this.mapDynamicForm(created);
+    return mapDynamicForm(created);
   }
 
   async updateDynamicForm(
@@ -703,7 +399,7 @@ export class FormService {
       }
     });
 
-    return this.mapDynamicForm(updated);
+    return mapDynamicForm(updated);
   }
 
   async listDynamicForms(actorId: string, query: DynamicFormListQuery) {
@@ -793,7 +489,7 @@ export class FormService {
       orderBy: [{ isActive: "desc" }, { createdAt: "desc" }]
     });
 
-    return forms.map((form) => this.mapDynamicForm(form));
+    return forms.map((form) => mapDynamicForm(form));
   }
 
   async getDynamicFormById(actorId: string, formId: string) {
@@ -845,8 +541,8 @@ export class FormService {
     });
 
     return {
-      ...this.mapDynamicForm(form),
-      questions: form.questions.map((question) => this.mapDynamicQuestion(question)),
+      ...mapDynamicForm(form),
+      questions: form.questions.map((question) => mapDynamicQuestion(question)),
       totalResponses: form._count.responses,
       submittedByMe: Boolean(submitted)
     };
@@ -870,7 +566,7 @@ export class FormService {
 
     await this.ensureCanManageForm(actorId, actorRole, form);
 
-    const options = this.normalizeOptions(input.options);
+    const options = normalizeOptions(input.options);
     const requiresOptions = input.type === "multiple_choice" || input.type === "checkbox";
 
     if (requiresOptions && (!options || options.length < 2)) {
@@ -919,7 +615,7 @@ export class FormService {
       }
     });
 
-    return this.mapDynamicQuestion(created);
+    return mapDynamicQuestion(created);
   }
 
   async updateDynamicQuestion(
@@ -958,8 +654,8 @@ export class FormService {
     const nextType = input.type ?? existing.type;
     const nextOptions =
       input.options !== undefined
-        ? this.normalizeOptions(input.options)
-        : this.parseOptions(existing.options);
+        ? normalizeOptions(input.options)
+        : parseOptions(existing.options);
 
     const requiresOptions = nextType === "multiple_choice" || nextType === "checkbox";
 
@@ -1002,7 +698,7 @@ export class FormService {
       }
     });
 
-    return this.mapDynamicQuestion(updated);
+    return mapDynamicQuestion(updated);
   }
 
   async deleteDynamicForm(actorId: string, formId: string) {
@@ -1155,7 +851,7 @@ export class FormService {
     const answerRows: Array<{ questionId: string; value: Prisma.JsonValue }> = [];
 
     for (const question of form.questions) {
-      const visible = this.shouldShowQuestion(question, answersByQuestion);
+      const visible = shouldShowQuestion(question, answersByQuestion);
       const hasAnswer = answersByQuestion.has(question.id);
 
       if (!hasAnswer) {
@@ -1170,7 +866,7 @@ export class FormService {
       }
 
       const rawValue = answersByQuestion.get(question.id);
-      const normalizedValue = this.normalizeAnswerValue(
+      const normalizedValue = normalizeAnswerValue(
         {
           type: question.type,
           label: question.label,
@@ -1199,7 +895,7 @@ export class FormService {
           data: answerRows.map((answer) => ({
             responseId: createdResponse.id,
             questionId: answer.questionId,
-            value: this.toInputJson(answer.value)
+            value: toInputJson(answer.value)
           }))
         });
       }
@@ -1388,7 +1084,7 @@ export class FormService {
 
     const questions = form.questions.map((question) => {
       const values = answersByQuestion.get(question.id) ?? [];
-      const options = this.parseOptions(question.options);
+      const options = parseOptions(question.options);
 
       if (question.type === "multiple_choice") {
         const counts: Record<string, number> = Object.fromEntries((options ?? []).map((option) => [option, 0]));
