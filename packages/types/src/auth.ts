@@ -17,19 +17,21 @@ export const loginInputSchema = z.object({
   password: passwordSchema
 });
 
+// El refresh token viaja en una cookie httpOnly; el campo en el body es
+// opcional solo para compatibilidad/transición.
 export const refreshInputSchema = z.object({
-  refreshToken: z.string().min(20)
+  refreshToken: z.string().min(20).optional()
 });
 
 export const authTokenSchema = z.object({
   accessToken: z.string(),
-  refreshToken: z.string(),
+  refreshToken: z.string().optional(),
   accessTokenExpiresInSeconds: z.number().int().positive(),
   userId: idSchema
 });
 
 export const logoutInputSchema = z.object({
-  refreshToken: z.string().min(20)
+  refreshToken: z.string().min(20).optional()
 });
 
 export const activateInviteInputSchema = z.object({

@@ -8,7 +8,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { ActivateInvitePage } from "@/components/activate-invite-page";
 
 const pushMock = vi.fn();
-const setTokensMock = vi.fn();
+const setAccessTokenMock = vi.fn();
 const apiRequestMock = vi.fn();
 let currentToken = "invite-token-1234567890";
 
@@ -31,9 +31,9 @@ vi.mock("@/lib/frontend-settings", () => ({
 
 vi.mock("@/lib/api", () => ({
   apiRequest: (...args: unknown[]) => apiRequestMock(...args),
-  useAuthStore: (selector: (state: { setTokens: typeof setTokensMock }) => unknown) =>
+  useAuthStore: (selector: (state: { setAccessToken: typeof setAccessTokenMock }) => unknown) =>
     selector({
-      setTokens: setTokensMock
+      setAccessToken: setAccessTokenMock
     })
 }));
 
@@ -144,7 +144,7 @@ describe("ActivateInvitePage", () => {
     });
 
     await waitFor(() => {
-      expect(setTokensMock).toHaveBeenCalledWith("access-token", "refresh-token");
+      expect(setAccessTokenMock).toHaveBeenCalledWith("access-token");
       expect(pushMock).toHaveBeenCalledWith("/home");
     });
   });

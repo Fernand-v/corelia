@@ -32,7 +32,7 @@ export const ActivateInvitePage = () => {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token") ?? "";
-  const setTokens = useAuthStore((state) => state.setTokens);
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const { settings: frontendSettings } = useFrontendSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -59,7 +59,7 @@ export const ActivateInvitePage = () => {
         })
       }),
     onSuccess: (tokens) => {
-      setTokens(tokens.accessToken, tokens.refreshToken);
+      setAccessToken(tokens.accessToken);
       router.push("/home" as Route);
     }
   });

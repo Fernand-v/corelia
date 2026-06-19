@@ -438,13 +438,8 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   const topTeams = memberships.data?.teams.slice(0, 2).map((item) => item.name) ?? [];
 
   const handleSignOut = () => {
-    const refreshToken = useAuthStore.getState().refreshToken;
-    if (refreshToken) {
-      void apiRequest("/auth/logout", {
-        method: "POST",
-        body: JSON.stringify({ refreshToken })
-      }).catch(() => {});
-    }
+    // El refresh token está en la cookie httpOnly; la API lo lee y la limpia.
+    void apiRequest("/auth/logout", { method: "POST" }).catch(() => {});
     clearAccessToken();
     setUserMenuOpen(false);
     router.replace("/login" as Route);

@@ -1,3 +1,4 @@
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
@@ -70,6 +71,8 @@ const isPrivateNetworkOrigin = (origin: string) => {
 };
 
 export const securityPlugin = fp(async (app) => {
+  await app.register(cookie);
+
   const originMatchers = parseConfiguredCorsOrigins().map((pattern) => buildOriginMatcher(pattern));
 
   await app.register(cors, {

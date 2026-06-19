@@ -21,7 +21,8 @@ const resolveApiBaseUrl = () => {
 
 const API_BASE_URL = resolveApiBaseUrl();
 const AUTH_STORAGE_KEY = "corelia_access_token";
-const REFRESH_TOKEN_KEY = "corelia_refresh_token";
+// El refresh token ya no se guarda en el cliente: vive en una cookie httpOnly
+// emitida por la API. Solo el access token (15 min) permanece accesible a JS.
 
 const safeGetItem = (key: string): string | null => {
   try {
@@ -49,17 +50,14 @@ const safeRemoveItem = (key: string): void => {
 
 interface AuthState {
   accessToken: string | null;
-  refreshToken: string | null;
   hydrated: boolean;
   hydrate: () => void;
-  setTokens: (access: string, refresh: string) => void;
   setAccessToken: (token: string | null) => void;
   clearAccessToken: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
-  refreshToken: null,
   hydrated: false,
   hydrate: () => {
     if (typeof window === "undefined") {
@@ -67,20 +65,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       return;
     }
 
-    const saved = safeGetItem(AUTH_STORAGE_KEY);
-    const refresh = safeGetItem(REFRESH_TOKEN_KEY);
     set({
-      accessToken: saved,
-      refreshToken: refresh,
+      accessToken: safeGetItem(AUTH_STORAGE_KEY),
       hydrated: true
     });
-  },
-  setTokens: (access, refresh) => {
-    if (typeof window !== "undefined") {
-      safeSetItem(AUTH_STORAGE_KEY, access);
-      safeSetItem(REFRESH_TOKEN_KEY, refresh);
-    }
-    set({ accessToken: access, refreshToken: refresh, hydrated: true });
   },
   setAccessToken: (token) => {
     if (typeof window !== "undefined") {
@@ -95,9 +83,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearAccessToken: () => {
     if (typeof window !== "undefined") {
       safeRemoveItem(AUTH_STORAGE_KEY);
-      safeRemoveItem(REFRESH_TOKEN_KEY);
     }
-    set({ accessToken: null, refreshToken: null, hydrated: true });
+    set({ accessToken: null, hydrated: true });
   }
 }));
 
@@ -107,21 +94,16 @@ export const getAuthToken = () => useAuthStore.getState().accessToken;
 let refreshPromise: Promise<boolean> | null = null;
 
 const tryRefreshToken = async (): Promise<boolean> => {
-  const { refreshToken } = useAuthStore.getState();
-  if (!refreshToken) {
-    return false;
-  }
-
   if (refreshPromise) {
     return refreshPromise;
   }
 
   refreshPromise = (async () => {
     try {
+      // El refresh token viaja en la cookie httpOnly (credentials: include).
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken })
+        credentials: "include"
       });
 
       if (!response.ok) {
@@ -129,11 +111,8 @@ const tryRefreshToken = async (): Promise<boolean> => {
         return false;
       }
 
-      const data = (await response.json()) as {
-        accessToken: string;
-        refreshToken: string;
-      };
-      useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+      const data = (await response.json()) as { accessToken: string };
+      useAuthStore.getState().setAccessToken(data.accessToken);
       return true;
     } catch {
       return false;
@@ -161,6 +140,7 @@ export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
+    credentials: "include",
     headers
   });
 
@@ -178,6 +158,7 @@ export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T
 
       const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
         ...init,
+        credentials: "include",
         headers: retryHeaders
       });
 

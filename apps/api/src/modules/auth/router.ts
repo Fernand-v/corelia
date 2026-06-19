@@ -2,6 +2,18 @@ import type { FastifyPluginAsync } from "fastify";
 import { AuthService } from "./service.js";
 import { authSchemas } from "./schema.js";
 import { parseWithSchema } from "../../lib/validate.js";
+import { env } from "../../config/env.js";
+
+const REFRESH_COOKIE = "corelia_refresh";
+const REFRESH_COOKIE_PATH = "/api/v1/auth";
+
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  path: REFRESH_COOKIE_PATH,
+  maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60
+};
 
 export const authRouter: FastifyPluginAsync = async (app) => {
   const service = new AuthService(app);
@@ -64,7 +76,8 @@ export const authRouter: FastifyPluginAsync = async (app) => {
     },
     async (request, reply) => {
       const payload = parseWithSchema(authSchemas.loginInputSchema, request.body);
-      const tokens = await service.login(payload);
+      const { refreshToken, ...tokens } = await service.login(payload);
+      reply.setCookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions);
       request.auditEvent = {
         entityType: "USUARIO",
         entityId: tokens.userId,
@@ -88,7 +101,8 @@ export const authRouter: FastifyPluginAsync = async (app) => {
     },
     async (request, reply) => {
       const payload = parseWithSchema(authSchemas.activateInviteInputSchema, request.body);
-      const tokens = await service.activateInternalInvite(payload);
+      const { refreshToken, ...tokens } = await service.activateInternalInvite(payload);
+      reply.setCookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions);
       request.auditEvent = {
         entityType: "USUARIO",
         entityId: tokens.userId,
@@ -114,8 +128,13 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      const payload = parseWithSchema(authSchemas.refreshInputSchema, request.body);
-      const tokens = await service.refresh(payload);
+      const payload = parseWithSchema(authSchemas.refreshInputSchema, request.body ?? {});
+      const presentedToken = request.cookies[REFRESH_COOKIE] ?? payload.refreshToken;
+      if (!presentedToken) {
+        return reply.code(401).send({ message: "Refresh token requerido" });
+      }
+      const { refreshToken, ...tokens } = await service.refresh({ refreshToken: presentedToken });
+      reply.setCookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions);
       return reply.send(tokens);
     }
   );
@@ -129,8 +148,13 @@ export const authRouter: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      const payload = parseWithSchema(authSchemas.logoutInputSchema, request.body);
-      const userId = await service.logout(payload);
+      const payload = parseWithSchema(authSchemas.logoutInputSchema, request.body ?? {});
+      const presentedToken = request.cookies[REFRESH_COOKIE] ?? payload.refreshToken;
+      reply.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
+      if (!presentedToken) {
+        return reply.code(204).send();
+      }
+      const userId = await service.logout({ refreshToken: presentedToken });
       if (userId) {
         request.auditEvent = {
           entityType: "USUARIO",

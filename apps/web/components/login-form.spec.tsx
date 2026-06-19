@@ -8,7 +8,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { LoginForm } from "@/components/login-form";
 
 const pushMock = vi.fn();
-const setTokensMock = vi.fn();
+const setAccessTokenMock = vi.fn();
 const apiRequestMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
@@ -27,9 +27,9 @@ vi.mock("@/lib/frontend-settings", () => ({
 
 vi.mock("@/lib/api", () => ({
   apiRequest: (...args: unknown[]) => apiRequestMock(...args),
-  useAuthStore: (selector: (state: { setTokens: typeof setTokensMock }) => unknown) =>
+  useAuthStore: (selector: (state: { setAccessToken: typeof setAccessTokenMock }) => unknown) =>
     selector({
-      setTokens: setTokensMock
+      setAccessToken: setAccessTokenMock
     })
 }));
 
@@ -87,7 +87,7 @@ describe("LoginForm", () => {
     });
 
     await waitFor(() => {
-      expect(setTokensMock).toHaveBeenCalledWith("access-token", "refresh-token");
+      expect(setAccessTokenMock).toHaveBeenCalledWith("access-token");
       expect(pushMock).toHaveBeenCalledWith("/home");
     });
   });

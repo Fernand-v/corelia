@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@corelia/types": "workspace:*",
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.0.1",
     "@fastify/helmet": "^13.0.0",
     "@fastify/jwt": "^9.1.0",

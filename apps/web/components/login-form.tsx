@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { loginInputSchema, type AuthToken } from "@corelia/types";
 import { Button, Card } from "@corelia/ui";
 import { useForm } from "react-hook-form";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { apiRequest, useAuthStore } from "@/lib/api";
@@ -18,7 +18,7 @@ type LoginInput = {
 
 export const LoginForm = () => {
   const router = useRouter();
-  const setTokens = useAuthStore((state) => state.setTokens);
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const { settings: frontendSettings } = useFrontendSettings();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -37,20 +37,18 @@ export const LoginForm = () => {
         body: JSON.stringify(payload)
       }),
     onSuccess: (data) => {
-      setTokens(data.accessToken, data.refreshToken);
+      setAccessToken(data.accessToken);
       router.push("/home" as Route);
     }
   });
 
-  const watchedEmail = form.watch("email");
-  const watchedPassword = form.watch("password");
-
-  useEffect(() => {
-    if (loginMutation.error) {
-      loginMutation.reset();
+  const clearErrorOnInput = {
+    onChange: () => {
+      if (loginMutation.error) {
+        loginMutation.reset();
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedEmail, watchedPassword]);
+  };
 
   return (
     <Card className="mx-auto w-full max-w-sm space-y-5 p-7 shadow-dropdown">
@@ -73,11 +71,11 @@ export const LoginForm = () => {
         <label className="block space-y-1.5">
           <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Email</span>
           <input
-            className="h-10 w-full rounded-xl border border-[rgba(0,0,0,0.1)] bg-white/70 px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
+            className="h-10 w-full rounded-xl border border-glass-border bg-white/70 px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
             type="email"
             autoComplete="email"
             disabled={loginMutation.isPending}
-            {...form.register("email")}
+            {...form.register("email", clearErrorOnInput)}
           />
           {form.formState.errors.email ? (
             <span className="text-xs text-red-500">{form.formState.errors.email.message}</span>
@@ -88,16 +86,16 @@ export const LoginForm = () => {
           <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Contraseña</span>
           <div className="flex items-center gap-2">
             <input
-              className="h-10 w-full rounded-xl border border-[rgba(0,0,0,0.1)] bg-white/70 px-3 text-sm text-slate-900 shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
+              className="h-10 w-full rounded-xl border border-glass-border bg-white/70 px-3 text-sm text-slate-900 shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               disabled={loginMutation.isPending}
-              {...form.register("password")}
+              {...form.register("password", clearErrorOnInput)}
             />
             <Button
               type="button"
               variant="secondary"
-              className="h-10 w-10 shrink-0 p-0"
+              className="h-11 w-11 shrink-0 p-0"
               aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               disabled={loginMutation.isPending}
