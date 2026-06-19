@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type {
   CollaborativeDocument,
@@ -10,14 +11,23 @@ import type {
   DocumentType
 } from "@corelia/types";
 import { UiModal } from "@/components/ui-modal";
-import { DocumentsEditorDiagram } from "@/components/documents-editor-diagram";
-import { DocumentsEditorWhiteboard } from "@/components/documents-editor-whiteboard";
 import { CollaborativeDocumentsModuleV2 } from "@/components/collaborative-documents-module-v2";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { OnlyOfficeEditor } from "@/components/onlyoffice-editor";
 import { apiRequest } from "@/lib/api";
 import { exportDiagramV3ToDrawioDocument } from "@/lib/diagram/maxgraph/diagram-collab-v3";
 import { serializeMxfile } from "@/lib/diagram/maxgraph/xml-format";
+
+// Editores pesados (Excalidraw / maxGraph): se cargan bajo demanda para no
+// inflar el chunk de documentos cuando se abre un documento de otro tipo.
+const DocumentsEditorDiagram = dynamic(
+  () => import("@/components/documents-editor-diagram").then((m) => m.DocumentsEditorDiagram),
+  { ssr: false }
+);
+const DocumentsEditorWhiteboard = dynamic(
+  () => import("@/components/documents-editor-whiteboard").then((m) => m.DocumentsEditorWhiteboard),
+  { ssr: false }
+);
 
 type DocumentTypeMeta = {
   label: string;

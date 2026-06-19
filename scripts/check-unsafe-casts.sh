@@ -20,7 +20,7 @@ trap cleanup EXIT
 collect_matches() {
   {
     if command -v rg &>/dev/null; then
-      rg -n --no-heading "as never|as unknown as" \
+      rg -n --no-heading "as never|as unknown as|as any\b" \
         "${ROOT_DIR}/apps/api/src" \
         "${ROOT_DIR}/apps/workers/src" \
         "${ROOT_DIR}/apps/web/app" \
@@ -33,7 +33,7 @@ collect_matches() {
         || true
     else
       grep -rn --include='*.ts' --include='*.tsx' \
-        -E 'as never|as unknown as' \
+        -E 'as never|as unknown as|as any\b' \
         "${ROOT_DIR}/apps/api/src" \
         "${ROOT_DIR}/apps/workers/src" \
         "${ROOT_DIR}/apps/web/app" \

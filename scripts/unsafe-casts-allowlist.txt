@@ -15,10 +15,28 @@ apps/api/src/modules/forms/service.ts:372:        return Number.isNaN(numeric) ?
 apps/api/src/modules/forms/service.ts:917:        ...(input.conditionalLogic ? { conditionalLogic: input.conditionalLogic as unknown as Prisma.InputJsonValue } : {}),
 apps/api/src/modules/identity/router.ts:149:        newDataText: checklist as unknown as Record<string, unknown>
 apps/api/src/modules/meetings/service.ts:409:        content: input.content as never
+apps/web/components/diagram/maxgraph/maxgraph-editor-handlers.ts:220:        } as any
+apps/web/components/diagram/maxgraph/maxgraph-editor-handlers.ts:267:          graph.setCellStyles(key as any, value as any, [cell]);
+apps/web/components/diagram/maxgraph/maxgraph-editor-handlers.ts:282:          graph.getDataModel().setStyle(cell, style as any);
+apps/web/components/diagram/maxgraph/maxgraph-editor-handlers.ts:498:            style: node.style as any
+apps/web/components/diagram/maxgraph/maxgraph-editor-handlers.ts:799:    graph.setCellStyles("locked" as any, nextLocked ? 1 : 0, [selected]);
+apps/web/components/diagram/maxgraph/maxgraph-editor-handlers.ts:821:      graph.getDataModel().setStyle(selected, copiedStyleRef.current as any);
 apps/web/components/diagram/maxgraph/maxgraph-editor-runtime.ts:1405:    const providerState = provider as unknown as { synced?: boolean; status?: string };
+apps/web/components/diagram/maxgraph/maxgraph-editor-runtime.ts:1557:      { ...baseConnectorStyle, ...selectedEdgeTemplate.style } as any
+apps/web/components/diagram/maxgraph/maxgraph-editor-runtime.ts:1576:    const graphHandler = (graph as any).graphHandler;
+apps/web/components/diagram/maxgraph/maxgraph-editor-runtime.ts:822:      const panningHandler = (graph as any).panningHandler;
+apps/web/components/diagram/maxgraph/maxgraph-editor-runtime.ts:989:    const graphHandler = (graph as any).graphHandler;
+apps/web/components/diagram/maxgraph/maxgraph-editor-shell.tsx:813:            graph.getDataModel().setStyle(selected, theme.defaultEdgeStyle as any);
+apps/web/components/diagram/maxgraph/maxgraph-editor-shell.tsx:815:            graph.getDataModel().setStyle(selected, theme.defaultVertexStyle as any);
+apps/web/components/diagram/maxgraph/maxgraph-editor-shell-utils.ts:239:    } as any
+apps/web/components/diagram/maxgraph/maxgraph-editor-shell-utils.ts:249:    } as any
+apps/web/components/diagram/maxgraph/maxgraph-editor-toolbar-hook.ts:161:        graph.groupCells(undefined as any, 12, graph.getSelectionCells());
+apps/web/components/documents-editor-whiteboard.tsx:140:          elements: initialData.elements as any,
 apps/web/components/task-board.tsx:1092:                                          event as unknown as ReactPointerEvent<HTMLDivElement>,
 apps/web/components/task-board.tsx:1109:                                          event as unknown as ReactPointerEvent<HTMLDivElement>,
 apps/web/lib/call-route-ref.ts:17:  const maybeGlobal = globalThis as unknown as {
 apps/web/lib/context.ts:31:  const maybeGlobal = globalThis as unknown as {
+apps/web/lib/diagram/maxgraph/shape-factory.ts:60:      style: template.style as any
+apps/web/lib/diagram/maxgraph/shape-factory.ts:86:      style: template.style as any
 apps/web/lib/documents-editor-route-ref.ts:15:  const maybeGlobal = globalThis as unknown as {
 apps/workers/src/jobs/webhook.worker.ts:62:            payload: payload as never,

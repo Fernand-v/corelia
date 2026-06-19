@@ -251,7 +251,8 @@ describe("CollaborativeDocumentsModule", () => {
 
     render(<CollaborativeDocumentsModule {...props} />);
 
-    fireEvent.click(screen.getByTestId("documents-editor-whiteboard-mock-change"));
+    // El editor se carga de forma diferida (next/dynamic): esperar su montaje.
+    fireEvent.click(await screen.findByTestId("documents-editor-whiteboard-mock-change"));
 
     await waitFor(() => {
       expect(screen.getByText("● Cambios sin guardar")).toBeInTheDocument();
