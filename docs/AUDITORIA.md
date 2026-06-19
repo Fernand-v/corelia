@@ -3,6 +3,22 @@
 > Fecha: 2026-06-19 · Alcance: monorepo completo (apps/api, apps/web, apps/workers, apps/hocuspocus, packages/*)
 > Método: revisión estática de código, configuración, seguridad, rendimiento y pruebas. No se ejecutó pentest dinámico.
 
+## Estado de implementación (2026-06-19)
+
+Corregido en esta tanda (ver historial git):
+- **CI desbloqueado**: `prisma generate` en postinstall + build de paquetes compartidos antes de los gates, Node 22, paso `build` en el pipeline, 4 warnings de hooks React.
+- **[ALTA] Escalada entre proyectos**: el RBAC ahora resuelve `projectId` desde el body (no solo header/query), con tests.
+- **[ALTA] Refresh token** en cookie httpOnly en vez de `localStorage`.
+- **[MEDIA] Login**: lockout por cuenta (5 fallos) + rate limit 10→5/min.
+- **[MEDIA] Cache RBAC** usuario/membresía en Redis (TTL 30s + invalidación).
+- **[BAJA]** Code-splitting de editores Excalidraw/maxGraph; gate extendido a `as any`; `DISTINCT ON` para último mensaje por canal.
+- **Docs**: guía de migraciones multi-instancia + rollback.
+
+Pendiente (follow-up recomendado):
+- **3.2 Harness de integración con DB real en CI**: requiere contenedor Postgres/Redis; no verificable en este entorno (sin daemon Docker). Hacer en sesión con CI ejecutable.
+- **3.3 Paginación de `listMessages`** (historial de chat): requiere scroll infinito en el cliente (es feature, no parche) para no truncar historial silenciosamente.
+- **4.1 Partir servicios monolíticos** (documents 2788, forms 1517, messaging 1423, tasks 1227 líneas): refactor grande que debe preservar comportamiento; hacerlo por servicio, incremental, subiendo antes la cobertura de `documents/service`.
+
 ## Resumen ejecutivo
 
 Corelia es una plataforma madura y bien estructurada: patrón plugin+módulo consistente en la API, RBAC granular, validación Zod de entorno y de payloads, 236 índices en 88 modelos Prisma, y pipeline CI con gates de calidad propios (unsafe-casts, PUML, audit). Las debilidades principales no son estructurales sino de **endurecimiento**: un posible vector de escalada de privilegios entre proyectos, almacenamiento de tokens en `localStorage`, cobertura de pruebas desigual, y varios cuellos de botella de rendimiento por consultas por-request y servicios monolíticos.
