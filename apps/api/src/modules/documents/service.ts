@@ -3,7 +3,6 @@ import { createHash, randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 import type {
   CollaborativeDocument,
-  CollaborativeDocumentVersion,
   DiagramKind,
   DocumentTemplate,
   DocumentType,
@@ -20,7 +19,15 @@ import {
   inferOnlyOfficeMimeType,
   isOnlyOfficeDocumentType
 } from "./onlyoffice.js";
-import { sanitizeFileName, stripControlChars } from "../../lib/sanitize.js";
+import { sanitizeFileName } from "../../lib/sanitize.js";
+import type { SpaceFolders } from "./document-helpers.js";
+import {
+  mapDiagramSessionParticipant,
+  mapDocument,
+  mapVersion,
+  normalizeClientId,
+  resolveFolderIdByType
+} from "./document-helpers.js";
 
 const DOCUMENTS_ROOT_FOLDER = "documentos";
 
@@ -52,16 +59,6 @@ const DOCUMENT_DIAGRAM_SESSION_STALE_MS = 70_000;
 const PRESENCE_SET_KEY_PREFIX = "presence:documents:set:";
 const PRESENCE_VALUE_KEY_PREFIX = "presence:documents:user:";
 const DEFAULT_PRESENCE_TTL_SECONDS = 70;
-
-type SpaceFolders = {
-  projectId: string;
-  rootFolderId: string;
-  textoFolderId: string;
-  diagramasFolderId: string;
-  tablasFolderId: string;
-  whiteboardFolderId: string;
-  presentacionesFolderId: string;
-};
 
 type PresencePayload = {
   userId: string;
@@ -371,107 +368,6 @@ export class DocumentsService {
     );
   }
 
-  private mapDocument(
-    document: {
-      id: string;
-      projectId: string;
-      folderId: string;
-      type: DocumentType;
-      name: string;
-      yDocName: string;
-      diagramEngine?: "EXCALIDRAW" | "REACT_FLOW" | null;
-      diagramKind?:
-        | "FLUJO"
-        | "SECUENCIA"
-        | "UML_CLASES"
-        | "ENTIDAD_RELACION"
-        | "ESTADO"
-        | "ARQUITECTURA"
-        | "BPMN"
-        | null;
-      currentVersion: number;
-      createdById: string;
-      deletedAt: Date | null;
-      purgeAt: Date | null;
-      createdAt: Date;
-      updatedAt: Date;
-      createdBy?: {
-        firstName: string;
-        lastName: string;
-      };
-    }
-  ): CollaborativeDocument {
-    return {
-      id: document.id,
-      projectId: document.projectId,
-      folderId: document.folderId,
-      type: document.type,
-      name: document.name,
-      yDocName: document.yDocName,
-      diagramEngine: document.diagramEngine ?? null,
-      diagramKind: document.diagramKind ?? null,
-      currentVersion: document.currentVersion,
-      createdById: document.createdById,
-      ...(document.createdBy
-        ? {
-            createdByName: `${document.createdBy.firstName} ${document.createdBy.lastName}`.trim()
-          }
-        : {}),
-      deletedAt: document.deletedAt ? document.deletedAt.toISOString() : null,
-      purgeAt: document.purgeAt ? document.purgeAt.toISOString() : null,
-      createdAt: document.createdAt.toISOString(),
-      updatedAt: document.updatedAt.toISOString()
-    };
-  }
-
-  private mapVersion(
-    version: {
-      id: string;
-      documentId: string;
-      versionNumber: number;
-      kind: DocumentVersionKind;
-      snapshotPath: string;
-      snapshotSizeBytes: number;
-      createdById: string;
-      createdAt: Date;
-      createdBy?: {
-        firstName: string;
-        lastName: string;
-      };
-    }
-  ): CollaborativeDocumentVersion {
-    return {
-      id: version.id,
-      documentId: version.documentId,
-      versionNumber: version.versionNumber,
-      kind: version.kind,
-      snapshotPath: version.snapshotPath,
-      snapshotSizeBytes: version.snapshotSizeBytes,
-      createdById: version.createdById,
-      ...(version.createdBy
-        ? {
-            createdByName: `${version.createdBy.firstName} ${version.createdBy.lastName}`.trim()
-          }
-        : {}),
-      createdAt: version.createdAt.toISOString()
-    };
-  }
-
-  private resolveFolderIdByType(space: SpaceFolders, type: DocumentType): string {
-    if (type === "TEXTO") {
-      return space.textoFolderId;
-    }
-    if (type === "DIAGRAMA") {
-      return space.diagramasFolderId;
-    }
-    if (type === "TABLA") {
-      return space.tablasFolderId;
-    }
-    if (type === "WHITEBOARD") {
-      return space.whiteboardFolderId;
-    }
-    return space.presentacionesFolderId;
-  }
 
   private async getPresenceForDocuments(documentIds: string[]) {
     const result = new Map<string, PresenceCollaborator[]>();
@@ -652,7 +548,7 @@ export class DocumentsService {
     };
 
     for (const document of documents) {
-      const mapped = this.mapDocument(document);
+      const mapped = mapDocument(document);
       (mapped as CollaborativeDocument & { isFavorite?: boolean }).isFavorite = document.favorites.length > 0;
       grouped[document.type].push(mapped);
     }
@@ -681,7 +577,7 @@ export class DocumentsService {
     await this.assertProjectAccess(input.projectId, input.userId);
     const space = await this.ensureDocumentSpace(input.projectId, input.userId);
 
-    const folderId = this.resolveFolderIdByType(space, input.type);
+    const folderId = resolveFolderIdByType(space, input.type);
     const now = Date.now();
     const document = await this.app.prisma.collaborativeDocument.create({
       data: {
@@ -732,7 +628,7 @@ export class DocumentsService {
       }
     }
 
-    return this.mapDocument(document);
+    return mapDocument(document);
   }
 
   private async getDocumentForUser(input: { documentId: string; userId: string }) {
@@ -761,7 +657,7 @@ export class DocumentsService {
 
   async getDocument(input: { documentId: string; userId: string }) {
     const document = await this.getDocumentForUser(input);
-    return this.mapDocument(document);
+    return mapDocument(document);
   }
 
   async createCollabToken(input: { documentId: string; userId: string }) {
@@ -1111,40 +1007,6 @@ export class DocumentsService {
     return env.DOCUMENTS_DIAGRAM_SESSION_IDLE_SECONDS * 1000;
   }
 
-  private normalizeClientId(input?: string) {
-    const candidate = stripControlChars((input ?? "").trim())
-      .replace(/\s+/g, "-")
-      .slice(0, 120);
-
-    return candidate.length > 0 ? candidate : randomUUID();
-  }
-
-  private participantDisplayName(input: { firstName: string; lastName: string }) {
-    return `${input.firstName} ${input.lastName}`.trim() || "Usuario";
-  }
-
-  private mapDiagramSessionParticipant(row: {
-    userId: string;
-    clientId: string;
-    status: "ONLINE" | "OFFLINE";
-    joinedAt: Date;
-    leftAt: Date | null;
-    lastHeartbeatAt: Date | null;
-    user: {
-      firstName: string;
-      lastName: string;
-    };
-  }) {
-    return {
-      userId: row.userId,
-      clientId: row.clientId,
-      name: this.participantDisplayName(row.user),
-      status: row.status,
-      joinedAt: row.joinedAt.toISOString(),
-      leftAt: row.leftAt ? row.leftAt.toISOString() : null,
-      lastHeartbeatAt: row.lastHeartbeatAt ? row.lastHeartbeatAt.toISOString() : null
-    };
-  }
 
   private async getDiagramDocumentForUser(input: { documentId: string; userId: string }) {
     const document = await this.getDocumentForUser(input);
@@ -1321,7 +1183,7 @@ export class DocumentsService {
         firstName: string;
         lastName: string;
       };
-    }) => this.mapDiagramSessionParticipant(row));
+    }) => mapDiagramSessionParticipant(row));
   }
 
   private async getSessionLastEvent(sessionId: string): Promise<SessionEventType | null> {
@@ -1348,7 +1210,7 @@ export class DocumentsService {
       userId: input.userId
     });
     const now = new Date();
-    const clientId = this.normalizeClientId(input.clientId);
+    const clientId = normalizeClientId(input.clientId);
 
     let activeSession = await this.closeIdleDiagramSessionIfNeeded(document.id, now);
     if (!activeSession) {
@@ -1480,7 +1342,7 @@ export class DocumentsService {
     }
 
     const now = new Date();
-    const clientId = this.normalizeClientId(input.clientId);
+    const clientId = normalizeClientId(input.clientId);
     const participantKey = {
       sessionId: session.id,
       userId: input.userId,
@@ -1594,7 +1456,7 @@ export class DocumentsService {
     }
 
     const now = new Date();
-    const clientId = this.normalizeClientId(input.clientId);
+    const clientId = normalizeClientId(input.clientId);
     const contentBuffer = Buffer.from(input.content, "utf8");
     if (contentBuffer.byteLength <= 0) {
       throw new Error("El snapshot está vacío");
@@ -1747,7 +1609,7 @@ export class DocumentsService {
     }
 
     const now = new Date();
-    const clientId = this.normalizeClientId(input.clientId);
+    const clientId = normalizeClientId(input.clientId);
 
     const updated = await this.getCollabPrisma().documentCollabParticipant.updateMany({
       where: {
@@ -1877,7 +1739,7 @@ export class DocumentsService {
       }
     });
 
-    return this.mapDocument(updated);
+    return mapDocument(updated);
   }
 
   async deleteDocument(input: { documentId: string; userId: string }) {
@@ -1907,7 +1769,7 @@ export class DocumentsService {
       }
     });
 
-    return this.mapDocument(deleted);
+    return mapDocument(deleted);
   }
 
   async listVersions(input: {
@@ -1948,7 +1810,7 @@ export class DocumentsService {
     ]);
 
     return {
-      items: rows.map((row) => this.mapVersion(row)),
+      items: rows.map((row) => mapVersion(row)),
       total,
       page: input.page,
       pageSize: input.pageSize,
@@ -2059,8 +1921,8 @@ export class DocumentsService {
     }
 
     return {
-      document: this.mapDocument(document),
-      version: this.mapVersion(created)
+      document: mapDocument(document),
+      version: mapVersion(created)
     };
   }
 
@@ -2374,7 +2236,7 @@ export class DocumentsService {
     });
 
     return {
-      items: documents.map((doc) => this.mapDocument(doc))
+      items: documents.map((doc) => mapDocument(doc))
     };
   }
 
@@ -2400,7 +2262,7 @@ export class DocumentsService {
       }
     });
 
-    return this.mapDocument(restored);
+    return mapDocument(restored);
   }
 
   // ── Duplicate ──────────────────────────────────────────
@@ -2412,7 +2274,7 @@ export class DocumentsService {
     });
 
     const space = await this.ensureDocumentSpace(document.projectId, input.userId);
-    const folderId = this.resolveFolderIdByType(space, document.type);
+    const folderId = resolveFolderIdByType(space, document.type);
     const now = Date.now();
 
     const created = await this.app.prisma.collaborativeDocument.create({
@@ -2487,7 +2349,7 @@ export class DocumentsService {
       }
     }
 
-    return this.mapDocument(created);
+    return mapDocument(created);
   }
 
   // ── Favorites ──────────────────────────────────────────
@@ -2657,7 +2519,7 @@ export class DocumentsService {
     }
 
     const space = await this.ensureDocumentSpace(input.projectId, input.userId);
-    const folderId = this.resolveFolderIdByType(space, input.type);
+    const folderId = resolveFolderIdByType(space, input.type);
     const now = Date.now();
 
     const document = await this.app.prisma.collaborativeDocument.create({
@@ -2723,7 +2585,7 @@ export class DocumentsService {
       // Document created without template content on failure
     }
 
-    return this.mapDocument(document);
+    return mapDocument(document);
   }
 
   // ── Batch operations ───────────────────────────────────
