@@ -65,7 +65,6 @@ export const DocumentsEditorWhiteboard = ({
   const yText = useMemo(() => yDoc.getText(`doc:${documentId}:whiteboard`), [documentId, yDoc]);
   const applyingRemoteRef = useRef(false);
   const readOnlyRef = useRef(readOnly);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const apiRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
 
@@ -111,7 +110,6 @@ export const DocumentsEditorWhiteboard = ({
     };
   }, [yText]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleChange = useCallback((elements: readonly any[]) => {
     if (applyingRemoteRef.current) {
       return;
@@ -136,7 +134,6 @@ export const DocumentsEditorWhiteboard = ({
           apiRef.current = api;
         }}
         initialData={{
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           elements: initialData.elements as any,
           appState: {
             viewBackgroundColor: "#ffffff",
