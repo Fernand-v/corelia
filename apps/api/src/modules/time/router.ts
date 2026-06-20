@@ -19,7 +19,8 @@ export const timeRouter: FastifyPluginAsync = async (app) => {
       const payload = parseWithSchema(timeSchemas.createTimeEntryInputSchema, request.body);
       const entry = await service.createEntry({
         ...payload,
-        userId: request.authUser!.id
+        userId: request.authUser!.id,
+        activeRoleRank: request.accessContext!.rank
       });
       return reply.code(201).send(entry);
     }
@@ -36,7 +37,12 @@ export const timeRouter: FastifyPluginAsync = async (app) => {
     },
     async (request) => {
       const query = parseWithSchema(timeSchemas.summaryQuerySchema, request.query ?? {});
-      return service.summary(query);
+      return service.summary({
+        ...query,
+        actorId: request.authUser!.id,
+        activeRoleRank: request.accessContext!.rank,
+        projectContextId: request.accessContext?.projectId
+      });
     }
   );
 };

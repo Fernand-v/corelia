@@ -328,11 +328,37 @@ describe("Task integration flows", () => {
       startDate: "2026-03-01T10:00:00.000Z",
       dueDate: "2026-03-02T10:00:00.000Z",
       reason: "Ajuste manual de prueba",
-      changedById: crypto.randomUUID()
+      changedById: crypto.randomUUID(),
+      activeRoleRank: 5
     });
 
     expect(updated).toHaveProperty("id", taskId);
     expect(app.prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects manager status changes when project context does not match task project", async () => {
+    const app = createMockApp();
+    const taskId = crypto.randomUUID();
+    app.prisma.task.findUnique = vi.fn().mockResolvedValue({
+      id: taskId,
+      projectId: crypto.randomUUID(),
+      status: "EN_REVISION",
+      assigneeId: crypto.randomUUID()
+    });
+
+    const service = new TaskService(app);
+
+    await expect(
+      service.changeStatus({
+        taskId,
+        status: "COMPLETADA",
+        reason: "Intento cruzado",
+        changedById: crypto.randomUUID(),
+        activeRole: "LIDER_PROYECTO",
+        activeRoleRank: 4,
+        projectContextId: crypto.randomUUID()
+      })
+    ).rejects.toThrowError("contexto del proyecto de la tarea");
   });
 
   it("requires manager role to activate task manually", async () => {

@@ -52,7 +52,10 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         ...payload,
         changedById: request.authUser!.id,
         activeRole: request.accessContext!.activeRole,
-        activeRoleRank: request.accessContext!.rank
+        activeRoleRank: request.accessContext!.rank,
+        ...(request.accessContext?.projectId !== undefined
+          ? { projectContextId: request.accessContext.projectId }
+          : {})
       });
 
       request.auditEvent = {
@@ -139,7 +142,11 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         dueDate: payload.dueDate,
         reason: payload.reason,
         reasonCatalogId: payload.reasonCatalogId,
-        changedById: request.authUser!.id
+        changedById: request.authUser!.id,
+        activeRoleRank: request.accessContext!.rank,
+        ...(request.accessContext?.projectId !== undefined
+          ? { projectContextId: request.accessContext.projectId }
+          : {})
       });
 
       request.auditEvent = {
@@ -174,7 +181,10 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         reasonCatalogId: payload.reasonCatalogId,
         changedById: request.authUser!.id,
         activeRole: request.accessContext!.activeRole,
-        activeRoleRank: request.accessContext!.rank
+        activeRoleRank: request.accessContext!.rank,
+        ...(request.accessContext?.projectId !== undefined
+          ? { projectContextId: request.accessContext.projectId }
+          : {})
       });
 
       request.auditEvent = {
@@ -207,7 +217,10 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         ...payload,
         changedById: request.authUser!.id,
         activeRole: request.accessContext!.activeRole,
-        activeRoleRank: request.accessContext!.rank
+        activeRoleRank: request.accessContext!.rank,
+        ...(request.accessContext?.projectId !== undefined
+          ? { projectContextId: request.accessContext.projectId }
+          : {})
       });
 
       request.auditEvent = {
@@ -242,7 +255,9 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
         requestedById: request.authUser!.id,
         activeRole: request.accessContext!.activeRole,
         activeRoleRank: request.accessContext!.rank,
-        projectContextId: request.accessContext?.projectId
+        ...(request.accessContext?.projectId !== undefined
+          ? { projectContextId: request.accessContext.projectId }
+          : {})
       });
 
       request.auditEvent = {

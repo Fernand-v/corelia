@@ -298,6 +298,33 @@ export class TaskService {
     return error;
   }
 
+  private ensureProjectContext(input: {
+    taskProjectId: string;
+    activeRoleRank: number;
+    projectContextId?: string | null;
+  }) {
+    if (input.activeRoleRank >= 5) {
+      return;
+    }
+
+    if (!input.projectContextId || input.projectContextId !== input.taskProjectId) {
+      throw this.forbidden("Debes operar en el contexto del proyecto de la tarea");
+    }
+  }
+
+  private canManageTaskProject(input: {
+    taskProjectId: string;
+    activeRoleRank: number;
+    projectContextId?: string | null;
+  }) {
+    if (!isManagerOrAbove(input.activeRoleRank)) {
+      return false;
+    }
+
+    this.ensureProjectContext(input);
+    return true;
+  }
+
   private async enqueueWebhooks(
     event:
       | "TAREA_COMPLETADA"
@@ -672,6 +699,7 @@ export class TaskService {
     changedById: string;
     activeRole: RoleCode;
     activeRoleRank: number;
+    projectContextId?: string | null;
   }) {
     const task = await this.app.prisma.task.findUnique({ where: { id: input.taskId } });
     if (!task) {
@@ -682,10 +710,20 @@ export class TaskService {
       return task;
     }
 
-    const isManager = isManagerOrAbove(input.activeRoleRank);
-    const isAssignee = task.assigneeId === input.changedById;
-
     const transition = `${task.status}->${input.status}`;
+    const isAssignee = task.assigneeId === input.changedById;
+    const requiresManager =
+      (transition === "PENDIENTE->EN_REVISION" && !isAssignee) ||
+      transition === "EN_REVISION->COMPLETADA" ||
+      transition === "EN_REVISION->PENDIENTE" ||
+      transition === "COMPLETADA->PENDIENTE";
+    const isManager = requiresManager
+      ? this.canManageTaskProject({
+          taskProjectId: task.projectId,
+          activeRoleRank: input.activeRoleRank,
+          ...(input.projectContextId !== undefined ? { projectContextId: input.projectContextId } : {})
+        })
+      : false;
     const allowedTransition =
       (transition === "PENDIENTE->EN_REVISION" && (isAssignee || isManager)) ||
       (transition === "EN_REVISION->COMPLETADA" && isManager) ||
@@ -801,6 +839,8 @@ export class TaskService {
     reason: string;
     reasonCatalogId?: string;
     changedById: string;
+    activeRoleRank: number;
+    projectContextId?: string | null;
   }) {
     const task = await this.app.prisma.task.findUnique({
       where: { id: input.taskId }
@@ -808,6 +848,12 @@ export class TaskService {
     if (!task) {
       throw new Error("Tarea no encontrada");
     }
+
+    this.ensureProjectContext({
+      taskProjectId: task.projectId,
+      activeRoleRank: input.activeRoleRank,
+      ...(input.projectContextId !== undefined ? { projectContextId: input.projectContextId } : {})
+    });
 
     const startDate =
       input.startDate === undefined ? task.startDate : input.startDate ? new Date(input.startDate) : null;
@@ -854,6 +900,7 @@ export class TaskService {
     changedById: string;
     activeRole: RoleCode;
     activeRoleRank: number;
+    projectContextId?: string | null;
   }) {
     if (!isManagerOrAbove(input.activeRoleRank)) {
       throw this.forbidden("Solo administrador, líder o coordinador pueden activar tareas manualmente");
@@ -865,6 +912,12 @@ export class TaskService {
     if (!task) {
       throw new Error("Tarea no encontrada");
     }
+
+    this.ensureProjectContext({
+      taskProjectId: task.projectId,
+      activeRoleRank: input.activeRoleRank,
+      ...(input.projectContextId !== undefined ? { projectContextId: input.projectContextId } : {})
+    });
 
     const canActivateHiddenPending = task.status === "PENDIENTE" && task.pendingActivatedAt === null;
     const allowedFrom = new Set<TaskStatus>(["EN_REVISION", "COMPLETADA"]);
@@ -933,6 +986,7 @@ export class TaskService {
     changedById: string;
     activeRole: RoleCode;
     activeRoleRank: number;
+    projectContextId?: string | null;
   }) {
     const task = await this.app.prisma.task.findUnique({
       where: { id: input.taskId }
@@ -941,8 +995,15 @@ export class TaskService {
       throw new Error("Tarea no encontrada");
     }
 
-    const canManageForeignTask = isManagerOrAbove(input.activeRoleRank);
-    if (task.assigneeId && task.assigneeId !== input.changedById && !canManageForeignTask) {
+    const isAssignee = task.assigneeId === input.changedById;
+    const canManageForeignTask = !isAssignee
+      ? this.canManageTaskProject({
+          taskProjectId: task.projectId,
+          activeRoleRank: input.activeRoleRank,
+          ...(input.projectContextId !== undefined ? { projectContextId: input.projectContextId } : {})
+        })
+      : false;
+    if (!isAssignee && !canManageForeignTask) {
       throw this.forbidden("No puedes finalizar una tarea asignada a otro usuario");
     }
 
