@@ -165,8 +165,12 @@ export const messagingRouter: FastifyPluginAsync = async (app) => {
     },
     async (request, reply) => {
       const params = parseWithSchema(messagingSchemas.channelParamsSchema, request.params);
-      const messages = await service.listMessages(params.channelId, request.authUser!.id);
-      return reply.send(messages);
+      const query = parseWithSchema(messagingSchemas.messageHistoryQuerySchema, request.query ?? {});
+      const result = await service.listMessages(params.channelId, request.authUser!.id, {
+        ...(query.before !== undefined ? { before: query.before } : {}),
+        limit: query.limit
+      });
+      return reply.send(result);
     }
   );
 

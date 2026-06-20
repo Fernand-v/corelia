@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { InfiniteData } from "@tanstack/react-query";
 import type { Channel, Message, MessagingConversationsResponse } from "@corelia/types";
 import type { TypingUser, PendingFile, UploadProgress } from "@/components/messaging-module";
 import { apiRequest, getApiBaseUrl, getAuthToken, useAuthStore } from "@/lib/api";
@@ -13,6 +14,12 @@ import { getRealtimeSocket, disconnectRealtimeSocket } from "@/lib/realtime";
 import { useSession } from "@/lib/session";
 import { MessagingModule } from "@/components/messaging-module";
 import { UiModal } from "@/components/ui-modal";
+
+type MessageHistoryPage = {
+  messages: Message[];
+  hasMore: boolean;
+  nextCursor: string | null;
+};
 
 type DirectoryUser = {
   userId: string;
@@ -594,12 +601,25 @@ export const MessagingBoard = () => {
     [activeChannelId, channels]
   );
 
-  const messagesQuery = useQuery({
+  const messagesQuery = useInfiniteQuery({
     queryKey: ["messaging", "messages", activeChannelId],
-    queryFn: () =>
-      apiRequest<Message[]>(`/messaging/channels/${encodeURIComponent(activeChannelId)}/messages`),
-    enabled: Boolean(activeChannelId)
+    queryFn: ({ pageParam }) => {
+      const query = pageParam ? `?before=${encodeURIComponent(pageParam)}` : "";
+      return apiRequest<MessageHistoryPage>(
+        `/messaging/channels/${encodeURIComponent(activeChannelId)}/messages${query}`
+      );
+    },
+    enabled: Boolean(activeChannelId),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor ?? undefined : undefined)
   });
+
+  // Las páginas vienen de la más reciente a la más antigua; al invertir el
+  // orden de páginas (cada una ya ascendente) obtenemos el hilo cronológico.
+  const messages = useMemo(
+    () => [...(messagesQuery.data?.pages ?? [])].reverse().flatMap((page) => page.messages),
+    [messagesQuery.data]
+  );
 
   const activeProjectId = activeChannel?.projectId ?? null;
 
@@ -798,11 +818,23 @@ export const MessagingBoard = () => {
         return;
       }
 
-      queryClient.setQueryData<Message[]>(["messaging", "messages", activeChannelId], (current) => {
-        const list = current ?? [];
-        const deduped = list.filter((item) => item.id !== message.id);
-        return [...deduped, message];
-      });
+      queryClient.setQueryData<InfiniteData<MessageHistoryPage>>(
+        ["messaging", "messages", activeChannelId],
+        (current) => {
+          if (!current || current.pages.length === 0) {
+            return current;
+          }
+          // El mensaje más reciente va en la primera página (la más nueva).
+          const pages = current.pages.map((page, index) => {
+            if (index !== 0) {
+              return page;
+            }
+            const deduped = page.messages.filter((item) => item.id !== message.id);
+            return { ...page, messages: [...deduped, message] };
+          });
+          return { ...current, pages };
+        }
+      );
       void queryClient.invalidateQueries({ queryKey: ["messaging", "conversations"] });
 
       if (message.authorId !== currentUserId) {
@@ -820,17 +852,23 @@ export const MessagingBoard = () => {
       messageIds: string[];
     }) => {
       if (data.channelId !== activeChannelId) return;
-      queryClient.setQueryData<Array<Message & { aggregateStatus?: string }>>(
+      queryClient.setQueryData<InfiniteData<MessageHistoryPage>>(
         ["messaging", "messages", activeChannelId],
         (current) => {
           if (!current) return current;
           const affectedIds = new Set(data.messageIds);
-          return current.map((msg) => {
-            if (!affectedIds.has(msg.id) || msg.authorId !== currentUserId) return msg;
-            const newStatus =
-              data.status === "LEIDO" ? "read" : data.status === "ENTREGADO" ? "delivered" : "sent";
-            return { ...msg, aggregateStatus: newStatus };
-          });
+          const newStatus =
+            data.status === "LEIDO" ? "read" : data.status === "ENTREGADO" ? "delivered" : "sent";
+          return {
+            ...current,
+            pages: current.pages.map((page) => ({
+              ...page,
+              messages: page.messages.map((msg) => {
+                if (!affectedIds.has(msg.id) || msg.authorId !== currentUserId) return msg;
+                return { ...msg, aggregateStatus: newStatus };
+              })
+            }))
+          };
         }
       );
     };
@@ -894,11 +932,10 @@ export const MessagingBoard = () => {
   }, [activeChannelId, authorNameById, queryClient, session.data?.id, token]);
 
   useEffect(() => {
-    if (!token || !activeChannelId || !messagesQuery.data?.length || !session.data?.id) {
+    if (!token || !activeChannelId || messages.length === 0 || !session.data?.id) {
       return;
     }
 
-    const messages = messagesQuery.data;
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage || lastMessage.authorId === session.data.id) {
       return;
@@ -909,7 +946,7 @@ export const MessagingBoard = () => {
       channelId: activeChannelId,
       upToMessageId: lastMessage.id
     });
-  }, [activeChannelId, messagesQuery.data, session.data?.id, token]);
+  }, [activeChannelId, messages, session.data?.id, token]);
 
   useEffect(() => {
     if (!token) {
@@ -999,7 +1036,7 @@ export const MessagingBoard = () => {
   }, [activeChannelId, token]);
 
   const mappedMessages = useMemo(() => {
-    return (messagesQuery.data ?? []).map((message) => {
+    return messages.map((message) => {
       const attachments = message.attachments.map((attachment) => ({
         id: attachment.id,
         name: attachment.originalName,
@@ -1036,7 +1073,7 @@ export const MessagingBoard = () => {
         attachments
       };
     });
-  }, [activeProjectId, authorNameById, frontendSettings.instantCallExpiryHours, messagesQuery.data]);
+  }, [activeProjectId, authorNameById, frontendSettings.instantCallExpiryHours, messages]);
 
   const teamMembers = useMemo(() => {
     const presenceById = new Map(
@@ -1102,6 +1139,9 @@ export const MessagingBoard = () => {
             : null
         }
         messages={mappedMessages}
+        hasMoreMessages={messagesQuery.hasNextPage}
+        isLoadingOlderMessages={messagesQuery.isFetchingNextPage}
+        onLoadOlderMessages={() => void messagesQuery.fetchNextPage()}
         teamMembers={teamMembers}
         typingUsers={typingUsers}
         actionError={actionError}

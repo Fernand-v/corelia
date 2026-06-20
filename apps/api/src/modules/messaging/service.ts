@@ -866,11 +866,33 @@ export class MessagingService {
     });
   }
 
-  async listMessages(channelId: string, userId: string) {
+  async listMessages(
+    channelId: string,
+    userId: string,
+    options?: { before?: string; limit?: number }
+  ) {
     await this.getChannelForMember(channelId, userId);
 
-    const messages = await this.app.prisma.message.findMany({
-      where: { channelId },
+    const limit = options?.limit ?? 50;
+
+    // Cursor de paginación: traer mensajes anteriores al mensaje `before`.
+    let beforeCreatedAt: Date | undefined;
+    if (options?.before) {
+      const cursor = await this.app.prisma.message.findUnique({
+        where: { id: options.before },
+        select: { createdAt: true, channelId: true }
+      });
+      if (cursor && cursor.channelId === channelId) {
+        beforeCreatedAt = cursor.createdAt;
+      }
+    }
+
+    // Pedimos limit+1 (más recientes primero) para saber si hay más historial.
+    const rows = await this.app.prisma.message.findMany({
+      where: {
+        channelId,
+        ...(beforeCreatedAt ? { createdAt: { lt: beforeCreatedAt } } : {})
+      },
       include: {
         attachments: {
           orderBy: {
@@ -881,16 +903,28 @@ export class MessagingService {
           select: { status: true }
         }
       },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "desc" },
+      take: limit + 1
     });
 
-    return messages.map((message) => {
-      const { receipts, ...rest } = message;
-      return {
-        ...rest,
-        aggregateStatus: rest.authorId === userId ? computeAggregateStatus(receipts) : undefined
-      };
-    });
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    // El cursor para "cargar anteriores" es el mensaje más antiguo de la página.
+    const nextCursor = hasMore ? page[page.length - 1]?.id ?? null : null;
+
+    // Devolvemos en orden ascendente (cronológico) para el render.
+    const messages = page
+      .slice()
+      .reverse()
+      .map((message) => {
+        const { receipts, ...rest } = message;
+        return {
+          ...rest,
+          aggregateStatus: rest.authorId === userId ? computeAggregateStatus(receipts) : undefined
+        };
+      });
+
+    return { messages, hasMore, nextCursor };
   }
 
   async listChannels(

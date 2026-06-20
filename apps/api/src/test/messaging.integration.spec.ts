@@ -130,9 +130,11 @@ describe("MessagingService", () => {
     ]);
 
     const service = new MessagingService(app);
-    const messages = await service.listMessages("c-1", "u-1");
+    const result = await service.listMessages("c-1", "u-1");
 
-    expect(messages).toHaveLength(1);
+    expect(result.messages).toHaveLength(1);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
     expect(app.prisma.message.findMany).toHaveBeenCalledWith({
       where: { channelId: "c-1" },
       include: {
@@ -147,8 +149,49 @@ describe("MessagingService", () => {
           }
         }
       },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "desc" },
+      take: 51
     });
+  });
+
+  it("paginates older history using a cursor", async () => {
+    const app = createMockApp();
+    app.prisma.channel.findUnique = vi.fn().mockResolvedValue({
+      id: "c-1",
+      name: "Canal",
+      members: [{ userId: "u-1" }]
+    });
+    app.prisma.message.findUnique = vi.fn().mockResolvedValue({
+      createdAt: new Date("2026-01-02T00:00:00.000Z"),
+      channelId: "c-1"
+    });
+    // Devuelve limit+1 filas → hasMore true.
+    app.prisma.message.findMany = vi.fn().mockResolvedValue(
+      Array.from({ length: 3 }, (_, i) => ({
+        id: `m-${i}`,
+        channelId: "c-1",
+        content: "x",
+        authorId: "u-1",
+        mentions: [],
+        attachments: [],
+        receipts: [],
+        createdAt: new Date(`2026-01-0${i + 1}T00:00:00.000Z`),
+        updatedAt: new Date()
+      }))
+    );
+
+    const service = new MessagingService(app);
+    const result = await service.listMessages("c-1", "u-1", { before: "m-cursor", limit: 2 });
+
+    expect(result.messages).toHaveLength(2);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).toBe("m-1");
+    expect(app.prisma.message.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { channelId: "c-1", createdAt: { lt: new Date("2026-01-02T00:00:00.000Z") } },
+        take: 3
+      })
+    );
   });
 
   it("blocks history access for non-members", async () => {

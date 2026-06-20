@@ -70,6 +70,10 @@ export const messagingSchemas = {
   channelParamsSchema: z.object({
     channelId: z.string().uuid()
   }),
+  messageHistoryQuerySchema: z.object({
+    before: z.string().uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(50)
+  }),
   attachmentParamsSchema: z.object({
     attachmentId: z.string().uuid()
   }),

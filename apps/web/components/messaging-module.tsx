@@ -126,6 +126,9 @@ export type MessagingModuleProps = {
   onConfirmSendFiles?: (() => void) | undefined;
   onRetryUpload?: ((fileId: string) => void) | undefined;
   resolveAttachmentUrl?: ((attachmentId: string) => Promise<string>) | undefined;
+  hasMoreMessages?: boolean | undefined;
+  isLoadingOlderMessages?: boolean | undefined;
+  onLoadOlderMessages?: (() => void) | undefined;
 };
 
 // ─── Utility Functions ───────────────────────────────────────────────────────
@@ -1001,7 +1004,10 @@ export const MessagingModule = ({
   onRemovePendingFile,
   onConfirmSendFiles,
   onRetryUpload,
-  resolveAttachmentUrl
+  resolveAttachmentUrl,
+  hasMoreMessages = false,
+  isLoadingOlderMessages = false,
+  onLoadOlderMessages
 }: MessagingModuleProps) => {
   const [conversationFilter, setConversationFilter] = useState("");
   const [composerValue, setComposerValue] = useState("");
@@ -1014,10 +1020,17 @@ export const MessagingModule = ({
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
 
+  // Auto-scroll solo cuando cambia el mensaje más reciente (mensaje nuevo o
+  // cambio de canal), no al prepender historial antiguo (evita el salto).
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    const lastId = messages[messages.length - 1]?.id ?? null;
+    if (lastId !== lastMessageIdRef.current) {
+      lastMessageIdRef.current = lastId;
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   const filteredConversations = useMemo(() => {
     const needle = conversationFilter.trim().toLowerCase();
@@ -1260,6 +1273,18 @@ export const MessagingModule = ({
               backgroundSize: "18px 18px"
             }}
           >
+            {hasMoreMessages ? (
+              <div className="mb-3 flex justify-center">
+                <button
+                  type="button"
+                  onClick={onLoadOlderMessages}
+                  disabled={isLoadingOlderMessages}
+                  className="rounded-full bg-white/80 px-4 py-1 text-xs font-medium text-[#667781] shadow-sm transition hover:bg-white disabled:opacity-60"
+                >
+                  {isLoadingOlderMessages ? "Cargando…" : "Cargar mensajes anteriores"}
+                </button>
+              </div>
+            ) : null}
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-[#667781]">
                 No hay mensajes en esta conversación.
