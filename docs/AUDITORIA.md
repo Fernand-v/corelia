@@ -18,9 +18,17 @@ Hecho después:
 - **3.3 Paginación de `listMessages`**: implementada con cursor (`before`/`limit`) en el backend (`DISTINCT`/`take+1`, devuelve `{messages, hasMore, nextCursor}`) y `useInfiniteQuery` + botón "Cargar mensajes anteriores" en el cliente, con auto-scroll que no salta al prepender historial.
 - **4.1 (helpers puros)**: extraídos a `*-helpers.ts` en forms/messaging/documents/tasks con tests propios.
 
+Hecho después (4.1 sub-services DB-bound):
+Resuelto el acoplamiento con **inyección de dependencias**: cada sub-service recibe `app` y los métodos compartidos del parent que necesita (p. ej. `getDocumentForUser`, `saveVersion`, `getChannelForMember`), y el servicio principal delega o usa el sub-service. Extraídos:
+- `DocumentCollabService` (sesiones colab de diagramas) y `DocumentOnlyOfficeService` (integración ONLYOFFICE) → **documents/service 2652 → 1586**.
+- `MessageReceiptsService` (recibos entregado/leído) → **messaging/service 1336 → 1253**.
+- `TaskOperationsService` (encolado webhooks/automatizaciones, validaciones de alcance/disponibilidad) → **tasks/service 1246 → 1063**.
+- `FormRequestsService` (solicitudes legacy VACACIONES/PERMISO) → **forms/service 1215 → 1092**.
+Cada uno con su spec de smoke tests. Comportamiento preservado (move verbatim + verificado con typecheck/lint/build/integration specs).
+
 Pendiente (follow-up recomendado):
 - **3.2 Harness de integración con DB real en CI**: requiere contenedor Postgres/Redis; no verificable sin daemon Docker.
-- **4.1 (sub-services DB-bound)**: partir la lógica con acceso a BD en sub-services es el siguiente nivel, pero los servicios son una **red acoplada**: los clusters candidatos dependen de infraestructura privada compartida (documents: `getDocumentForUser`, `saveVersion`, `assertProjectAccess`; messaging: `createMessageRecord`, `getChannelForMember`, `getProjectForUser`). El orden correcto es: (1) extraer esa capa de infraestructura/acceso a un módulo compartido, (2) **subir cobertura** de la lógica core (documents collab/OnlyOffice no tiene tests de comportamiento), (3) recién entonces dividir por subdominio. Hacerlo a ciegas mueve ~600 líneas sin red de seguridad.
+- **Cobertura de comportamiento** de la lógica core de documents (collab/OnlyOffice tienen smoke tests de guardas, no de los flujos completos).
 
 ## Resumen ejecutivo
 
