@@ -14,10 +14,13 @@ Corregido en esta tanda (ver historial git):
 - **[BAJA]** Code-splitting de editores Excalidraw/maxGraph; gate extendido a `as any`; `DISTINCT ON` para último mensaje por canal.
 - **Docs**: guía de migraciones multi-instancia + rollback.
 
+Hecho después:
+- **3.3 Paginación de `listMessages`**: implementada con cursor (`before`/`limit`) en el backend (`DISTINCT`/`take+1`, devuelve `{messages, hasMore, nextCursor}`) y `useInfiniteQuery` + botón "Cargar mensajes anteriores" en el cliente, con auto-scroll que no salta al prepender historial.
+- **4.1 (helpers puros)**: extraídos a `*-helpers.ts` en forms/messaging/documents/tasks con tests propios.
+
 Pendiente (follow-up recomendado):
-- **3.2 Harness de integración con DB real en CI**: requiere contenedor Postgres/Redis; no verificable en este entorno (sin daemon Docker). Hacer en sesión con CI ejecutable.
-- **3.3 Paginación de `listMessages`** (historial de chat): requiere scroll infinito en el cliente (es feature, no parche) para no truncar historial silenciosamente.
-- **4.1 Partir servicios monolíticos** (documents 2788, forms 1517, messaging 1423, tasks 1227 líneas): refactor grande que debe preservar comportamiento; hacerlo por servicio, incremental, subiendo antes la cobertura de `documents/service`.
+- **3.2 Harness de integración con DB real en CI**: requiere contenedor Postgres/Redis; no verificable sin daemon Docker.
+- **4.1 (sub-services DB-bound)**: partir la lógica con acceso a BD en sub-services es el siguiente nivel, pero los servicios son una **red acoplada**: los clusters candidatos dependen de infraestructura privada compartida (documents: `getDocumentForUser`, `saveVersion`, `assertProjectAccess`; messaging: `createMessageRecord`, `getChannelForMember`, `getProjectForUser`). El orden correcto es: (1) extraer esa capa de infraestructura/acceso a un módulo compartido, (2) **subir cobertura** de la lógica core (documents collab/OnlyOffice no tiene tests de comportamiento), (3) recién entonces dividir por subdominio. Hacerlo a ciegas mueve ~600 líneas sin red de seguridad.
 
 ## Resumen ejecutivo
 
