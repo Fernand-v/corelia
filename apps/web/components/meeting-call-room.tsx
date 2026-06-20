@@ -239,15 +239,24 @@ const MeetingTopBar = ({
   onReconnect,
   onLeave
 }: MeetingTopBarProps) => (
-  <header className="teams-call-panel flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
+  <header className="teams-call-panel flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 backdrop-blur-xl">
     <div className="min-w-0">
-      <h1 className="truncate text-base font-semibold text-[--teams-call-text] sm:text-lg">{title}</h1>
+      <h1 className="truncate text-base font-semibold tracking-tight text-[--teams-call-text] sm:text-lg">{title}</h1>
       <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[--teams-call-muted]">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="relative flex h-1.5 w-1.5">
+            <span
+              className={`absolute inline-flex h-full w-full rounded-full opacity-70 ${connected ? "animate-ping bg-emerald-400" : "bg-amber-400"}`}
+            />
+            <span
+              className={`relative inline-flex h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-500" : "bg-amber-500"}`}
+            />
+          </span>
+          {connected ? `En vivo · ${participantCount} ${participantCount === 1 ? "participante" : "participantes"}` : "Sin conexión"}
+        </span>
+        <span className="text-white/30">·</span>
         <span>{startsAtLabel}</span>
         <span className="teams-call-pill">{meetingStatusLabel}</span>
-        <span className={connected ? "teams-call-pill teams-call-pill--success" : "teams-call-pill"}>
-          {connected ? `${participantCount} participante(s)` : "Sin conexión"}
-        </span>
       </p>
     </div>
 
@@ -255,19 +264,22 @@ const MeetingTopBar = ({
       {!connected ? (
         <Button
           type="button"
-          className="h-9 rounded-xl bg-[--teams-call-accent] px-3 text-xs text-white hover:bg-[--teams-call-accent-hover]"
+          className="h-9 rounded-xl bg-[--teams-call-accent] px-3 text-xs font-medium text-white shadow-sm transition-all hover:bg-[--teams-call-accent-hover] active:scale-[0.98]"
           disabled={connecting}
           onClick={onReconnect}
         >
-          {connecting ? "Conectando..." : "Reintentar"}
+          {connecting ? "Conectando…" : "Reintentar"}
         </Button>
       ) : null}
       <Button
         type="button"
         variant="danger"
-        className="h-9 rounded-xl bg-[#c4314b] px-3 text-xs text-white hover:bg-[#b42a43]"
+        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#c4314b] px-3 text-xs font-medium text-white shadow-sm transition-all hover:bg-[#b42a43] active:scale-[0.98]"
         onClick={onLeave}
       >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 14.5a18 18 0 0117 0l-.9 2.7a2 2 0 01-2 1.4l-2.4-.3a2 2 0 01-1.7-1.5l-.4-1.8a12 12 0 00-4.2 0l-.4 1.8a2 2 0 01-1.7 1.5l-2.4.3a2 2 0 01-2-1.4l-.9-2.7z" />
+        </svg>
         Salir
       </Button>
     </div>
@@ -277,8 +289,17 @@ const MeetingTopBar = ({
 const StageSurface = ({ participant, participantName }: StageSurfaceProps) => {
   if (!participant || !participantName) {
     return (
-      <div className="teams-call-stage-surface flex min-h-[260px] items-center justify-center text-sm text-[--teams-call-muted] sm:min-h-[380px] xl:min-h-[520px]">
-        Conéctate para iniciar la videollamada.
+      <div className="teams-call-stage-surface relative flex min-h-[260px] items-center justify-center text-sm text-[--teams-call-muted] sm:min-h-[380px] xl:min-h-[520px]">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="relative flex h-16 w-16 items-center justify-center">
+            <span className="absolute inset-0 rounded-full border border-[--teams-call-border] animate-pulse" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-7 w-7 text-[--teams-call-muted]">
+              <rect x="3" y="6" width="13" height="12" rx="2" strokeLinejoin="round" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 10l5-3v10l-5-3" />
+            </svg>
+          </div>
+          <p className="text-sm text-[--teams-call-muted]">Conéctate para iniciar la videollamada.</p>
+        </div>
       </div>
     );
   }
@@ -287,11 +308,7 @@ const StageSurface = ({ participant, participantName }: StageSurfaceProps) => {
   const header = participant.screenSharing ? "Pantalla compartida" : "Vista principal";
 
   return (
-    <div className="teams-call-stage-surface">
-      <div className="flex items-center justify-between gap-2 border-b border-[--teams-call-border-soft] px-3 py-2 text-xs text-[--teams-call-muted]">
-        <span>{header}</span>
-        <span className="truncate text-[--teams-call-text]">{participantName}</span>
-      </div>
+    <div className="teams-call-stage-surface relative">
       <div className="flex min-h-[240px] items-center justify-center bg-[#11131a] sm:min-h-[360px] xl:min-h-[500px]">
         {canRenderVideo && participant.stream ? (
           <StreamVideo
@@ -302,14 +319,38 @@ const StageSurface = ({ participant, participantName }: StageSurfaceProps) => {
           />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[--teams-call-accent-soft] text-2xl font-semibold text-white">
-              {getInitials(participantName)}
+            <div className="relative flex h-24 w-24 items-center justify-center">
+              {participant.hasLiveAudio ? (
+                <>
+                  <span className="absolute inset-0 rounded-full bg-[--teams-call-accent]/25 animate-ping" />
+                  <span className="absolute -inset-2 rounded-full border-2 border-[--teams-call-accent]/40" />
+                </>
+              ) : null}
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[--teams-call-accent] to-[--teams-call-accent-soft] text-2xl font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_10px_30px_rgba(0,0,0,0.3)]">
+                {getInitials(participantName)}
+              </div>
             </div>
             <p className="text-sm text-[--teams-call-muted]">
-              {participant.videoOn ? "Esperando video..." : `${participantName} tiene la cámara apagada`}
+              {participant.videoOn ? "Esperando video…" : `${participantName} tiene la cámara apagada`}
             </p>
           </div>
         )}
+      </div>
+
+      <div className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur-md">
+        {participant.screenSharing ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-3 w-3">
+            <rect x="3" y="4" width="18" height="12" rx="2" strokeLinejoin="round" />
+            <path strokeLinecap="round" d="M8 20h8M12 16v4" />
+          </svg>
+        ) : (
+          <span className="h-1.5 w-1.5 rounded-full bg-[--teams-call-accent]" />
+        )}
+        <span>{header}</span>
+      </div>
+      <div className="pointer-events-none absolute bottom-3 left-3 inline-flex max-w-[70%] items-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${participant.hasLiveAudio ? "bg-emerald-400" : "bg-white/40"}`} />
+        <span className="truncate">{participantName}</span>
       </div>
     </div>
   );
@@ -320,14 +361,22 @@ const ParticipantRail = ({
   memberNameById,
   projectStatusByUserId
 }: ParticipantRailProps) => (
-  <aside className="teams-call-panel flex min-h-[260px] flex-col rounded-2xl p-3 sm:min-h-[320px]">
-    <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[--teams-call-muted]">
-      Participantes
-    </h2>
+  <aside className="teams-call-panel flex min-h-[260px] flex-col rounded-2xl p-3 backdrop-blur-xl sm:min-h-[320px]">
+    <div className="mb-3 flex items-center justify-between">
+      <h2 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[--teams-call-muted]">
+        Participantes
+      </h2>
+      <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium tabular-nums text-[--teams-call-muted]">
+        {participants.length}
+      </span>
+    </div>
     {participants.length === 0 ? (
-      <p className="flex-1 rounded-xl border border-dashed border-[--teams-call-border] px-3 py-8 text-center text-sm text-[--teams-call-muted]">
-        Sin participantes conectados.
-      </p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[--teams-call-border] px-3 py-8 text-center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6 text-[--teams-call-muted] opacity-60">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M10 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <p className="text-xs text-[--teams-call-muted]">Sin participantes conectados.</p>
+      </div>
     ) : (
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
         {participants.map((participant) => {
@@ -340,7 +389,7 @@ const ParticipantRail = ({
           return (
             <article
               key={participant.userId}
-              className="rounded-xl border border-[--teams-call-border] bg-[--teams-call-surface-2] p-2"
+              className="group rounded-xl border border-[--teams-call-border] bg-[--teams-call-surface-2] p-2 transition-colors duration-150 hover:border-white/20"
             >
               <div className="relative overflow-hidden rounded-lg border border-[--teams-call-border-soft] bg-[#161a24]">
                 {canRenderVideo && participant.stream ? (
@@ -351,24 +400,76 @@ const ParticipantRail = ({
                     className="h-24 w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-24 w-full items-center justify-center bg-[#161a24] text-base font-semibold text-[--teams-call-text]">
-                    {getInitials(fullName)}
+                  <div className="flex h-24 w-full items-center justify-center bg-gradient-to-br from-[#1b1f2c] to-[#121621]">
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all ${
+                        participant.hasLiveAudio
+                          ? "bg-gradient-to-br from-[--teams-call-accent] to-[--teams-call-accent-hover] ring-2 ring-[--teams-call-accent]/50"
+                          : "bg-[--teams-call-accent-soft]"
+                      }`}
+                    >
+                      {getInitials(fullName)}
+                    </div>
                   </div>
                 )}
+
+                <div className="pointer-events-none absolute bottom-1 right-1 flex items-center gap-1">
+                  {participant.screenSharing ? (
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-black/60 text-[--teams-call-accent] backdrop-blur-sm" title="Compartiendo">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3">
+                        <rect x="3" y="4" width="18" height="12" rx="2" />
+                      </svg>
+                    </span>
+                  ) : null}
+                  <span
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-md backdrop-blur-sm ${
+                      participant.audioOn ? "bg-black/60 text-white" : "bg-red-500/80 text-white"
+                    }`}
+                    title={participant.audioOn ? "Micrófono activado" : "Silenciado"}
+                  >
+                    {participant.audioOn ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3">
+                        <rect x="9" y="3" width="6" height="12" rx="3" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3 w-3">
+                        <path strokeLinecap="round" d="M3 3l18 18" />
+                        <path d="M9 7v4a3 3 0 005.12 2.12M15 12V6a3 3 0 00-5.6-1.5" />
+                      </svg>
+                    )}
+                  </span>
+                  <span
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-md backdrop-blur-sm ${
+                      participant.videoOn ? "bg-black/60 text-white" : "bg-white/15 text-white/50"
+                    }`}
+                    title={participant.videoOn ? "Cámara activada" : "Cámara apagada"}
+                  >
+                    {participant.videoOn ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3">
+                        <rect x="3" y="6" width="13" height="12" rx="2" />
+                        <path d="M16 10l5-3v10l-5-3" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3 w-3">
+                        <path strokeLinecap="round" d="M3 3l18 18" />
+                        <path d="M16 10l5-3v10l-1-0.6" />
+                      </svg>
+                    )}
+                  </span>
+                </div>
+
+                {participant.isLocal ? (
+                  <span className="pointer-events-none absolute left-1 top-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/80 backdrop-blur-sm">
+                    Tú
+                  </span>
+                ) : null}
               </div>
 
-              <div className="mt-2 space-y-1">
-                <p className="truncate text-sm font-medium text-[--teams-call-text]">
-                  {fullName}
-                  {participant.isLocal ? " (Tú)" : ""}
-                </p>
-                <p className="text-[11px] text-[--teams-call-muted]">
-                  Mic {participant.audioOn ? "on" : "off"} · Cam {participant.videoOn ? "on" : "off"}
-                  {participant.screenSharing ? " · Compartiendo" : ""}
-                </p>
+              <div className="mt-2 space-y-0.5">
+                <p className="truncate text-xs font-medium text-[--teams-call-text]">{fullName}</p>
                 {status ? (
-                  <p className="text-[11px] text-[--teams-call-muted]">
-                    {status.availability} · {status.activeTasks}/{status.maxActiveTasks} tareas
+                  <p className="truncate text-[10px] text-[--teams-call-muted]">
+                    {status.availability} · {status.activeTasks}/{status.maxActiveTasks}
                   </p>
                 ) : null}
               </div>
@@ -379,6 +480,91 @@ const ParticipantRail = ({
     )}
   </aside>
 );
+
+const MicOnIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <rect x="9" y="3" width="6" height="12" rx="3" />
+    <path strokeLinecap="round" d="M5 11a7 7 0 0014 0M12 18v3" />
+  </svg>
+);
+
+const MicOffIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <path strokeLinecap="round" d="M3 3l18 18" />
+    <path d="M9 7v4a3 3 0 005.12 2.12M15 12V6a3 3 0 00-5.6-1.5" />
+    <path strokeLinecap="round" d="M5 11a7 7 0 001.56 4.4M19 11a7 7 0 01-2 4.85M12 18v3" />
+  </svg>
+);
+
+const CamOnIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <rect x="3" y="6" width="13" height="12" rx="2" strokeLinejoin="round" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16 10l5-3v10l-5-3" />
+  </svg>
+);
+
+const CamOffIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <path strokeLinecap="round" d="M3 3l18 18" />
+    <path strokeLinejoin="round" d="M16 10l5-3v10l-1-0.6M14 18H5a2 2 0 01-2-2V8a2 2 0 012-2h1" />
+  </svg>
+);
+
+const ScreenShareIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <rect x="3" y="4" width="18" height="12" rx="2" strokeLinejoin="round" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 20h8M12 16v4M9 11l3-3 3 3M12 8v5" />
+  </svg>
+);
+
+const HangUpIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.5 14.5a18 18 0 0117 0l-.9 2.7a2 2 0 01-2 1.4l-2.4-.3a2 2 0 01-1.7-1.5l-.4-1.8a12 12 0 00-4.2 0l-.4 1.8a2 2 0 01-1.7 1.5l-2.4.3a2 2 0 01-2-1.4l-.9-2.7z"
+    />
+  </svg>
+);
+
+type DockButtonProps = {
+  icon: React.ReactNode;
+  label: string;
+  tone: "active" | "warn" | "accent" | "danger" | "disabled";
+  disabled?: boolean;
+  onClick?: () => void;
+  pressed?: boolean;
+  title?: string;
+  stateText?: string;
+};
+
+const DockButton = ({ icon, label, tone, disabled, onClick, pressed, title, stateText }: DockButtonProps) => {
+  const toneClass: Record<DockButtonProps["tone"], string> = {
+    active: "border-white/10 bg-white/[0.06] hover:bg-white/[0.12] text-white",
+    warn: "border-amber-400/40 bg-amber-500/20 hover:bg-amber-500/30 text-amber-100",
+    accent: "border-[color:var(--teams-call-accent)]/60 bg-[color:var(--teams-call-accent)]/30 hover:bg-[color:var(--teams-call-accent)]/45 text-white",
+    danger: "border-red-400/40 bg-red-500/80 hover:bg-red-500 text-white",
+    disabled: "border-white/5 bg-white/[0.03] text-white/35"
+  };
+  return (
+    <button
+      type="button"
+      className={`group relative inline-flex min-h-[44px] min-w-[52px] items-center justify-center rounded-xl border px-3 py-2 transition-all duration-150 active:translate-y-[1px] disabled:cursor-not-allowed ${toneClass[tone]} sm:min-w-[60px]`}
+      disabled={disabled}
+      onClick={onClick}
+      aria-pressed={pressed}
+      aria-label={label}
+      title={title ?? label}
+    >
+      {icon}
+      {stateText ? (
+        <span className="pointer-events-none absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-medium text-white/55">
+          {stateText}
+        </span>
+      ) : null}
+    </button>
+  );
+};
 
 const ControlDock = ({
   connected,
@@ -392,52 +578,44 @@ const ControlDock = ({
   onLeave
 }: ControlDockProps) => {
   const screenShareDisabled = !connected || (remoteScreenSharing && !localScreenSharing);
-  const screenShareClass = localScreenSharing
-    ? "teams-call-dock-btn--accent"
+  const screenShareTone: DockButtonProps["tone"] = localScreenSharing
+    ? "accent"
     : screenShareDisabled
-      ? "teams-call-dock-btn--disabled"
-      : "teams-call-dock-btn--active";
+      ? "disabled"
+      : "active";
 
   return (
     <footer className="pointer-events-none fixed inset-x-3 bottom-4 z-40 flex justify-center">
-      <div className="pointer-events-auto flex w-full max-w-[640px] items-center justify-center gap-2 rounded-2xl border border-[--teams-call-border] bg-[--teams-call-panel]/95 px-2 py-2 shadow-[var(--teams-call-shadow-strong)] backdrop-blur-xl sm:gap-3 sm:px-3">
-        <button
-          type="button"
-          className={`teams-call-dock-btn ${localAudioOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
+      <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-white/10 bg-black/55 px-3 py-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:gap-3 sm:px-4">
+        <DockButton
+          icon={localAudioOn ? <MicOnIcon /> : <MicOffIcon />}
+          label={localAudioOn ? "Silenciar micrófono" : "Activar micrófono"}
+          tone={localAudioOn ? "active" : "warn"}
           disabled={!connected}
           onClick={onToggleAudio}
-          aria-pressed={localAudioOn}
-        >
-          <span className="teams-call-dock-btn__label">Mic</span>
-          <span className="teams-call-dock-btn__state">{localAudioOn ? "On" : "Off"}</span>
-        </button>
-        <button
-          type="button"
-          className={`teams-call-dock-btn ${localVideoOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
+          pressed={localAudioOn}
+        />
+        <DockButton
+          icon={localVideoOn ? <CamOnIcon /> : <CamOffIcon />}
+          label={localVideoOn ? "Apagar cámara" : "Encender cámara"}
+          tone={localVideoOn ? "active" : "warn"}
           disabled={!connected}
           onClick={onToggleVideo}
-          aria-pressed={localVideoOn}
-        >
-          <span className="teams-call-dock-btn__label">Cam</span>
-          <span className="teams-call-dock-btn__state">{localVideoOn ? "On" : "Off"}</span>
-        </button>
-        <button
-          type="button"
-          className={`teams-call-dock-btn ${screenShareClass}`}
+          pressed={localVideoOn}
+        />
+        <DockButton
+          icon={<ScreenShareIcon />}
+          label={localScreenSharing ? "Detener compartir" : "Compartir pantalla"}
+          tone={screenShareTone}
           disabled={screenShareDisabled}
           onClick={onToggleScreenShare}
-          aria-pressed={localScreenSharing}
-          title={remoteScreenSharing && !localScreenSharing ? "Otro participante está compartiendo pantalla" : undefined}
-        >
-          <span className="teams-call-dock-btn__label">Pantalla</span>
-          <span className="teams-call-dock-btn__state">
-            {localScreenSharing ? "On" : remoteScreenSharing ? "Bloq" : "Off"}
-          </span>
-        </button>
-        <button type="button" className="teams-call-dock-btn teams-call-dock-btn--danger" onClick={onLeave}>
-          <span className="teams-call-dock-btn__label">Salir</span>
-          <span className="teams-call-dock-btn__state">Llamada</span>
-        </button>
+          pressed={localScreenSharing}
+          {...(remoteScreenSharing && !localScreenSharing
+            ? { title: "Otro participante está compartiendo pantalla", stateText: "Ocupado" }
+            : {})}
+        />
+        <span className="mx-1 h-6 w-px bg-white/10" aria-hidden />
+        <DockButton icon={<HangUpIcon />} label="Salir de la llamada" tone="danger" onClick={onLeave} />
       </div>
     </footer>
   );
@@ -1065,30 +1243,53 @@ export const MeetingCallRoom = ({
             </div>
 
             {isVoiceOnly ? (
-              <div className="flex min-h-[300px] flex-wrap items-center justify-center gap-6 rounded-2xl bg-[--teams-call-surface-2] p-8 sm:min-h-[400px]">
+              <div className="relative flex min-h-[300px] flex-wrap items-center justify-center gap-8 overflow-hidden rounded-2xl bg-gradient-to-br from-[--teams-call-surface-2] to-[#0f1320] p-8 sm:min-h-[400px]">
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-[80%] w-[80%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[--teams-call-accent]/10 blur-3xl" />
                 {visualParticipants.length === 0 ? (
-                  <p className="text-sm text-[--teams-call-muted]">Esperando participantes...</p>
+                  <div className="relative flex flex-col items-center gap-3 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[--teams-call-border] bg-white/5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-7 w-7 text-[--teams-call-muted]">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.37 1.9.72 2.8a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.28-1.28a2 2 0 012.11-.45c.9.35 1.84.59 2.8.72a2 2 0 011.72 2.02z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-[--teams-call-muted]">Esperando participantes…</p>
+                  </div>
                 ) : (
                   visualParticipants.map((participant) => {
                     const fullName = memberNameById.get(participant.userId) ?? participant.userId;
                     return (
-                      <div key={participant.userId} className="flex flex-col items-center gap-2">
-                        <div
-                          className={`flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white transition-all ${
+                      <div key={participant.userId} className="relative flex flex-col items-center gap-2">
+                        <div className="relative flex h-24 w-24 items-center justify-center">
+                          {participant.hasLiveAudio ? (
+                            <>
+                              <span className="absolute inset-0 rounded-full bg-[--teams-call-accent]/25 animate-ping" />
+                              <span className="absolute -inset-1 rounded-full border-2 border-[--teams-call-accent]/50" />
+                            </>
+                          ) : null}
+                          <div
+                            className={`relative flex h-20 w-20 items-center justify-center rounded-full text-xl font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_10px_30px_rgba(0,0,0,0.35)] transition-all ${
+                              participant.hasLiveAudio
+                                ? "bg-gradient-to-br from-[--teams-call-accent] to-[--teams-call-accent-hover]"
+                                : "bg-gradient-to-br from-[--teams-call-accent-soft] to-[rgba(111,119,255,0.15)]"
+                            }`}
+                          >
+                            {getInitials(fullName)}
+                          </div>
+                        </div>
+                        <p className="text-sm font-medium text-[--teams-call-text]">
+                          {fullName}
+                          {participant.isLocal ? <span className="ml-1 text-[--teams-call-muted]">(Tú)</span> : null}
+                        </p>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
                             participant.hasLiveAudio
-                              ? "bg-[--teams-call-accent] ring-4 ring-[--teams-call-accent]/40 animate-pulse"
-                              : "bg-[--teams-call-accent-soft]"
+                              ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-200"
+                              : "border-white/10 bg-white/5 text-[--teams-call-muted]"
                           }`}
                         >
-                          {getInitials(fullName)}
-                        </div>
-                        <p className="text-xs font-medium text-[--teams-call-text]">
-                          {fullName}
-                          {participant.isLocal ? " (Tú)" : ""}
-                        </p>
-                        <p className="text-[10px] text-[--teams-call-muted]">
-                          {participant.hasLiveAudio ? "Mic on" : "Mic off"}
-                        </p>
+                          <span className={`h-1.5 w-1.5 rounded-full ${participant.hasLiveAudio ? "bg-emerald-400" : "bg-white/40"}`} />
+                          {participant.hasLiveAudio ? "Hablando" : "En silencio"}
+                        </span>
                       </div>
                     );
                   })
@@ -1148,21 +1349,22 @@ export const MeetingCallRoom = ({
 
       {isVoiceOnly ? (
         <footer className="pointer-events-none fixed inset-x-3 bottom-4 z-40 flex justify-center">
-          <div className="pointer-events-auto flex w-full max-w-[400px] items-center justify-center gap-3 rounded-2xl border border-[--teams-call-border] bg-[--teams-call-panel]/95 px-3 py-2 shadow-[var(--teams-call-shadow-strong)] backdrop-blur-xl">
-            <button
-              type="button"
-              className={`teams-call-dock-btn ${localAudioOn ? "teams-call-dock-btn--active" : "teams-call-dock-btn--warn"}`}
+          <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-white/10 bg-black/55 px-3 py-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+            <DockButton
+              icon={localAudioOn ? <MicOnIcon /> : <MicOffIcon />}
+              label={localAudioOn ? "Silenciar micrófono" : "Activar micrófono"}
+              tone={localAudioOn ? "active" : "warn"}
               disabled={!connected}
               onClick={() => toggleAudio(!localAudioOn)}
-              aria-pressed={localAudioOn}
-            >
-              <span className="teams-call-dock-btn__label">Mic</span>
-              <span className="teams-call-dock-btn__state">{localAudioOn ? "On" : "Off"}</span>
-            </button>
-            <button type="button" className="teams-call-dock-btn teams-call-dock-btn--danger" onClick={() => void handleLeaveCall()}>
-              <span className="teams-call-dock-btn__label">Salir</span>
-              <span className="teams-call-dock-btn__state">Llamada</span>
-            </button>
+              pressed={localAudioOn}
+            />
+            <span className="mx-1 h-6 w-px bg-white/10" aria-hidden />
+            <DockButton
+              icon={<HangUpIcon />}
+              label="Salir de la llamada"
+              tone="danger"
+              onClick={() => void handleLeaveCall()}
+            />
           </div>
         </footer>
       ) : (
