@@ -11,8 +11,8 @@ apps/api/src/modules/admin/services/common.ts:122:    const legacyCode = (actor?
 apps/api/src/modules/admin/services/common.ts:140:    const valid = CODE_CATALOG_FIELDS[domain].includes(field as never);
 apps/api/src/modules/forms/form-helpers.ts:248:      return Number.isNaN(numeric) ? (null as unknown as Prisma.JsonValue) : numeric;
 apps/api/src/modules/forms/form-helpers.ts:92:    return obj as unknown as ConditionalLogic;
-apps/api/src/modules/forms/service.ts:613:        ...(input.conditionalLogic ? { conditionalLogic: input.conditionalLogic as unknown as Prisma.InputJsonValue } : {}),
-apps/api/src/modules/forms/service.ts:696:          ? { conditionalLogic: input.conditionalLogic ? (input.conditionalLogic as unknown as Prisma.InputJsonValue) : Prisma.JsonNull }
+apps/api/src/modules/forms/service.ts:492:        ...(input.conditionalLogic ? { conditionalLogic: input.conditionalLogic as unknown as Prisma.InputJsonValue } : {}),
+apps/api/src/modules/forms/service.ts:575:          ? { conditionalLogic: input.conditionalLogic ? (input.conditionalLogic as unknown as Prisma.InputJsonValue) : Prisma.JsonNull }
 apps/api/src/modules/identity/router.ts:149:        newDataText: checklist as unknown as Record<string, unknown>
 apps/api/src/modules/meetings/service.ts:409:        content: input.content as never
 apps/web/components/diagram/maxgraph/maxgraph-editor-handlers.ts:220:        } as any
