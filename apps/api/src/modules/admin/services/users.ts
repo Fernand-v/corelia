@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import type { RoleCode } from "@corelia/types";
 import { hashPassword } from "../../../lib/password.js";
+import { invalidateMembershipCache, invalidateUserAccessCache } from "../../../plugins/rbac.js";
 import { ACTIVE_TASK_STATUSES, AdminCommonService } from "./common.js";
 
 export class AdminUsersService extends AdminCommonService {
@@ -287,6 +288,8 @@ export class AdminUsersService extends AdminCommonService {
   ) {
     await this.assertAdmin(actorId);
 
+    const shouldInvalidateUserAccess = input.baseRole !== undefined || input.isActive !== undefined;
+
     const result = await this.app.prisma.$transaction(async (tx) => {
       const updateData: Prisma.UserUpdateInput = {};
 
@@ -416,6 +419,10 @@ export class AdminUsersService extends AdminCommonService {
         }
       });
     });
+
+    if (shouldInvalidateUserAccess) {
+      await invalidateUserAccessCache(this.app, userId);
+    }
 
     return {
       id: result?.id,
@@ -673,7 +680,7 @@ export class AdminUsersService extends AdminCommonService {
       throw new Error("Uno o más usuarios destino no existen o están inactivos");
     }
 
-    return this.app.prisma.$transaction(async (tx) => {
+    const result = await this.app.prisma.$transaction(async (tx) => {
       const [taskTransferResults, documentTransferResults] = await Promise.all([
         Promise.all(
           input.taskTransfers.map((transfer) =>
@@ -779,5 +786,15 @@ export class AdminUsersService extends AdminCommonService {
         transferredLeaderships: removedLeaderships.count
       };
     });
+
+    await Promise.all([
+      invalidateUserAccessCache(this.app, input.userId),
+      ...input.leadershipTransfers.flatMap((transfer) => [
+        invalidateMembershipCache(this.app, input.userId, transfer.projectId),
+        invalidateMembershipCache(this.app, transfer.toUserId, transfer.projectId)
+      ])
+    ]);
+
+    return result;
   }
 }
