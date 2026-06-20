@@ -11,7 +11,6 @@ import type {
 } from "@corelia/types";
 import type { Prisma } from "@prisma/client";
 import {
-  buildOnlyOfficeDocumentKey,
   createBlankOnlyOfficeFile,
   getOnlyOfficeFileInfo,
   getOnlyOfficeFileName,
@@ -27,6 +26,7 @@ import {
   resolveFolderIdByType
 } from "./document-helpers.js";
 import { DocumentCollabService } from "./document-collab-service.js";
+import { DocumentOnlyOfficeService } from "./document-onlyoffice-service.js";
 
 const DOCUMENTS_ROOT_FOLDER = "documentos";
 
@@ -48,9 +48,6 @@ const DEFAULT_ASSET_MIME = "application/octet-stream";
 const DOCUMENT_ASSET_TOKEN_TYPE = "document_asset";
 const DOCUMENT_COLLAB_TOKEN_SCOPE = "collab:document";
 const DOCUMENT_COLLAB_TOKEN_TTL_SECONDS = 5 * 60;
-const ONLYOFFICE_FILE_TOKEN_TYPE = "onlyoffice_file";
-const ONLYOFFICE_CALLBACK_TOKEN_TYPE = "onlyoffice_callback";
-const ONLYOFFICE_LINK_TOKEN_TTL = "7d";
 const DOCUMENT_DIAGRAM_SNAPSHOT_MIME = "application/xml";
 
 const PRESENCE_SET_KEY_PREFIX = "presence:documents:set:";
@@ -82,9 +79,15 @@ const streamToBuffer = async (stream: NodeJS.ReadableStream): Promise<Buffer> =>
 
 export class DocumentsService {
   private readonly collab: DocumentCollabService;
+  private readonly onlyOffice: DocumentOnlyOfficeService;
 
   constructor(private readonly app: FastifyInstance) {
     this.collab = new DocumentCollabService(this.app, (input) => this.getDocumentForUser(input));
+    this.onlyOffice = new DocumentOnlyOfficeService(
+      this.app,
+      (input) => this.getDocumentForUser(input),
+      (input) => this.saveVersion(input)
+    );
   }
 
   private getPresenceTtlSeconds() {
@@ -292,71 +295,6 @@ export class DocumentsService {
     });
   }
 
-  private getOnlyOfficeDocumentServerUrl() {
-    const value = env.ONLYOFFICE_DOCUMENT_SERVER_URL.trim();
-    if (value) {
-      return value.replace(/\/+$/g, "");
-    }
-    return "/onlyoffice";
-  }
-
-  /** URL interna (Docker) usada para llamadas server-side a la Command API de OnlyOffice */
-  private getOnlyOfficeInternalUrl() {
-    const configured = env.ONLYOFFICE_INTERNAL_URL.trim();
-    if (configured) {
-      return configured.replace(/\/+$/g, "");
-    }
-    // Fallback: si hay URL pública configurada, usarla también para comandos internos
-    const pub = env.ONLYOFFICE_DOCUMENT_SERVER_URL.trim();
-    if (pub) {
-      return pub.replace(/\/+$/g, "");
-    }
-    return "http://onlyoffice";
-  }
-
-  private getOnlyOfficeApiBaseUrl() {
-    const configured = env.ONLYOFFICE_CALLBACK_BASE_URL.trim();
-    const base = (configured || env.CORELIA_APP_URL).replace(/\/+$/g, "");
-    return `${base}/api/v1`;
-  }
-
-  private async signOnlyOfficeFileToken(input: {
-    documentId: string;
-    userId: string;
-    fileName: string;
-    mimeType: string;
-    snapshotPath: string;
-  }) {
-    return this.app.jwt.sign(
-      {
-        typ: ONLYOFFICE_FILE_TOKEN_TYPE,
-        documentId: input.documentId,
-        userId: input.userId,
-        snapshotPath: input.snapshotPath,
-        fileName: input.fileName,
-        mimeType: input.mimeType
-      },
-      {
-        expiresIn: ONLYOFFICE_LINK_TOKEN_TTL
-      }
-    );
-  }
-
-  private async signOnlyOfficeCallbackToken(input: {
-    documentId: string;
-    userId: string;
-  }) {
-    return this.app.jwt.sign(
-      {
-        typ: ONLYOFFICE_CALLBACK_TOKEN_TYPE,
-        documentId: input.documentId,
-        userId: input.userId
-      },
-      {
-        expiresIn: ONLYOFFICE_LINK_TOKEN_TTL
-      }
-    );
-  }
 
 
   private async getPresenceForDocuments(documentIds: string[]) {
@@ -675,310 +613,22 @@ export class DocumentsService {
     };
   }
 
-  private async resolveOnlyOfficeLatestVersion(documentId: string) {
-    return this.app.prisma.collaborativeDocumentVersion.findFirst({
-      where: {
-        documentId
-      },
-      orderBy: {
-        versionNumber: "desc"
-      },
-      select: {
-        id: true,
-        versionNumber: true,
-        snapshotPath: true
-      }
-    });
+
+  // Integración ONLYOFFICE: delegada en DocumentOnlyOfficeService.
+  getOnlyOfficeConfig(input: Parameters<DocumentOnlyOfficeService["getOnlyOfficeConfig"]>[0]) {
+    return this.onlyOffice.getOnlyOfficeConfig(input);
   }
 
-  async getOnlyOfficeConfig(input: {
-    documentId: string;
-    userId: string;
-    canEdit: boolean;
-  }) {
-    const document = await this.getDocumentForUser({
-      documentId: input.documentId,
-      userId: input.userId
-    });
-
-    if (!isOnlyOfficeDocumentType(document.type)) {
-      throw new Error("ONLYOFFICE está disponible solo para texto, tabla y presentación");
-    }
-
-    if (!this.app.storage) {
-      throw new Error("Servicio de almacenamiento no disponible");
-    }
-
-    const documentServerUrl = this.getOnlyOfficeDocumentServerUrl();
-    if (!documentServerUrl) {
-      throw new Error("ONLYOFFICE no está configurado");
-    }
-
-    const latestVersion = await this.resolveOnlyOfficeLatestVersion(document.id);
-    if (!latestVersion) {
-      throw new Error("El documento no tiene archivo base para abrir en ONLYOFFICE");
-    }
-
-    const user = await this.app.prisma.user.findUnique({
-      where: {
-        id: input.userId
-      },
-      select: {
-        firstName: true,
-        lastName: true,
-        email: true
-      }
-    });
-
-    const userName =
-      user ? `${user.firstName} ${user.lastName}`.trim() || user.email : `Usuario ${input.userId}`;
-    const fileInfo = getOnlyOfficeFileInfo(document.type);
-    const fileName = inferOnlyOfficeFileNameFromPath(
-      latestVersion.snapshotPath,
-      getOnlyOfficeFileName(document.name, document.type),
-      document.type
-    );
-    const mimeType = inferOnlyOfficeMimeType(latestVersion.snapshotPath, document.type);
-    const apiBaseUrl = this.getOnlyOfficeApiBaseUrl();
-    const fileToken = await this.signOnlyOfficeFileToken({
-      documentId: document.id,
-      userId: input.userId,
-      fileName,
-      mimeType,
-      snapshotPath: latestVersion.snapshotPath
-    });
-    const callbackToken = await this.signOnlyOfficeCallbackToken({
-      documentId: document.id,
-      userId: input.userId
-    });
-
-    const config = {
-      documentType: fileInfo.documentType,
-      type: "desktop",
-      document: {
-        fileType: fileInfo.fileType,
-        key: buildOnlyOfficeDocumentKey({
-          documentId: document.id,
-          currentVersion: latestVersion.versionNumber,
-          updatedAt: document.updatedAt.toISOString()
-        }),
-        title: fileName,
-        url: `${apiBaseUrl}/documents/${encodeURIComponent(document.id)}/onlyoffice/file?token=${encodeURIComponent(fileToken)}`,
-        permissions: {
-          edit: input.canEdit,
-          download: true,
-          print: true,
-          copy: true,
-          review: input.canEdit
-        }
-      },
-      editorConfig: {
-        mode: input.canEdit ? "edit" : "view",
-        lang: "es",
-        callbackUrl: `${apiBaseUrl}/documents/${encodeURIComponent(document.id)}/onlyoffice/callback?token=${encodeURIComponent(callbackToken)}`,
-        user: {
-          id: input.userId,
-          name: userName
-        },
-        region: "es",
-        customization: {
-          autosave: true,
-          forcesave: true,
-          spellcheck: true,
-          compactHeader: false,
-          toolbarNoTabs: false
-        }
-      }
-    } as Record<string, unknown>;
-
-    if (env.ONLYOFFICE_JWT_SECRET) {
-      return {
-        documentServerUrl,
-        config: {
-          ...config,
-          token: await this.app.jwt.sign(config, {
-            key: env.ONLYOFFICE_JWT_SECRET
-          })
-        }
-      };
-    }
-
-    return {
-      documentServerUrl,
-      config
-    };
+  getOnlyOfficeFileContent(input: Parameters<DocumentOnlyOfficeService["getOnlyOfficeFileContent"]>[0]) {
+    return this.onlyOffice.getOnlyOfficeFileContent(input);
   }
 
-  async getOnlyOfficeFileContent(input: { documentId: string; token: string }) {
-    const payload = (await this.app.jwt.verify(input.token)) as Partial<{
-      typ: string;
-      documentId: string;
-      snapshotPath: string;
-      fileName: string;
-      mimeType: string;
-    }>;
-
-    if (
-      payload.typ !== ONLYOFFICE_FILE_TOKEN_TYPE ||
-      payload.documentId !== input.documentId ||
-      !payload.documentId ||
-      !payload.snapshotPath ||
-      !payload.fileName ||
-      !payload.mimeType
-    ) {
-      throw new Error("Token de ONLYOFFICE inválido");
-    }
-
-    if (!this.app.storage) {
-      throw new Error("Servicio de almacenamiento no disponible");
-    }
-
-    const stream = await this.app.storage.getObjectStream(payload.snapshotPath);
-    return {
-      stream,
-      fileName: payload.fileName,
-      mimeType: payload.mimeType
-    };
+  handleOnlyOfficeCallback(input: Parameters<DocumentOnlyOfficeService["handleOnlyOfficeCallback"]>[0]) {
+    return this.onlyOffice.handleOnlyOfficeCallback(input);
   }
 
-  async handleOnlyOfficeCallback(input: {
-    documentId: string;
-    token: string;
-    body: {
-      status: number;
-      url?: string;
-    };
-  }) {
-    const tokenPayload = (await this.app.jwt.verify(input.token)) as Partial<{
-      typ: string;
-      documentId: string;
-      userId: string;
-    }>;
-
-    if (
-      tokenPayload.typ !== ONLYOFFICE_CALLBACK_TOKEN_TYPE ||
-      tokenPayload.documentId !== input.documentId ||
-      !tokenPayload.userId
-    ) {
-      throw new Error("Callback de ONLYOFFICE inválido");
-    }
-
-    const document = await this.getDocumentForUser({
-      documentId: input.documentId,
-      userId: tokenPayload.userId
-    });
-
-    if (!isOnlyOfficeDocumentType(document.type)) {
-      throw new Error("Tipo de documento no soportado por ONLYOFFICE");
-    }
-
-    const status = Number(input.body.status);
-    if (![2, 3, 6, 7].includes(status)) {
-      return { error: 0 as const };
-    }
-
-    if (status === 3 || status === 7) {
-      return { error: 0 as const };
-    }
-
-    if (!input.body.url) {
-      throw new Error("ONLYOFFICE no envió la URL del archivo");
-    }
-
-    const response = await fetch(input.body.url);
-    if (!response.ok) {
-      throw new Error("No se pudo descargar el archivo guardado por ONLYOFFICE");
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const fileInfo = getOnlyOfficeFileInfo(document.type);
-    await this.saveVersion({
-      documentId: document.id,
-      userId: tokenPayload.userId,
-      kind: status === 6 ? "AUTO" : "MANUAL",
-      fileName: getOnlyOfficeFileName(document.name, document.type),
-      mimeType: fileInfo.mimeType,
-      data: Buffer.from(arrayBuffer)
-    });
-
-    return { error: 0 as const };
-  }
-
-  async forceSaveOnlyOffice(input: {
-    documentId: string;
-    userId: string;
-  }) {
-    const document = await this.getDocumentForUser({
-      documentId: input.documentId,
-      userId: input.userId
-    });
-
-    if (!isOnlyOfficeDocumentType(document.type)) {
-      throw new Error("Forcesave solo está disponible para documentos de ONLYOFFICE");
-    }
-
-    const internalUrl = this.getOnlyOfficeInternalUrl();
-
-    const latestVersion = await this.resolveOnlyOfficeLatestVersion(document.id);
-    if (!latestVersion) {
-      throw new Error("El documento no tiene archivo base");
-    }
-
-    const documentKey = buildOnlyOfficeDocumentKey({
-      documentId: document.id,
-      currentVersion: latestVersion.versionNumber,
-      updatedAt: document.updatedAt.toISOString()
-    });
-
-    const commandPayload: Record<string, unknown> = {
-      c: "forcesave",
-      key: documentKey
-    };
-
-    if (env.ONLYOFFICE_JWT_SECRET) {
-      commandPayload.token = await this.app.jwt.sign(commandPayload, {
-        key: env.ONLYOFFICE_JWT_SECRET
-      });
-    }
-
-    const commandUrls = [
-      `${internalUrl}/command`,
-      `${internalUrl}/coauthoring/CommandService.ashx`
-    ];
-    let response: Response | null = null;
-
-    for (const commandUrl of commandUrls) {
-      const currentResponse = await fetch(commandUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(commandPayload)
-      });
-
-      if (currentResponse.ok) {
-        response = currentResponse;
-        break;
-      }
-
-      if (currentResponse.status !== 404 && currentResponse.status !== 405) {
-        throw new Error(`ONLYOFFICE Command Service respondió con ${currentResponse.status}`);
-      }
-    }
-
-    if (!response) {
-      throw new Error("ONLYOFFICE Command Service no está disponible en /command ni en /coauthoring/CommandService.ashx");
-    }
-
-    const result = (await response.json()) as { error?: number };
-
-    // error 0 = OK, error 4 = no changes (documento sin modificar)
-    if (result.error !== 0 && result.error !== 4) {
-      throw new Error(`ONLYOFFICE forcesave falló con código ${result.error}`);
-    }
-
-    return {
-      saved: result.error === 0,
-      noChanges: result.error === 4
-    };
+  forceSaveOnlyOffice(input: Parameters<DocumentOnlyOfficeService["forceSaveOnlyOffice"]>[0]) {
+    return this.onlyOffice.forceSaveOnlyOffice(input);
   }
 
   // Sesiones colaborativas avanzadas de diagramas: delegadas en DocumentCollabService.
