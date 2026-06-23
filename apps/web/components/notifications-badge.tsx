@@ -238,7 +238,7 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
   return (
     <div className="relative">
       <button
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(0,0,0,0.09)] bg-white/80 text-slate-600 shadow-sm backdrop-blur-sm transition-colors duration-100 hover:bg-white/95"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(0,0,0,0.09)] bg-paper text-mid shadow-sm backdrop-blur-sm transition-colors duration-100 hover:bg-paper"
         onClick={() => setOpen((current) => !current)}
         type="button"
         aria-label="Notificaciones"
@@ -267,10 +267,10 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
       {open ? (
         <div className="absolute right-0 z-50 mt-2 w-[min(360px,calc(100vw-1rem))] rounded-2xl border border-[rgba(0,0,0,0.08)] bg-glass-heavy p-3 shadow-dropdown backdrop-blur-dropdown">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Notificaciones</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-faint">Notificaciones</p>
             <button
               type="button"
-              className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white/60 px-2.5 py-1 text-[11px] text-slate-600 hover:bg-white/90 transition-colors duration-100"
+              className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-paper px-2.5 py-1 text-[11px] text-mid hover:bg-paper transition-colors duration-100"
               onClick={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending}
             >
@@ -279,13 +279,13 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
           </div>
 
           {notificationsQuery.isLoading ? (
-            <p className="text-xs text-slate-400">Cargando…</p>
+            <p className="text-xs text-faint">Cargando…</p>
           ) : null}
           {notificationsQuery.error ? (
-            <p className="text-xs text-red-500">{notificationsQuery.error.message}</p>
+            <p className="text-xs text-urgent">{notificationsQuery.error.message}</p>
           ) : null}
           {unreadNotifications.length === 0 ? (
-            <p className="py-2 text-center text-xs text-slate-400">Sin notificaciones pendientes.</p>
+            <p className="py-2 text-center text-xs text-faint">Sin notificaciones pendientes.</p>
           ) : (
             <ul className="max-h-72 space-y-1.5 overflow-y-auto">
               {unreadNotifications.slice(0, 12).map((notification) => {
@@ -302,13 +302,13 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
                       }}
                     >
                       <div className="mb-1 flex items-start justify-between gap-2">
-                        <p className="text-xs font-semibold text-slate-900 leading-snug">{display.title}</p>
+                        <p className="text-xs font-semibold text-ink leading-snug">{display.title}</p>
                         <span className="mt-0.5 shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
                           Nuevo
                         </span>
                       </div>
-                      <p className="text-[11px] leading-snug text-slate-500">{display.subtitle}</p>
-                      <p className="mt-1.5 text-[10px] text-slate-400">
+                      <p className="text-[11px] leading-snug text-mid">{display.subtitle}</p>
+                      <p className="mt-1.5 text-[10px] text-faint">
                         {formatDateTime(notification.createdAt)}
                       </p>
                     </Link>
@@ -321,7 +321,7 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
             <Link
               href="/notifications"
               onClick={() => setOpen(false)}
-              className="block w-full rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/60 px-3 py-2 text-center text-xs text-slate-600 transition-colors hover:bg-white/90"
+              className="block w-full rounded-xl border border-[rgba(0,0,0,0.08)] bg-paper px-3 py-2 text-center text-xs text-mid transition-colors hover:bg-paper"
             >
               Ver todas las notificaciones
             </Link>

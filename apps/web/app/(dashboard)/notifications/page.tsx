@@ -106,8 +106,8 @@ export default function NotificationsPage() {
     <main className="mx-auto w-full max-w-3xl space-y-4 px-0 sm:px-2">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Notificaciones</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-ink">Notificaciones</h1>
+          <p className="text-sm text-mid">
             {unreadCount > 0 ? `${unreadCount} sin leer` : "Todo al día"}
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function NotificationsPage() {
             type="button"
             onClick={() => markAllReadMutation.mutate()}
             disabled={markAllReadMutation.isPending}
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl border border-line px-3 py-2 text-sm text-ink hover:bg-line disabled:cursor-not-allowed disabled:opacity-60"
           >
             {markAllReadMutation.isPending ? "Marcando..." : "Marcar todas como leídas"}
           </button>
@@ -125,18 +125,18 @@ export default function NotificationsPage() {
 
       <BrowserPushCard />
 
-      <Card className="divide-y divide-slate-100 overflow-hidden p-0">
+      <Card className="divide-y divide-line overflow-hidden p-0">
         {notificationsQuery.isLoading ? (
           <div className="space-y-3 p-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-line" />
             ))}
           </div>
         ) : notificationsQuery.error ? (
-          <p className="p-4 text-sm text-red-600">{notificationsQuery.error.message}</p>
+          <p className="p-4 text-sm text-urgent">{notificationsQuery.error.message}</p>
         ) : notifications.length === 0 ? (
           <div className="px-4 py-12 text-center">
-            <p className="text-sm text-slate-500">No tienes notificaciones.</p>
+            <p className="text-sm text-mid">No tienes notificaciones.</p>
           </div>
         ) : (
           <ul>
@@ -148,7 +148,7 @@ export default function NotificationsPage() {
               return (
                 <li
                   key={notification.id}
-                  className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-slate-50 ${
+                  className={`flex items-start gap-3 px-4 py-3 transition-colors hover:bg-line ${
                     isUnread ? "bg-accent-muted/40" : ""
                   }`}
                 >
@@ -156,7 +156,7 @@ export default function NotificationsPage() {
                     {isUnread ? (
                       <span className="inline-block h-2 w-2 rounded-full bg-accent" />
                     ) : (
-                      <span className="inline-block h-2 w-2 rounded-full bg-slate-200" />
+                      <span className="inline-block h-2 w-2 rounded-full bg-line" />
                     )}
                   </div>
 
@@ -170,11 +170,11 @@ export default function NotificationsPage() {
                       }}
                       className="block"
                     >
-                      <p className={`text-sm font-semibold leading-snug ${isUnread ? "text-slate-900" : "text-slate-600"}`}>
+                      <p className={`text-sm font-semibold leading-snug ${isUnread ? "text-ink" : "text-mid"}`}>
                         {display.title}
                       </p>
-                      <p className="mt-0.5 text-xs leading-snug text-slate-500">{display.subtitle}</p>
-                      <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(notification.createdAt)}</p>
+                      <p className="mt-0.5 text-xs leading-snug text-mid">{display.subtitle}</p>
+                      <p className="mt-1 text-[11px] text-faint">{formatDateTime(notification.createdAt)}</p>
                     </Link>
                   </div>
 
@@ -182,7 +182,7 @@ export default function NotificationsPage() {
                     <button
                       type="button"
                       onClick={() => markReadMutation.mutate(notification.id)}
-                      className="shrink-0 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] text-slate-500 hover:bg-slate-100"
+                      className="shrink-0 rounded-lg border border-line px-2.5 py-1 text-[11px] text-mid hover:bg-line"
                     >
                       Leída
                     </button>
