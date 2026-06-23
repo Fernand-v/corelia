@@ -147,7 +147,7 @@ export default function ProjectsPage() {
 
       <Card className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mis proyectos</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-mid">Mis proyectos</p>
           {canCreateProject ? (
             <Button
               type="button"
@@ -162,17 +162,17 @@ export default function ProjectsPage() {
           ) : null}
         </div>
 
-        {projectsQuery.isLoading ? <p className="text-sm text-slate-600">Cargando proyectos...</p> : null}
-        {projectsQuery.error ? <p className="text-sm text-red-600">{projectsQuery.error.message}</p> : null}
+        {projectsQuery.isLoading ? <p className="text-sm text-mid">Cargando proyectos...</p> : null}
+        {projectsQuery.error ? <p className="text-sm text-urgent">{projectsQuery.error.message}</p> : null}
 
         <label className="block space-y-1">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Buscar proyecto</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-mid">Buscar proyecto</span>
           <input
             type="text"
             value={projectSearch}
             onChange={(event) => setProjectSearch(event.target.value)}
             placeholder="Nombre, descripción o plantilla"
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-xl border border-line px-3 text-sm"
           />
         </label>
 
@@ -186,12 +186,12 @@ export default function ProjectsPage() {
                   onClick={() => selectProject(project.id)}
                   className={`w-full rounded-xl border px-3 py-3 text-left ${
                     selected
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                      ? "border-line bg-ink text-white"
+                      : "border-line bg-white text-ink hover:bg-line"
                   }`}
                 >
                   <p className="text-sm font-medium">{project.name}</p>
-                  <p className={`text-xs ${selected ? "text-slate-200" : "text-slate-600"}`}>
+                  <p className={`text-xs ${selected ? "text-faint" : "text-mid"}`}>
                     {project.template} ·{" "}
                     {new Date(project.createdAt).toLocaleDateString("es-ES", { dateStyle: "medium" })}
                   </p>
@@ -201,7 +201,7 @@ export default function ProjectsPage() {
           })}
         </ul>
         {!projectsQuery.isLoading && !projectsQuery.error && filteredProjects.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          <p className="rounded-xl border border-line bg-line px-3 py-2 text-sm text-mid">
             No se encontraron proyectos con ese criterio.
           </p>
         ) : null}
@@ -210,10 +210,10 @@ export default function ProjectsPage() {
       {selectedProject ? (
         <Card className="space-y-4">
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-slate-900">{selectedProject.name}</p>
-            <p className="text-sm text-slate-600">{selectedProject.description || "Sin descripción"}</p>
+            <p className="text-sm font-semibold text-ink">{selectedProject.name}</p>
+            <p className="text-sm text-mid">{selectedProject.description || "Sin descripción"}</p>
             {selectedProject.startDate || selectedProject.estimatedEndDate ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-mid">
                 {selectedProject.startDate
                   ? `Inicio: ${new Date(selectedProject.startDate).toLocaleDateString("es-ES", { dateStyle: "medium" })}`
                   : null}
@@ -238,10 +238,10 @@ export default function ProjectsPage() {
                 <Link
                   key={resource.href}
                   href={href as Route}
-                  className="rounded-xl border border-slate-200 bg-white p-3 hover:bg-slate-50"
+                  className="rounded-xl border border-line bg-white p-3 hover:bg-line"
                 >
-                  <p className="text-sm font-semibold text-slate-900">{resource.label}</p>
-                  <p className="text-xs text-slate-600">{resource.description}</p>
+                  <p className="text-sm font-semibold text-ink">{resource.label}</p>
+                  <p className="text-xs text-mid">{resource.description}</p>
                 </Link>
               );
             })}
@@ -250,7 +250,7 @@ export default function ProjectsPage() {
           <div>
             <Link
               href={`/projects/${selectedProject.id}/settings` as Route}
-              className="rounded-lg border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-line px-3 py-1 text-xs text-ink hover:bg-line"
             >
               Configurar equipo del proyecto
             </Link>
@@ -277,9 +277,9 @@ export default function ProjectsPage() {
           }}
         >
           <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Nombre</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-mid">Nombre</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={newProjectName}
               onChange={(event) => setNewProjectName(event.target.value)}
               placeholder="Ej. Plataforma de Soporte"
@@ -287,9 +287,9 @@ export default function ProjectsPage() {
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Plantilla</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-mid">Plantilla</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={newProjectTemplate}
               onChange={(event) => setNewProjectTemplate(event.target.value as ProjectTemplate)}
             >
@@ -301,19 +301,19 @@ export default function ProjectsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block space-y-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Fecha inicio (opcional)</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-mid">Fecha inicio (opcional)</span>
               <input
                 type="date"
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                 value={newProjectStartDate}
                 onChange={(event) => setNewProjectStartDate(event.target.value)}
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Fin estimado (opcional)</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-mid">Fin estimado (opcional)</span>
               <input
                 type="date"
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                 value={newProjectEndDate}
                 onChange={(event) => setNewProjectEndDate(event.target.value)}
               />
@@ -321,11 +321,11 @@ export default function ProjectsPage() {
           </div>
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            <span className="text-xs font-medium uppercase tracking-wide text-mid">
               Descripción (opcional)
             </span>
             <textarea
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-line px-3 py-2 text-sm"
               rows={3}
               value={newProjectDescription}
               onChange={(event) => setNewProjectDescription(event.target.value)}
@@ -334,7 +334,7 @@ export default function ProjectsPage() {
           </label>
 
           {createError ? (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="rounded-lg border border-urgent/30 bg-urgent-muted px-3 py-2 text-sm text-urgent">
               {createError}
             </p>
           ) : null}

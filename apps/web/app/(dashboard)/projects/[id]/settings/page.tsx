@@ -210,25 +210,25 @@ export default function ProjectSettingsPage() {
   return (
     <main className="mx-auto w-full max-w-5xl space-y-4 px-4 py-8 md:px-6">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Configuración de Proyecto</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-ink">Configuración de Proyecto</h1>
+        <p className="text-sm text-mid">
           Gestiona miembros y roles del proyecto desde la UI.
         </p>
       </header>
 
       <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-ink">
           Equipo del proyecto {membersQuery.data ? `· ${membersQuery.data.projectName}` : ""}
         </h2>
-        {membersQuery.isLoading ? <p className="text-sm text-slate-600">Cargando miembros...</p> : null}
-        {membersQuery.error ? <p className="text-sm text-red-600">{membersQuery.error.message}</p> : null}
+        {membersQuery.isLoading ? <p className="text-sm text-mid">Cargando miembros...</p> : null}
+        {membersQuery.error ? <p className="text-sm text-urgent">{membersQuery.error.message}</p> : null}
 
         <ul className="space-y-2">
           {membersQuery.data?.members.map((member) => (
-            <li key={member.userId} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
+            <li key={member.userId} className="flex items-center justify-between rounded-xl border border-line p-3">
               <div>
-                <p className="text-sm font-medium text-slate-900">{member.fullName}</p>
-                <p className="text-xs text-slate-600">
+                <p className="text-sm font-medium text-ink">{member.fullName}</p>
+                <p className="text-xs text-mid">
                   {member.email} · {member.role}
                 </p>
               </div>
@@ -253,7 +253,7 @@ export default function ProjectSettingsPage() {
 
       <Card className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">Equipos vinculados</h2>
+          <h2 className="text-lg font-semibold text-ink">Equipos vinculados</h2>
           <Button
             type="button"
             className="h-8 px-3 text-xs"
@@ -267,17 +267,17 @@ export default function ProjectSettingsPage() {
           </Button>
         </div>
 
-        {linkedTeamsQuery.isLoading ? <p className="text-sm text-slate-600">Cargando equipos vinculados...</p> : null}
-        {linkedTeamsQuery.error ? <p className="text-sm text-red-600">{linkedTeamsQuery.error.message}</p> : null}
+        {linkedTeamsQuery.isLoading ? <p className="text-sm text-mid">Cargando equipos vinculados...</p> : null}
+        {linkedTeamsQuery.error ? <p className="text-sm text-urgent">{linkedTeamsQuery.error.message}</p> : null}
         {!linkedTeamsQuery.isLoading && !linkedTeamsQuery.error && (linkedTeamsQuery.data?.items.length ?? 0) === 0 ? (
-          <p className="text-sm text-slate-600">Sin equipos vinculados por ahora.</p>
+          <p className="text-sm text-mid">Sin equipos vinculados por ahora.</p>
         ) : null}
 
         <ul className="space-y-2">
           {linkedTeamsQuery.data?.items.map((item) => (
-            <li key={item.teamId} className="rounded-xl border border-slate-200 p-3">
+            <li key={item.teamId} className="rounded-xl border border-line p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium text-slate-900">{item.teamName}</p>
+                <p className="text-sm font-medium text-ink">{item.teamName}</p>
                 <Button
                   type="button"
                   variant="danger"
@@ -288,21 +288,21 @@ export default function ProjectSettingsPage() {
                   Desvincular
                 </Button>
               </div>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-mid">
                 Miembros del equipo: {item.totalTeamMembers} · Sincronizados en proyecto: {item.syncedMembers}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-mid">
                 Vinculado: {new Date(item.linkedAt).toLocaleDateString("es-ES", { dateStyle: "medium" })}
               </p>
             </li>
           ))}
         </ul>
-        {unlinkTeamMutation.error ? <p className="text-sm text-red-600">{unlinkTeamMutation.error.message}</p> : null}
+        {unlinkTeamMutation.error ? <p className="text-sm text-urgent">{unlinkTeamMutation.error.message}</p> : null}
       </Card>
 
       <Card className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">Agregar miembro</h2>
+          <h2 className="text-lg font-semibold text-ink">Agregar miembro</h2>
           <Button
             type="button"
             className="h-8 px-3 text-xs"
@@ -317,11 +317,11 @@ export default function ProjectSettingsPage() {
             Abrir selector
           </Button>
         </div>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-mid">
           Usa el modal para buscar rápidamente al colaborador y asignar su cargo.
         </p>
-        {addMemberMutation.error ? <p className="text-sm text-red-600">{addMemberMutation.error.message}</p> : null}
-        {removeMemberMutation.error ? <p className="text-sm text-red-600">{removeMemberMutation.error.message}</p> : null}
+        {addMemberMutation.error ? <p className="text-sm text-urgent">{addMemberMutation.error.message}</p> : null}
+        {removeMemberMutation.error ? <p className="text-sm text-urgent">{removeMemberMutation.error.message}</p> : null}
       </Card>
 
       <UiModal
@@ -336,9 +336,9 @@ export default function ProjectSettingsPage() {
       >
         <div className="space-y-3">
           <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Buscar colaborador</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-mid">Buscar colaborador</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="Nombre o correo"
               value={userSearch}
               onChange={(event) => setUserSearch(event.target.value)}
@@ -346,9 +346,9 @@ export default function ProjectSettingsPage() {
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Cargo en proyecto</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-mid">Cargo en proyecto</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={selectedRole}
               onChange={(event) => setSelectedRole(event.target.value as RoleCode)}
             >
@@ -360,13 +360,13 @@ export default function ProjectSettingsPage() {
             </select>
           </label>
 
-          <p className="text-xs text-slate-500">Resultados: {candidateUsers.length}</p>
+          <p className="text-xs text-mid">Resultados: {candidateUsers.length}</p>
 
-          <div className="max-h-72 overflow-y-auto rounded-xl border border-slate-200">
+          <div className="max-h-72 overflow-y-auto rounded-xl border border-line">
             {candidateUsers.length === 0 ? (
-              <p className="p-3 text-sm text-slate-600">No hay usuarios disponibles para agregar con este filtro.</p>
+              <p className="p-3 text-sm text-mid">No hay usuarios disponibles para agregar con este filtro.</p>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-line">
                 {candidateUsers.map((user) => {
                   const isSelected = selectedUserId === user.userId;
                   return (
@@ -374,12 +374,12 @@ export default function ProjectSettingsPage() {
                       <button
                         type="button"
                         className={`w-full p-3 text-left transition ${
-                          isSelected ? "bg-blue-50" : "hover:bg-slate-50"
+                          isSelected ? "bg-paper" : "hover:bg-line"
                         }`}
                         onClick={() => setSelectedUserId(user.userId)}
                       >
-                        <p className="text-sm font-medium text-slate-900">{user.fullName}</p>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-sm font-medium text-ink">{user.fullName}</p>
+                        <p className="text-xs text-mid">
                           {user.contact.email}
                           {user.teamName ? ` · ${user.teamName}` : " · Sin equipo"}
                         </p>
@@ -392,12 +392,12 @@ export default function ProjectSettingsPage() {
           </div>
 
           {selectedUser ? (
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-mid">
               Seleccionado: {selectedUser.fullName} · {selectedUser.contact.email}
             </p>
           ) : null}
 
-          {memberModalError ? <p className="text-xs text-red-600">{memberModalError}</p> : null}
+          {memberModalError ? <p className="text-xs text-urgent">{memberModalError}</p> : null}
         </div>
 
         <div className="flex justify-end gap-2">
@@ -435,13 +435,13 @@ export default function ProjectSettingsPage() {
         title="Vincular equipo al proyecto"
       >
         <div className="space-y-3">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-mid">
             Al vincular un equipo, sus miembros se sincronizan al proyecto como colaboradores.
           </p>
           <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Equipo</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-mid">Equipo</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={selectedTeamId}
               onChange={(event) => setSelectedTeamId(event.target.value)}
             >
@@ -454,9 +454,9 @@ export default function ProjectSettingsPage() {
             </select>
           </label>
           {availableTeams.length === 0 ? (
-            <p className="text-xs text-slate-500">No hay equipos disponibles para vincular.</p>
+            <p className="text-xs text-mid">No hay equipos disponibles para vincular.</p>
           ) : null}
-          {teamLinkError ? <p className="text-xs text-red-600">{teamLinkError}</p> : null}
+          {teamLinkError ? <p className="text-xs text-urgent">{teamLinkError}</p> : null}
         </div>
 
         <div className="flex justify-end gap-2">

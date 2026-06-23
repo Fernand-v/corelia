@@ -25,21 +25,21 @@ export const ProjectDetailForm = ({ initial, onSubmit, onCancel, isPending }: Pr
       }}
     >
       <label className="block space-y-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Descripcion</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-mid">Descripcion</span>
         <input
-          className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+          className="h-10 w-full rounded-xl border border-line px-3 text-sm"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Ej. Infraestructura cloud"
         />
       </label>
       <label className="block space-y-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Presupuesto estimado</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-mid">Presupuesto estimado</span>
         <input
           type="number"
           min="0"
           step="0.01"
-          className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+          className="h-10 w-full rounded-xl border border-line px-3 text-sm"
           value={estimatedBudget}
           onChange={(e) => setEstimatedBudget(e.target.value)}
           placeholder="0.00"

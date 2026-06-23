@@ -11,16 +11,16 @@ export const ProjectContextRequired = ({ sectionLabel, description }: ProjectCon
   return (
     <main className="mx-auto w-full max-w-5xl space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">{sectionLabel}</h1>
-        <p className="text-sm text-slate-600">{description}</p>
+        <h1 className="text-2xl font-semibold text-ink">{sectionLabel}</h1>
+        <p className="text-sm text-mid">{description}</p>
       </header>
       <Card className="space-y-3">
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-ink">
           Esta sección se habilita dentro de un proyecto activo.
         </p>
         <Link
           href={"/projects" as Route}
-          className="inline-flex rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          className="inline-flex rounded-lg border border-line px-3 py-1.5 text-xs text-ink hover:bg-line"
         >
           Seleccionar proyecto
         </Link>
