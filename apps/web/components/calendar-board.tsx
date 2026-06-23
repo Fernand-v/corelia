@@ -776,12 +776,12 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => setMobileSidebarOpen(false)}
-              className="shrink-0 rounded-[10px] border border-[#d7dff0] px-2.5 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 lg:hidden"
+              className="shrink-0 rounded-[10px] border border-[#d7dff0] px-2.5 py-1.5 text-sm text-mid transition hover:bg-line lg:hidden"
               aria-label="Cerrar panel"
             >
               ←
             </button>
-            <h2 className={`${sora.className} text-base font-semibold text-slate-900`}>Calendario</h2>
+            <h2 className={`${sora.className} text-base font-semibold text-ink`}>Calendario</h2>
           </div>
           <button
             type="button"
@@ -797,25 +797,25 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => onChangeMonth("prev")}
-              className="h-8 w-8 rounded-lg border border-[#d7dff0] text-slate-600 transition hover:bg-white"
+              className="h-8 w-8 rounded-lg border border-[#d7dff0] text-mid transition hover:bg-white"
               aria-label="Mes anterior"
             >
               ‹
             </button>
-            <p className={`${sora.className} text-sm font-semibold text-slate-800`}>
+            <p className={`${sora.className} text-sm font-semibold text-ink`}>
               {currentMonth.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
             </p>
             <button
               type="button"
               onClick={() => onChangeMonth("next")}
-              className="h-8 w-8 rounded-lg border border-[#d7dff0] text-slate-600 transition hover:bg-white"
+              className="h-8 w-8 rounded-lg border border-[#d7dff0] text-mid transition hover:bg-white"
               aria-label="Mes siguiente"
             >
               ›
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-mid">
             {WEEKDAY_HEADER.map((day) => (
               <span key={day}>{day}</span>
             ))}
@@ -837,7 +837,7 @@ const CalendarBoardView = ({
                     isSelected
                       ? "border border-[#4f6ef7] bg-white text-[#1d3ca6]"
                       : "border border-transparent hover:bg-[#eef2f9]"
-                  } ${isCurrentMonth ? "text-slate-700" : "text-slate-400"}`}
+                  } ${isCurrentMonth ? "text-ink" : "text-faint"}`}
                 >
                   <span
                     className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
@@ -866,7 +866,7 @@ const CalendarBoardView = ({
               className={`h-8 rounded-[10px] text-xs font-semibold transition ${
                 activeView === option.value
                   ? "bg-[#4f6ef7] text-white"
-                  : "border border-[#d7dff0] bg-white text-slate-600 hover:bg-slate-50"
+                  : "border border-[#d7dff0] bg-white text-mid hover:bg-line"
               }`}
             >
               {option.label}
@@ -875,11 +875,11 @@ const CalendarBoardView = ({
         </div>
 
         <div className="mt-3 shrink-0 rounded-2xl border border-[#e2e8f2] bg-white p-3">
-          <h3 className={`${sora.className} mb-2 text-sm font-semibold text-slate-900`}>Reprogramar tarea</h3>
+          <h3 className={`${sora.className} mb-2 text-sm font-semibold text-ink`}>Reprogramar tarea</h3>
           <select
             value={rescheduleTaskId}
             onChange={(event) => setRescheduleTaskId(event.target.value)}
-            className="h-10 w-full rounded-[10px] border border-[#d7dff0] bg-white px-3 text-sm text-slate-700"
+            className="h-10 w-full rounded-[10px] border border-[#d7dff0] bg-white px-3 text-sm text-ink"
           >
             <option value="">Seleccionar tarea</option>
             {tasksForSelectedDay.map((task) => (
@@ -892,9 +892,9 @@ const CalendarBoardView = ({
             type="datetime-local"
             value={rescheduleDatetime}
             onChange={(event) => setRescheduleDatetime(event.target.value)}
-            className="mt-2 h-10 w-full rounded-[10px] border border-[#d7dff0] bg-white px-3 text-sm text-slate-700"
+            className="mt-2 h-10 w-full rounded-[10px] border border-[#d7dff0] bg-white px-3 text-sm text-ink"
           />
-          <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+          <label className="mt-2 flex items-center gap-2 text-xs text-mid">
             <input
               type="checkbox"
               checked={confirmOutOfSchedule}
@@ -913,10 +913,10 @@ const CalendarBoardView = ({
         </div>
 
         <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#e2e8f2] bg-white p-3">
-          <h3 className={`${sora.className} mb-2 text-sm font-semibold text-slate-900`}>Próximos eventos</h3>
+          <h3 className={`${sora.className} mb-2 text-sm font-semibold text-ink`}>Próximos eventos</h3>
           <div className="calendar-upcoming-scroll min-h-0 flex-1 overflow-y-auto pr-2">
             {upcomingEvents.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-500">
+              <p className="rounded-xl border border-dashed border-line bg-line px-3 py-4 text-xs text-mid">
                 Sin eventos próximos.
               </p>
             ) : (
@@ -934,7 +934,7 @@ const CalendarBoardView = ({
                       style={{ borderLeft: `4px solid ${state.borderColor}` }}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold text-slate-700">
+                        <p className="text-xs font-semibold text-ink">
                           {startsAt.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                         <span
@@ -944,8 +944,8 @@ const CalendarBoardView = ({
                           {state.label}
                         </span>
                       </div>
-                      <p className="mt-1 break-words text-sm font-semibold text-slate-900">{event.title}</p>
-                      <p className="break-words text-xs text-slate-500">
+                      <p className="mt-1 break-words text-sm font-semibold text-ink">{event.title}</p>
+                      <p className="break-words text-xs text-mid">
                         {owner ?? "Proyecto"} · {formatRelativeEventDate(event.startsAt)}
                       </p>
                     </li>
@@ -960,7 +960,7 @@ const CalendarBoardView = ({
 
       <section className={`${mobileSidebarOpen ? "hidden" : "flex"} lg:flex min-h-0 min-w-0 flex-col rounded-2xl border border-[#e2e8f2] bg-white shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
         {(errorMessage || localError) && (
-          <div className="mx-3 mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mx-3 mt-3 rounded-xl border border-urgent/30 bg-urgent-muted px-3 py-2 text-sm text-urgent">
             {errorMessage ?? localError}
           </div>
         )}
@@ -970,13 +970,13 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => setMobileSidebarOpen(true)}
-              className="shrink-0 rounded-[10px] border border-[#d7dff0] px-2.5 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 lg:hidden"
+              className="shrink-0 rounded-[10px] border border-[#d7dff0] px-2.5 py-1.5 text-sm text-mid transition hover:bg-line lg:hidden"
               aria-label="Opciones de calendario"
             >
               ☰
             </button>
             <div className="min-w-0">
-              <h2 className={`${sora.className} truncate text-base font-semibold text-slate-900`}>
+              <h2 className={`${sora.className} truncate text-base font-semibold text-ink`}>
                 {activeView === "mes"
                   ? `Mes de ${currentMonth.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}`
                   : `${timelineDays[0]?.toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) ?? ""} - ${
@@ -986,7 +986,7 @@ const CalendarBoardView = ({
                       }) ?? ""
                     }`}
               </h2>
-              <p className="text-xs text-slate-500">Vista colaborativa de agenda semanal</p>
+              <p className="text-xs text-mid">Vista colaborativa de agenda semanal</p>
             </div>
           </div>
 
@@ -994,7 +994,7 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => onChangeWeek("prev")}
-              className="h-9 w-9 rounded-[10px] border border-[#d7dff0] text-slate-600 transition hover:bg-slate-50"
+              className="h-9 w-9 rounded-[10px] border border-[#d7dff0] text-mid transition hover:bg-line"
               aria-label="Semana anterior"
             >
               ‹
@@ -1002,7 +1002,7 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => onChangeWeek("next")}
-              className="h-9 w-9 rounded-[10px] border border-[#d7dff0] text-slate-600 transition hover:bg-slate-50"
+              className="h-9 w-9 rounded-[10px] border border-[#d7dff0] text-mid transition hover:bg-line"
               aria-label="Semana siguiente"
             >
               ›
@@ -1019,14 +1019,14 @@ const CalendarBoardView = ({
 
         {loading ? (
           <div className="grid flex-1 grid-cols-1 gap-2 p-4">
-            <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
-            <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
-            <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
-            <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+            <div className="h-16 animate-pulse rounded-xl bg-line" />
+            <div className="h-16 animate-pulse rounded-xl bg-line" />
+            <div className="h-16 animate-pulse rounded-xl bg-line" />
+            <div className="h-16 animate-pulse rounded-xl bg-line" />
           </div>
         ) : showMonthView ? (
           <div className="flex-1 overflow-auto p-4">
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-wide text-mid">
               {WEEKDAY_LONG.map((label) => (
                 <span key={label}>{label}</span>
               ))}
@@ -1055,15 +1055,15 @@ const CalendarBoardView = ({
                         : "border-[#e2e8f2] bg-white hover:border-[#cfd8ee]"
                     } ${!isCurrentMonth ? "opacity-50" : ""}`}
                   >
-                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? "bg-[#4f6ef7] text-white" : "text-slate-700"}`}>
+                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? "bg-[#4f6ef7] text-white" : "text-ink"}`}>
                       {day.getDate()}
                     </span>
                     <div className="mt-2 space-y-1">
                       {dayEvents.length === 0 ? (
-                        <p className="text-[11px] text-slate-400">Sin eventos</p>
+                        <p className="text-[11px] text-faint">Sin eventos</p>
                       ) : (
                         dayEvents.slice(0, 3).map((event) => (
-                          <p key={`month-item-${event.id}`} className="truncate rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-700">
+                          <p key={`month-item-${event.id}`} className="truncate rounded-md bg-line px-2 py-1 text-[11px] text-ink">
                             {event.title}
                           </p>
                         ))
@@ -1080,7 +1080,7 @@ const CalendarBoardView = ({
               className="grid border-b border-[#e2e8f2] bg-[#f8faff]"
               style={{ gridTemplateColumns: gridColumnTemplate }}
             >
-              <div className="border-r border-[#e2e8f2] px-2 py-2 text-xs font-semibold text-slate-500">Hora</div>
+              <div className="border-r border-[#e2e8f2] px-2 py-2 text-xs font-semibold text-mid">Hora</div>
               {timelineDays.map((day, index) => {
                 const isToday = isSameDay(day, now);
                 const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -1088,13 +1088,13 @@ const CalendarBoardView = ({
                   <div
                     key={`header-${day.toISOString()}`}
                     className={`border-r border-[#e2e8f2] px-2 py-2 text-center ${
-                      isWeekend ? "bg-slate-50" : ""
+                      isWeekend ? "bg-line" : ""
                     } ${isToday ? "bg-[#ecf2ff]" : ""}`}
                   >
-                    <p className="text-[11px] font-semibold text-slate-500">{WEEKDAY_LONG[(day.getDay() + 6) % 7]}</p>
+                    <p className="text-[11px] font-semibold text-mid">{WEEKDAY_LONG[(day.getDay() + 6) % 7]}</p>
                     <span
                       className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${
-                        isToday ? "bg-[#4f6ef7] text-white" : "text-slate-700"
+                        isToday ? "bg-[#4f6ef7] text-white" : "text-ink"
                       }`}
                     >
                       {day.getDate()}
@@ -1108,11 +1108,11 @@ const CalendarBoardView = ({
               <div className="grid" style={{ gridTemplateColumns: gridColumnTemplate }}>
                 <div className="relative border-r border-[#e2e8f2] bg-white" style={{ height: GRID_TOTAL_HEIGHT }}>
                   {hourRows.map((hour) => (
-                    <div key={`hour-${hour}`} className="border-b border-[#eef2f9] pr-2 text-right text-[11px] text-slate-500" style={{ height: GRID_HOUR_HEIGHT }}>
+                    <div key={`hour-${hour}`} className="border-b border-[#eef2f9] pr-2 text-right text-[11px] text-mid" style={{ height: GRID_HOUR_HEIGHT }}>
                       <span className="relative -top-2 inline-block bg-white px-1">{formatHourLabel(hour)}</span>
                     </div>
                   ))}
-                  <div className="pointer-events-none absolute bottom-0 right-0 pr-2 text-right text-[11px] text-slate-500">
+                  <div className="pointer-events-none absolute bottom-0 right-0 pr-2 text-right text-[11px] text-mid">
                     <span className="relative top-2 inline-block bg-white px-1">{formatHourLabel(GRID_END_HOUR)}</span>
                   </div>
                 </div>
@@ -1126,7 +1126,7 @@ const CalendarBoardView = ({
                   return (
                     <div
                       key={`column-${dayKey}`}
-                      className={`relative border-r border-[#e2e8f2] ${isWeekend ? "bg-slate-50/50" : "bg-white"}`}
+                      className={`relative border-r border-[#e2e8f2] ${isWeekend ? "bg-line/50" : "bg-white"}`}
                       style={{ height: GRID_TOTAL_HEIGHT }}
                       onClick={(event) => handleGridClick(day, event)}
                     >
@@ -1175,14 +1175,14 @@ const CalendarBoardView = ({
 
                       {isToday && timelineIsTodayInView && nowTop >= 0 && nowTop <= GRID_TOTAL_HEIGHT ? (
                         <div className="pointer-events-none absolute left-0 right-0" style={{ top: nowTop }}>
-                          <div className="relative h-0.5 bg-red-500">
-                            <span className="absolute -left-1.5 -top-1 h-3 w-3 rounded-full border border-white bg-red-500" />
+                          <div className="relative h-0.5 bg-urgent-muted0">
+                            <span className="absolute -left-1.5 -top-1 h-3 w-3 rounded-full border border-white bg-urgent-muted0" />
                           </div>
                         </div>
                       ) : null}
 
                       {eventRows.length === 0 ? (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-slate-300">
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-faint">
                           Sin eventos
                         </div>
                       ) : null}
@@ -1205,11 +1205,11 @@ const CalendarBoardView = ({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h3 className={`${sora.className} text-lg font-semibold text-slate-900`}>Nuevo registro</h3>
+              <h3 className={`${sora.className} text-lg font-semibold text-ink`}>Nuevo registro</h3>
               <button
                 type="button"
                 onClick={closeModal}
-                className="h-8 w-8 rounded-lg border border-[#d7dff0] text-slate-500 transition hover:bg-slate-50"
+                className="h-8 w-8 rounded-lg border border-[#d7dff0] text-mid transition hover:bg-line"
               >
                 ✕
               </button>
@@ -1227,7 +1227,7 @@ const CalendarBoardView = ({
                   className={`h-9 rounded-[10px] text-sm font-semibold transition ${
                     modalTab === tab.value
                       ? "bg-[#4f6ef7] text-white"
-                      : "text-slate-600 hover:bg-white"
+                      : "text-mid hover:bg-white"
                   }`}
                 >
                   {tab.label}
@@ -1238,7 +1238,7 @@ const CalendarBoardView = ({
             {modalTab === "evento" ? (
               <div className="space-y-3">
                 <label className="block space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Título del evento</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-mid">Título del evento</span>
                   <input
                     value={eventTitle}
                     onChange={(event) => setEventTitle(event.target.value)}
@@ -1248,7 +1248,7 @@ const CalendarBoardView = ({
                 </label>
 
                 <label className="block space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tipo</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-mid">Tipo</span>
                   <select
                     value={eventType}
                     onChange={(event) =>
@@ -1265,7 +1265,7 @@ const CalendarBoardView = ({
 
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Inicio</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-mid">Inicio</span>
                     <input
                       type="datetime-local"
                       value={eventStartsAt}
@@ -1274,7 +1274,7 @@ const CalendarBoardView = ({
                     />
                   </label>
                   <label className="block space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fin</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-mid">Fin</span>
                     <input
                       type="datetime-local"
                       value={eventEndsAt}
@@ -1285,12 +1285,12 @@ const CalendarBoardView = ({
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invitados</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-mid">Invitados</p>
                   <div className="max-h-32 space-y-1 overflow-y-auto rounded-[10px] border border-[#d7dff0] bg-white p-2">
                     {members.map((member) => {
                       const checked = selectedInviteIds.includes(member.userId);
                       return (
-                        <label key={`invite-${member.userId}`} className="flex items-center gap-2 text-sm text-slate-700">
+                        <label key={`invite-${member.userId}`} className="flex items-center gap-2 text-sm text-ink">
                           <input
                             type="checkbox"
                             checked={checked}
@@ -1304,7 +1304,7 @@ const CalendarBoardView = ({
                 </div>
 
                 <label className="block space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Descripción</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-mid">Descripción</span>
                   <textarea
                     value={eventDescription}
                     onChange={(event) => setEventDescription(event.target.value)}
@@ -1317,7 +1317,7 @@ const CalendarBoardView = ({
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="h-10 rounded-[10px] border border-[#d7dff0] px-4 text-sm font-semibold text-slate-600"
+                    className="h-10 rounded-[10px] border border-[#d7dff0] px-4 text-sm font-semibold text-mid"
                   >
                     Cancelar
                   </button>
@@ -1334,7 +1334,7 @@ const CalendarBoardView = ({
             ) : (
               <div className="space-y-3">
                 <label className="block space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nombre de la tarea</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-mid">Nombre de la tarea</span>
                   <input
                     value={taskName}
                     onChange={(event) => setTaskName(event.target.value)}
@@ -1345,7 +1345,7 @@ const CalendarBoardView = ({
 
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Etapa</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-mid">Etapa</span>
                     <select
                       value={taskStageId}
                       onChange={(event) => setTaskStageId(event.target.value)}
@@ -1360,7 +1360,7 @@ const CalendarBoardView = ({
                     </select>
                   </label>
                   <label className="block space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Responsable</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-mid">Responsable</span>
                     <select
                       value={taskAssigneeId}
                       onChange={(event) => setTaskAssigneeId(event.target.value)}
@@ -1378,7 +1378,7 @@ const CalendarBoardView = ({
 
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha de inicio</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-mid">Fecha de inicio</span>
                     <input
                       type="datetime-local"
                       value={taskStartAt}
@@ -1387,7 +1387,7 @@ const CalendarBoardView = ({
                     />
                   </label>
                   <label className="block space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha de vencimiento</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-mid">Fecha de vencimiento</span>
                     <input
                       type="datetime-local"
                       value={taskDueAt}
@@ -1398,7 +1398,7 @@ const CalendarBoardView = ({
                 </div>
 
                 <label className="block space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Prioridad</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-mid">Prioridad</span>
                   <select
                     value={taskPriority}
                     onChange={(event) =>
@@ -1414,7 +1414,7 @@ const CalendarBoardView = ({
                 </label>
 
                 <label className="block space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Descripción</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-mid">Descripción</span>
                   <textarea
                     value={taskDescription}
                     onChange={(event) => setTaskDescription(event.target.value)}
@@ -1423,7 +1423,7 @@ const CalendarBoardView = ({
                   />
                 </label>
 
-                <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                <div className="rounded-xl border border-line bg-paper px-3 py-2 text-xs text-ink">
                   ⚡ Esta tarea también aparecerá en el módulo de Tareas y en el Gantt con las fechas que definas aquí.
                 </div>
 
@@ -1431,7 +1431,7 @@ const CalendarBoardView = ({
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="h-10 rounded-[10px] border border-[#d7dff0] px-4 text-sm font-semibold text-slate-600"
+                    className="h-10 rounded-[10px] border border-[#d7dff0] px-4 text-sm font-semibold text-mid"
                   >
                     Cancelar
                   </button>
@@ -1447,7 +1447,7 @@ const CalendarBoardView = ({
               </div>
             )}
 
-            {localError ? <p className="mt-3 text-sm text-red-600">{localError}</p> : null}
+            {localError ? <p className="mt-3 text-sm text-urgent">{localError}</p> : null}
           </div>
         </div>
       ) : null}

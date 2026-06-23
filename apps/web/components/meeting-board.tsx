@@ -51,15 +51,15 @@ const meetingStatusLabel = (status: Meeting["status"]) => {
 const meetingStatusClass = (status: Meeting["status"]) => {
   switch (status) {
     case "EN_CURSO":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      return "bg-paper text-ink border-line";
     case "PROGRAMADA":
-      return "bg-blue-50 text-blue-700 border-blue-200";
+      return "bg-paper text-ink border-line";
     case "FINALIZADA":
-      return "bg-slate-100 text-slate-700 border-slate-200";
+      return "bg-line text-ink border-line";
     case "CANCELADA":
-      return "bg-rose-50 text-rose-700 border-rose-200";
+      return "bg-urgent-muted text-urgent border-urgent/30";
     default:
-      return "bg-blue-50 text-blue-700 border-blue-200";
+      return "bg-paper text-ink border-line";
   }
 };
 
@@ -213,7 +213,7 @@ export const MeetingBoard = () => {
               <p className="mb-2 text-xs text-[--teams-call-muted]">Cargando miembros...</p>
             ) : null}
             {projectMembersQuery.error ? (
-              <p className="mb-2 text-xs text-red-600">{projectMembersQuery.error.message}</p>
+              <p className="mb-2 text-xs text-urgent">{projectMembersQuery.error.message}</p>
             ) : null}
             <div className="max-h-40 space-y-1 overflow-y-auto">
               {projectMembersQuery.data?.members.map((member) => (
@@ -244,7 +244,7 @@ export const MeetingBoard = () => {
           />
 
           {createMeetingMutation.error ? (
-            <p className="text-sm text-red-600">{createMeetingMutation.error.message}</p>
+            <p className="text-sm text-urgent">{createMeetingMutation.error.message}</p>
           ) : null}
 
           <Button
@@ -271,7 +271,7 @@ export const MeetingBoard = () => {
         </div>
 
         {meetingsQuery.isLoading ? <p className="text-sm text-[--teams-call-muted]">Cargando reuniones...</p> : null}
-        {meetingsQuery.error ? <p className="text-sm text-red-600">{meetingsQuery.error.message}</p> : null}
+        {meetingsQuery.error ? <p className="text-sm text-urgent">{meetingsQuery.error.message}</p> : null}
 
         {orderedMeetings.length === 0 && !meetingsQuery.isLoading ? (
           <p className="rounded-xl border border-dashed border-[--teams-call-border] px-3 py-8 text-center text-sm text-[--teams-call-muted]">
@@ -299,7 +299,7 @@ export const MeetingBoard = () => {
                       {meetingStatusLabel(meeting.status)}
                     </span>
                     {meeting.status === "FINALIZADA" || meeting.status === "CANCELADA" ? (
-                      <span className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-slate-100 px-3 text-xs font-medium text-slate-400">
+                      <span className="inline-flex h-9 items-center rounded-xl border border-line bg-line px-3 text-xs font-medium text-faint">
                         {meeting.status === "FINALIZADA" ? "Finalizada" : "Cancelada"}
                       </span>
                     ) : (
