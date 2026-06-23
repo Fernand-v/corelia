@@ -40,7 +40,7 @@ export const UiModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 sm:items-center"
       role="presentation"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -52,14 +52,14 @@ export const UiModal = ({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`my-auto w-full ${widthClassName} rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl`}
+        className={`my-auto w-full ${widthClassName} rounded-2xl border border-line bg-white p-5 shadow-2xl`}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
-          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+          <h3 className="text-base font-semibold text-ink">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-line px-2 py-1 text-xs text-mid hover:bg-line"
           >
             Cerrar
           </button>

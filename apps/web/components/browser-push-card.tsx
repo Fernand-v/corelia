@@ -21,7 +21,7 @@ const resolveStatus = (
   if (!supported || permission === "unsupported") {
     return {
       label: "No disponible",
-      tone: "bg-slate-100 text-slate-500",
+      tone: "bg-line text-mid",
       description: "Este navegador no soporta notificaciones push."
     };
   }
@@ -29,7 +29,7 @@ const resolveStatus = (
   if (!enabled) {
     return {
       label: "Deshabilitado",
-      tone: "bg-amber-100 text-amber-700",
+      tone: "bg-paper text-ink",
       description: "El servidor todavía no tiene configuradas las claves VAPID."
     };
   }
@@ -37,7 +37,7 @@ const resolveStatus = (
   if (permission === "denied") {
     return {
       label: "Bloqueado",
-      tone: "bg-rose-100 text-rose-700",
+      tone: "bg-urgent-muted text-urgent",
       description: "El navegador bloqueó el permiso. Revísalo en la configuración del sitio."
     };
   }
@@ -45,14 +45,14 @@ const resolveStatus = (
   if (subscribed) {
     return {
       label: "Activo",
-      tone: "bg-emerald-100 text-emerald-700",
+      tone: "bg-paper text-ink",
       description: "Este navegador recibirá avisos incluso cuando no tengas Corelia abierta."
     };
   }
 
   return {
     label: "Listo para activar",
-    tone: "bg-sky-100 text-sky-700",
+    tone: "bg-paper text-ink",
     description: "Actívalo para recibir avisos inmediatos de tareas, mensajes y reuniones."
   };
 };
@@ -223,14 +223,14 @@ export const BrowserPushCard = () => {
   const isBusy = enableMutation.isPending || disableMutation.isPending;
 
   return (
-    <Card className="border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-cyan-50 p-4 shadow-sm">
+    <Card className="border border-line bg-gradient-to-br from-sky-50 via-white to-cyan-50 p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-700/70">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/70">
             Push del navegador
           </p>
-          <h2 className="text-lg font-semibold text-slate-900">Notificaciones fuera de Corelia</h2>
-          <p className="max-w-2xl text-sm leading-6 text-slate-600">{status.description}</p>
+          <h2 className="text-lg font-semibold text-ink">Notificaciones fuera de Corelia</h2>
+          <p className="max-w-2xl text-sm leading-6 text-mid">{status.description}</p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${status.tone}`}>{status.label}</span>
       </div>
@@ -247,7 +247,7 @@ export const BrowserPushCard = () => {
             enableMutation.mutate();
           }}
           disabled={isBusy || !supported || configQuery.isLoading || (!subscribed && permission === "denied")}
-          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="rounded-xl bg-ink px-4 py-2 text-sm font-medium text-white transition hover:bg-ink disabled:cursor-not-allowed disabled:bg-ink"
         >
           {isBusy
             ? "Procesando..."
@@ -257,22 +257,22 @@ export const BrowserPushCard = () => {
         </button>
 
         {!initialized || configQuery.isLoading ? (
-          <p className="text-sm text-slate-500">Preparando configuración…</p>
+          <p className="text-sm text-mid">Preparando configuración…</p>
         ) : null}
         {configQuery.error ? (
-          <p className="text-sm text-rose-600">{configQuery.error.message}</p>
+          <p className="text-sm text-urgent">{configQuery.error.message}</p>
         ) : null}
         {enableMutation.error ? (
-          <p className="text-sm text-rose-600">{enableMutation.error.message}</p>
+          <p className="text-sm text-urgent">{enableMutation.error.message}</p>
         ) : null}
         {disableMutation.error ? (
-          <p className="text-sm text-rose-600">{disableMutation.error.message}</p>
+          <p className="text-sm text-urgent">{disableMutation.error.message}</p>
         ) : null}
         {syncError ? (
-          <div className="space-y-1 text-sm text-rose-600">
+          <div className="space-y-1 text-sm text-urgent">
             <p>{syncError}</p>
             {localHttpUrl ? (
-              <a className="font-medium text-sky-700 underline underline-offset-2" href={localHttpUrl}>
+              <a className="font-medium text-ink underline underline-offset-2" href={localHttpUrl}>
                 Abrir esta pantalla en HTTP local
               </a>
             ) : null}

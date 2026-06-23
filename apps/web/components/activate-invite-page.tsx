@@ -80,14 +80,14 @@ export const ActivateInvitePage = () => {
     <main className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md space-y-4">
         <header className="space-y-1">
-          <h1 className="text-2xl font-semibold text-slate-900">Activar cuenta</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-ink">Activar cuenta</h1>
+          <p className="text-sm text-mid">
             Completa tus datos para activar tu invitación interna en {frontendSettings.organizationName}.
           </p>
         </header>
 
         {!token ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p className="rounded-xl border border-urgent/30 bg-urgent-muted p-3 text-sm text-urgent">
             No se encontró token de invitación en la URL. Solicita un nuevo enlace al administrador.
           </p>
         ) : null}
@@ -102,38 +102,38 @@ export const ActivateInvitePage = () => {
           })}
         >
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Nombre</span>
+            <span className="text-xs font-medium text-mid">Nombre</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="Nombre"
               autoComplete="given-name"
               disabled={!token || activateMutation.isPending}
               {...form.register("firstName")}
             />
             {form.formState.errors.firstName ? (
-              <span className="text-xs text-red-500">{form.formState.errors.firstName.message}</span>
+              <span className="text-xs text-urgent">{form.formState.errors.firstName.message}</span>
             ) : null}
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Apellido</span>
+            <span className="text-xs font-medium text-mid">Apellido</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="Apellido"
               autoComplete="family-name"
               disabled={!token || activateMutation.isPending}
               {...form.register("lastName")}
             />
             {form.formState.errors.lastName ? (
-              <span className="text-xs text-red-500">{form.formState.errors.lastName.message}</span>
+              <span className="text-xs text-urgent">{form.formState.errors.lastName.message}</span>
             ) : null}
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Contraseña</span>
+            <span className="text-xs font-medium text-mid">Contraseña</span>
             <div className="flex items-center gap-2">
               <input
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                 type={showPassword ? "text" : "password"}
                 placeholder="Contraseña"
                 autoComplete="new-password"
@@ -153,15 +153,15 @@ export const ActivateInvitePage = () => {
               </Button>
             </div>
             {form.formState.errors.password ? (
-              <span className="text-xs text-red-500">{form.formState.errors.password.message}</span>
+              <span className="text-xs text-urgent">{form.formState.errors.password.message}</span>
             ) : null}
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Confirmar contraseña</span>
+            <span className="text-xs font-medium text-mid">Confirmar contraseña</span>
             <div className="flex items-center gap-2">
               <input
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Confirmar contraseña"
                 autoComplete="new-password"
@@ -181,12 +181,12 @@ export const ActivateInvitePage = () => {
               </Button>
             </div>
             {form.formState.errors.confirmPassword ? (
-              <span className="text-xs text-red-500">{form.formState.errors.confirmPassword.message}</span>
+              <span className="text-xs text-urgent">{form.formState.errors.confirmPassword.message}</span>
             ) : null}
           </label>
 
           {activateMutation.error ? (
-            <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <p className="rounded-xl border border-urgent/30 bg-urgent-muted p-3 text-sm text-urgent">
               {activateMutation.error.message}
             </p>
           ) : null}

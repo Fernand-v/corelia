@@ -416,7 +416,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   if (!hydrated || (accessToken && session.isLoading)) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-4 py-10">
-        <p className="text-sm text-slate-500 tracking-wide">Cargando sesión…</p>
+        <p className="text-sm text-mid tracking-wide">Cargando sesión…</p>
       </main>
     );
   }

@@ -9,9 +9,9 @@ export default function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-12">
-      <section className="w-full rounded-3xl border border-white/60 bg-white/70 p-8 shadow-panel backdrop-blur">
-        <h1 className="text-3xl font-semibold text-slate-900">{frontendSettings.organizationName}</h1>
-        <p className="mt-2 text-sm text-slate-600">Intranet colaborativa empresarial</p>
+      <section className="w-full rounded-3xl border border-white/60 bg-paper p-8 shadow-panel backdrop-blur">
+        <h1 className="text-3xl font-semibold text-ink">{frontendSettings.organizationName}</h1>
+        <p className="mt-2 text-sm text-mid">Intranet colaborativa empresarial</p>
 
         <div className="mt-6 flex gap-3">
           <Link
@@ -21,13 +21,13 @@ export default function HomePage() {
             Iniciar sesión
           </Link>
           <Link
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+            className="rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-ink"
             href="/tasks"
           >
             Ver tareas
           </Link>
           <Link
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+            className="rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-ink"
             href={"/meetings" as Route}
           >
             Reuniones
