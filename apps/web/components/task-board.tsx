@@ -162,7 +162,7 @@ const formatRemaining = (task: Task): { label: string; tone: string } => {
   if (!task.dueDate) {
     return {
       label: "Sin fecha límite",
-      tone: "text-slate-600 border-slate-200 bg-slate-50"
+      tone: "text-mid border-line bg-line"
     };
   }
 
@@ -176,20 +176,20 @@ const formatRemaining = (task: Task): { label: string; tone: string } => {
   if (diff < 0) {
     return {
       label: `Venció hace ${days}d ${hours}h`,
-      tone: "text-red-700 border-red-200 bg-red-50"
+      tone: "text-urgent border-urgent/30 bg-urgent-muted"
     };
   }
 
   if (days <= 1) {
     return {
       label: `Por vencer: ${days}d ${hours}h`,
-      tone: "text-amber-700 border-amber-200 bg-amber-50"
+      tone: "text-ink border-line bg-paper"
     };
   }
 
   return {
     label: `Faltan ${days}d ${hours}h`,
-    tone: "text-emerald-700 border-emerald-200 bg-emerald-50"
+    tone: "text-ink border-line bg-paper"
   };
 };
 
@@ -754,7 +754,7 @@ export const TaskBoard = ({
               <select
                 value={selectedProjectId}
                 onChange={(event) => setSelectedProjectId(event.target.value)}
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm sm:w-auto sm:min-w-[220px]"
+                className="h-10 w-full rounded-xl border border-line px-3 text-sm sm:w-auto sm:min-w-[220px]"
                 aria-label="Proyecto"
               >
                 <option value="">Selecciona proyecto</option>
@@ -765,16 +765,16 @@ export const TaskBoard = ({
                 ))}
               </select>
             ) : (
-              <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              <span className="rounded-lg border border-line bg-line px-3 py-2 text-xs text-ink">
                 {selectedProject?.name ?? "Proyecto"}
               </span>
             )}
 
-            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+            <div className="inline-flex rounded-xl border border-line bg-white p-1">
               <button
                 type="button"
                 className={`rounded-lg px-3 py-1 text-xs font-medium ${
-                  viewMode === "cards" ? "bg-slate-900 text-white" : "text-slate-700"
+                  viewMode === "cards" ? "bg-ink text-white" : "text-ink"
                 }`}
                 onClick={() => setViewMode("cards")}
               >
@@ -783,7 +783,7 @@ export const TaskBoard = ({
               <button
                 type="button"
                 className={`rounded-lg px-3 py-1 text-xs font-medium ${
-                  viewMode === "gantt" ? "bg-slate-900 text-white" : "text-slate-700"
+                  viewMode === "gantt" ? "bg-ink text-white" : "text-ink"
                 }`}
                 onClick={() => setViewMode("gantt")}
               >
@@ -818,7 +818,7 @@ export const TaskBoard = ({
               Nueva tarea
             </Button>
             {viewMode === "gantt" && !canEditGantt ? (
-              <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
+              <span className="rounded-lg border border-line bg-line px-2 py-1 text-xs text-mid">
                 Solo lectura
               </span>
             ) : null}
@@ -826,22 +826,22 @@ export const TaskBoard = ({
         </div>
 
         {!lockProjectSelection && projectsQuery.isLoading ? (
-          <p className="text-sm text-slate-500">Cargando proyectos...</p>
+          <p className="text-sm text-mid">Cargando proyectos...</p>
         ) : null}
         {!lockProjectSelection && projectsQuery.error ? (
-          <p className="text-sm text-red-600">{projectsQuery.error.message}</p>
+          <p className="text-sm text-urgent">{projectsQuery.error.message}</p>
         ) : null}
 
         <div className="grid gap-2 lg:grid-cols-[1fr_1fr_auto]">
           <input
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-xl border border-line px-3 text-sm"
             type="datetime-local"
             value={dateFromFilter}
             onChange={(event) => setDateFromFilter(event.target.value)}
             aria-label="Filtrar desde"
           />
           <input
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-xl border border-line px-3 text-sm"
             type="datetime-local"
             value={dateToFilter}
             onChange={(event) => setDateToFilter(event.target.value)}
@@ -860,19 +860,19 @@ export const TaskBoard = ({
         </div>
 
         {taskFeedback ? (
-          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{taskFeedback}</p>
+          <p className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink">{taskFeedback}</p>
         ) : null}
 
-        {tasksQuery.isLoading ? <p className="text-sm text-slate-500">Cargando tareas...</p> : null}
-        {tasksQuery.error ? <p className="text-sm text-red-600">{tasksQuery.error.message}</p> : null}
+        {tasksQuery.isLoading ? <p className="text-sm text-mid">Cargando tareas...</p> : null}
+        {tasksQuery.error ? <p className="text-sm text-urgent">{tasksQuery.error.message}</p> : null}
 
         {!selectedProjectId ? (
-          <p className="text-sm text-slate-600">Selecciona un proyecto para ver su tablero.</p>
+          <p className="text-sm text-mid">Selecciona un proyecto para ver su tablero.</p>
         ) : viewMode === "cards" ? (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {projectTasksByStatus.map((column) => (
-              <div key={column.status} className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
-                <h3 className="text-sm font-semibold text-slate-900">
+              <div key={column.status} className="space-y-2 rounded-2xl border border-line bg-line/60 p-3">
+                <h3 className="text-sm font-semibold text-ink">
                   {column.label} ({column.tasks.length})
                 </h3>
                 <ul className="space-y-2">
@@ -881,12 +881,12 @@ export const TaskBoard = ({
                     const stageName = stage?.name ?? task.stageName ?? "Sin etapa";
                     const stageColor = stage?.color ?? task.stageColor ?? NO_STAGE_COLOR;
                     return (
-                      <li key={task.id} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+                      <li key={task.id} className="space-y-2 rounded-xl border border-line bg-white p-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="space-y-1">
-                            <p className="text-sm font-medium text-slate-900">{task.title}</p>
+                            <p className="text-sm font-medium text-ink">{task.title}</p>
                             <p
-                              className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] text-slate-700"
+                              className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] text-ink"
                               style={{
                                 borderColor: hexToRgba(stageColor, 0.35),
                                 backgroundColor: hexToRgba(stageColor, 0.12)
@@ -895,10 +895,10 @@ export const TaskBoard = ({
                               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stageColor }} />
                               Etapa: {stageName}
                             </p>
-                            <p className="text-xs text-slate-500">Desde: {formatDateTime(task.startDate)}</p>
-                            <p className="text-xs text-slate-500">Hasta: {formatDateTime(task.dueDate)}</p>
+                            <p className="text-xs text-mid">Desde: {formatDateTime(task.startDate)}</p>
+                            <p className="text-xs text-mid">Hasta: {formatDateTime(task.dueDate)}</p>
                           </div>
-                          <Link href={`/tasks/${task.id}` as Route} className="text-xs font-medium text-blue-700 hover:underline">
+                          <Link href={`/tasks/${task.id}` as Route} className="text-xs font-medium text-ink hover:underline">
                             Detalle
                           </Link>
                         </div>
@@ -911,11 +911,11 @@ export const TaskBoard = ({
                         </p>
 
                         {task.assigneeId ? (
-                          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-700">
+                          <p className="rounded-lg border border-line bg-paper px-2 py-1 text-[11px] text-ink">
                             Responsable: {membersById.get(task.assigneeId)?.fullName ?? task.assigneeName ?? "Asignado"}
                           </p>
                         ) : (
-                          <p className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+                          <p className="rounded-lg border border-line bg-paper px-2 py-1 text-[11px] text-ink">
                             Sin asignar
                           </p>
                         )}
@@ -927,11 +927,11 @@ export const TaskBoard = ({
             ))}
           </div>
         ) : (
-          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700">
-              <span className="font-semibold text-slate-900">Estados:</span>
+          <div className="space-y-3 rounded-2xl border border-line bg-line p-3">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-[11px] text-ink">
+              <span className="font-semibold text-ink">Estados:</span>
               {statusColumns.map((column) => (
-                <span key={`legend-${column.status}`} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                <span key={`legend-${column.status}`} className="inline-flex items-center gap-1 rounded-full border border-line bg-line px-2 py-0.5">
                   <span
                     className="h-2 w-2 rounded-full"
                     style={{ backgroundColor: getTaskStatusColor(column.status, taskStatusColors) }}
@@ -942,14 +942,14 @@ export const TaskBoard = ({
             </div>
 
             {hoveredTask ? (
-              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+              <div className="rounded-xl border border-line bg-white px-3 py-2 text-xs text-ink">
                 {(() => {
                   const stage = hoveredTask.stageId ? stagesById.get(hoveredTask.stageId) : null;
                   const stageName = stage?.name ?? hoveredTask.stageName ?? "Sin etapa";
                   const stageColor = stage?.color ?? hoveredTask.stageColor ?? NO_STAGE_COLOR;
                   return (
                     <p
-                      className="mb-1 inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] text-slate-700"
+                      className="mb-1 inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] text-ink"
                       style={{
                         borderColor: hexToRgba(stageColor, 0.35),
                         backgroundColor: hexToRgba(stageColor, 0.12)
@@ -960,7 +960,7 @@ export const TaskBoard = ({
                     </p>
                   );
                 })()}
-                <p className="font-semibold text-slate-900">{hoveredTask.title}</p>
+                <p className="font-semibold text-ink">{hoveredTask.title}</p>
                 <p>Creó: {hoveredTask.createdByName ?? hoveredTask.createdById}</p>
                 <p>Asignado: {hoveredTask.assigneeName ?? "Sin asignar"}</p>
                 <p>
@@ -972,7 +972,7 @@ export const TaskBoard = ({
             <div className="overflow-x-auto">
               <div className="min-w-[1200px]">
                 <div className="grid" style={{ gridTemplateColumns: `460px ${timelineWidthPx}px` }}>
-                  <div className="sticky left-0 z-10 grid grid-cols-[120px_1fr_110px_80px_80px] border-b border-slate-200 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="sticky left-0 z-10 grid grid-cols-[120px_1fr_110px_80px_80px] border-b border-line bg-white text-[11px] font-semibold uppercase tracking-wide text-mid">
                     <div className="px-2 py-2">Tarea</div>
                     <div className="px-2 py-2">Detalle</div>
                     <div className="px-2 py-2">Responsable</div>
@@ -980,9 +980,9 @@ export const TaskBoard = ({
                     <div className="px-2 py-2">Fin</div>
                   </div>
 
-                  <div className="grid border-b border-slate-200 bg-white text-[11px] text-slate-500" style={{ gridTemplateColumns: `repeat(${timelineDays}, minmax(0, 1fr))` }}>
+                  <div className="grid border-b border-line bg-white text-[11px] text-mid" style={{ gridTemplateColumns: `repeat(${timelineDays}, minmax(0, 1fr))` }}>
                     {Array.from({ length: timelineDays }).map((_, index) => (
-                      <div key={index} className="border-l border-slate-200 px-1 py-2 text-center">
+                      <div key={index} className="border-l border-line px-1 py-2 text-center">
                         {formatTimelineDate(timelineBounds.startMs + DAY_MS * index)}
                       </div>
                     ))}
@@ -991,7 +991,7 @@ export const TaskBoard = ({
                   {ganttGroups.map((group) => (
                     <div key={`${group.stageName}-${group.stageColor}`} className="contents">
                       <div
-                        className="sticky left-0 z-[9] border-b border-slate-200 bg-slate-100 px-2 py-2 text-xs font-semibold text-slate-700"
+                        className="sticky left-0 z-[9] border-b border-line bg-line px-2 py-2 text-xs font-semibold text-ink"
                         style={{
                           boxShadow: `inset 4px 0 0 ${group.stageColor}`
                         }}
@@ -1001,7 +1001,7 @@ export const TaskBoard = ({
                           {group.stageName}
                         </span>
                       </div>
-                      <div className="border-b border-slate-200 bg-slate-100" />
+                      <div className="border-b border-line bg-line" />
 
                       {group.tasks.map((task) => {
                         const range = ganttDrafts[task.id] ?? normalizeTaskRange(task);
@@ -1025,15 +1025,15 @@ export const TaskBoard = ({
 
                         return (
                           <div key={task.id} className="contents">
-                            <div className="sticky left-0 z-[8] grid grid-cols-[120px_1fr_110px_80px_80px] items-center border-b border-slate-200 bg-white text-xs text-slate-700">
+                            <div className="sticky left-0 z-[8] grid grid-cols-[120px_1fr_110px_80px_80px] items-center border-b border-line bg-white text-xs text-ink">
                               <button
                                 type="button"
-                                className="truncate px-2 py-2 text-left font-medium text-slate-900 hover:text-blue-700"
+                                className="truncate px-2 py-2 text-left font-medium text-ink hover:text-ink"
                                 onClick={() => setSelectedHistoryTaskId(task.id)}
                               >
                                 {task.title}
                               </button>
-                              <div className="truncate px-2 py-2 text-slate-500">
+                              <div className="truncate px-2 py-2 text-mid">
                                 {task.description?.trim() || "Sin descripción"}
                               </div>
                               <div className="truncate px-2 py-2">{task.assigneeName ?? "Sin asignar"}</div>
@@ -1042,7 +1042,7 @@ export const TaskBoard = ({
                             </div>
 
                             <div
-                              className="relative h-11 border-b border-slate-200 bg-white"
+                              className="relative h-11 border-b border-line bg-white"
                               onMouseEnter={() => setHoveredTaskId(task.id)}
                               onMouseLeave={() => setHoveredTaskId((current) => (current === task.id ? null : current))}
                             >
@@ -1051,13 +1051,13 @@ export const TaskBoard = ({
                                 style={{ gridTemplateColumns: `repeat(${timelineDays}, minmax(0, 1fr))` }}
                               >
                                 {Array.from({ length: timelineDays }).map((_, index) => (
-                                  <div key={index} className="border-l border-slate-100" />
+                                  <div key={index} className="border-l border-line" />
                                 ))}
                               </div>
 
                               <div
                                 title={hoverLabel}
-                                className={`absolute top-1.5 h-8 rounded-md border px-2 text-xs leading-8 text-slate-900 ${
+                                className={`absolute top-1.5 h-8 rounded-md border px-2 text-xs leading-8 text-ink ${
                                   canEditGantt ? "cursor-grab" : ""
                                 }`}
                                 style={{
@@ -1132,7 +1132,7 @@ export const TaskBoard = ({
       {showPersonalPanels ? (
         <Card className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">Mis tareas pendientes</h2>
+            <h2 className="text-lg font-semibold text-ink">Mis tareas pendientes</h2>
             <div className="flex flex-wrap items-center gap-1.5">
               {(["PENDIENTE", "EN_REVISION"] as const).map((status) => {
                 const count = myTasks.filter((task) => task.status === status).length;
@@ -1156,12 +1156,12 @@ export const TaskBoard = ({
                 value={myTasksSearch}
                 onChange={(event) => setMyTasksSearch(event.target.value)}
                 placeholder="Buscar tarea o proyecto..."
-                className="h-9 flex-1 rounded-xl border border-slate-300 px-3 text-sm min-w-[180px]"
+                className="h-9 flex-1 rounded-xl border border-line px-3 text-sm min-w-[180px]"
               />
               <select
                 value={myTasksStatusFilter}
                 onChange={(event) => setMyTasksStatusFilter(event.target.value as "all" | TaskStatus)}
-                className="h-9 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-9 rounded-xl border border-line px-3 text-sm"
               >
                 <option value="all">Todos los estados</option>
                 <option value="PENDIENTE">Pendiente</option>
@@ -1170,13 +1170,13 @@ export const TaskBoard = ({
             </div>
           ) : null}
 
-          {allTasksQuery.isLoading ? <p className="text-sm text-slate-500">Cargando...</p> : null}
-          {allTasksQuery.error ? <p className="text-sm text-red-600">{allTasksQuery.error.message}</p> : null}
+          {allTasksQuery.isLoading ? <p className="text-sm text-mid">Cargando...</p> : null}
+          {allTasksQuery.error ? <p className="text-sm text-urgent">{allTasksQuery.error.message}</p> : null}
 
           {myTasks.length === 0 ? (
-            <p className="text-sm text-slate-600">No tienes tareas pendientes asignadas.</p>
+            <p className="text-sm text-mid">No tienes tareas pendientes asignadas.</p>
           ) : filteredMyTasks.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-mid">
               Sin resultados para{" "}
               {myTasksSearch ? `"${myTasksSearch}"` : "el filtro seleccionado"}.
             </p>
@@ -1189,12 +1189,12 @@ export const TaskBoard = ({
                 const stageName = stage?.name ?? task.stageName ?? "Sin etapa";
                 const stageColor = stage?.color ?? task.stageColor ?? NO_STAGE_COLOR;
                 return (
-                  <li key={task.id} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                  <li key={task.id} className="space-y-2 rounded-xl border border-line p-3">
                     <div className="space-y-1">
-                      <p className="text-sm font-semibold text-slate-900">{task.title}</p>
-                      <p className="text-xs text-slate-600">{projectMap.get(task.projectId) ?? "Proyecto"}</p>
+                      <p className="text-sm font-semibold text-ink">{task.title}</p>
+                      <p className="text-xs text-mid">{projectMap.get(task.projectId) ?? "Proyecto"}</p>
                       <p
-                        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] text-slate-700"
+                        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] text-ink"
                         style={{
                           borderColor: hexToRgba(stageColor, 0.35),
                           backgroundColor: hexToRgba(stageColor, 0.12)
@@ -1215,13 +1215,13 @@ export const TaskBoard = ({
                       <span className={`rounded-lg border px-2 py-1 ${remaining.tone}`}>{remaining.label}</span>
                     </div>
 
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-mid">
                       <p>Desde: {formatDateTime(task.startDate)}</p>
                       <p>Hasta: {formatDateTime(task.dueDate)}</p>
                     </div>
 
                     <div className="flex items-center justify-between gap-2">
-                      <Link href={`/tasks/${task.id}` as Route} className="text-xs text-blue-700 hover:underline">
+                      <Link href={`/tasks/${task.id}` as Route} className="text-xs text-ink hover:underline">
                         Ver detalle
                       </Link>
                       {task.status === "PENDIENTE" ? (
@@ -1255,7 +1255,7 @@ export const TaskBoard = ({
                           {changeStatusMutation.isPending ? "Aprobando..." : "Aprobar"}
                         </Button>
                       ) : (
-                        <span className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700">
+                        <span className="rounded-lg border border-line bg-paper px-2 py-1 text-[11px] text-ink">
                           Pendiente de aprobación
                         </span>
                       )}
@@ -1272,36 +1272,36 @@ export const TaskBoard = ({
       {canManageTaskFlow ? (
         <Card className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">Gestión unificada</h2>
-            <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
+            <h2 className="text-lg font-semibold text-ink">Gestión unificada</h2>
+            <span className="rounded-lg border border-line bg-line px-2 py-1 text-xs text-mid">
               Acciones de aprobación y reapertura
             </span>
           </div>
 
           {!selectedProjectId ? (
-            <p className="text-sm text-slate-600">Selecciona un proyecto para gestionar actividades.</p>
+            <p className="text-sm text-mid">Selecciona un proyecto para gestionar actividades.</p>
           ) : managementTasks.length === 0 ? (
-            <p className="text-sm text-slate-600">No hay actividades para gestionar en este proyecto.</p>
+            <p className="text-sm text-mid">No hay actividades para gestionar en este proyecto.</p>
           ) : (
             <ul className="space-y-2">
               {managementTasks.map((task) => {
                 const isActivablePending = task.status === "PENDIENTE" && task.pendingActivatedAt === null;
                 return (
-                  <li key={`manage-${task.id}`} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                  <li key={`manage-${task.id}`} className="space-y-2 rounded-xl border border-line p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="space-y-1">
-                        <p className="text-sm font-semibold text-slate-900">{task.title}</p>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-sm font-semibold text-ink">{task.title}</p>
+                        <p className="text-xs text-mid">
                           Estado: {task.status} · Desde: {formatDateTime(task.startDate)} · Hasta:{" "}
                           {formatDateTime(task.dueDate)}
                         </p>
                         {isActivablePending ? (
-                          <p className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+                          <p className="rounded-lg border border-line bg-paper px-2 py-1 text-[11px] text-ink">
                             Pendiente no activa (oculta para el asignado hasta activación)
                           </p>
                         ) : null}
                       </div>
-                      <Link href={`/tasks/${task.id}` as Route} className="text-xs font-medium text-blue-700 hover:underline">
+                      <Link href={`/tasks/${task.id}` as Route} className="text-xs font-medium text-ink hover:underline">
                         Detalle
                       </Link>
                     </div>
@@ -1385,10 +1385,10 @@ export const TaskBoard = ({
       ) : null}
 
       {createModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <article className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+          <article className="w-full max-w-2xl rounded-2xl border border-line bg-white p-5 shadow-2xl">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-slate-900">Nueva tarea</h3>
+              <h3 className="text-base font-semibold text-ink">Nueva tarea</h3>
               <Button type="button" variant="secondary" className="h-8 px-3 text-xs" onClick={() => setCreateModalOpen(false)}>
                 Cerrar
               </Button>
@@ -1440,12 +1440,12 @@ export const TaskBoard = ({
               })}
             >
               <input
-                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                 placeholder="Título"
                 {...form.register("title")}
               />
               <textarea
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-line px-3 py-2 text-sm"
                 placeholder="Descripción"
                 rows={4}
                 {...form.register("description")}
@@ -1453,12 +1453,12 @@ export const TaskBoard = ({
 
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-600" htmlFor="create-task-stage">
+                  <label className="text-xs text-mid" htmlFor="create-task-stage">
                     Etapa (opcional)
                   </label>
                   <select
                     id="create-task-stage"
-                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                    className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                     {...form.register("stageId")}
                   >
                     <option value="">Sin etapa</option>
@@ -1471,12 +1471,12 @@ export const TaskBoard = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-600" htmlFor="create-task-assignee">
+                  <label className="text-xs text-mid" htmlFor="create-task-assignee">
                     Responsable (opcional)
                   </label>
                   <select
                     id="create-task-assignee"
-                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                    className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                     {...form.register("assigneeId")}
                   >
                     <option value="">Sin asignar</option>
@@ -1491,23 +1491,23 @@ export const TaskBoard = ({
 
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-600" htmlFor="create-task-start-date">
+                  <label className="text-xs text-mid" htmlFor="create-task-start-date">
                     Fecha desde
                   </label>
                   <input
                     id="create-task-start-date"
-                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                    className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                     type="datetime-local"
                     {...form.register("startDate")}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-600" htmlFor="create-task-due-date">
+                  <label className="text-xs text-mid" htmlFor="create-task-due-date">
                     Fecha hasta
                   </label>
                   <input
                     id="create-task-due-date"
-                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                    className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                     type="datetime-local"
                     {...form.register("dueDate")}
                   />
@@ -1515,13 +1515,13 @@ export const TaskBoard = ({
               </div>
 
               {form.formState.errors.startDate?.message ? (
-                <p className="text-sm text-red-600">{form.formState.errors.startDate.message}</p>
+                <p className="text-sm text-urgent">{form.formState.errors.startDate.message}</p>
               ) : null}
               {form.formState.errors.dueDate?.message ? (
-                <p className="text-sm text-red-600">{form.formState.errors.dueDate.message}</p>
+                <p className="text-sm text-urgent">{form.formState.errors.dueDate.message}</p>
               ) : null}
 
-              {createTaskMutation.error ? <p className="text-sm text-red-600">{createTaskMutation.error.message}</p> : null}
+              {createTaskMutation.error ? <p className="text-sm text-urgent">{createTaskMutation.error.message}</p> : null}
 
               <div className="mt-3 flex justify-end gap-2">
                 <Button type="button" variant="secondary" className="h-9 px-3 text-xs" onClick={() => setCreateModalOpen(false)}>
@@ -1537,10 +1537,10 @@ export const TaskBoard = ({
       ) : null}
 
       {createStageModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <article className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+          <article className="w-full max-w-xl rounded-2xl border border-line bg-white p-5 shadow-2xl">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-slate-900">Nueva etapa</h3>
+              <h3 className="text-base font-semibold text-ink">Nueva etapa</h3>
               <Button type="button" variant="secondary" className="h-8 px-3 text-xs" onClick={() => setCreateStageModalOpen(false)}>
                 Cerrar
               </Button>
@@ -1561,33 +1561,33 @@ export const TaskBoard = ({
               })}
             >
               <div className="space-y-1">
-                <label className="text-xs text-slate-600" htmlFor="create-stage-name">
+                <label className="text-xs text-mid" htmlFor="create-stage-name">
                   Nombre
                 </label>
                 <input
                   id="create-stage-name"
-                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                   placeholder="Análisis funcional"
                   {...stageForm.register("name")}
                 />
                 {stageForm.formState.errors.name?.message ? (
-                  <p className="text-sm text-red-600">{stageForm.formState.errors.name.message}</p>
+                  <p className="text-sm text-urgent">{stageForm.formState.errors.name.message}</p>
                 ) : null}
               </div>
 
-              <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <p className="rounded-xl border border-line bg-line px-3 py-2 text-xs text-mid">
                 Número de etapa: se asigna automáticamente en orden incremental.
               </p>
 
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-600" htmlFor="create-stage-color">
+                  <label className="text-xs text-mid" htmlFor="create-stage-color">
                     Color
                   </label>
                   <div className="flex items-center gap-2">
                     <input
                       id="create-stage-color"
-                      className="h-10 w-12 rounded-xl border border-slate-300 p-1"
+                      className="h-10 w-12 rounded-xl border border-line p-1"
                       type="color"
                       value={stageColorValue}
                       onChange={(event) =>
@@ -1598,7 +1598,7 @@ export const TaskBoard = ({
                       }
                     />
                     <input
-                      className="h-10 w-28 rounded-xl border border-slate-300 px-3 text-sm uppercase"
+                      className="h-10 w-28 rounded-xl border border-line px-3 text-sm uppercase"
                       placeholder="#4F7CFF"
                       {...stageForm.register("color", {
                         setValueAs: (value) => String(value || "").toUpperCase()
@@ -1606,12 +1606,12 @@ export const TaskBoard = ({
                     />
                   </div>
                   {stageForm.formState.errors.color?.message ? (
-                    <p className="text-sm text-red-600">{stageForm.formState.errors.color.message}</p>
+                    <p className="text-sm text-urgent">{stageForm.formState.errors.color.message}</p>
                   ) : null}
                 </div>
               </div>
 
-              {createStageMutation.error ? <p className="text-sm text-red-600">{createStageMutation.error.message}</p> : null}
+              {createStageMutation.error ? <p className="text-sm text-urgent">{createStageMutation.error.message}</p> : null}
 
               <div className="mt-3 flex justify-end gap-2">
                 <Button type="button" variant="secondary" className="h-9 px-3 text-xs" onClick={() => setCreateStageModalOpen(false)}>
@@ -1627,36 +1627,36 @@ export const TaskBoard = ({
       ) : null}
 
       {selectedHistoryTaskId ? (
-        <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-xl overflow-y-auto border-l border-slate-200 bg-white p-4 shadow-2xl">
+        <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-xl overflow-y-auto border-l border-line bg-white p-4 shadow-2xl">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900">Historial de tarea</h3>
+            <h3 className="text-base font-semibold text-ink">Historial de tarea</h3>
             <Button type="button" variant="secondary" className="h-8 px-3 text-xs" onClick={() => setSelectedHistoryTaskId(null)}>
               Cerrar
             </Button>
           </div>
 
-          {taskHistoryQuery.isLoading ? <p className="text-sm text-slate-500">Cargando historial...</p> : null}
-          {taskHistoryQuery.error ? <p className="text-sm text-red-600">{taskHistoryQuery.error.message}</p> : null}
+          {taskHistoryQuery.isLoading ? <p className="text-sm text-mid">Cargando historial...</p> : null}
+          {taskHistoryQuery.error ? <p className="text-sm text-urgent">{taskHistoryQuery.error.message}</p> : null}
 
           {historyTask ? (
             <div className="space-y-4 text-sm">
-              <div className="rounded-xl border border-slate-200 p-3">
-                <p className="text-base font-semibold text-slate-900">{historyTask.title}</p>
-                <p className="text-xs text-slate-600">Etapa: {historyTask.stage?.name ?? "Sin etapa"}</p>
-                <p className="text-xs text-slate-600">
+              <div className="rounded-xl border border-line p-3">
+                <p className="text-base font-semibold text-ink">{historyTask.title}</p>
+                <p className="text-xs text-mid">Etapa: {historyTask.stage?.name ?? "Sin etapa"}</p>
+                <p className="text-xs text-mid">
                   Creó: {historyTask.createdBy ? `${historyTask.createdBy.firstName} ${historyTask.createdBy.lastName}` : historyTask.createdById}
                 </p>
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-mid">
                   Asignado: {historyTask.assignee ? `${historyTask.assignee.firstName} ${historyTask.assignee.lastName}` : "Sin asignar"}
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Cambios de estado</p>
+              <div className="rounded-xl border border-line p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-mid">Cambios de estado</p>
                 {historyTask.statusHistory?.length ? (
                   <ul className="space-y-2">
                     {historyTask.statusHistory.map((entry) => (
-                      <li key={entry.id} className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-2 text-xs">
+                      <li key={entry.id} className="rounded-lg border border-line bg-line px-2 py-2 text-xs">
                         <p>
                           {formatDateTime(entry.changedAt)} · {entry.fromStatus} → {entry.toStatus}
                         </p>
@@ -1668,16 +1668,16 @@ export const TaskBoard = ({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-slate-500">Sin cambios de estado registrados.</p>
+                  <p className="text-xs text-mid">Sin cambios de estado registrados.</p>
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Reasignaciones</p>
+              <div className="rounded-xl border border-line p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-mid">Reasignaciones</p>
                 {historyTask.reassignments?.length ? (
                   <ul className="space-y-2">
                     {historyTask.reassignments.map((entry) => (
-                      <li key={entry.id} className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-2 text-xs">
+                      <li key={entry.id} className="rounded-lg border border-line bg-line px-2 py-2 text-xs">
                         <p>{formatDateTime(entry.reassignedAt)}</p>
                         <p>Motivo: {entry.reason}</p>
                         <p>
@@ -1687,16 +1687,16 @@ export const TaskBoard = ({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-slate-500">Sin reasignaciones registradas.</p>
+                  <p className="text-xs text-mid">Sin reasignaciones registradas.</p>
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Cambios de cronograma</p>
+              <div className="rounded-xl border border-line p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-mid">Cambios de cronograma</p>
                 {historyTask.scheduleHistory?.length ? (
                   <ul className="space-y-2">
                     {historyTask.scheduleHistory.map((entry) => (
-                      <li key={entry.id} className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-2 text-xs">
+                      <li key={entry.id} className="rounded-lg border border-line bg-line px-2 py-2 text-xs">
                         <p>{formatDateTime(entry.changedAt)}</p>
                         <p>
                           Desde: {formatDateTime(entry.previousStartDate)} / {formatDateTime(entry.previousDueDate)}
@@ -1712,7 +1712,7 @@ export const TaskBoard = ({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-slate-500">Sin ajustes de fechas registrados.</p>
+                  <p className="text-xs text-mid">Sin ajustes de fechas registrados.</p>
                 )}
               </div>
             </div>
