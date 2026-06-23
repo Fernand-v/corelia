@@ -1,0 +1,5 @@
+
+# Playwright E2E
+/playwright-report/
+/test-results/
+/e2e/fixtures/collab.bundle.js

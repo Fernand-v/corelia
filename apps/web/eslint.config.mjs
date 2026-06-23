@@ -4,7 +4,16 @@ import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
   {
-    ignores: [".next/**", "dist/**", "coverage/**", "node_modules/**", "tsconfig.tsbuildinfo"]
+    ignores: [
+      ".next/**",
+      "dist/**",
+      "coverage/**",
+      "node_modules/**",
+      "tsconfig.tsbuildinfo",
+      "e2e/**",
+      "playwright-report/**",
+      "test-results/**"
+    ]
   },
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
