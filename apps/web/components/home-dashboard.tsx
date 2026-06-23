@@ -56,15 +56,16 @@ const summarizeNotification = (body: string, maxLength = 140) => {
 };
 
 type AvailabilityTone = { dot: string; text: string; bg: string };
+// Swiss: disponibilidad en escala de grises (no es urgencia → sin rojo).
 const defaultAvailabilityTone: AvailabilityTone = {
-  dot: "bg-slate-400",
-  text: "text-slate-600",
-  bg: "bg-slate-100 border-slate-200"
+  dot: "bg-faint",
+  text: "text-faint",
+  bg: "bg-paper border-line"
 };
 const availabilityTone: Record<string, AvailabilityTone> = {
-  DISPONIBLE: { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200/70" },
-  OCUPADO: { dot: "bg-accent", text: "text-accent", bg: "bg-accent-muted border-accent/20" },
-  EN_REUNION: { dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50 border-amber-200/70" },
+  DISPONIBLE: { dot: "bg-ink", text: "text-ink", bg: "bg-paper border-line" },
+  OCUPADO: { dot: "bg-mid", text: "text-mid", bg: "bg-paper border-line" },
+  EN_REUNION: { dot: "bg-mid", text: "text-mid", bg: "bg-paper border-line" },
   AUSENTE: defaultAvailabilityTone
 };
 
@@ -81,16 +82,23 @@ const contextLabel = (dashboard: HomeDashboard) => {
 const SectionTitle = ({
   children,
   subtitle,
-  action
+  action,
+  folio
 }: {
   children: React.ReactNode;
   subtitle?: string;
   action?: React.ReactNode;
+  folio?: string;
 }) => (
-  <div className="flex items-end justify-between gap-3">
-    <div>
-      <h2 className="text-sm font-semibold tracking-tight text-slate-800">{children}</h2>
-      {subtitle ? <p className="text-[11px] text-slate-400">{subtitle}</p> : null}
+  <div className="flex items-baseline justify-between gap-3 border-t border-ink pt-2.5">
+    <div className="flex items-baseline gap-4">
+      {folio ? (
+        <span className="font-condensed text-3xl font-bold leading-none tracking-tight text-ink">{folio}</span>
+      ) : null}
+      <div>
+        <h2 className="text-[13px] font-bold uppercase tracking-[0.14em] text-ink">{children}</h2>
+        {subtitle ? <p className="text-[11px] text-mid">{subtitle}</p> : null}
+      </div>
     </div>
     {action}
   </div>
@@ -108,19 +116,19 @@ const Stat = ({
   icon?: React.ReactNode;
 }) => {
   const toneClasses: Record<string, string> = {
-    default: "text-slate-900",
-    danger: "text-red-600",
-    warning: "text-amber-600",
-    success: "text-emerald-600",
-    accent: "text-accent"
+    default: "text-ink",
+    danger: "text-urgent",
+    warning: "text-urgent",
+    success: "text-ink",
+    accent: "text-ink"
   };
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-glass-border bg-white/70 p-4 shadow-sm backdrop-blur-sm transition-all duration-150 hover:bg-white/90 hover:shadow-md">
+    <div className="border border-line bg-paper p-4 transition-colors duration-150 hover:bg-accent-muted">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">{label}</p>
-        {icon ? <span className="text-slate-300 group-hover:text-slate-400 transition-colors">{icon}</span> : null}
+        <p className="text-[10px] font-medium uppercase tracking-widest text-faint">{label}</p>
+        {icon ? <span className="text-faint">{icon}</span> : null}
       </div>
-      <p className={`mt-2 text-2xl font-semibold tabular-nums ${toneClasses[tone]}`}>{value}</p>
+      <p className={`mt-2 font-condensed text-4xl font-bold tabular-nums tracking-tight ${toneClasses[tone]}`}>{value}</p>
     </div>
   );
 };
@@ -133,14 +141,14 @@ const Pill = ({
   tone?: "neutral" | "danger" | "warning" | "success" | "accent";
 }) => {
   const tones: Record<string, string> = {
-    neutral: "border-slate-200 bg-white/70 text-slate-600",
-    danger: "border-red-100 bg-red-50/80 text-red-600",
-    warning: "border-amber-100 bg-amber-50/80 text-amber-700",
-    success: "border-emerald-100 bg-emerald-50/80 text-emerald-700",
-    accent: "border-accent/20 bg-accent-muted text-accent"
+    neutral: "border-line bg-paper text-mid",
+    danger: "border-urgent/30 bg-urgent-muted text-urgent",
+    warning: "border-urgent/30 bg-urgent-muted text-urgent",
+    success: "border-line bg-paper text-ink",
+    accent: "border-line bg-paper text-ink"
   };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${tones[tone]}`}>
+    <span className={`inline-flex items-center gap-1 border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${tones[tone]}`}>
       {children}
     </span>
   );
@@ -150,10 +158,10 @@ const ProgressRing = ({ value, size = 44 }: { value: number; size?: number }) =>
   const safe = Math.max(0, Math.min(100, value));
   const r = size / 2 - 4;
   const c = 2 * Math.PI * r;
-  const color = safe >= 80 ? "#10b981" : safe >= 50 ? "#f59e0b" : "#6366f1";
+  const color = "#111111";
   return (
     <svg width={size} height={size} className="shrink-0 -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#eef2f7" strokeWidth="4" />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e3e3e3" strokeWidth="4" />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -172,18 +180,11 @@ const ProgressRing = ({ value, size = 44 }: { value: number; size?: number }) =>
 
 const ProgressBar = ({ value, tone }: { value: number; tone?: "auto" | "accent" }) => {
   const safe = Math.max(0, Math.min(100, value));
-  const color =
-    tone === "accent"
-      ? "bg-accent"
-      : safe >= 80
-        ? "bg-emerald-500"
-        : safe >= 50
-          ? "bg-amber-500"
-          : "bg-indigo-500";
+  const color = "bg-ink";
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+    <div className="h-0.5 w-full overflow-hidden bg-line">
       <div
-        className={`h-full rounded-full transition-all duration-700 ease-macos ${color}`}
+        className={`h-full transition-all duration-700 ease-macos ${color}`}
         style={{ width: `${safe}%` }}
       />
     </div>
@@ -191,9 +192,9 @@ const ProgressBar = ({ value, tone }: { value: number; tone?: "auto" | "accent" 
 };
 
 const EmptyState = ({ label, icon }: { label: string; icon?: React.ReactNode }) => (
-  <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-white/40 px-4 py-6 text-center">
-    {icon ? <div className="text-slate-300">{icon}</div> : null}
-    <p className="text-xs text-slate-500">{label}</p>
+  <div className="flex flex-col items-center justify-center gap-2 border border-dashed border-line bg-paper px-4 py-6 text-center">
+    {icon ? <div className="text-faint">{icon}</div> : null}
+    <p className="text-xs text-mid">{label}</p>
   </div>
 );
 
@@ -282,21 +283,21 @@ export const HomeDashboardView = () => {
   if (query.isLoading) {
     return (
       <div className="space-y-5">
-        <div className="h-32 animate-pulse rounded-2xl bg-white/60 shadow-sm" />
+        <div className="h-32 animate-pulse bg-line" />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/60 shadow-sm" />
+            <div key={i} className="h-24 animate-pulse bg-line" />
           ))}
         </div>
-        <div className="h-48 animate-pulse rounded-2xl bg-white/60 shadow-sm" />
+        <div className="h-48 animate-pulse bg-line" />
       </div>
     );
   }
 
   if (query.error) {
     return (
-      <Card className="border-red-200/70 bg-red-50/60">
-        <p className="text-sm text-red-700">{query.error.message}</p>
+      <Card className="border-urgent/30 bg-urgent-muted">
+        <p className="text-sm text-urgent">{query.error.message}</p>
       </Card>
     );
   }
@@ -304,7 +305,7 @@ export const HomeDashboardView = () => {
   if (!query.data) {
     return (
       <Card>
-        <p className="text-sm text-slate-600">No hay información disponible.</p>
+        <p className="text-sm text-mid">No hay información disponible.</p>
       </Card>
     );
   }
@@ -322,39 +323,31 @@ export const HomeDashboardView = () => {
 
   return (
     <div className="space-y-6">
-      {/* ================ HERO ================ */}
-      <div className="relative overflow-hidden rounded-3xl border border-glass-border bg-gradient-to-br from-white/90 via-white/75 to-accent-muted/50 p-6 shadow-panel backdrop-blur-header">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-accent/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-10 h-56 w-56 rounded-full bg-indigo-400/10 blur-3xl" />
-
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 space-y-1.5">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">{greeting}</p>
-            <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+      {/* ================ MASTHEAD ================ */}
+      <div className="border-b border-ink pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-faint">{greeting}</p>
+            <h1 className="truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">
               {roleDisplay}
             </h1>
-            <p className="text-sm text-slate-500">
-              {dashboard.organizationName} <span className="mx-1.5 text-slate-300">·</span> {contextLabel(dashboard)}
+            <p className="text-sm text-mid">
+              {dashboard.organizationName} <span className="mx-1.5 text-faint">·</span> {contextLabel(dashboard)}
             </p>
-            <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
-              <span className="inline-flex items-center gap-1">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                </span>
-                Actualizado {formatRelative(dashboard.generatedAt)}
-              </span>
+            <p className="flex items-center gap-1.5 text-[11px] text-faint">
+              <span className="h-1.5 w-1.5 rounded-full bg-ink" />
+              Actualizado {formatRelative(dashboard.generatedAt)}
             </p>
           </div>
 
           <Link
             href={"/notifications" as Route}
-            className="group relative inline-flex items-center gap-2 rounded-2xl border border-glass-border bg-white/80 px-3 py-2 text-sm text-slate-700 shadow-sm backdrop-blur-sm transition-all duration-150 hover:bg-white/95 hover:shadow-md"
+            className="inline-flex items-center gap-2 border border-line bg-paper px-3 py-2 text-sm text-ink transition-colors duration-150 hover:bg-accent-muted"
           >
             <Icon.Bell />
             <span>Notificaciones</span>
             {dashboard.unreadNotificationCount > 0 ? (
-              <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              <span className="inline-flex min-w-[1.25rem] items-center justify-center bg-urgent px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
                 {dashboard.unreadNotificationCount}
               </span>
             ) : null}
@@ -362,8 +355,8 @@ export const HomeDashboardView = () => {
         </div>
 
         {blocks.externalBanner ? (
-          <div className="relative mt-4 flex items-start gap-2 rounded-xl border border-amber-200/70 bg-amber-50/80 px-3 py-2 text-sm text-amber-800">
-            <span className="mt-0.5 text-amber-600">
+          <div className="mt-4 flex items-start gap-2 border border-urgent/30 bg-urgent-muted px-3 py-2 text-sm text-ink">
+            <span className="mt-0.5 text-urgent">
               <Icon.Alert />
             </span>
             <span>{blocks.externalBanner}</span>
@@ -371,12 +364,12 @@ export const HomeDashboardView = () => {
         ) : null}
 
         {dashboard.quickActions.length > 0 ? (
-          <div className="relative mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             {dashboard.quickActions.map((action) => (
               <Link
                 key={action.key}
                 href={action.path as Route}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-glass-border bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-all duration-100 hover:-translate-y-0.5 hover:bg-white hover:text-accent hover:shadow-md"
+                className="inline-flex items-center gap-1.5 border border-line bg-paper px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-100 hover:bg-accent-muted"
               >
                 {action.label}
                 <Icon.ArrowRight />
@@ -389,16 +382,16 @@ export const HomeDashboardView = () => {
       {/* ================ MI DÍA ================ */}
       {blocks.myDay ? (
         <section className="space-y-3">
-          <SectionTitle subtitle="Lo que necesita tu atención hoy">Mi día</SectionTitle>
+          <SectionTitle folio="01" subtitle="Lo que necesita tu atención hoy">Mi día</SectionTitle>
 
           <div className="grid gap-3 md:grid-cols-3">
             <Card className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-slate-400">
+                <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-faint">
                   <Icon.Clock />
                   Tareas de hoy o vencidas
                 </p>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-faint">
                   {blocks.myDay.dueOrOverdueTasks.length} {blocks.myDay.dueOrOverdueTasks.length === 1 ? "tarea" : "tareas"}
                 </span>
               </div>
@@ -409,30 +402,30 @@ export const HomeDashboardView = () => {
                   {blocks.myDay.dueOrOverdueTasks.slice(0, 8).map((task) => (
                     <li
                       key={task.id}
-                      className={`group flex items-start gap-3 rounded-xl border bg-white/60 p-3 transition-colors duration-100 hover:bg-white/90 ${
-                        task.overdue ? "border-red-200/60" : "border-glass-border"
+                      className={`group flex items-start gap-3 rounded-xl border bg-paper p-3 transition-colors duration-100 hover:bg-paper ${
+                        task.overdue ? "border-urgent/40" : "border-line"
                       }`}
                     >
                       <span
                         className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
-                          task.overdue ? "bg-red-500" : "bg-accent"
+                          task.overdue ? "bg-urgent" : "bg-ink"
                         }`}
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-medium text-slate-900">{task.title}</p>
+                          <p className="text-sm font-medium text-ink">{task.title}</p>
                           {task.overdue ? <Pill tone="danger">Vencida</Pill> : null}
                         </div>
-                        <p className="mt-0.5 text-[11px] text-slate-500">
-                          {task.projectName} <span className="text-slate-300">·</span> {task.status}
+                        <p className="mt-0.5 text-[11px] text-mid">
+                          {task.projectName} <span className="text-faint">·</span> {task.status}
                           {task.dueDate ? (
                             <>
-                              <span className="text-slate-300"> · </span>
+                              <span className="text-faint"> · </span>
                               {formatDateTime(task.dueDate)}
                             </>
                           ) : (
                             <>
-                              <span className="text-slate-300"> · </span>
+                              <span className="text-faint"> · </span>
                               Sin fecha
                             </>
                           )}
@@ -446,19 +439,19 @@ export const HomeDashboardView = () => {
 
             <div className="space-y-3">
               <Card className="space-y-2">
-                <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-slate-400">
+                <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-faint">
                   <Icon.Calendar />
                   Próxima reunión
                 </p>
                 {blocks.myDay.nextMeeting ? (
                   <div className="space-y-1.5">
-                    <p className="text-sm font-semibold text-slate-900">{blocks.myDay.nextMeeting.title}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-semibold text-ink">{blocks.myDay.nextMeeting.title}</p>
+                    <p className="text-xs text-mid">
                       {formatDateTime(blocks.myDay.nextMeeting.startsAt)}{" "}
-                      <span className="text-slate-400">({formatRelative(blocks.myDay.nextMeeting.startsAt)})</span>
+                      <span className="text-faint">({formatRelative(blocks.myDay.nextMeeting.startsAt)})</span>
                     </p>
                     {blocks.myDay.nextMeeting.projectName ? (
-                      <p className="text-xs text-slate-500">{blocks.myDay.nextMeeting.projectName}</p>
+                      <p className="text-xs text-mid">{blocks.myDay.nextMeeting.projectName}</p>
                     ) : null}
                     <Link
                       href={blocks.myDay.nextMeeting.joinPath as Route}
@@ -471,16 +464,16 @@ export const HomeDashboardView = () => {
                     </Link>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500">Sin reuniones pendientes.</p>
+                  <p className="text-xs text-mid">Sin reuniones pendientes.</p>
                 )}
               </Card>
 
               <Card className="space-y-2">
-                <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-slate-400">
+                <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-faint">
                   <Icon.Inbox />
                   Solicitudes pendientes
                 </p>
-                <p className="text-3xl font-semibold tabular-nums text-slate-900">
+                <p className="text-3xl font-semibold tabular-nums text-ink">
                   {blocks.myDay.pendingRequests.length}
                 </p>
                 {blocks.myDay.pendingRequests.length > 0 ? (
@@ -491,7 +484,7 @@ export const HomeDashboardView = () => {
                     Revisar <Icon.ArrowRight />
                   </Link>
                 ) : (
-                  <p className="text-[11px] text-slate-400">Todo al día.</p>
+                  <p className="text-[11px] text-faint">Todo al día.</p>
                 )}
               </Card>
             </div>
@@ -503,6 +496,7 @@ export const HomeDashboardView = () => {
       {blocks.myProjects ? (
         <section className="space-y-3">
           <SectionTitle
+            folio="02"
             subtitle={`${blocks.myProjects.length} ${blocks.myProjects.length === 1 ? "proyecto" : "proyectos"}`}
           >
             Mis proyectos activos
@@ -513,7 +507,7 @@ export const HomeDashboardView = () => {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {blocks.myProjects.map((project) => {
                 const pct = project.completionPct;
-                const pctColor = pct >= 80 ? "text-emerald-600" : pct >= 50 ? "text-amber-600" : "text-indigo-600";
+                const pctColor = "text-ink";
 
                 return (
                   <Link
@@ -525,17 +519,17 @@ export const HomeDashboardView = () => {
                         teamId: teamId ?? null
                       }) as Route
                     }
-                    className="group relative overflow-hidden rounded-2xl border border-glass-border bg-white/75 p-4 shadow-sm backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md"
+                    className="group relative overflow-hidden border border-line bg-paper p-4 transition-colors duration-150 hover:bg-accent-muted"
                   >
                     {project.risk && (
                       <span className="absolute right-3 top-3 flex h-2.5 w-2.5" aria-label="Proyecto en riesgo">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-urgent opacity-75" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-urgent" />
                       </span>
                     )}
 
                     <div className="space-y-3">
-                      <p className="pr-5 text-sm font-semibold text-slate-900 transition-colors group-hover:text-accent">
+                      <p className="pr-5 text-sm font-semibold text-ink transition-colors group-hover:text-accent">
                         {project.name}
                       </p>
 
@@ -543,7 +537,7 @@ export const HomeDashboardView = () => {
                         <ProgressRing value={pct} />
                         <div>
                           <p className={`text-xl font-bold tabular-nums ${pctColor}`}>{pct}%</p>
-                          <p className="text-[11px] text-slate-400">completado</p>
+                          <p className="text-[11px] text-faint">completado</p>
                         </div>
                       </div>
 
@@ -572,10 +566,10 @@ export const HomeDashboardView = () => {
       {/* ================ ACTIVIDAD RECIENTE ================ */}
       {blocks.recentActivity ? (
         <section className="space-y-3">
-          <SectionTitle>Actividad reciente</SectionTitle>
+          <SectionTitle folio="03">Actividad reciente</SectionTitle>
           <div className="grid gap-3 md:grid-cols-2">
             <Card className="space-y-3">
-              <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-slate-400">
+              <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-faint">
                 <Icon.Bell />
                 Notificaciones no leídas
               </p>
@@ -587,13 +581,13 @@ export const HomeDashboardView = () => {
                     <li key={notification.id}>
                       <Link
                         href={(notification.path.startsWith("/") ? notification.path : "/home") as Route}
-                        className="block rounded-xl border border-glass-border bg-white/60 p-3 transition-colors duration-100 hover:bg-white/90"
+                        className="block rounded-xl border border-line bg-paper p-3 transition-colors duration-100 hover:bg-paper"
                       >
-                        <p className="text-sm font-medium text-slate-900">{notification.title}</p>
-                        <p className="mt-0.5 line-clamp-2 text-xs text-slate-600">
+                        <p className="text-sm font-medium text-ink">{notification.title}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-mid">
                           {summarizeNotification(notification.body)}
                         </p>
-                        <p className="mt-1 text-[11px] text-slate-400">{formatRelative(notification.createdAt)}</p>
+                        <p className="mt-1 text-[11px] text-faint">{formatRelative(notification.createdAt)}</p>
                       </Link>
                     </li>
                   ))}
@@ -602,7 +596,7 @@ export const HomeDashboardView = () => {
             </Card>
 
             <Card className="space-y-3">
-              <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-slate-400">
+              <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-faint">
                 <Icon.Bolt />
                 Cambios en tareas
               </p>
@@ -613,18 +607,18 @@ export const HomeDashboardView = () => {
                   {blocks.recentActivity.recentTaskChanges.slice(0, 6).map((change) => (
                     <li
                       key={`${change.taskId}-${change.changedAt}`}
-                      className="flex items-start gap-2 rounded-xl border border-glass-border bg-white/60 p-3"
+                      className="flex items-start gap-2 rounded-xl border border-line bg-paper p-3"
                     >
                       <span
                         className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                          change.changeType === "REASIGNACION" ? "bg-accent" : "bg-indigo-400"
+                          change.changeType === "REASIGNACION" ? "bg-ink" : "bg-faint"
                         }`}
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-slate-900">{change.taskTitle}</p>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="truncate text-sm font-medium text-ink">{change.taskTitle}</p>
+                        <p className="text-[11px] text-mid">
                           {change.changeType === "REASIGNACION" ? "Reasignación" : "Cambio de estado"}
-                          <span className="text-slate-300"> · </span>
+                          <span className="text-faint"> · </span>
                           {formatRelative(change.changedAt)}
                         </p>
                       </div>
@@ -641,11 +635,12 @@ export const HomeDashboardView = () => {
       {blocks.announcements ? (
         <section className="space-y-3">
           <SectionTitle
+            folio="04"
             action={
               <div className="flex items-center gap-2">
                 <Link
                   href={"/announcements" as Route}
-                  className="rounded-xl border border-glass-border bg-white/70 px-3 py-1 text-xs text-slate-600 shadow-sm transition-colors duration-100 hover:bg-white"
+                  className="border border-line bg-paper px-3 py-1 text-xs text-mid transition-colors duration-100 hover:bg-accent-muted hover:text-ink"
                 >
                   Ver todos
                 </Link>
@@ -672,20 +667,20 @@ export const HomeDashboardView = () => {
               {blocks.announcements.map((announcement) => (
                 <li
                   key={announcement.id}
-                  className="rounded-2xl border border-glass-border bg-white/70 p-4 shadow-sm backdrop-blur-sm transition-colors duration-100 hover:bg-white/90"
+                  className="border border-line bg-paper p-4 transition-colors duration-100 hover:bg-accent-muted"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">{announcement.title}</p>
+                    <p className="text-sm font-semibold text-ink">{announcement.title}</p>
                     {announcement.isNew ? <Pill tone="accent">Nuevo</Pill> : null}
                   </div>
-                  <div className="mt-1 text-xs text-slate-600">
+                  <div className="mt-1 text-xs text-mid">
                     <AnnouncementContent
                       blocks={announcement.content?.blocks}
                       fallbackBody={announcement.body}
                       compact
                     />
                   </div>
-                  <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">
+                  <p className="mt-2 flex items-center gap-1 text-[11px] text-faint">
                     <Icon.Clock />
                     Expira {formatDate(announcement.expiresAt)}
                   </p>
@@ -699,7 +694,7 @@ export const HomeDashboardView = () => {
       {/* ================ MI EQUIPO HOY ================ */}
       {blocks.teamToday ? (
         <section className="space-y-3">
-          <SectionTitle>Mi equipo hoy</SectionTitle>
+          <SectionTitle folio="05">Mi equipo hoy</SectionTitle>
           {blocks.teamToday.length === 0 ? (
             <EmptyState label="No hay equipos asignados." icon={<Icon.Users />} />
           ) : (
@@ -707,11 +702,11 @@ export const HomeDashboardView = () => {
               {blocks.teamToday.map((team) => (
                 <Card key={team.teamId} className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-muted text-accent">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-line text-ink">
                       <Icon.Users />
                     </span>
-                    <p className="text-sm font-semibold text-slate-900">{team.teamName}</p>
-                    <span className="text-[11px] text-slate-400">
+                    <p className="text-sm font-semibold text-ink">{team.teamName}</p>
+                    <span className="text-[11px] text-faint">
                       {team.members.length} {team.members.length === 1 ? "miembro" : "miembros"}
                     </span>
                   </div>
@@ -721,10 +716,10 @@ export const HomeDashboardView = () => {
                       return (
                         <li
                           key={member.userId}
-                          className="rounded-xl border border-glass-border bg-white/60 p-3"
+                          className="rounded-xl border border-line bg-paper p-3"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <p className="truncate text-sm font-medium text-slate-900">{member.fullName}</p>
+                            <p className="truncate text-sm font-medium text-ink">{member.fullName}</p>
                             <span
                               className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${tone.bg} ${tone.text}`}
                             >
@@ -733,7 +728,7 @@ export const HomeDashboardView = () => {
                             </span>
                           </div>
                           <div className="mt-2 space-y-1.5">
-                            <div className="flex items-center justify-between text-[11px] text-slate-500">
+                            <div className="flex items-center justify-between text-[11px] text-mid">
                               <span>Capacidad</span>
                               <span className="tabular-nums">{member.capacityPct}%</span>
                             </div>
@@ -743,7 +738,7 @@ export const HomeDashboardView = () => {
                             {member.overdueTasks > 0 ? (
                               <Pill tone="danger">{member.overdueTasks} vencidas</Pill>
                             ) : (
-                              <span className="text-slate-400">Sin vencidas</span>
+                              <span className="text-faint">Sin vencidas</span>
                             )}
                             {member.overloaded ? <Pill tone="warning">Sobrecarga</Pill> : null}
                           </div>
@@ -761,20 +756,20 @@ export const HomeDashboardView = () => {
       {/* ================ TAREAS SIN RESPONSABLE ================ */}
       {blocks.unassignedTasks ? (
         <section className="space-y-3">
-          <SectionTitle subtitle="Asigna un responsable para desbloquearlas">Tareas sin responsable</SectionTitle>
+          <SectionTitle folio="06" subtitle="Asigna un responsable para desbloquearlas">Tareas sin responsable</SectionTitle>
           {blocks.unassignedTasks.length === 0 ? (
             <EmptyState label="No hay tareas sin responsable." />
           ) : (
             <Card>
-              <ul className="divide-y divide-glass-border">
+              <ul className="divide-y divide-line">
                 {blocks.unassignedTasks.slice(0, 10).map((task) => (
                   <li key={task.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-urgent" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-900">{task.title}</p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="truncate text-sm font-medium text-ink">{task.title}</p>
+                      <p className="text-[11px] text-mid">
                         {task.projectName}
-                        <span className="text-slate-300"> · </span>
+                        <span className="text-faint"> · </span>
                         {task.status}
                       </p>
                     </div>
@@ -786,7 +781,7 @@ export const HomeDashboardView = () => {
                           teamId: teamId ?? null
                         }) as Route
                       }
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-glass-border bg-white/70 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors duration-100 hover:bg-white hover:text-accent"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line bg-paper px-2.5 py-1 text-xs font-medium text-ink transition-colors duration-100 hover:bg-white hover:text-accent"
                     >
                       Asignar
                       <Icon.ArrowRight />
@@ -802,7 +797,7 @@ export const HomeDashboardView = () => {
       {/* ================ ESTADO DE PROYECTOS ================ */}
       {blocks.projectStatus ? (
         <section className="space-y-3">
-          <SectionTitle>Estado de mis proyectos</SectionTitle>
+          <SectionTitle folio="07">Estado de mis proyectos</SectionTitle>
           {blocks.projectStatus.length === 0 ? (
             <EmptyState label="No lideras proyectos activos." icon={<Icon.Folder />} />
           ) : (
@@ -810,26 +805,26 @@ export const HomeDashboardView = () => {
               {blocks.projectStatus.map((project) => (
                 <Card key={project.projectId} className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">{project.name}</p>
+                    <p className="text-sm font-semibold text-ink">{project.name}</p>
                     {project.risk ? <Pill tone="danger">Riesgo</Pill> : <Pill tone="success">Saludable</Pill>}
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="flex items-center justify-between text-[11px] text-mid">
                       <span>Avance</span>
-                      <span className="tabular-nums font-medium text-slate-700">{project.completionPct}%</span>
+                      <span className="tabular-nums font-medium text-ink">{project.completionPct}%</span>
                     </div>
                     <ProgressBar value={project.completionPct} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    <div className="rounded-lg border border-glass-border bg-white/60 px-2.5 py-1.5">
-                      <p className="text-slate-400">Bloqueadas</p>
-                      <p className="mt-0.5 font-semibold tabular-nums text-slate-800">{project.blockedPct}%</p>
+                    <div className="rounded-lg border border-line bg-paper px-2.5 py-1.5">
+                      <p className="text-faint">Bloqueadas</p>
+                      <p className="mt-0.5 font-semibold tabular-nums text-ink">{project.blockedPct}%</p>
                     </div>
-                    <div className="rounded-lg border border-glass-border bg-white/60 px-2.5 py-1.5">
-                      <p className="text-slate-400">Próximo hito</p>
-                      <p className="mt-0.5 truncate font-semibold text-slate-800">
+                    <div className="rounded-lg border border-line bg-paper px-2.5 py-1.5">
+                      <p className="text-faint">Próximo hito</p>
+                      <p className="mt-0.5 truncate font-semibold text-ink">
                         {project.nextMilestone
                           ? `${project.nextMilestone.title} · ${project.nextMilestone.daysRemaining}d`
                           : "—"}
@@ -859,7 +854,7 @@ export const HomeDashboardView = () => {
       {/* ================ DECISIONES PENDIENTES ================ */}
       {blocks.pendingDecisions ? (
         <section className="space-y-3">
-          <SectionTitle subtitle="Esperan tu aprobación">Decisiones pendientes</SectionTitle>
+          <SectionTitle folio="08" subtitle="Esperan tu aprobación">Decisiones pendientes</SectionTitle>
           <div className="grid gap-3 md:grid-cols-3">
             <Stat
               label="Reasignaciones"
@@ -886,7 +881,7 @@ export const HomeDashboardView = () => {
       {/* ================ ACTIVIDAD ORGANIZACIONAL ================ */}
       {blocks.organizationActivity ? (
         <section className="space-y-3">
-          <SectionTitle>Actividad organizacional</SectionTitle>
+          <SectionTitle folio="09">Actividad organizacional</SectionTitle>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Stat
               label="Nuevos usuarios (7d)"
@@ -914,7 +909,7 @@ export const HomeDashboardView = () => {
       {/* ================ RESUMEN OPERATIVO ================ */}
       {blocks.operationalSummary ? (
         <section className="space-y-3">
-          <SectionTitle>Resumen operativo</SectionTitle>
+          <SectionTitle folio="10">Resumen operativo</SectionTitle>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Stat
               label="Proyectos activos"
@@ -937,7 +932,7 @@ export const HomeDashboardView = () => {
           </div>
 
           <Card className="space-y-3">
-            <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-slate-400">
+            <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-faint">
               <Icon.Alert />
               Equipos con más bloqueos
             </p>
@@ -948,9 +943,9 @@ export const HomeDashboardView = () => {
                 {blocks.operationalSummary.teamsWithMoreBlockedTasks.map((team) => (
                   <li
                     key={team.teamId}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-glass-border bg-white/60 px-3 py-2"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper px-3 py-2"
                   >
-                    <p className="truncate text-sm font-medium text-slate-900">{team.teamName}</p>
+                    <p className="truncate text-sm font-medium text-ink">{team.teamName}</p>
                     <Pill tone="danger">
                       <Icon.Alert />
                       {team.blockedTasks} bloqueadas
@@ -966,27 +961,27 @@ export const HomeDashboardView = () => {
       {/* ================ RECURSOS COMPARTIDOS ================ */}
       {blocks.sharedResources ? (
         <section className="space-y-3">
-          <SectionTitle>Recursos compartidos</SectionTitle>
+          <SectionTitle folio="11">Recursos compartidos</SectionTitle>
           {blocks.sharedResources.length === 0 ? (
             <EmptyState label="No tienes recursos compartidos activos." icon={<Icon.Doc />} />
           ) : (
             <Card>
-              <ul className="divide-y divide-glass-border">
+              <ul className="divide-y divide-line">
                 {blocks.sharedResources.map((resource) => (
                   <li key={resource.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
-                    <span className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent">
+                    <span className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-line text-ink">
                       <Icon.Doc />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-900">
+                      <p className="truncate text-sm font-medium text-ink">
                         {resource.resourceScopeType}
-                        <span className="ml-1 text-slate-400">· {resource.resourceScopeId.slice(0, 8)}</span>
+                        <span className="ml-1 text-faint">· {resource.resourceScopeId.slice(0, 8)}</span>
                       </p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-mid">
                         Expira {formatDateTime(resource.expiresAt)}
                         {resource.contactName ? (
                           <>
-                            <span className="text-slate-300"> · </span>
+                            <span className="text-faint"> · </span>
                             Responsable: {resource.contactName}
                           </>
                         ) : null}
