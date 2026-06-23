@@ -51,21 +51,21 @@ const buildQueryString = (filters: Filters) => {
 };
 
 const pctColor = (value: number): string => {
-  if (value >= 80) return "text-emerald-600";
-  if (value >= 50) return "text-amber-600";
-  return "text-red-600";
+  if (value >= 80) return "text-ink";
+  if (value >= 50) return "text-ink";
+  return "text-urgent";
 };
 
 const pctBgColor = (value: number): string => {
-  if (value >= 80) return "bg-emerald-500";
-  if (value >= 50) return "bg-amber-500";
-  return "bg-red-500";
+  if (value >= 80) return "bg-paper0";
+  if (value >= 50) return "bg-paper0";
+  return "bg-urgent-muted0";
 };
 
 const loadBarColor = (pct: number): string => {
-  if (pct >= 100) return "bg-red-500";
-  if (pct >= 80) return "bg-amber-500";
-  return "bg-blue-500";
+  if (pct >= 100) return "bg-urgent-muted0";
+  if (pct >= 80) return "bg-paper0";
+  return "bg-paper0";
 };
 
 /* ────────────────────────────────────────
@@ -115,15 +115,15 @@ const KpiCard = ({
   sparkData?: number[];
 }) => {
   const accents = {
-    indigo: { bg: "bg-indigo-50", text: "text-indigo-600", ring: "ring-indigo-100", spark: "#6366f1" },
-    emerald: { bg: "bg-emerald-50", text: "text-emerald-600", ring: "ring-emerald-100", spark: "#10b981" },
-    amber: { bg: "bg-amber-50", text: "text-amber-600", ring: "ring-amber-100", spark: "#f59e0b" },
-    blue: { bg: "bg-blue-50", text: "text-blue-600", ring: "ring-blue-100", spark: "#3b82f6" }
+    indigo: { bg: "bg-paper", text: "text-ink", ring: "ring-line", spark: "#6366f1" },
+    emerald: { bg: "bg-paper", text: "text-ink", ring: "ring-line", spark: "#10b981" },
+    amber: { bg: "bg-paper", text: "text-ink", ring: "ring-line", spark: "#f59e0b" },
+    blue: { bg: "bg-paper", text: "text-ink", ring: "ring-line", spark: "#3b82f6" }
   };
   const a = accents[accent];
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-5 flex flex-col gap-3 relative overflow-hidden">
+    <div className="rounded-2xl bg-white shadow-sm border border-line p-5 flex flex-col gap-3 relative overflow-hidden">
       <div className="flex items-start justify-between">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${a.bg} ring-1 ${a.ring}`}>
           <span className={a.text}>{icon}</span>
@@ -135,9 +135,9 @@ const KpiCard = ({
         )}
       </div>
       <div>
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-400">{label}</p>
-        <p className="text-2xl font-bold text-slate-900 tabular-nums">{value}</p>
-        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        <p className="text-xs font-medium uppercase tracking-wider text-faint">{label}</p>
+        <p className="text-2xl font-bold text-ink tabular-nums">{value}</p>
+        {subtitle && <p className="text-xs text-mid mt-0.5">{subtitle}</p>}
       </div>
     </div>
   );
@@ -240,7 +240,7 @@ export const ReportsDashboardView = () => {
   if (session.isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-indigo-600" />
       </div>
     );
   }
@@ -248,7 +248,7 @@ export const ReportsDashboardView = () => {
   if (session.error || !session.data) {
     return (
       <div className="rounded-2xl bg-white shadow-sm p-8 text-center">
-        <p className="text-sm text-red-600">{session.error?.message ?? "No se pudo cargar la sesion."}</p>
+        <p className="text-sm text-urgent">{session.error?.message ?? "No se pudo cargar la sesion."}</p>
       </div>
     );
   }
@@ -256,13 +256,13 @@ export const ReportsDashboardView = () => {
   if (!roleCanAccessReports) {
     return (
       <div className="rounded-2xl bg-white shadow-sm p-8 text-center space-y-3">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-slate-400">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-line">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-faint">
             <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
           </svg>
         </div>
-        <h1 className="text-lg font-semibold text-slate-900">Reportes</h1>
-        <p className="text-sm text-slate-500">Tu rol no tiene acceso a este modulo.</p>
+        <h1 className="text-lg font-semibold text-ink">Reportes</h1>
+        <p className="text-sm text-mid">Tu rol no tiene acceso a este modulo.</p>
       </div>
     );
   }
@@ -283,11 +283,11 @@ export const ReportsDashboardView = () => {
               </svg>
               <h1 className="text-xl font-bold">Reporte Ejecutivo</h1>
             </div>
-            <p className="text-sm text-indigo-200">
+            <p className="text-sm text-ink">
               {session.data.roleDisplayName ?? session.data.activeRole} — KPIs de productividad, SLA, carga y avance
             </p>
             {report && (
-              <p className="text-xs text-indigo-300 mt-1">
+              <p className="text-xs text-ink mt-1">
                 Generado: {formatDateTime(report.generatedAt)}
               </p>
             )}
@@ -296,7 +296,7 @@ export const ReportsDashboardView = () => {
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-paper transition-colors"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clipRule="evenodd" />
@@ -307,7 +307,7 @@ export const ReportsDashboardView = () => {
               type="button"
               disabled={Boolean(downloading) || reportQuery.isLoading || !report}
               onClick={() => downloadReport("pdf")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-paper transition-colors disabled:opacity-50"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
@@ -319,7 +319,7 @@ export const ReportsDashboardView = () => {
               type="button"
               disabled={Boolean(downloading) || reportQuery.isLoading || !report}
               onClick={() => downloadReport("xlsx")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-paper transition-colors disabled:opacity-50"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
@@ -333,30 +333,30 @@ export const ReportsDashboardView = () => {
 
       {/* Filters panel */}
       {showFilters && (
-        <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-5 space-y-4">
+        <div className="rounded-2xl bg-white shadow-sm border border-line p-5 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-1.5">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Desde</span>
+              <span className="text-xs font-semibold text-mid uppercase tracking-wider">Desde</span>
               <input
                 type="date"
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-colors"
+                className="h-10 w-full rounded-xl border border-line bg-line px-3 text-sm text-ink focus:border-line focus:ring-2 focus:ring-line focus:outline-none transition-colors"
                 value={filters.from}
                 onChange={(e) => setFilters((c) => ({ ...c, from: e.target.value }))}
               />
             </label>
             <label className="space-y-1.5">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Hasta</span>
+              <span className="text-xs font-semibold text-mid uppercase tracking-wider">Hasta</span>
               <input
                 type="date"
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-colors"
+                className="h-10 w-full rounded-xl border border-line bg-line px-3 text-sm text-ink focus:border-line focus:ring-2 focus:ring-line focus:outline-none transition-colors"
                 value={filters.to}
                 onChange={(e) => setFilters((c) => ({ ...c, to: e.target.value }))}
               />
             </label>
             <label className="space-y-1.5">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Proyecto</span>
+              <span className="text-xs font-semibold text-mid uppercase tracking-wider">Proyecto</span>
               <select
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-colors"
+                className="h-10 w-full rounded-xl border border-line bg-line px-3 text-sm text-ink focus:border-line focus:ring-2 focus:ring-line focus:outline-none transition-colors"
                 value={filters.projectId}
                 onChange={(e) => setFilters((c) => ({ ...c, projectId: e.target.value }))}
               >
@@ -367,9 +367,9 @@ export const ReportsDashboardView = () => {
               </select>
             </label>
             <label className="space-y-1.5">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Equipo</span>
+              <span className="text-xs font-semibold text-mid uppercase tracking-wider">Equipo</span>
               <select
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-colors"
+                className="h-10 w-full rounded-xl border border-line bg-line px-3 text-sm text-ink focus:border-line focus:ring-2 focus:ring-line focus:outline-none transition-colors"
                 value={filters.teamId}
                 onChange={(e) => setFilters((c) => ({ ...c, teamId: e.target.value }))}
               >
@@ -384,7 +384,7 @@ export const ReportsDashboardView = () => {
             <button
               type="button"
               onClick={() => setAppliedFilters(filters)}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+              className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink transition-colors"
             >
               Aplicar filtros
             </button>
@@ -394,12 +394,12 @@ export const ReportsDashboardView = () => {
                 setFilters(defaultFilters);
                 setAppliedFilters(defaultFilters);
               }}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              className="rounded-xl border border-line px-4 py-2 text-sm font-medium text-mid hover:bg-line transition-colors"
             >
               Limpiar
             </button>
             {report && (
-              <p className="ml-auto text-xs text-slate-400">
+              <p className="ml-auto text-xs text-faint">
                 Rango: {formatDateTime(report.range.from)} — {formatDateTime(report.range.to)}
               </p>
             )}
@@ -410,17 +410,17 @@ export const ReportsDashboardView = () => {
       {/* Loading */}
       {reportQuery.isLoading && (
         <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-indigo-600" />
         </div>
       )}
 
       {/* Error */}
       {reportQuery.error && (
-        <div className="rounded-2xl bg-red-50 border border-red-200 p-5 flex items-start gap-3">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-red-500 shrink-0 mt-0.5">
+        <div className="rounded-2xl bg-urgent-muted border border-urgent/30 p-5 flex items-start gap-3">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-urgent shrink-0 mt-0.5">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
           </svg>
-          <p className="text-sm text-red-700">{reportQuery.error.message}</p>
+          <p className="text-sm text-urgent">{reportQuery.error.message}</p>
         </div>
       )}
 
@@ -479,65 +479,65 @@ export const ReportsDashboardView = () => {
 
           {/* Extra SLA/workload stats row */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+            <div className="rounded-2xl bg-white shadow-sm border border-line p-5 flex items-center gap-4">
               <ProgressRing value={report.blocks.sla.slaPct} />
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">SLA cumplido</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-faint">SLA cumplido</p>
                 <p className={`text-lg font-bold tabular-nums ${pctColor(report.blocks.sla.slaPct)}`}>{formatPct(report.blocks.sla.slaPct)}</p>
-                <p className="text-xs text-slate-500">{formatNumber(report.blocks.sla.breached)} incumplidas</p>
+                <p className="text-xs text-mid">{formatNumber(report.blocks.sla.breached)} incumplidas</p>
               </div>
             </div>
-            <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+            <div className="rounded-2xl bg-white shadow-sm border border-line p-5 flex items-center gap-4">
               <ProgressRing value={report.blocks.productivity.completionRate} />
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Tasa de cierre</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-faint">Tasa de cierre</p>
                 <p className={`text-lg font-bold tabular-nums ${pctColor(report.blocks.productivity.completionRate)}`}>{formatPct(report.blocks.productivity.completionRate)}</p>
-                <p className="text-xs text-slate-500">{formatNumber(report.blocks.productivity.tasksCompleted)} completadas</p>
+                <p className="text-xs text-mid">{formatNumber(report.blocks.productivity.tasksCompleted)} completadas</p>
               </div>
             </div>
-            <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+            <div className="rounded-2xl bg-white shadow-sm border border-line p-5 flex items-center gap-4">
               <ProgressRing value={Math.min(report.blocks.workload.loadPct, 100)} />
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Capacidad usada</p>
-                <p className={`text-lg font-bold tabular-nums ${report.blocks.workload.loadPct > 100 ? "text-red-600" : "text-slate-900"}`}>{formatPct(report.blocks.workload.loadPct)}</p>
-                <p className="text-xs text-slate-500">{formatNumber(report.blocks.workload.overloadedCount)} sobrecargados</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-faint">Capacidad usada</p>
+                <p className={`text-lg font-bold tabular-nums ${report.blocks.workload.loadPct > 100 ? "text-urgent" : "text-ink"}`}>{formatPct(report.blocks.workload.loadPct)}</p>
+                <p className="text-xs text-mid">{formatNumber(report.blocks.workload.overloadedCount)} sobrecargados</p>
               </div>
             </div>
           </div>
 
           {/* Project progress */}
-          <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-5 border-b border-slate-100">
-              <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-indigo-500">
+          <div className="rounded-2xl bg-white shadow-sm border border-line overflow-hidden">
+            <div className="p-5 border-b border-line">
+              <h2 className="text-base font-semibold text-ink flex items-center gap-2">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-ink">
                   <path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" clipRule="evenodd" />
                 </svg>
                 Avance por proyecto
               </h2>
             </div>
             {report.blocks.progressByClient.length === 0 ? (
-              <div className="p-8 text-center text-sm text-slate-400">No hay proyectos en el alcance actual.</div>
+              <div className="p-8 text-center text-sm text-faint">No hay proyectos en el alcance actual.</div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-line">
                 {report.blocks.progressByClient.map((item) => (
-                  <div key={item.projectId} className="p-4 hover:bg-slate-50/50 transition-colors">
+                  <div key={item.projectId} className="p-4 hover:bg-line/50 transition-colors">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-semibold text-slate-800">{item.projectName}</p>
+                      <p className="text-sm font-semibold text-ink">{item.projectName}</p>
                       <div className="flex items-center gap-3 text-xs">
-                        <span className="text-slate-500">{formatNumber(item.completedTasks)}/{formatNumber(item.totalTasks)} tareas</span>
+                        <span className="text-mid">{formatNumber(item.completedTasks)}/{formatNumber(item.totalTasks)} tareas</span>
                         <span className={`font-bold tabular-nums ${pctColor(item.completionPct)}`}>{formatPct(item.completionPct)}</span>
                       </div>
                     </div>
-                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-2 rounded-full bg-line overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${pctBgColor(item.completionPct)}`}
                         style={{ width: `${Math.min(item.completionPct, 100)}%` }}
                       />
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                    <div className="flex items-center gap-4 mt-2 text-xs text-mid">
                       <span>SLA: <span className={`font-semibold ${pctColor(item.slaPct)}`}>{formatPct(item.slaPct)}</span></span>
                       {item.overdueOpenTasks > 0 && (
-                        <span className="text-red-600 font-medium">{formatNumber(item.overdueOpenTasks)} vencidas</span>
+                        <span className="text-urgent font-medium">{formatNumber(item.overdueOpenTasks)} vencidas</span>
                       )}
                     </div>
                   </div>
@@ -550,38 +550,38 @@ export const ReportsDashboardView = () => {
           {session.data.activeRole !== "COLABORADOR" ? (
             <div className="grid gap-4 xl:grid-cols-2">
               {/* Teams */}
-              <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
-                <div className="p-5 border-b border-slate-100">
-                  <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-amber-500">
+              <div className="rounded-2xl bg-white shadow-sm border border-line overflow-hidden">
+                <div className="p-5 border-b border-line">
+                  <h2 className="text-base font-semibold text-ink flex items-center gap-2">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-ink">
                       <path d="M10 9a3 3 0 100-6 3 3 0 000 6zM6 8a2 2 0 11-4 0 2 2 0 014 0zM1.49 15.326a.78.78 0 01-.358-.442 3 3 0 014.308-3.516 6.484 6.484 0 00-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 01-2.07-.655zM16.44 15.98a4.97 4.97 0 002.07-.654.78.78 0 00.357-.442 3 3 0 00-4.308-3.517 6.484 6.484 0 011.907 3.96 2.32 2.32 0 01-.026.654zM18 8a2 2 0 11-4 0 2 2 0 014 0zM5.304 16.19a.844.844 0 01-.277-.71 5 5 0 019.947 0 .843.843 0 01-.277.71A6.975 6.975 0 0110 18a6.974 6.974 0 01-4.696-1.81z" />
                     </svg>
                     Carga por equipo
                   </h2>
                 </div>
                 {report.blocks.workload.byTeam.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-slate-400">No hay equipos en el alcance.</div>
+                  <div className="p-8 text-center text-sm text-faint">No hay equipos en el alcance.</div>
                 ) : (
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-line">
                     {report.blocks.workload.byTeam.map((team) => (
                       <div key={team.teamId} className="p-4">
                         <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-sm font-semibold text-slate-800">{team.teamName}</p>
-                          <span className={`text-xs font-bold tabular-nums ${team.loadPct >= 100 ? "text-red-600" : team.loadPct >= 80 ? "text-amber-600" : "text-blue-600"}`}>
+                          <p className="text-sm font-semibold text-ink">{team.teamName}</p>
+                          <span className={`text-xs font-bold tabular-nums ${team.loadPct >= 100 ? "text-urgent" : team.loadPct >= 80 ? "text-ink" : "text-ink"}`}>
                             {formatPct(team.loadPct)}
                           </span>
                         </div>
-                        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden mb-1.5">
+                        <div className="h-1.5 rounded-full bg-line overflow-hidden mb-1.5">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${loadBarColor(team.loadPct)}`}
                             style={{ width: `${Math.min(team.loadPct, 100)}%` }}
                           />
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                        <div className="flex items-center gap-3 text-xs text-mid">
                           <span>{formatNumber(team.activeTasksNow)} activas</span>
                           <span>{formatNumber(team.capacitySlots)} capacidad</span>
                           {team.overloadedCount > 0 && (
-                            <span className="text-red-500 font-medium">{team.overloadedCount} sobrecargados</span>
+                            <span className="text-urgent font-medium">{team.overloadedCount} sobrecargados</span>
                           )}
                         </div>
                       </div>
@@ -591,38 +591,38 @@ export const ReportsDashboardView = () => {
               </div>
 
               {/* Users */}
-              <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
-                <div className="p-5 border-b border-slate-100">
-                  <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-blue-500">
+              <div className="rounded-2xl bg-white shadow-sm border border-line overflow-hidden">
+                <div className="p-5 border-b border-line">
+                  <h2 className="text-base font-semibold text-ink flex items-center gap-2">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-ink">
                       <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
                     </svg>
                     Carga por usuario
                   </h2>
                 </div>
                 {report.blocks.workload.byUser.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-slate-400">No hay usuarios en el alcance.</div>
+                  <div className="p-8 text-center text-sm text-faint">No hay usuarios en el alcance.</div>
                 ) : (
-                  <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                  <div className="divide-y divide-line max-h-96 overflow-y-auto">
                     {report.blocks.workload.byUser.slice(0, 30).map((user) => (
                       <div key={user.userId} className="p-4 flex items-center gap-3">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shrink-0 ${user.overloaded ? "bg-red-500" : "bg-indigo-500"}`}>
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shrink-0 ${user.overloaded ? "bg-urgent-muted0" : "bg-paper0"}`}>
                           {user.fullName.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-slate-800 truncate">{user.fullName}</p>
-                            <span className={`text-xs font-bold tabular-nums ml-2 shrink-0 ${user.overloaded ? "text-red-600" : "text-slate-600"}`}>
+                            <p className="text-sm font-medium text-ink truncate">{user.fullName}</p>
+                            <span className={`text-xs font-bold tabular-nums ml-2 shrink-0 ${user.overloaded ? "text-urgent" : "text-mid"}`}>
                               {formatPct(user.loadPct)}
                             </span>
                           </div>
-                          <div className="h-1 rounded-full bg-slate-100 overflow-hidden mt-1">
+                          <div className="h-1 rounded-full bg-line overflow-hidden mt-1">
                             <div
                               className={`h-full rounded-full transition-all duration-500 ${loadBarColor(user.loadPct)}`}
                               style={{ width: `${Math.min(user.loadPct, 100)}%` }}
                             />
                           </div>
-                          <p className="text-xs text-slate-400 mt-0.5">{user.teamName ?? "Sin equipo"} — {formatNumber(user.activeTasksNow)}/{formatNumber(user.capacitySlots)}</p>
+                          <p className="text-xs text-faint mt-0.5">{user.teamName ?? "Sin equipo"} — {formatNumber(user.activeTasksNow)}/{formatNumber(user.capacitySlots)}</p>
                         </div>
                       </div>
                     ))}
@@ -631,30 +631,30 @@ export const ReportsDashboardView = () => {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-5 space-y-3">
-              <h2 className="text-base font-semibold text-slate-900">Carga personal</h2>
+            <div className="rounded-2xl bg-white shadow-sm border border-line p-5 space-y-3">
+              <h2 className="text-base font-semibold text-ink">Carga personal</h2>
               {report.blocks.workload.byUser[0] ? (
                 <div className="flex items-center gap-4">
                   <ProgressRing value={Math.min(report.blocks.workload.byUser[0].loadPct, 100)} size={56} />
                   <div>
-                    <p className="text-lg font-bold text-slate-900 tabular-nums">{formatPct(report.blocks.workload.byUser[0].loadPct)}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-lg font-bold text-ink tabular-nums">{formatPct(report.blocks.workload.byUser[0].loadPct)}</p>
+                    <p className="text-xs text-mid">
                       {formatNumber(report.blocks.workload.byUser[0].activeTasksNow)} activas / {formatNumber(report.blocks.workload.byUser[0].capacitySlots)} capacidad
                     </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">No hay datos de carga personal.</p>
+                <p className="text-sm text-faint">No hay datos de carga personal.</p>
               )}
             </div>
           )}
 
           {/* Budget */}
           {report.blocks.budget && report.blocks.budget.byProject.length > 0 && (
-            <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-5 border-b border-slate-100">
-                <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-emerald-500">
+            <div className="rounded-2xl bg-white shadow-sm border border-line overflow-hidden">
+              <div className="p-5 border-b border-line">
+                <h2 className="text-base font-semibold text-ink flex items-center gap-2">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-ink">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.798 7.45c.512-.67 1.135-.95 1.702-.95s1.19.28 1.702.95a.75.75 0 001.192-.91C12.637 5.55 11.596 5 10.5 5s-2.137.55-2.894 1.54A5.205 5.205 0 006.83 8H5.75a.75.75 0 000 1.5h.77a6.333 6.333 0 000 1h-.77a.75.75 0 000 1.5h1.08c.183.528.442 1.023.776 1.46.757.99 1.798 1.54 2.894 1.54s2.137-.55 2.894-1.54a.75.75 0 00-1.192-.91c-.512.67-1.135.95-1.702.95s-1.19-.28-1.702-.95a3.505 3.505 0 01-.343-.55h1.795a.75.75 0 000-1.5H8.026a4.835 4.835 0 010-1h2.224a.75.75 0 000-1.5H8.455c.098-.195.212-.38.343-.55z" clipRule="evenodd" />
                   </svg>
                   Presupuesto por proyecto
@@ -663,7 +663,7 @@ export const ReportsDashboardView = () => {
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
+                    <tr className="bg-line text-left text-xs uppercase tracking-wider text-mid">
                       <th className="px-5 py-3 font-semibold">Proyecto</th>
                       <th className="px-5 py-3 font-semibold">Estimado</th>
                       <th className="px-5 py-3 font-semibold">Aprobado</th>
@@ -672,37 +672,37 @@ export const ReportsDashboardView = () => {
                       <th className="px-5 py-3 font-semibold">Ejecutado</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-line">
                     {report.blocks.budget.byProject.map((item) => (
-                      <tr key={item.projectId} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-5 py-3 font-medium text-slate-800">{item.projectName}</td>
-                        <td className="px-5 py-3 text-slate-700 tabular-nums">{formatNumber(item.totalEstimated)}</td>
-                        <td className="px-5 py-3 text-emerald-700 font-medium tabular-nums">{formatNumber(item.totalApproved)}</td>
-                        <td className="px-5 py-3 text-amber-600 font-medium tabular-nums">{formatNumber(item.totalPending)}</td>
-                        <td className={`px-5 py-3 font-medium tabular-nums ${item.totalRemaining >= 0 ? "text-slate-700" : "text-red-600"}`}>
+                      <tr key={item.projectId} className="hover:bg-line/50 transition-colors">
+                        <td className="px-5 py-3 font-medium text-ink">{item.projectName}</td>
+                        <td className="px-5 py-3 text-ink tabular-nums">{formatNumber(item.totalEstimated)}</td>
+                        <td className="px-5 py-3 text-ink font-medium tabular-nums">{formatNumber(item.totalApproved)}</td>
+                        <td className="px-5 py-3 text-ink font-medium tabular-nums">{formatNumber(item.totalPending)}</td>
+                        <td className={`px-5 py-3 font-medium tabular-nums ${item.totalRemaining >= 0 ? "text-ink" : "text-urgent"}`}>
                           {formatNumber(item.totalRemaining)}
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="h-1.5 flex-1 rounded-full bg-line overflow-hidden">
                               <div
-                                className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                                className="h-full rounded-full bg-paper0 transition-all duration-500"
                                 style={{ width: `${Math.min(item.executionPct, 100)}%` }}
                               />
                             </div>
-                            <span className="text-xs font-semibold text-slate-600 tabular-nums w-12 text-right">{formatPct(item.executionPct)}</span>
+                            <span className="text-xs font-semibold text-mid tabular-nums w-12 text-right">{formatPct(item.executionPct)}</span>
                           </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-slate-50 font-semibold">
-                      <td className="px-5 py-3 text-slate-900">Total</td>
-                      <td className="px-5 py-3 text-slate-900 tabular-nums">{formatNumber(report.blocks.budget.totalEstimated)}</td>
-                      <td className="px-5 py-3 text-emerald-700 tabular-nums">{formatNumber(report.blocks.budget.totalApproved)}</td>
-                      <td className="px-5 py-3 text-amber-600 tabular-nums">{formatNumber(report.blocks.budget.totalPending)}</td>
-                      <td className={`px-5 py-3 tabular-nums ${report.blocks.budget.totalRemaining >= 0 ? "text-slate-900" : "text-red-600"}`}>
+                    <tr className="bg-line font-semibold">
+                      <td className="px-5 py-3 text-ink">Total</td>
+                      <td className="px-5 py-3 text-ink tabular-nums">{formatNumber(report.blocks.budget.totalEstimated)}</td>
+                      <td className="px-5 py-3 text-ink tabular-nums">{formatNumber(report.blocks.budget.totalApproved)}</td>
+                      <td className="px-5 py-3 text-ink tabular-nums">{formatNumber(report.blocks.budget.totalPending)}</td>
+                      <td className={`px-5 py-3 tabular-nums ${report.blocks.budget.totalRemaining >= 0 ? "text-ink" : "text-urgent"}`}>
                         {formatNumber(report.blocks.budget.totalRemaining)}
                       </td>
                       <td className="px-5 py-3" />
@@ -734,10 +734,10 @@ const DailySeriesSection = ({ daily }: { daily: DailyItem[] }) => {
   const maxVal = Math.max(1, ...daily.map((d) => Math.max(d.created, d.completed, d.due)));
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
-      <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-violet-500">
+    <div className="rounded-2xl bg-white shadow-sm border border-line overflow-hidden">
+      <div className="p-5 border-b border-line flex items-center justify-between">
+        <h2 className="text-base font-semibold text-ink flex items-center gap-2">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-ink">
             <path fillRule="evenodd" d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.25A2.75 2.75 0 0118 6.75v8.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25v-8.5A2.75 2.75 0 014.75 4H5V2.75A.75.75 0 015.75 2zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75z" clipRule="evenodd" />
           </svg>
           Serie diaria
@@ -745,7 +745,7 @@ const DailySeriesSection = ({ daily }: { daily: DailyItem[] }) => {
         <button
           type="button"
           onClick={() => setShowTable(!showTable)}
-          className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+          className="text-xs font-medium text-ink hover:text-ink transition-colors"
         >
           {showTable ? "Ocultar tabla" : "Ver tabla"}
         </button>
@@ -761,18 +761,18 @@ const DailySeriesSection = ({ daily }: { daily: DailyItem[] }) => {
               <div key={day.date} className="flex flex-col items-center gap-0.5 min-w-[18px] flex-1 group relative">
                 <div className="flex items-end gap-px w-full justify-center" style={{ height: "100px" }}>
                   <div
-                    className="w-2 rounded-t bg-indigo-400 transition-all duration-300 group-hover:bg-indigo-500"
+                    className="w-2 rounded-t bg-ink transition-all duration-300 group-hover:bg-paper0"
                     style={{ height: `${createdH}%` }}
                     title={`Creadas: ${day.created}`}
                   />
                   <div
-                    className="w-2 rounded-t bg-emerald-400 transition-all duration-300 group-hover:bg-emerald-500"
+                    className="w-2 rounded-t bg-ink transition-all duration-300 group-hover:bg-paper0"
                     style={{ height: `${completedH}%` }}
                     title={`Completadas: ${day.completed}`}
                   />
                 </div>
                 {/* Tooltip on hover */}
-                <div className="absolute -top-16 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 rounded-lg bg-slate-800 text-white text-xs px-2 py-1.5 shadow-lg whitespace-nowrap">
+                <div className="absolute -top-16 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 rounded-lg bg-ink text-white text-xs px-2 py-1.5 shadow-lg whitespace-nowrap">
                   <p className="font-semibold">{day.date}</p>
                   <p>Creadas: {day.created} | Completadas: {day.completed}</p>
                   <p>SLA ok: {day.slaOnTime} | SLA mal: {day.slaBreached}</p>
@@ -782,21 +782,21 @@ const DailySeriesSection = ({ daily }: { daily: DailyItem[] }) => {
           })}
         </div>
         <div className="flex items-center justify-center gap-6 mt-3">
-          <span className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="h-2.5 w-2.5 rounded-sm bg-indigo-400" /> Creadas
+          <span className="flex items-center gap-1.5 text-xs text-mid">
+            <span className="h-2.5 w-2.5 rounded-sm bg-ink" /> Creadas
           </span>
-          <span className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="h-2.5 w-2.5 rounded-sm bg-emerald-400" /> Completadas
+          <span className="flex items-center gap-1.5 text-xs text-mid">
+            <span className="h-2.5 w-2.5 rounded-sm bg-ink" /> Completadas
           </span>
         </div>
       </div>
 
       {/* Collapsible table */}
       {showTable && (
-        <div className="border-t border-slate-100 overflow-x-auto">
+        <div className="border-t border-line overflow-x-auto">
           <table className="min-w-full text-xs">
             <thead>
-              <tr className="bg-slate-50 text-left uppercase tracking-wider text-slate-500">
+              <tr className="bg-line text-left uppercase tracking-wider text-mid">
                 <th className="px-4 py-2.5 font-semibold">Fecha</th>
                 <th className="px-4 py-2.5 font-semibold">Creadas</th>
                 <th className="px-4 py-2.5 font-semibold">Completadas</th>
@@ -806,16 +806,16 @@ const DailySeriesSection = ({ daily }: { daily: DailyItem[] }) => {
                 <th className="px-4 py-2.5 font-semibold">Minutos</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line">
               {daily.map((item) => (
-                <tr key={item.date} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-2 text-slate-700 font-medium">{item.date}</td>
-                  <td className="px-4 py-2 text-slate-600 tabular-nums">{formatNumber(item.created)}</td>
-                  <td className="px-4 py-2 text-slate-600 tabular-nums">{formatNumber(item.completed)}</td>
-                  <td className="px-4 py-2 text-slate-600 tabular-nums">{formatNumber(item.due)}</td>
-                  <td className="px-4 py-2 text-emerald-600 tabular-nums">{formatNumber(item.slaOnTime)}</td>
-                  <td className="px-4 py-2 text-red-600 tabular-nums">{formatNumber(item.slaBreached)}</td>
-                  <td className="px-4 py-2 text-slate-600 tabular-nums">{formatNumber(item.loggedMinutes)}</td>
+                <tr key={item.date} className="hover:bg-line/50 transition-colors">
+                  <td className="px-4 py-2 text-ink font-medium">{item.date}</td>
+                  <td className="px-4 py-2 text-mid tabular-nums">{formatNumber(item.created)}</td>
+                  <td className="px-4 py-2 text-mid tabular-nums">{formatNumber(item.completed)}</td>
+                  <td className="px-4 py-2 text-mid tabular-nums">{formatNumber(item.due)}</td>
+                  <td className="px-4 py-2 text-ink tabular-nums">{formatNumber(item.slaOnTime)}</td>
+                  <td className="px-4 py-2 text-urgent tabular-nums">{formatNumber(item.slaBreached)}</td>
+                  <td className="px-4 py-2 text-mid tabular-nums">{formatNumber(item.loggedMinutes)}</td>
                 </tr>
               ))}
             </tbody>

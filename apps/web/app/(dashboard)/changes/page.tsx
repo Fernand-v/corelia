@@ -37,9 +37,9 @@ const typeLabel: Record<ProjectChangesResponse["changes"][number]["type"], strin
 };
 
 const typeTone: Record<ProjectChangesResponse["changes"][number]["type"], string> = {
-  CARPETA_CREADA: "border-blue-200 bg-blue-50 text-blue-700",
-  ARCHIVO_SUBIDO: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  ARCHIVO_ELIMINADO: "border-red-200 bg-red-50 text-red-700"
+  CARPETA_CREADA: "border-line bg-paper text-ink",
+  ARCHIVO_SUBIDO: "border-line bg-paper text-ink",
+  ARCHIVO_ELIMINADO: "border-urgent/30 bg-urgent-muted text-urgent"
 };
 
 export default function ProjectChangesPage() {
@@ -77,31 +77,31 @@ export default function ProjectChangesPage() {
     <main className="mx-auto w-full max-w-7xl space-y-4">
       <header className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Ver cambios</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-ink">Ver cambios</h1>
+          <p className="text-sm text-mid">
             {changesQuery.data?.project.name ? `Proyecto: ${changesQuery.data.project.name}` : "Cargando proyecto..."}
           </p>
         </div>
         <Link
           href={filesHref as Route}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink hover:bg-line"
         >
           Ir a archivos
         </Link>
       </header>
 
       <Card className="space-y-3">
-        {changesQuery.isLoading ? <p className="text-sm text-slate-600">Cargando historial...</p> : null}
-        {changesQuery.error ? <p className="text-sm text-red-600">{changesQuery.error.message}</p> : null}
+        {changesQuery.isLoading ? <p className="text-sm text-mid">Cargando historial...</p> : null}
+        {changesQuery.error ? <p className="text-sm text-urgent">{changesQuery.error.message}</p> : null}
 
         {!changesQuery.isLoading && !changesQuery.error && changesQuery.data?.changes.length === 0 ? (
-          <p className="text-sm text-slate-600">No hay cambios registrados.</p>
+          <p className="text-sm text-mid">No hay cambios registrados.</p>
         ) : null}
 
         {changesQuery.data?.changes.length ? (
           <ul className="space-y-2">
             {changesQuery.data.changes.map((change) => (
-              <li key={change.id} className="rounded-xl border border-slate-200 p-3">
+              <li key={change.id} className="rounded-xl border border-line p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -110,12 +110,12 @@ export default function ProjectChangesPage() {
                       >
                         {typeLabel[change.type]}
                       </span>
-                      <p className="text-sm font-semibold text-slate-900">{change.title}</p>
+                      <p className="text-sm font-semibold text-ink">{change.title}</p>
                     </div>
-                    <p className="text-sm text-slate-700">{change.detail}</p>
-                    <p className="text-xs text-slate-500">Por: {change.actorName}</p>
+                    <p className="text-sm text-ink">{change.detail}</p>
+                    <p className="text-xs text-mid">Por: {change.actorName}</p>
                   </div>
-                  <p className="text-xs text-slate-500">{formatDateTime(change.occurredAt)}</p>
+                  <p className="text-xs text-mid">{formatDateTime(change.occurredAt)}</p>
                 </div>
               </li>
             ))}

@@ -31,7 +31,7 @@ const toRangeIso = (value: string, endOfDay: boolean): string =>
 const SparkBars = ({
   data,
   valueKey,
-  color = "bg-slate-700/25"
+  color = "bg-ink/25"
 }: {
   data: ReportsExecutiveResponse["blocks"]["series"]["daily"];
   valueKey: "completed" | "created" | "loggedMinutes";
@@ -93,7 +93,7 @@ export const UserMetricsDashboard = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Spinner size="lg" className="text-slate-400" />
+        <Spinner size="lg" className="text-faint" />
       </div>
     );
   }
@@ -105,7 +105,7 @@ export const UserMetricsDashboard = () => {
         <button
           type="button"
           onClick={() => refetch()}
-          className="ml-2 underline text-red-700 text-xs"
+          className="ml-2 underline text-urgent text-xs"
         >
           Reintentar
         </button>
@@ -124,8 +124,8 @@ export const UserMetricsDashboard = () => {
       {/* Header + filtros de fecha */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Mis Métricas</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-xl font-semibold text-ink tracking-tight">Mis Métricas</h1>
+          <p className="mt-0.5 text-sm text-mid">
             {rangeLabel}
             {data.scope.projectFilter && (
               <span className="ml-2">
@@ -145,16 +145,16 @@ export const UserMetricsDashboard = () => {
             value={filters.from}
             max={filters.to}
             onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
-            className="rounded-xl border border-[rgba(0,0,0,0.09)] bg-white/80 px-3 py-1.5 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="rounded-xl border border-[rgba(0,0,0,0.09)] bg-paper px-3 py-1.5 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-line"
           />
-          <span className="self-center text-slate-400 text-sm">—</span>
+          <span className="self-center text-faint text-sm">—</span>
           <input
             type="date"
             value={filters.to}
             min={filters.from}
             max={toDateInputValue(today)}
             onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
-            className="rounded-xl border border-[rgba(0,0,0,0.09)] bg-white/80 px-3 py-1.5 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="rounded-xl border border-[rgba(0,0,0,0.09)] bg-paper px-3 py-1.5 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-line"
           />
         </div>
       </div>
@@ -219,7 +219,7 @@ export const UserMetricsDashboard = () => {
       {/* Barras de progreso de completado y SLA */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-slate-800">Productividad del período</h2>
+          <h2 className="mb-4 text-sm font-semibold text-ink">Productividad del período</h2>
           <div className="space-y-3">
             <Progress
               value={productivity.completionRate}
@@ -251,29 +251,29 @@ export const UserMetricsDashboard = () => {
           </div>
           <div className="mt-4 grid grid-cols-3 gap-3 pt-4 border-t border-[rgba(0,0,0,0.06)]">
             <div className="text-center">
-              <p className="text-lg font-semibold text-slate-900">{fmt(productivity.tasksCreated)}</p>
-              <p className="text-xs text-slate-500">Creadas</p>
+              <p className="text-lg font-semibold text-ink">{fmt(productivity.tasksCreated)}</p>
+              <p className="text-xs text-mid">Creadas</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-semibold text-emerald-600">{fmt(productivity.tasksCompleted)}</p>
-              <p className="text-xs text-slate-500">Completadas</p>
+              <p className="text-lg font-semibold text-ink">{fmt(productivity.tasksCompleted)}</p>
+              <p className="text-xs text-mid">Completadas</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-semibold text-red-600">{fmt(sla.breached)}</p>
-              <p className="text-xs text-slate-500">SLA incumplido</p>
+              <p className="text-lg font-semibold text-urgent">{fmt(sla.breached)}</p>
+              <p className="text-xs text-mid">SLA incumplido</p>
             </div>
           </div>
         </Card>
 
         {/* Carga del equipo */}
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-slate-800">Carga del equipo</h2>
+          <h2 className="mb-4 text-sm font-semibold text-ink">Carga del equipo</h2>
           {workload.byUser.length > 0 ? (
             <div className="space-y-2.5">
               {workload.byUser.slice(0, 8).map((u) => (
                 <div key={u.userId} className="flex items-center gap-3">
                   <span
-                    className="w-24 truncate text-xs text-slate-700"
+                    className="w-24 truncate text-xs text-ink"
                     title={u.fullName}
                   >
                     {u.fullName.split(" ")[0]}
@@ -286,7 +286,7 @@ export const UserMetricsDashboard = () => {
                       variant={u.overloaded ? "danger" : u.loadPct > 70 ? "warning" : "success"}
                     />
                   </div>
-                  <span className="w-10 text-right text-xs tabular-nums text-slate-500">
+                  <span className="w-10 text-right text-xs tabular-nums text-mid">
                     {new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 }).format(u.loadPct)}%
                   </span>
                   {u.overloaded && (
@@ -300,9 +300,9 @@ export const UserMetricsDashboard = () => {
           ) : (
             <Empty title="Sin datos de carga" description="No hay información de carga disponible." />
           )}
-          <div className="mt-3 pt-3 border-t border-[rgba(0,0,0,0.06)] flex gap-3 text-xs text-slate-500">
-            <span>Tareas activas: <strong className="text-slate-800">{fmt(workload.activeTasksNow)}</strong></span>
-            <span>Capacidad: <strong className="text-slate-800">{fmt(workload.capacitySlots)}</strong></span>
+          <div className="mt-3 pt-3 border-t border-[rgba(0,0,0,0.06)] flex gap-3 text-xs text-mid">
+            <span>Tareas activas: <strong className="text-ink">{fmt(workload.activeTasksNow)}</strong></span>
+            <span>Capacidad: <strong className="text-ink">{fmt(workload.capacitySlots)}</strong></span>
             {workload.overloadedCount > 0 && (
               <Badge variant="warning">{workload.overloadedCount} sobrecargados</Badge>
             )}
@@ -313,28 +313,28 @@ export const UserMetricsDashboard = () => {
       {/* Actividad diaria (sparklines) */}
       {series.daily.length > 0 && (
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-slate-800">Actividad diaria</h2>
+          <h2 className="mb-4 text-sm font-semibold text-ink">Actividad diaria</h2>
           <div className="grid gap-6 sm:grid-cols-3">
             <div>
-              <p className="mb-1 text-xs font-medium text-slate-500 uppercase tracking-wide">
+              <p className="mb-1 text-xs font-medium text-mid uppercase tracking-wide">
                 Tareas completadas
               </p>
-              <SparkBars data={series.daily} valueKey="completed" color="bg-emerald-400/40" />
+              <SparkBars data={series.daily} valueKey="completed" color="bg-ink/40" />
             </div>
             <div>
-              <p className="mb-1 text-xs font-medium text-slate-500 uppercase tracking-wide">
+              <p className="mb-1 text-xs font-medium text-mid uppercase tracking-wide">
                 Tareas creadas
               </p>
-              <SparkBars data={series.daily} valueKey="created" color="bg-blue-400/40" />
+              <SparkBars data={series.daily} valueKey="created" color="bg-ink/40" />
             </div>
             <div>
-              <p className="mb-1 text-xs font-medium text-slate-500 uppercase tracking-wide">
+              <p className="mb-1 text-xs font-medium text-mid uppercase tracking-wide">
                 Tiempo registrado
               </p>
-              <SparkBars data={series.daily} valueKey="loggedMinutes" color="bg-violet-400/40" />
+              <SparkBars data={series.daily} valueKey="loggedMinutes" color="bg-ink/40" />
             </div>
           </div>
-          <div className="mt-2 flex gap-4 text-xs text-slate-400">
+          <div className="mt-2 flex gap-4 text-xs text-faint">
             <span>
               Período: {fmt(series.daily.length)} días
             </span>
@@ -349,12 +349,12 @@ export const UserMetricsDashboard = () => {
       {/* Progreso por proyecto */}
       {progressByClient.length > 0 && (
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-slate-800">Progreso por proyecto</h2>
+          <h2 className="mb-4 text-sm font-semibold text-ink">Progreso por proyecto</h2>
           <div className="space-y-4">
             {progressByClient.map((p) => (
               <div key={p.projectId}>
                 <div className="flex items-center justify-between gap-3 mb-1.5">
-                  <span className="text-sm font-medium text-slate-800 truncate max-w-[60%]">
+                  <span className="text-sm font-medium text-ink truncate max-w-[60%]">
                     {p.projectName}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
@@ -363,7 +363,7 @@ export const UserMetricsDashboard = () => {
                         {fmt(p.overdueOpenTasks)} vencidas
                       </Badge>
                     )}
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-sm font-semibold text-ink">
                       {fmtPct(p.completionPct)}
                     </span>
                   </div>
@@ -379,7 +379,7 @@ export const UserMetricsDashboard = () => {
                   }
                   size="sm"
                 />
-                <div className="mt-1 flex gap-3 text-xs text-slate-400">
+                <div className="mt-1 flex gap-3 text-xs text-faint">
                   <span>{fmt(p.completedTasks)} de {fmt(p.totalTasks)} tareas</span>
                   <span>SLA: {fmtPct(p.slaPct)}</span>
                 </div>

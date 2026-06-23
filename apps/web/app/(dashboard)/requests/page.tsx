@@ -24,27 +24,27 @@ export default function RequestsPage() {
     <main className="mx-auto w-full max-w-7xl space-y-4">
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Solicitudes</h1>
-          <p className="text-sm text-slate-600">Estado de solicitudes internas y aprobaciones</p>
+          <h1 className="text-2xl font-semibold text-ink">Solicitudes</h1>
+          <p className="text-sm text-mid">Estado de solicitudes internas y aprobaciones</p>
         </div>
       </header>
 
       <Card className="space-y-3">
-        {query.isLoading ? <p className="text-sm text-slate-600">Cargando solicitudes...</p> : null}
-        {query.error ? <p className="text-sm text-red-600">{query.error.message}</p> : null}
+        {query.isLoading ? <p className="text-sm text-mid">Cargando solicitudes...</p> : null}
+        {query.error ? <p className="text-sm text-urgent">{query.error.message}</p> : null}
         <ul className="space-y-2">
           {query.data?.map((request) => (
-            <li key={request.id} className="rounded-xl border border-slate-200 p-3">
-              <p className="text-sm font-medium text-slate-900">
+            <li key={request.id} className="rounded-xl border border-line p-3">
+              <p className="text-sm font-medium text-ink">
                 {request.type} · {request.status}
               </p>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-mid">
                 {new Date(request.createdAt).toLocaleString("es-ES", {
                   dateStyle: "medium",
                   timeStyle: "short"
                 })}
               </p>
-              {request.comment ? <p className="text-xs text-slate-600">{request.comment}</p> : null}
+              {request.comment ? <p className="text-xs text-mid">{request.comment}</p> : null}
             </li>
           ))}
         </ul>
