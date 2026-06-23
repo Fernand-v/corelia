@@ -120,9 +120,11 @@ Simple Hocuspocus server (`server.js`) that broadcasts Y.js CRDT updates. The we
 - Routes that don't require authentication set `config: { requiresAuth: false }` in route options
 - API errors use `ValidationError` name for 400 responses; all others return 500
 - The `@corelia/types` package is the single source of truth for shared types — both API and web import from it
-- Prisma schema lives at `apps/api/prisma/schema.prisma`; `AUTO_MIGRATE_ON_START=true` runs `prisma migrate deploy` on API boot
+- Prisma schema lives at `apps/api/prisma/schema.prisma`; `AUTO_MIGRATE_ON_START=true` runs `prisma migrate deploy` on API boot (default for local single-instance dev). In Docker Compose and production it defaults to `false` — migrations run via a dedicated step (the compose `migrate` one-shot service, or `pnpm prisma:migrate:deploy`) to avoid multi-instance migration races
 - Tests use Vitest with mocked Prisma/app instances (no real DB required for unit tests)
 - API test files live in `apps/api/src/test/**/*.spec.ts`; web tests match `**/*.spec.ts`
+- Real-DB integration tests use the `*.dbtest.spec.ts` suffix and run via `pnpm test:db` (root) — spins an ephemeral Postgres (`docker/docker-compose.test.yml`), applies migrations, and runs `vitest.db.config.ts`. They are excluded from the default unit suite and require Docker + `TEST_DATABASE_URL`. Helpers in `apps/api/src/test/db/` (dedicated Prisma client, `resetDatabase()`, `FakeRedis`)
+- Browser E2E (collaboration transport) lives in `apps/web/e2e/*.e2e.ts` and runs via `pnpm --filter @corelia/web test:e2e` (Playwright). Self-contained: Playwright boots the Hocuspocus server + a static fixture server (no Next/API/DB); the harness client is bundled with esbuild. `e2e/` is excluded from web's tsconfig and ESLint, and `*.e2e.ts` is not matched by the Vitest unit suite
 - API coverage thresholds: 70% lines/statements/functions, 60% branches
 - The Prisma schema uses Spanish enum values throughout (e.g., `PENDIENTE`, `COMPLETADA`, `VACACIONES`)
 - Turbo caches `build`, `test`, `typecheck`; `dev` and `format` are not cached

@@ -26,9 +26,19 @@ Resuelto el acoplamiento con **inyección de dependencias**: cada sub-service re
 - `FormRequestsService` (solicitudes legacy VACACIONES/PERMISO) → **forms/service 1215 → 1092**.
 Cada uno con su spec de smoke tests. Comportamiento preservado (move verbatim + verificado con typecheck/lint/build/integration specs).
 
-Pendiente (follow-up recomendado):
-- **3.2 Harness de integración con DB real en CI**: requiere contenedor Postgres/Redis; no verificable sin daemon Docker.
-- **Cobertura de comportamiento** de la lógica core de documents (collab/OnlyOffice tienen smoke tests de guardas, no de los flujos completos).
+Cobertura ampliada de los sub-services de documents (ya no solo smoke):
+- `DocumentOnlyOfficeService`: 2 → **24 tests** (config con/sin JWT secret y `canEdit`, contenido de archivo y validación de token, callback con todos los estados 2/3/6/7 + descarga fallida + sin URL, forcesave con fallback de endpoint, error 0/4/otros y firma de comando).
+- `DocumentCollabService`: 2 → **18 tests** (state vacío/poblado/cierre por inactividad, join nuevo/reuso/RECONNECT, heartbeat, snapshot nuevo/dedupe/límites/sin storage, leave con y sin participante online).
+
+**3.2 Harness de integración con DB real** — **[RESUELTO]**. Suite separada `*.dbtest.spec.ts` (vitest.db.config.ts) contra Postgres efímero:
+- Local: `pnpm test:db` levanta `docker/docker-compose.test.yml` (Postgres en tmpfs, puerto 5433), aplica migraciones (globalSetup) y corre la suite; teardown automático.
+- CI: job `integration-db` con service container Postgres.
+- `src/test/db/`: cliente Prisma dedicado (`TEST_DATABASE_URL`) + `resetDatabase()` (TRUNCATE) + `FakeRedis` en memoria.
+- Cobertura inicial: rotación/revocación/expiración de refresh tokens (AuthService.refresh) y resolución de rol RBAC por proyecto sin fuga cross-proyecto + caché/invalidación (valida §2.1). 6 tests verdes.
+
+**E2E de collab con Playwright** — **[RESUELTO]**. Suite en `apps/web/e2e/*.e2e.ts` (`pnpm --filter @corelia/web test:e2e`, job `e2e-collab` en CI):
+- Self-contained: Playwright levanta el servidor Hocuspocus + un servidor estático del fixture (sin Next, sin API, sin DB). El cliente del harness se bundlea con esbuild (yjs + @hocuspocus/provider) y expone `collabConnect/Insert/Get` en `window`.
+- Valida en Chromium real: dos contextos sincronizan ediciones Y.js bidireccionalmente vía Hocuspocus, y un token con scope inválido es rechazado por `onAuthenticate`. 2 tests verdes.
 
 ## Resumen ejecutivo
 
@@ -116,9 +126,9 @@ Editores pesados (`@excalidraw/excalidraw`, `@maxgraph/core`, Tiptap, AG Grid) y
 | workers | 4 | — | bajo |
 
 - Umbral de cobertura api: 70% líneas/funcs, 60% ramas (definido en config). Actual ≈ **77% líneas** global, pero módulos críticos por debajo: `tasks/service` 66%, `auth/service` 75%.
-- Pruebas unitarias con Prisma/app mockeados: **no hay pruebas de integración con DB real** ni e2e. Riesgo de regresiones en queries/migraciones no detectadas por unit tests.
+- Pruebas unitarias con Prisma/app mockeados. **[RESUELTO]** Ya hay suite de integración con DB real (`*.dbtest.spec.ts`, `pnpm test:db`, job `integration-db` en CI) — ver §4.1/3.2. Queda pendiente e2e de navegador (Playwright).
 
-**Mitigación:** subir cobertura en `tasks`, `auth`, `documents`; añadir suite de integración con Postgres efímero (testcontainers/servicio en CI) para los flujos RBAC y de proyecto (cubre además el hallazgo 1.1).
+**Mitigación:** subir cobertura en `tasks`, `auth`, `documents`; suite de integración con Postgres efímero (servicio en CI) para los flujos RBAC y de proyecto **[hecho, 3.2]** (cubre además el hallazgo 1.1).
 
 ---
 
@@ -126,10 +136,12 @@ Editores pesados (`@excalidraw/excalidraw`, `@maxgraph/core`, Tiptap, AG Grid) y
 
 - CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) corre lint+typecheck+test+audit+gates propios. **Falta un paso `pnpm build`**: typecheck no garantiza que el bundle de Next/build de la API compile.
 - Tests en CI corren por-filtro secuencialmente; podrían paralelizarse o delegarse a `turbo run test` (cache).
-- `AUTO_MIGRATE_ON_START=true` aplica `migrate deploy` en boot de la API: cómodo, pero arriesgado en despliegues multi-instancia (carreras de migración). Considerar job de migración dedicado.
-- No se observa healthcheck/readiness diferenciado ni estrategia de rollback documentada para migraciones.
+- `AUTO_MIGRATE_ON_START=true` aplica `migrate deploy` en boot de la API: cómodo, pero arriesgado en despliegues multi-instancia (carreras de migración). Considerar job de migración dedicado. **[RESUELTO 4.2]**
+- No se observa healthcheck/readiness diferenciado ni estrategia de rollback documentada para migraciones. **[Rollback documentado en docker/README.md]**
 
 **Mitigación:** añadir `build` al pipeline; separar migraciones del arranque en producción; documentar rollback.
+
+**Estado:** `build` en pipeline ✅ (Fase 1). Migraciones separadas del arranque ✅ (Fase 4.2): servicio one-shot `migrate` en docker-compose corre `prisma migrate deploy` antes de la API; `AUTO_MIGRATE_ON_START` por defecto `false` en compose/prod (`true` sólo en dev local de una instancia). Rollback documentado en [docker/README.md](../docker/README.md).
 
 ---
 
