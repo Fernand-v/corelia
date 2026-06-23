@@ -59,12 +59,12 @@ export default function SearchPage() {
   return (
     <main className="mx-auto w-full max-w-7xl space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Buscar</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-ink">Buscar</h1>
+        <p className="text-sm text-mid">
           Búsqueda global en {frontendSettings.organizationName}
         </p>
         {dashboardContext.projectId ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-mid">
             Consulta acotada al proyecto activo.
           </p>
         ) : null}
@@ -73,7 +73,7 @@ export default function SearchPage() {
       <Card className="space-y-3">
         <div className="flex flex-col gap-2 md:flex-row">
           <input
-            className="h-10 flex-1 rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 flex-1 rounded-xl border border-line px-3 text-sm"
             placeholder="Buscar tareas, proyectos, personas, mensajes..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -88,24 +88,24 @@ export default function SearchPage() {
         </div>
 
         {searchMutation.error ? (
-          <p className="text-sm text-red-600">{searchMutation.error.message}</p>
+          <p className="text-sm text-urgent">{searchMutation.error.message}</p>
         ) : null}
 
         {searchMutation.data
           ? sections.map((key) => (
               <div key={key} className="space-y-2">
-                <p className="text-xs uppercase tracking-wide text-slate-500">{sectionLabel[key]}</p>
+                <p className="text-xs uppercase tracking-wide text-mid">{sectionLabel[key]}</p>
                 {searchMutation.data[key].length === 0 ? (
-                  <p className="text-sm text-slate-600">Sin resultados.</p>
+                  <p className="text-sm text-mid">Sin resultados.</p>
                 ) : (
                   <ul className="space-y-2">
                     {searchMutation.data[key].map((item) => (
-                      <li key={item.id} className="rounded-xl border border-slate-200 p-3">
-                        <p className="text-sm font-medium text-slate-900">{item.title}</p>
-                        <p className="text-xs text-slate-600">
+                      <li key={item.id} className="rounded-xl border border-line p-3">
+                        <p className="text-sm font-medium text-ink">{item.title}</p>
+                        <p className="text-xs text-mid">
                           {item.entity} · {item.subtitle ?? "Sin detalle"}
                         </p>
-                        <p className="text-xs text-slate-500">{item.path}</p>
+                        <p className="text-xs text-mid">{item.path}</p>
                       </li>
                     ))}
                   </ul>
