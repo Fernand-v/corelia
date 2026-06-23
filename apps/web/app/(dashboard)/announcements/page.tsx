@@ -89,46 +89,46 @@ export default function AnnouncementsPage() {
           <div className="flex justify-end">
             <Link
               href={"/announcements/new" as Route}
-              className="rounded-xl border border-slate-900 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
+              className="rounded-xl border border-line bg-ink px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink"
             >
               Nuevo anuncio
             </Link>
           </div>
         ) : null}
-        {deleteError ? <p className="text-sm text-red-600">{deleteError}</p> : null}
-        {query.isLoading ? <p className="text-sm text-slate-600">Cargando anuncios...</p> : null}
-        {query.error ? <p className="text-sm text-red-600">{query.error.message}</p> : null}
+        {deleteError ? <p className="text-sm text-urgent">{deleteError}</p> : null}
+        {query.isLoading ? <p className="text-sm text-mid">Cargando anuncios...</p> : null}
+        {query.error ? <p className="text-sm text-urgent">{query.error.message}</p> : null}
         {!query.isLoading && !query.error && (query.data?.length ?? 0) === 0 ? (
-          <p className="text-sm text-slate-600">No hay anuncios activos.</p>
+          <p className="text-sm text-mid">No hay anuncios activos.</p>
         ) : null}
 
         <ul className="space-y-3">
           {query.data?.map((item) => (
-            <li key={item.id} className="space-y-2 rounded-xl border border-slate-200 p-3">
+            <li key={item.id} className="space-y-2 rounded-xl border border-line p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-base font-semibold text-slate-900">{item.title}</p>
+                <p className="text-base font-semibold text-ink">{item.title}</p>
                 {item.audience.allCompany ? (
-                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">
+                  <span className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink">
                     Global
                   </span>
                 ) : null}
                 {!item.audience.allCompany && item.audience.teamIds.length > 0 ? (
-                  <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">
+                  <span className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink">
                     Equipos: {item.audience.teamIds.length}
                   </span>
                 ) : null}
                 {!item.audience.allCompany && item.audience.userIds.length > 0 ? (
-                  <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] text-purple-700">
+                  <span className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink">
                     Usuarios: {item.audience.userIds.length}
                   </span>
                 ) : null}
                 {item.scheduleType === "PROGRAMADO" ? (
-                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
+                  <span className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink">
                     Programado
                   </span>
                 ) : null}
                 {item.scheduleType === "CUMPLEANOS" ? (
-                  <span className="rounded-full border border-pink-200 bg-pink-50 px-2 py-0.5 text-[11px] text-pink-700">
+                  <span className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink">
                     Cumpleaños · {formatRecurringDate(item.recurringMonth, item.recurringDay)}
                   </span>
                 ) : null}
@@ -139,7 +139,7 @@ export default function AnnouncementsPage() {
                       setDeleteError(null);
                       setDeleteTarget(item);
                     }}
-                    className="rounded-lg border border-red-300 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 hover:bg-red-100"
+                    className="rounded-lg border border-urgent/30 bg-urgent-muted px-2 py-0.5 text-[11px] font-semibold text-urgent hover:bg-urgent-muted"
                   >
                     Eliminar
                   </button>
@@ -148,7 +148,7 @@ export default function AnnouncementsPage() {
 
               <AnnouncementContent blocks={item.content?.blocks} fallbackBody={item.body} />
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-mid">
                 {item.scheduleType === "CUMPLEANOS" ? (
                   <>Cada año el {formatRecurringDate(item.recurringMonth, item.recurringDay)}</>
                 ) : (
@@ -174,16 +174,16 @@ export default function AnnouncementsPage() {
         }}
         title="Eliminar anuncio"
       >
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-ink">
           ¿Seguro que deseas eliminar{" "}
-          <span className="font-semibold text-slate-900">{deleteTarget?.title ?? "-"}</span>?
+          <span className="font-semibold text-ink">{deleteTarget?.title ?? "-"}</span>?
         </p>
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={() => setDeleteTarget(null)}
             disabled={deleteAnnouncementMutation.isPending}
-            className="rounded-[10px] border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-[10px] border border-line px-3 py-2 text-sm text-ink hover:bg-line disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancelar
           </button>
@@ -196,7 +196,7 @@ export default function AnnouncementsPage() {
               deleteAnnouncementMutation.mutate(deleteTarget.id);
             }}
             disabled={deleteAnnouncementMutation.isPending}
-            className="rounded-[10px] bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-[10px] bg-urgent px-3 py-2 text-sm font-semibold text-white hover:bg-urgent disabled:cursor-not-allowed disabled:opacity-60"
           >
             {deleteAnnouncementMutation.isPending ? "Eliminando..." : "Eliminar"}
           </button>

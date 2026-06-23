@@ -428,15 +428,15 @@ export const AdminAnnouncementComposer = () => {
 
   return (
     <Card className="space-y-4">
-      <h2 className="text-lg font-semibold text-slate-900">Publicar anuncio</h2>
+      <h2 className="text-lg font-semibold text-ink">Publicar anuncio</h2>
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="space-y-3">
           <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            <span className="text-xs font-medium uppercase tracking-wide text-mid">
               Título del anuncio
             </span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Ej. Cambio de horario operativo"
@@ -444,13 +444,13 @@ export const AdminAnnouncementComposer = () => {
           </label>
 
           {/* Tipo de programación */}
-          <div className="space-y-2 rounded-xl border border-slate-200 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="space-y-2 rounded-xl border border-line p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-mid">
               Programación
             </p>
             <div className="flex flex-wrap gap-3">
               {(["INMEDIATO", "PROGRAMADO", "CUMPLEANOS"] as const).map((type) => (
-                <label key={type} className="flex items-center gap-2 text-sm text-slate-700">
+                <label key={type} className="flex items-center gap-2 text-sm text-ink">
                   <input
                     type="radio"
                     name="admin-announcement-schedule-type"
@@ -474,18 +474,18 @@ export const AdminAnnouncementComposer = () => {
             {scheduleType === "PROGRAMADO" ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="block space-y-1">
-                  <span className="text-xs text-slate-600">Fecha/hora de inicio</span>
+                  <span className="text-xs text-mid">Fecha/hora de inicio</span>
                   <input
-                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                    className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                     type="datetime-local"
                     value={startsAt}
                     onChange={(event) => setStartsAt(event.target.value)}
                   />
                 </label>
                 <label className="block space-y-1">
-                  <span className="text-xs text-slate-600">Fecha/hora de expiración</span>
+                  <span className="text-xs text-mid">Fecha/hora de expiración</span>
                   <input
-                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                    className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                     type="datetime-local"
                     value={expiresAt}
                     onChange={(event) => setExpiresAt(event.target.value)}
@@ -496,14 +496,14 @@ export const AdminAnnouncementComposer = () => {
 
             {scheduleType === "CUMPLEANOS" ? (
               <div className="space-y-2">
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-mid">
                   Este anuncio se mostrará automáticamente cada año en la fecha seleccionada.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <label className="block space-y-1">
-                    <span className="text-xs text-slate-600">Mes</span>
+                    <span className="text-xs text-mid">Mes</span>
                     <select
-                      className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                      className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                       value={recurringMonth}
                       onChange={(event) => setRecurringMonth(Number(event.target.value))}
                     >
@@ -515,9 +515,9 @@ export const AdminAnnouncementComposer = () => {
                     </select>
                   </label>
                   <label className="block space-y-1">
-                    <span className="text-xs text-slate-600">Día</span>
+                    <span className="text-xs text-mid">Día</span>
                     <input
-                      className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                      className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                       type="number"
                       min={1}
                       max={31}
@@ -531,9 +531,9 @@ export const AdminAnnouncementComposer = () => {
 
             {scheduleType === "INMEDIATO" ? (
               <label className="block space-y-1">
-                <span className="text-xs text-slate-600">Fecha de expiración</span>
+                <span className="text-xs text-mid">Fecha de expiración</span>
                 <input
-                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                   type="datetime-local"
                   value={expiresAt}
                   onChange={(event) => setExpiresAt(event.target.value)}
@@ -542,11 +542,11 @@ export const AdminAnnouncementComposer = () => {
             ) : null}
           </div>
 
-          <div className="space-y-2 rounded-xl border border-slate-200 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="space-y-2 rounded-xl border border-line p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-mid">
               Audiencia
             </p>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-ink">
               <input
                 type="radio"
                 name="admin-announcement-audience-mode"
@@ -561,7 +561,7 @@ export const AdminAnnouncementComposer = () => {
               />
               Global (todos los usuarios)
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-ink">
               <input
                 type="radio"
                 name="admin-announcement-audience-mode"
@@ -578,18 +578,18 @@ export const AdminAnnouncementComposer = () => {
             {audienceMode === "SEGMENTADA" ? (
               <>
                 <div className="space-y-1">
-                  <p className="text-xs text-slate-600">Equipos</p>
+                  <p className="text-xs text-mid">Equipos</p>
                   <input
-                    className="h-8 w-full rounded-lg border border-slate-300 px-2 text-xs"
+                    className="h-8 w-full rounded-lg border border-line px-2 text-xs"
                     placeholder="Filtrar equipos..."
                     value={teamFilter}
                     onChange={(event) => setTeamFilter(event.target.value)}
                   />
-                  <div className="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                  <div className="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-line p-2">
                     {filteredTeams.map((team) => (
                       <label
                         key={team.id}
-                        className="flex items-center gap-2 text-xs text-slate-700"
+                        className="flex items-center gap-2 text-xs text-ink"
                       >
                         <input
                           type="checkbox"
@@ -609,18 +609,18 @@ export const AdminAnnouncementComposer = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-slate-600">Usuarios específicos</p>
+                  <p className="text-xs text-mid">Usuarios específicos</p>
                   <input
-                    className="h-8 w-full rounded-lg border border-slate-300 px-2 text-xs"
+                    className="h-8 w-full rounded-lg border border-line px-2 text-xs"
                     placeholder="Filtrar por nombre o email..."
                     value={userFilter}
                     onChange={(event) => setUserFilter(event.target.value)}
                   />
-                  <div className="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                  <div className="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-line p-2">
                     {filteredUsers.map((user) => (
                       <label
                         key={user.userId}
-                        className="flex items-center gap-2 text-xs text-slate-700"
+                        className="flex items-center gap-2 text-xs text-ink"
                       >
                         <input
                           type="checkbox"
@@ -642,8 +642,8 @@ export const AdminAnnouncementComposer = () => {
             ) : null}
           </div>
 
-          <div className="space-y-2 rounded-xl border border-slate-200 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="space-y-2 rounded-xl border border-line p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-mid">
               Constructor de contenido
             </p>
             <div className="flex flex-wrap gap-2">
@@ -722,16 +722,16 @@ export const AdminAnnouncementComposer = () => {
                 return (
                   <li
                     key={block.clientId}
-                    className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-2"
+                    className="space-y-2 rounded-lg border border-line bg-line p-2"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-medium text-slate-700">
+                      <p className="text-xs font-medium text-ink">
                         Bloque {index + 1}: {block.type}
                       </p>
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          className="rounded border border-slate-300 px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-white"
+                          className="rounded border border-line px-1.5 py-0.5 text-[11px] text-mid hover:bg-white"
                           disabled={index === 0}
                           onClick={() => {
                             setBlocks((current) => {
@@ -747,7 +747,7 @@ export const AdminAnnouncementComposer = () => {
                         </button>
                         <button
                           type="button"
-                          className="rounded border border-slate-300 px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-white"
+                          className="rounded border border-line px-1.5 py-0.5 text-[11px] text-mid hover:bg-white"
                           disabled={index === blocks.length - 1}
                           onClick={() => {
                             setBlocks((current) => {
@@ -763,7 +763,7 @@ export const AdminAnnouncementComposer = () => {
                         </button>
                         <button
                           type="button"
-                          className="rounded border border-red-300 px-1.5 py-0.5 text-[11px] text-red-700 hover:bg-red-50"
+                          className="rounded border border-urgent/30 px-1.5 py-0.5 text-[11px] text-urgent hover:bg-urgent-muted"
                           onClick={() => {
                             setBlocks((current) =>
                               current.filter(
@@ -781,7 +781,7 @@ export const AdminAnnouncementComposer = () => {
                     block.type === "SUBTITLE" ||
                     block.type === "TEXT" ? (
                       <textarea
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                        className="w-full rounded-lg border border-line px-2 py-1 text-sm"
                         rows={block.type === "TEXT" ? 4 : 2}
                         value={block.text}
                         onChange={(event) => {
@@ -810,12 +810,12 @@ export const AdminAnnouncementComposer = () => {
 
                     {block.type === "IMAGE" ? (
                       <div className="grid gap-2">
-                        <label className="text-xs text-slate-600">
+                        <label className="text-xs text-mid">
                           Subir imagen
                           <input
                             type="file"
                             accept="image/*"
-                            className="mt-1 block w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
+                            className="mt-1 block w-full rounded-lg border border-line px-2 py-1.5 text-xs"
                             disabled={uploadingBlockId === block.clientId}
                             onChange={(event) => {
                               const file = event.target.files?.[0];
@@ -832,12 +832,12 @@ export const AdminAnnouncementComposer = () => {
                           />
                         </label>
                         {uploadingBlockId === block.clientId ? (
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-mid">
                             Subiendo imagen...
                           </p>
                         ) : imagePreviewUrl ? (
                           <div
-                            className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+                            className="overflow-hidden rounded-lg border border-line bg-line"
                             style={{ minHeight: "120px" }}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -848,10 +848,10 @@ export const AdminAnnouncementComposer = () => {
                             />
                           </div>
                         ) : null}
-                        <label className="text-xs text-slate-600">
+                        <label className="text-xs text-mid">
                           Texto alternativo
                           <input
-                            className="h-9 w-full rounded-lg border border-slate-300 px-2 text-sm"
+                            className="h-9 w-full rounded-lg border border-line px-2 text-sm"
                             placeholder="Texto alternativo (descripción de la imagen)"
                             value={block.alt}
                             onChange={(event) => {
@@ -875,11 +875,11 @@ export const AdminAnnouncementComposer = () => {
 
                     {block.type === "FILE" ? (
                       <div className="grid gap-2">
-                        <label className="text-xs text-slate-600">
+                        <label className="text-xs text-mid">
                           Subir archivo
                           <input
                             type="file"
-                            className="mt-1 block w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
+                            className="mt-1 block w-full rounded-lg border border-line px-2 py-1.5 text-xs"
                             disabled={uploadingBlockId === block.clientId}
                             onChange={(event) => {
                               const file = event.target.files?.[0];
@@ -896,16 +896,16 @@ export const AdminAnnouncementComposer = () => {
                           />
                         </label>
                         {uploadingBlockId === block.clientId ? (
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-mid">
                             Subiendo archivo...
                           </p>
                         ) : block.url ? (
-                          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs text-emerald-700">
+                          <p className="rounded-lg border border-line bg-paper px-2 py-1.5 text-xs text-ink">
                             Archivo cargado correctamente
                           </p>
                         ) : null}
                         <input
-                          className="h-9 w-full rounded-lg border border-slate-300 px-2 text-sm"
+                          className="h-9 w-full rounded-lg border border-line px-2 text-sm"
                           placeholder="Etiqueta del archivo (ej. Política 2026)"
                           value={block.label}
                           onChange={(event) => {
@@ -932,13 +932,13 @@ export const AdminAnnouncementComposer = () => {
           </div>
 
           {uploadError ? (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="rounded-lg border border-urgent/30 bg-urgent-muted px-3 py-2 text-sm text-urgent">
               {uploadError}
             </p>
           ) : null}
 
           {formError ? (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="rounded-lg border border-urgent/30 bg-urgent-muted px-3 py-2 text-sm text-urgent">
               {formError}
             </p>
           ) : null}
@@ -958,12 +958,12 @@ export const AdminAnnouncementComposer = () => {
           </div>
         </section>
 
-        <section className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <section className="space-y-2 rounded-xl border border-line bg-line p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-mid">
             Vista previa
           </p>
-          <article className="rounded-xl border border-slate-200 bg-white p-3">
-            <h3 className="text-lg font-semibold text-slate-900">
+          <article className="rounded-xl border border-line bg-white p-3">
+            <h3 className="text-lg font-semibold text-ink">
               {title.trim() || "Título del anuncio"}
             </h3>
             <AnnouncementContent blocks={previewBlocks} />

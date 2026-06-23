@@ -28,11 +28,11 @@ const AnnouncementImage = ({
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100"
+      className="relative w-full overflow-hidden rounded-xl border border-line bg-line"
       style={{ minHeight: "160px" }}
     >
       {!currentUrl || failed ? (
-        <div className="flex h-40 w-full items-center justify-center gap-2 text-slate-400">
+        <div className="flex h-40 w-full items-center justify-center gap-2 text-faint">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -85,7 +85,7 @@ export const AnnouncementContent = ({
     return (
       <p
         className={
-          compact ? "text-sm text-slate-700" : "text-sm text-slate-700"
+          compact ? "text-sm text-ink" : "text-sm text-ink"
         }
       >
         {fallbackBody}
@@ -100,7 +100,7 @@ export const AnnouncementContent = ({
           return (
             <h3
               key={`block-${index}`}
-              className="text-xl font-bold text-slate-900"
+              className="text-xl font-bold text-ink"
             >
               {block.text}
             </h3>
@@ -111,7 +111,7 @@ export const AnnouncementContent = ({
           return (
             <h4
               key={`block-${index}`}
-              className="text-base font-semibold text-slate-800"
+              className="text-base font-semibold text-ink"
             >
               {block.text}
             </h4>
@@ -122,7 +122,7 @@ export const AnnouncementContent = ({
           return (
             <p
               key={`block-${index}`}
-              className="whitespace-pre-wrap text-sm leading-6 text-slate-700"
+              className="whitespace-pre-wrap text-sm leading-6 text-ink"
             >
               {block.text}
             </p>
@@ -145,7 +145,7 @@ export const AnnouncementContent = ({
                 alt={block.alt || "Imagen del anuncio"}
               />
               {block.alt ? (
-                <figcaption className="text-xs text-slate-500">
+                <figcaption className="text-xs text-mid">
                   {block.alt}
                 </figcaption>
               ) : null}
@@ -169,14 +169,14 @@ export const AnnouncementContent = ({
               href={resolvedUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              className="inline-flex rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:bg-line"
             >
               Adjuntar: {block.label}
             </a>
           );
         }
 
-        return <hr key={`block-${index}`} className="border-slate-200" />;
+        return <hr key={`block-${index}`} className="border-line" />;
       })}
     </div>
   );

@@ -86,16 +86,16 @@ export const EntryAnnouncementModal = ({ enabled }: { enabled: boolean }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-      <article className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+      <article className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-line bg-white p-5 shadow-2xl">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Anuncio al ingresar</p>
-            <h2 className="text-xl font-semibold text-slate-900">{entryAnnouncement.title}</h2>
+            <p className="text-xs uppercase tracking-wide text-mid">Anuncio al ingresar</p>
+            <h2 className="text-xl font-semibold text-ink">{entryAnnouncement.title}</h2>
           </div>
           <button
             type="button"
-            className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-line px-2 py-1 text-xs text-mid hover:bg-line"
             onClick={() => dismissEntryAnnouncement(false)}
           >
             Cerrar
@@ -108,7 +108,7 @@ export const EntryAnnouncementModal = ({ enabled }: { enabled: boolean }) => {
         <div className="mt-4 flex items-center justify-end gap-2">
           <Link
             href={"/announcements" as Route}
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            className="rounded-xl border border-line px-3 py-2 text-sm text-ink hover:bg-line"
           >
             Ver todos los anuncios
           </Link>

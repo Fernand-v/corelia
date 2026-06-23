@@ -14,7 +14,7 @@ export default function NewAnnouncementPage() {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 lg:px-8">
         <Card>
-          <p className="text-sm text-slate-600">Cargando permisos...</p>
+          <p className="text-sm text-mid">Cargando permisos...</p>
         </Card>
       </main>
     );
@@ -24,7 +24,7 @@ export default function NewAnnouncementPage() {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 lg:px-8">
         <Card>
-          <p className="text-sm text-red-600">No tienes permisos para crear anuncios.</p>
+          <p className="text-sm text-urgent">No tienes permisos para crear anuncios.</p>
         </Card>
       </main>
     );
