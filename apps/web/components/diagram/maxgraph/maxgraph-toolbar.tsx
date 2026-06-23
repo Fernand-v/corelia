@@ -21,7 +21,7 @@ export const MaxGraphToolbar = ({
   actions: GraphToolbarActions;
 }) => {
   return (
-    <header className="overflow-x-auto border-b border-[#e2e8f2] bg-white">
+    <header className="overflow-x-auto border-b border-line bg-white">
       <div className="flex min-h-[52px] min-w-max items-center gap-2 px-2 py-1">
         <div className={groupClass}>
           <button type="button" className={state.activeTool === "select" ? activeToolClass : iconButtonClass} title="Selector (S o Esc)" onClick={() => actions.setTool("select")}>

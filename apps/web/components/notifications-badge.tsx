@@ -238,7 +238,7 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
   return (
     <div className="relative">
       <button
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(0,0,0,0.09)] bg-paper text-mid shadow-sm backdrop-blur-sm transition-colors duration-100 hover:bg-paper"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(0,0,0,0.09)] bg-paper text-mid shadow-sm transition-colors duration-100 hover:bg-paper"
         onClick={() => setOpen((current) => !current)}
         type="button"
         aria-label="Notificaciones"
@@ -265,7 +265,7 @@ export const NotificationsBadge = ({ onToast }: { onToast?: (payload: Notificati
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-[min(360px,calc(100vw-1rem))] rounded-2xl border border-[rgba(0,0,0,0.08)] bg-glass-heavy p-3 shadow-dropdown backdrop-blur-dropdown">
+        <div className="absolute right-0 z-50 mt-2 w-[min(360px,calc(100vw-1rem))] rounded-2xl border border-[rgba(0,0,0,0.08)] bg-glass-heavy p-3 shadow-dropdown">
           <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-faint">Notificaciones</p>
             <button

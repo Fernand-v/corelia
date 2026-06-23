@@ -40,6 +40,9 @@ jobs:
       - name: Check unsafe runtime casts baseline
         run: pnpm security:check-unsafe-casts
 
+      - name: Check Swiss design system conformance
+        run: pnpm style:check-swiss
+
       - name: Check DB PUML sync
         run: pnpm db:diagram:check
 

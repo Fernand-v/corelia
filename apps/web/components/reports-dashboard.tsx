@@ -296,7 +296,7 @@ export const ReportsDashboardView = () => {
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-paper transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white hover:bg-paper transition-colors"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clipRule="evenodd" />
@@ -307,7 +307,7 @@ export const ReportsDashboardView = () => {
               type="button"
               disabled={Boolean(downloading) || reportQuery.isLoading || !report}
               onClick={() => downloadReport("pdf")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-paper transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white hover:bg-paper transition-colors disabled:opacity-50"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
@@ -319,7 +319,7 @@ export const ReportsDashboardView = () => {
               type="button"
               disabled={Boolean(downloading) || reportQuery.isLoading || !report}
               onClick={() => downloadReport("xlsx")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-paper transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-paper px-3 py-2 text-sm font-medium text-white hover:bg-paper transition-colors disabled:opacity-50"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />

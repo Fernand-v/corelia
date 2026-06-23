@@ -171,7 +171,7 @@ export const CollaborativeDocumentsModuleV2EditorView = ({
   onSetRestoreConfirm,
   onSetSvgPreview
 }: CollaborativeDocumentsEditorViewProps) => (
-  <div data-testid="documents-v2-editor" className="flex h-full min-h-0 flex-col bg-[#f5f7fb]">
+  <div data-testid="documents-v2-editor" className="flex h-full min-h-0 flex-col bg-line">
     <header className="border-b border-line bg-white px-3 py-3 md:px-5">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">

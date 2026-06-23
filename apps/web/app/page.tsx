@@ -9,7 +9,7 @@ export default function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-12">
-      <section className="w-full rounded-3xl border border-white/60 bg-paper p-8 shadow-panel backdrop-blur">
+      <section className="w-full rounded-3xl border border-line bg-paper p-8">
         <h1 className="text-3xl font-semibold text-ink">{frontendSettings.organizationName}</h1>
         <p className="mt-2 text-sm text-mid">Intranet colaborativa empresarial</p>
 

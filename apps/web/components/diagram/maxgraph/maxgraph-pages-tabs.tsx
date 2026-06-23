@@ -10,7 +10,7 @@ export const MaxGraphPagesTabs = ({
   onSetActive
 }: PagesTabsProps) => {
   return (
-    <footer className="flex h-12 items-center gap-2 overflow-x-auto border-t border-[#e2e8f2] bg-white px-3">
+    <footer className="flex h-12 items-center gap-2 overflow-x-auto border-t border-line bg-white px-3">
       {document.pages.map((page) => {
         const active = page.id === document.activePageId;
 

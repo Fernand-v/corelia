@@ -40,7 +40,7 @@ export default async function DocumentsEditorPage({ searchParams }: DocumentsEdi
 
   if (!documentId || !projectId) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f5f7fa]">
+      <div className="flex h-screen items-center justify-center bg-line">
         <div className="rounded-2xl border border-[rgba(0,0,0,0.08)] bg-white px-8 py-10 shadow-md text-center max-w-sm">
           <p className="text-sm font-semibold text-ink">Enlace inválido</p>
           <p className="mt-2 text-xs text-mid">

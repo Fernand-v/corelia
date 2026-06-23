@@ -53,7 +53,7 @@ export const AdminMonitoringView = () => {
         </a>
       </div>
 
-      <div className="rounded-2xl border border-[rgba(0,0,0,0.08)] bg-paper backdrop-blur-sm shadow-sm">
+      <div className="rounded-2xl border border-[rgba(0,0,0,0.08)] bg-paper shadow-sm">
         <div className="flex gap-1 border-b border-[rgba(0,0,0,0.07)] px-4 pt-3">
           {DASHBOARDS.map((tab) => (
             <button

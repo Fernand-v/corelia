@@ -156,7 +156,7 @@ const mentionNodes = (content: string) => {
   return pieces.map((piece, index) => {
     if (/^@[a-zA-Z0-9._-]+$/.test(piece)) {
       return (
-        <span key={`mention-${piece}-${index}`} className="font-semibold text-[#128c7e]">
+        <span key={`mention-${piece}-${index}`} className="font-semibold text-ink">
           {piece}
         </span>
       );
@@ -436,7 +436,7 @@ const ChatAudioAttachment = ({
           );
         }
         return (
-          <div className={`flex w-64 items-center gap-3 rounded-xl p-2 ${isMine ? "bg-[#c5f0c0]" : "bg-line"}`}>
+          <div className={`flex w-64 items-center gap-3 rounded-xl p-2 ${isMine ? "bg-line" : "bg-line"}`}>
             <audio
               ref={audioRef}
               src={url}
@@ -453,7 +453,7 @@ const ChatAudioAttachment = ({
             <button
               type="button"
               onClick={togglePlay}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white ${isMine ? "bg-[#128c7e]" : "bg-[#128c7e]"}`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white ${isMine ? "bg-ink" : "bg-ink"}`}
             >
               {playing ? "⏸" : "▶"}
             </button>
@@ -465,15 +465,15 @@ const ChatAudioAttachment = ({
                 aria-valuenow={progress}
               >
                 <div
-                  className="h-full rounded-full bg-[#128c7e] transition-all"
+                  className="h-full rounded-full bg-ink transition-all"
                   style={{ width: `${progress}%` }}
                 />
                 <div
-                  className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-[#128c7e] shadow"
+                  className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-ink shadow"
                   style={{ left: `calc(${progress}% - 6px)` }}
                 />
               </div>
-              <div className="mt-1 flex justify-between text-[10px] text-[#667781]">
+              <div className="mt-1 flex justify-between text-[10px] text-mid">
                 <span>{formatSeconds(currentTime)}</span>
                 <span>{duration > 0 ? formatSeconds(duration) : "--:--"}</span>
               </div>
@@ -624,7 +624,7 @@ const VoiceRecorder = ({
         <button
           type="button"
           onClick={sendRecording}
-          className="rounded-full bg-[#128c7e] p-2 text-white hover:bg-[#0f6f66]"
+          className="rounded-full bg-ink p-2 text-white hover:bg-ink"
           title="Enviar"
         >
           ⬆
@@ -638,7 +638,7 @@ const VoiceRecorder = ({
       type="button"
       onClick={() => { void startRecording(); }}
       disabled={disabled || state === "sending"}
-      className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] disabled:cursor-not-allowed disabled:opacity-40"
+      className="rounded-full p-2 text-mid hover:bg-line disabled:cursor-not-allowed disabled:opacity-40"
       title="Nota de voz"
     >
       🎤
@@ -699,7 +699,7 @@ const VoiceNotePlayer = ({
           );
         }
         return (
-          <div className={`flex w-64 items-center gap-2 rounded-2xl p-2 ${isMine ? "bg-[#c5f0c0]" : "bg-line"}`}>
+          <div className={`flex w-64 items-center gap-2 rounded-2xl p-2 ${isMine ? "bg-line" : "bg-line"}`}>
             <audio
               ref={audioRef}
               src={url}
@@ -716,13 +716,13 @@ const VoiceNotePlayer = ({
             <button
               type="button"
               onClick={togglePlay}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#128c7e] text-white"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-white"
             >
               {playing ? "⏸" : "▶"}
             </button>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
-                <span className="text-[#128c7e]">🎤</span>
+                <span className="text-ink">🎤</span>
                 <div
                   className="relative h-[5px] flex-1 cursor-pointer rounded-full bg-ink"
                   onClick={handleSeek}
@@ -730,16 +730,16 @@ const VoiceNotePlayer = ({
                   aria-valuenow={progress}
                 >
                   <div
-                    className="h-full rounded-full bg-[#128c7e] transition-all"
+                    className="h-full rounded-full bg-ink transition-all"
                     style={{ width: `${progress}%` }}
                   />
                   <div
-                    className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[#128c7e] shadow"
+                    className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-ink shadow"
                     style={{ left: `calc(${progress}% - 5px)` }}
                   />
                 </div>
               </div>
-              <div className="mt-0.5 flex justify-between text-[10px] text-[#667781]">
+              <div className="mt-0.5 flex justify-between text-[10px] text-mid">
                 <span>{formatSeconds(currentTime)}</span>
                 <span>{duration > 0 ? formatSeconds(duration) : "--:--"}</span>
               </div>
@@ -763,18 +763,18 @@ const ChatPdfAttachment = ({
   <button
     type="button"
     onClick={onPreview}
-    className="group flex w-64 items-center gap-3 rounded-xl border border-[#e4e9f0] bg-paper p-3 transition hover:bg-line"
+    className="group flex w-64 items-center gap-3 rounded-xl border border-line bg-paper p-3 transition hover:bg-line"
   >
     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-urgent-muted text-xl text-urgent">
       PDF
     </span>
     <span className="min-w-0 flex-1 text-left">
-      <span className="block truncate text-xs font-semibold text-[#111b21]">{attachment.name}</span>
-      <span className="block text-[10px] text-[#667781]">
+      <span className="block truncate text-xs font-semibold text-ink">{attachment.name}</span>
+      <span className="block text-[10px] text-mid">
         {formatFileSize(attachment.sizeBytes)} · Documento PDF
       </span>
     </span>
-    <span className="shrink-0 text-[#667781] opacity-0 transition group-hover:opacity-100">⬇</span>
+    <span className="shrink-0 text-mid opacity-0 transition group-hover:opacity-100">⬇</span>
   </button>
 );
 
@@ -790,16 +790,16 @@ const ChatGenericAttachment = ({
     <button
       type="button"
       onClick={onDownload}
-      className="group flex w-64 items-center gap-3 rounded-xl border border-[#e4e9f0] bg-paper p-3 transition hover:bg-line"
+      className="group flex w-64 items-center gap-3 rounded-xl border border-line bg-paper p-3 transition hover:bg-line"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-paper text-xs font-bold text-ink">
         {ext.slice(0, 4)}
       </span>
       <span className="min-w-0 flex-1 text-left">
-        <span className="block truncate text-xs font-semibold text-[#111b21]">{attachment.name}</span>
-        <span className="block text-[10px] text-[#667781]">{formatFileSize(attachment.sizeBytes)}</span>
+        <span className="block truncate text-xs font-semibold text-ink">{attachment.name}</span>
+        <span className="block text-[10px] text-mid">{formatFileSize(attachment.sizeBytes)}</span>
       </span>
-      <span className="shrink-0 text-lg text-[#667781] opacity-60 transition group-hover:opacity-100">⬇</span>
+      <span className="shrink-0 text-lg text-mid opacity-60 transition group-hover:opacity-100">⬇</span>
     </button>
   );
 };
@@ -853,11 +853,11 @@ const UploadProgressBubble = ({ progress }: { progress: UploadProgress }) => {
         <>
           <div className="h-1.5 flex-1 rounded-full bg-line">
             <div
-              className="h-full rounded-full bg-[#25d366] transition-all"
+              className="h-full rounded-full bg-ink transition-all"
               style={{ width: `${progress.status === "done" ? 100 : progress.progress}%` }}
             />
           </div>
-          <span className="shrink-0 text-[10px] text-[#667781]">{label}</span>
+          <span className="shrink-0 text-[10px] text-mid">{label}</span>
         </>
       )}
     </div>
@@ -885,9 +885,9 @@ const PendingFilePreview = ({
   const anyUploading = uploadProgress.some((p) => p.status === "uploading" || p.status === "compressing");
 
   return (
-    <div className="border-t border-[#e4e9f0] bg-[#f0f2f5] px-3 py-2">
+    <div className="border-t border-line bg-line px-3 py-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-[#667781]">
+        <span className="text-xs font-semibold text-mid">
           {pendingFiles.length} archivo{pendingFiles.length > 1 ? "s" : ""} seleccionado{pendingFiles.length > 1 ? "s" : ""}
         </span>
         <div className="flex gap-2">
@@ -903,7 +903,7 @@ const PendingFilePreview = ({
             type="button"
             onClick={onConfirm}
             disabled={anyUploading}
-            className="rounded-lg bg-[#25d366] px-3 py-1 text-xs font-semibold text-white hover:bg-[#128c7e] disabled:opacity-50"
+            className="rounded-lg bg-ink px-3 py-1 text-xs font-semibold text-white hover:bg-ink disabled:opacity-50"
           >
             {anyUploading ? "Enviando..." : "Enviar"}
           </button>
@@ -915,7 +915,7 @@ const PendingFilePreview = ({
           return (
             <div key={pf.id} className="relative shrink-0">
               {pf.type === "image" && pf.previewUrl ? (
-                <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-[#e4e9f0]">
+                <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-line">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={pf.previewUrl} alt={pf.file.name} className="h-full w-full object-cover" />
                   {prog && prog.status !== "done" ? (
@@ -927,7 +927,7 @@ const PendingFilePreview = ({
                   ) : null}
                 </div>
               ) : pf.type === "video" ? (
-                <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-[#e4e9f0] bg-ink">
+                <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-line bg-ink">
                   {pf.previewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={pf.previewUrl} alt={pf.file.name} className="h-full w-full object-cover opacity-70" />
@@ -935,22 +935,22 @@ const PendingFilePreview = ({
                   <span className="absolute text-2xl text-white">▶</span>
                   {prog && prog.status !== "done" ? (
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-ink">
-                      <div className="h-full bg-[#25d366]" style={{ width: `${prog.progress}%` }} />
+                      <div className="h-full bg-ink" style={{ width: `${prog.progress}%` }} />
                     </div>
                   ) : null}
                 </div>
               ) : pf.type === "audio" ? (
-                <div className="flex h-20 w-28 flex-col items-center justify-center rounded-xl border border-[#e4e9f0] bg-line px-2">
+                <div className="flex h-20 w-28 flex-col items-center justify-center rounded-xl border border-line bg-line px-2">
                   <span className="text-2xl">🎵</span>
                   <span className="mt-1 w-full truncate text-center text-[9px] text-mid">{pf.file.name}</span>
                   {prog && prog.status !== "done" ? (
                     <div className="mt-1 h-1 w-full rounded-full bg-line">
-                      <div className="h-full rounded-full bg-[#25d366]" style={{ width: `${prog.progress}%` }} />
+                      <div className="h-full rounded-full bg-ink" style={{ width: `${prog.progress}%` }} />
                     </div>
                   ) : null}
                 </div>
               ) : (
-                <div className="flex h-20 w-28 flex-col items-center justify-center rounded-xl border border-[#e4e9f0] bg-white px-2">
+                <div className="flex h-20 w-28 flex-col items-center justify-center rounded-xl border border-line bg-white px-2">
                   <span className="text-lg">{pf.type === "pdf" ? "📕" : "📄"}</span>
                   <span className="mt-1 w-full truncate text-center text-[9px] text-ink">{pf.file.name}</span>
                   <span className="text-[9px] text-mid">{formatFileSize(pf.file.size)}</span>
@@ -1187,28 +1187,28 @@ export const MessagingModule = ({
 
   return (
     <section
-      className={`${plusJakartaSans.className} h-full w-full overflow-hidden bg-[#f0f2f5] text-[#111b21]`}
+      className={`${plusJakartaSans.className} h-full w-full overflow-hidden bg-line text-ink`}
       style={{ scrollbarWidth: "thin" }}
     >
       <div className="h-full w-full overflow-hidden bg-white md:grid md:grid-cols-[300px_minmax(0,1fr)_280px]">
         {/* ─── Conversations Panel ──────────────────────────── */}
-        <aside className={`${mobileView === "list" ? "flex" : "hidden"} md:flex h-full flex-col border-r border-[#e4e9f0] bg-white`}>
-          <header className="flex items-center justify-between border-b border-[#e4e9f0] px-4 py-3">
+        <aside className={`${mobileView === "list" ? "flex" : "hidden"} md:flex h-full flex-col border-r border-line bg-white`}>
+          <header className="flex items-center justify-between border-b border-line px-4 py-3">
             <h2 className="text-base font-semibold">Mensajes</h2>
             <button
               type="button"
               onClick={() => onOpenNewChat?.()}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e4e9f0] text-[#667781] hover:bg-[#f0f2f5]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line text-mid hover:bg-line"
             >
               +
             </button>
           </header>
-          <div className="border-b border-[#e4e9f0] p-3">
+          <div className="border-b border-line p-3">
             <input
               value={conversationFilter}
               onChange={(e) => setConversationFilter(e.target.value)}
               placeholder="Buscar conversación..."
-              className="h-10 w-full rounded-xl border border-[#e4e9f0] bg-[#f0f2f5] px-3 text-sm outline-none focus:border-[#25d366]"
+              className="h-10 w-full rounded-xl border border-line bg-line px-3 text-sm outline-none focus:border-ink"
             />
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -1219,22 +1219,22 @@ export const MessagingModule = ({
                   key={conversation.id}
                   type="button"
                   onClick={() => { onSelectConversation(conversation.id); setMobileView("chat"); }}
-                  className={`w-full border-b border-[#f4f6f9] px-4 py-3 text-left ${active ? "bg-[#e9f8ef]" : "hover:bg-[#f7f9fb]"}`}
+                  className={`w-full border-b border-line px-4 py-3 text-left ${active ? "bg-line" : "hover:bg-line"}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="relative h-11 w-11 shrink-0 rounded-full bg-[#128c7e] text-center text-sm font-bold leading-[2.75rem] text-white">
+                    <div className="relative h-11 w-11 shrink-0 rounded-full bg-ink text-center text-sm font-bold leading-[2.75rem] text-white">
                       {initialsFromName(conversation.name)}
-                      <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${conversation.isOnline ? "bg-[#25d366]" : "bg-ink"}`} />
+                      <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${conversation.isOnline ? "bg-ink" : "bg-ink"}`} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="truncate text-sm font-semibold">{conversation.name}</p>
-                        <span className="shrink-0 text-[11px] text-[#667781]">{formatTime(conversation.lastMessageAt)}</span>
+                        <span className="shrink-0 text-[11px] text-mid">{formatTime(conversation.lastMessageAt)}</span>
                       </div>
                       <div className="mt-1 flex items-center justify-between gap-2">
-                        <p className="truncate text-xs text-[#667781]">{conversation.lastMessage}</p>
+                        <p className="truncate text-xs text-mid">{conversation.lastMessage}</p>
                         {conversation.unreadCount ? (
-                          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#25d366] px-1 text-[11px] font-semibold text-white">
+                          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-[11px] font-semibold text-white">
                             {conversation.unreadCount}
                           </span>
                         ) : null}
@@ -1248,20 +1248,20 @@ export const MessagingModule = ({
         </aside>
 
         {/* ─── Chat Panel ───────────────────────────────────── */}
-        <main className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex relative h-full flex-col overflow-hidden bg-[#eae6df]`}>
-          <header className="z-10 flex items-center justify-between border-b border-[#e4e9f0] bg-white px-4 py-3 shadow-sm">
+        <main className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex relative h-full flex-col overflow-hidden bg-line`}>
+          <header className="z-10 flex items-center justify-between border-b border-line bg-white px-4 py-3 shadow-sm">
             <div className="flex min-w-0 items-center gap-1">
-              <button type="button" onClick={() => setMobileView("list")} className="mr-1 shrink-0 rounded-full p-1.5 text-[#667781] hover:bg-[#f0f2f5] md:hidden">←</button>
+              <button type="button" onClick={() => setMobileView("list")} className="mr-1 shrink-0 rounded-full p-1.5 text-mid hover:bg-line md:hidden">←</button>
               <div className="min-w-0">
                 <h3 className="truncate text-base font-semibold">{activeConversation?.name ?? "Selecciona una conversación"}</h3>
-                <p className="truncate text-xs text-[#667781]">Canal activo</p>
+                <p className="truncate text-xs text-mid">Canal activo</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button type="button" onClick={() => onStartVoiceCall?.()} disabled={!activeConversation} className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] disabled:cursor-not-allowed disabled:opacity-40" title="Llamada de voz">📞</button>
-              <button type="button" onClick={() => onStartCall?.()} disabled={!activeConversation} className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] disabled:cursor-not-allowed disabled:opacity-40" title="Videollamada">🎥</button>
-              <button type="button" onClick={() => setMobileView("team")} className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] md:hidden">👥</button>
-              <button type="button" className="hidden rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] md:block">⋯</button>
+              <button type="button" onClick={() => onStartVoiceCall?.()} disabled={!activeConversation} className="rounded-full p-2 text-mid hover:bg-line disabled:cursor-not-allowed disabled:opacity-40" title="Llamada de voz">📞</button>
+              <button type="button" onClick={() => onStartCall?.()} disabled={!activeConversation} className="rounded-full p-2 text-mid hover:bg-line disabled:cursor-not-allowed disabled:opacity-40" title="Videollamada">🎥</button>
+              <button type="button" onClick={() => setMobileView("team")} className="rounded-full p-2 text-mid hover:bg-line md:hidden">👥</button>
+              <button type="button" className="hidden rounded-full p-2 text-mid hover:bg-line md:block">⋯</button>
             </div>
           </header>
 
@@ -1279,14 +1279,14 @@ export const MessagingModule = ({
                   type="button"
                   onClick={onLoadOlderMessages}
                   disabled={isLoadingOlderMessages}
-                  className="rounded-full bg-paper px-4 py-1 text-xs font-medium text-[#667781] shadow-sm transition hover:bg-white disabled:opacity-60"
+                  className="rounded-full bg-paper px-4 py-1 text-xs font-medium text-mid shadow-sm transition hover:bg-white disabled:opacity-60"
                 >
                   {isLoadingOlderMessages ? "Cargando…" : "Cargar mensajes anteriores"}
                 </button>
               </div>
             ) : null}
             {messages.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-[#667781]">
+              <div className="flex h-full items-center justify-center text-sm text-mid">
                 No hay mensajes en esta conversación.
               </div>
             ) : null}
@@ -1299,7 +1299,7 @@ export const MessagingModule = ({
                 <div key={message.id} className="mb-2">
                   {showDateDivider ? (
                     <div className="mb-3 text-center">
-                      <span className="inline-flex rounded-lg bg-paper px-3 py-1 text-[11px] text-[#667781] shadow-sm">
+                      <span className="inline-flex rounded-lg bg-paper px-3 py-1 text-[11px] text-mid shadow-sm">
                         {formatDate(message.createdAt)}
                       </span>
                     </div>
@@ -1307,11 +1307,11 @@ export const MessagingModule = ({
                   <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                     <article
                       className={`max-w-[75%] rounded-2xl px-3 py-2 shadow-sm ${
-                        isMine ? "rounded-br-md bg-[#d9fdd3]" : "rounded-bl-md border border-[#e4e9f0] bg-white"
+                        isMine ? "rounded-br-md bg-line" : "rounded-bl-md border border-line bg-white"
                       }`}
                     >
                       {!isMine ? (
-                        <p className="mb-1 text-[11px] font-semibold text-[#128c7e]">{message.senderName}</p>
+                        <p className="mb-1 text-[11px] font-semibold text-ink">{message.senderName}</p>
                       ) : null}
 
                       {/* Inline Media Attachments */}
@@ -1371,17 +1371,17 @@ export const MessagingModule = ({
                             href={message.meetingUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#128c7e] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6f66]"
+                            className="mt-2 inline-flex items-center gap-1 rounded-full bg-ink px-3 py-1 text-xs font-semibold text-white hover:bg-ink"
                           >
                             {message.callType === "VOZ" ? "📞" : "🎥"} Unirme a llamada
                           </a>
                         ) : null
                       ) : null}
 
-                      <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#667781]">
+                      <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-mid">
                         <span>{formatTime(message.createdAt)}</span>
                         {isMine ? (
-                          <span className={message.status === "read" ? "text-[#53bdeb]" : "text-[#667781]"}>
+                          <span className={message.status === "read" ? "text-ink" : "text-mid"}>
                             {message.status === "sent" || !message.status ? "✓" : "✓✓"}
                           </span>
                         ) : null}
@@ -1396,13 +1396,13 @@ export const MessagingModule = ({
 
           {/* Typing Indicator */}
           {typingUsers.length > 0 ? (
-            <div className="flex items-center gap-2 border-t border-[#e4e9f0] bg-[#f0f2f5] px-4 py-1.5">
+            <div className="flex items-center gap-2 border-t border-line bg-line px-4 py-1.5">
               <span className="flex items-center gap-[3px]">
-                <span className="inline-block h-[6px] w-[6px] rounded-full bg-[#667781]" style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0s" }} />
-                <span className="inline-block h-[6px] w-[6px] rounded-full bg-[#667781]" style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0.2s" }} />
-                <span className="inline-block h-[6px] w-[6px] rounded-full bg-[#667781]" style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0.4s" }} />
+                <span className="inline-block h-[6px] w-[6px] rounded-full bg-mid" style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0s" }} />
+                <span className="inline-block h-[6px] w-[6px] rounded-full bg-mid" style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0.2s" }} />
+                <span className="inline-block h-[6px] w-[6px] rounded-full bg-mid" style={{ animation: "typingBounce 1.4s infinite ease-in-out", animationDelay: "0.4s" }} />
               </span>
-              <span className="text-xs text-[#667781]">
+              <span className="text-xs text-mid">
                 {typingUsers.length === 1
                   ? `${typingUsers[0]!.userName} está escribiendo`
                   : typingUsers.length === 2
@@ -1422,20 +1422,20 @@ export const MessagingModule = ({
           />
 
           {/* Composer Footer */}
-          <footer className="border-t border-[#e4e9f0] bg-white px-3 py-3">
+          <footer className="border-t border-line bg-white px-3 py-3">
             <div className="relative">
               <div className="flex items-end gap-2">
                 <div className="relative" ref={emojiPickerRef}>
                   <button
                     type="button"
                     onClick={() => setEmojiPickerOpen((c) => !c)}
-                    className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5]"
+                    className="rounded-full p-2 text-mid hover:bg-line"
                     aria-label="Abrir selector de emojis"
                   >
                     😀
                   </button>
                   {emojiPickerOpen ? (
-                    <div className="absolute bottom-[110%] left-0 z-30 overflow-hidden rounded-2xl border border-[#e4e9f0] bg-white shadow-xl">
+                    <div className="absolute bottom-[110%] left-0 z-30 overflow-hidden rounded-2xl border border-line bg-white shadow-xl">
                       <Picker
                         data={emojiData}
                         onEmojiSelect={(emoji: { native?: string }) => { insertEmoji(emoji.native ?? ""); setEmojiPickerOpen(false); }}
@@ -1449,11 +1449,11 @@ export const MessagingModule = ({
                     </div>
                   ) : null}
                 </div>
-                <label className="rounded-full p-2 text-[#667781] hover:bg-[#f0f2f5] cursor-pointer">
+                <label className="rounded-full p-2 text-mid hover:bg-line cursor-pointer">
                   📎
                   <input type="file" className="hidden" onChange={handleUploadInput} />
                 </label>
-                <div className="relative flex-1 rounded-2xl border border-[#e4e9f0] bg-[#f0f2f5] px-3 py-2">
+                <div className="relative flex-1 rounded-2xl border border-line bg-line px-3 py-2">
                   <textarea
                     ref={composerRef}
                     value={composerValue}
@@ -1474,7 +1474,7 @@ export const MessagingModule = ({
                 <button
                   type="button"
                   onClick={handleSend}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#25d366] text-white hover:bg-[#128c7e]"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-ink text-white hover:bg-ink"
                 >
                   ➤
                 </button>
@@ -1487,15 +1487,15 @@ export const MessagingModule = ({
               </div>
 
               {showMentionDropdown ? (
-                <div className="absolute bottom-[105%] left-0 right-0 rounded-xl border border-[#e4e9f0] bg-white p-2 shadow-lg sm:left-12 sm:right-14">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#667781]">Mencionar usuario</p>
+                <div className="absolute bottom-[105%] left-0 right-0 rounded-xl border border-line bg-white p-2 shadow-lg sm:left-12 sm:right-14">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mid">Mencionar usuario</p>
                   <ul className="space-y-1">
                     {mentionOptions.map((member, index) => (
                       <li key={member.id}>
                         <button
                           type="button"
                           onMouseDown={(event: ReactMouseEvent<HTMLButtonElement>) => { event.preventDefault(); handleInsertMention(member); }}
-                          className={`w-full rounded-lg px-2 py-1 text-left text-sm ${index === dropdownIndex ? "bg-[#e9f8ef]" : "hover:bg-[#f0f2f5]"}`}
+                          className={`w-full rounded-lg px-2 py-1 text-left text-sm ${index === dropdownIndex ? "bg-line" : "hover:bg-line"}`}
                         >
                           @{normalizeHandle(member.name.split(/\s+/)[0] ?? member.name)} · {member.name}
                         </button>
@@ -1506,15 +1506,15 @@ export const MessagingModule = ({
               ) : null}
 
               {showEmojiAutocomplete ? (
-                <div className="absolute bottom-[105%] left-0 right-0 rounded-xl border border-[#e4e9f0] bg-white p-2 shadow-lg sm:left-12 sm:right-14">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#667781]">Emoji</p>
+                <div className="absolute bottom-[105%] left-0 right-0 rounded-xl border border-line bg-white p-2 shadow-lg sm:left-12 sm:right-14">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mid">Emoji</p>
                   <ul className="space-y-1">
                     {emojiAutocompleteOptions.map((emoji, index) => (
                       <li key={emoji.id}>
                         <button
                           type="button"
                           onMouseDown={(event: ReactMouseEvent<HTMLButtonElement>) => { event.preventDefault(); handleInsertEmojiAutocomplete(emoji); }}
-                          className={`flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-sm ${index === dropdownIndex ? "bg-[#e9f8ef]" : "hover:bg-[#f0f2f5]"}`}
+                          className={`flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-sm ${index === dropdownIndex ? "bg-line" : "hover:bg-line"}`}
                         >
                           <span className="text-lg leading-none">{emoji.native}</span>
                           <span className="truncate">:{emoji.id}:</span>
@@ -1530,28 +1530,28 @@ export const MessagingModule = ({
         </main>
 
         {/* ─── Team Panel ───────────────────────────────────── */}
-        <aside className={`${mobileView === "team" ? "flex" : "hidden"} md:flex h-full flex-col border-l border-[#e4e9f0] bg-white`}>
-          <header className="flex items-center gap-2 border-b border-[#e4e9f0] px-4 py-3">
-            <button type="button" onClick={() => setMobileView("chat")} className="shrink-0 rounded-full p-1.5 text-[#667781] hover:bg-[#f0f2f5] md:hidden">←</button>
+        <aside className={`${mobileView === "team" ? "flex" : "hidden"} md:flex h-full flex-col border-l border-line bg-white`}>
+          <header className="flex items-center gap-2 border-b border-line px-4 py-3">
+            <button type="button" onClick={() => setMobileView("chat")} className="shrink-0 rounded-full p-1.5 text-mid hover:bg-line md:hidden">←</button>
             <h4 className="text-sm font-semibold">Equipo</h4>
           </header>
           <div className="flex-1 overflow-y-auto px-3 py-3">
             {teamMembers.length === 0 ? (
-              <p className="rounded-xl border border-[#e4e9f0] bg-[#f9fbfd] px-3 py-2 text-xs text-[#667781]">
+              <p className="rounded-xl border border-line bg-line px-3 py-2 text-xs text-mid">
                 Sin participantes disponibles en este canal.
               </p>
             ) : null}
             <div className="space-y-2">
               {teamMembers.map((member) => (
-                <article key={member.id} className="rounded-xl border border-[#e4e9f0] bg-[#f9fbfd] p-2.5">
+                <article key={member.id} className="rounded-xl border border-line bg-line p-2.5">
                   <div className="flex items-start gap-2">
-                    <div className="h-9 w-9 rounded-full bg-[#128c7e] text-center text-xs font-semibold leading-9 text-white">
+                    <div className="h-9 w-9 rounded-full bg-ink text-center text-xs font-semibold leading-9 text-white">
                       {initialsFromName(member.name)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{member.name}</p>
-                      <p className="truncate text-[11px] text-[#667781]">{member.role}</p>
-                      <p className="text-[11px] text-[#667781]">
+                      <p className="truncate text-[11px] text-mid">{member.role}</p>
+                      <p className="text-[11px] text-mid">
                         Tareas activas: {(member.activeTasks ?? 0).toLocaleString("es-ES")}
                       </p>
                     </div>

@@ -98,9 +98,9 @@ export const MaxGraphPropertiesPanel = ({
     <aside
       className={`flex h-full min-h-0 w-full flex-col overflow-hidden ${
         side === "left" ? "border-r" : "border-l"
-      } border-[#e2e8f2] bg-white xl:w-[280px]`}
+      } border-line bg-white xl:w-[280px]`}
     >
-      <header className="border-b border-[#e2e8f2] p-3">
+      <header className="border-b border-line p-3">
         <p className="text-[11px] uppercase tracking-wide text-mid">Propiedades</p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <p className="min-w-0 flex-1 text-sm font-semibold text-ink">

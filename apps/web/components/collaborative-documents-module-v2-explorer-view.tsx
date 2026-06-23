@@ -145,7 +145,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
   explorerDensityRowClass,
   renderCollaboratorAvatar
 }: CollaborativeDocumentsExplorerViewProps) => (
-  <div data-testid="documents-v2-explorer" className="flex h-full min-h-0 flex-col bg-[#f5f7fb]">
+  <div data-testid="documents-v2-explorer" className="flex h-full min-h-0 flex-col bg-line">
     <header className="border-b border-line bg-white px-3 py-3 md:px-5">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -254,7 +254,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
             }}
             data-testid="documents-v2-filter-ALL"
             className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-              typeFilter === "ALL" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-ink hover:bg-line"
+              typeFilter === "ALL" ? "bg-line text-ink" : "text-ink hover:bg-line"
             }`}
           >
             <span className="text-base">📁</span>
@@ -280,7 +280,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                 }}
                 data-testid={`documents-v2-filter-${type}`}
                 className={`mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                  isActive ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-ink hover:bg-line"
+                  isActive ? "bg-line text-ink" : "text-ink hover:bg-line"
                 }`}
               >
                 <span aria-hidden className="text-base">
@@ -306,7 +306,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
               }}
               data-testid="documents-v2-filter-FAVORITES"
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                typeFilter === "FAVORITES" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-ink hover:bg-line"
+                typeFilter === "FAVORITES" ? "bg-line text-ink" : "text-ink hover:bg-line"
               }`}
             >
               <span className="text-base">⭐</span>
@@ -327,7 +327,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
               }}
               data-testid="documents-v2-filter-TRASH"
               className={`mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                typeFilter === "TRASH" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-ink hover:bg-line"
+                typeFilter === "TRASH" ? "bg-line text-ink" : "text-ink hover:bg-line"
               }`}
             >
               <span className="text-base">🗑️</span>
@@ -464,7 +464,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                     {favoriteRows.map((row) => (
                       <tr key={row.id} className="border-b border-line h-12 bg-white hover:bg-line">
                         <td className="px-3">
-                          <button type="button" onClick={() => onOpenDocument(row.document)} className="text-left font-semibold text-ink hover:text-[#0a84ff]">
+                          <button type="button" onClick={() => onOpenDocument(row.document)} className="text-left font-semibold text-ink hover:text-ink">
                             {row.name}
                           </button>
                         </td>
@@ -530,7 +530,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                               key={row.id}
                               data-testid={`documents-v2-row-${row.id}`}
                               className={`border-b border-line ${explorerDensityRowClass} ${
-                                isSelected ? "bg-[#eef4ff]" : "bg-white hover:bg-line"
+                                isSelected ? "bg-line" : "bg-white hover:bg-line"
                               }`}
                               onClick={() => setSelectedDocumentId(row.id)}
                               onDoubleClick={() => onOpenDocument(row.document)}
@@ -561,7 +561,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                                   type="button"
                                   onClick={() => onOpenDocument(row.document)}
                                   data-testid={`documents-v2-open-${row.id}`}
-                                  className="text-left font-semibold text-ink hover:text-[#0a84ff]"
+                                  className="text-left font-semibold text-ink hover:text-ink"
                                 >
                                   {row.name}
                                 </button>
@@ -649,7 +649,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                       <article
                         key={row.id}
                         className={`rounded-xl border bg-white p-4 shadow-sm ${
-                          selectedDocumentId === row.id ? "border-[#8ab4f8]" : "border-line"
+                          selectedDocumentId === row.id ? "border-line" : "border-line"
                         }`}
                       >
                         <div className="flex items-center justify-between">

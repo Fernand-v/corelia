@@ -769,14 +769,14 @@ const CalendarBoardView = ({
   );
 
   return (
-    <section className={`${dmSans.className} h-full min-h-0 w-full overflow-hidden bg-[#f0f4f9] p-2 lg:grid lg:grid-cols-[clamp(340px,31vw,400px)_minmax(0,1fr)] lg:gap-3`}>
-      <aside className={`${mobileSidebarOpen ? "flex" : "hidden"} lg:flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#e2e8f2] bg-white p-3 shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
+    <section className={`${dmSans.className} h-full min-h-0 w-full overflow-hidden bg-line p-2 lg:grid lg:grid-cols-[clamp(340px,31vw,400px)_minmax(0,1fr)] lg:gap-3`}>
+      <aside className={`${mobileSidebarOpen ? "flex" : "hidden"} lg:flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-line bg-white p-3 shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setMobileSidebarOpen(false)}
-              className="shrink-0 rounded-[10px] border border-[#d7dff0] px-2.5 py-1.5 text-sm text-mid transition hover:bg-line lg:hidden"
+              className="shrink-0 rounded-[10px] border border-line px-2.5 py-1.5 text-sm text-mid transition hover:bg-line lg:hidden"
               aria-label="Cerrar panel"
             >
               ←
@@ -786,18 +786,18 @@ const CalendarBoardView = ({
           <button
             type="button"
             onClick={() => openModal("evento")}
-            className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#4f6ef7] px-3 text-xs font-semibold text-white transition hover:bg-[#3f5ce0]"
+            className="inline-flex h-9 items-center justify-center rounded-[10px] bg-ink px-3 text-xs font-semibold text-white transition hover:bg-ink"
           >
             Nuevo evento
           </button>
         </div>
 
-        <div className="shrink-0 rounded-2xl border border-[#e2e8f2] bg-[#f8faff] p-3">
+        <div className="shrink-0 rounded-2xl border border-line bg-line p-3">
           <div className="mb-3 flex items-center justify-between">
             <button
               type="button"
               onClick={() => onChangeMonth("prev")}
-              className="h-8 w-8 rounded-lg border border-[#d7dff0] text-mid transition hover:bg-white"
+              className="h-8 w-8 rounded-lg border border-line text-mid transition hover:bg-white"
               aria-label="Mes anterior"
             >
               ‹
@@ -808,7 +808,7 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => onChangeMonth("next")}
-              className="h-8 w-8 rounded-lg border border-[#d7dff0] text-mid transition hover:bg-white"
+              className="h-8 w-8 rounded-lg border border-line text-mid transition hover:bg-white"
               aria-label="Mes siguiente"
             >
               ›
@@ -835,25 +835,25 @@ const CalendarBoardView = ({
                   onClick={() => handleSelectDay(day)}
                   className={`relative h-9 rounded-lg text-xs font-medium transition ${
                     isSelected
-                      ? "border border-[#4f6ef7] bg-white text-[#1d3ca6]"
-                      : "border border-transparent hover:bg-[#eef2f9]"
+                      ? "border border-line bg-white text-ink"
+                      : "border border-transparent hover:bg-line"
                   } ${isCurrentMonth ? "text-ink" : "text-faint"}`}
                 >
                   <span
                     className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
-                      isToday ? "bg-[#4f6ef7] text-white" : ""
+                      isToday ? "bg-ink text-white" : ""
                     }`}
                   >
                     {day.getDate()}
                   </span>
-                  {hasEvents ? <span className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#10b981]" /> : null}
+                  {hasEvents ? <span className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-ink" /> : null}
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="mt-3 shrink-0 grid grid-cols-3 gap-2 rounded-2xl border border-[#e2e8f2] bg-white p-2">
+        <div className="mt-3 shrink-0 grid grid-cols-3 gap-2 rounded-2xl border border-line bg-white p-2">
           {([
             { value: "hoy", label: "Hoy" },
             { value: "semana", label: "Semana" },
@@ -865,8 +865,8 @@ const CalendarBoardView = ({
               onClick={() => handleChangeView(option.value)}
               className={`h-8 rounded-[10px] text-xs font-semibold transition ${
                 activeView === option.value
-                  ? "bg-[#4f6ef7] text-white"
-                  : "border border-[#d7dff0] bg-white text-mid hover:bg-line"
+                  ? "bg-ink text-white"
+                  : "border border-line bg-white text-mid hover:bg-line"
               }`}
             >
               {option.label}
@@ -874,12 +874,12 @@ const CalendarBoardView = ({
           ))}
         </div>
 
-        <div className="mt-3 shrink-0 rounded-2xl border border-[#e2e8f2] bg-white p-3">
+        <div className="mt-3 shrink-0 rounded-2xl border border-line bg-white p-3">
           <h3 className={`${sora.className} mb-2 text-sm font-semibold text-ink`}>Reprogramar tarea</h3>
           <select
             value={rescheduleTaskId}
             onChange={(event) => setRescheduleTaskId(event.target.value)}
-            className="h-10 w-full rounded-[10px] border border-[#d7dff0] bg-white px-3 text-sm text-ink"
+            className="h-10 w-full rounded-[10px] border border-line bg-white px-3 text-sm text-ink"
           >
             <option value="">Seleccionar tarea</option>
             {tasksForSelectedDay.map((task) => (
@@ -892,7 +892,7 @@ const CalendarBoardView = ({
             type="datetime-local"
             value={rescheduleDatetime}
             onChange={(event) => setRescheduleDatetime(event.target.value)}
-            className="mt-2 h-10 w-full rounded-[10px] border border-[#d7dff0] bg-white px-3 text-sm text-ink"
+            className="mt-2 h-10 w-full rounded-[10px] border border-line bg-white px-3 text-sm text-ink"
           />
           <label className="mt-2 flex items-center gap-2 text-xs text-mid">
             <input
@@ -906,13 +906,13 @@ const CalendarBoardView = ({
             type="button"
             onClick={handleRescheduleTask}
             disabled={busy || !rescheduleTaskId || !rescheduleDatetime}
-            className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-[#4f6ef7] text-sm font-semibold text-white transition hover:bg-[#3f5ce0] disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-ink text-sm font-semibold text-white transition hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
           >
             Reprogramar
           </button>
         </div>
 
-        <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#e2e8f2] bg-white p-3">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-white p-3">
           <h3 className={`${sora.className} mb-2 text-sm font-semibold text-ink`}>Próximos eventos</h3>
           <div className="calendar-upcoming-scroll min-h-0 flex-1 overflow-y-auto pr-2">
             {upcomingEvents.length === 0 ? (
@@ -930,7 +930,7 @@ const CalendarBoardView = ({
                   return (
                     <li
                       key={`upcoming-${event.id}`}
-                      className="min-w-0 rounded-xl border border-[#e2e8f2] bg-white px-3 py-2 transition hover:translate-x-0.5 hover:shadow-sm"
+                      className="min-w-0 rounded-xl border border-line bg-white px-3 py-2 transition hover:translate-x-0.5 hover:shadow-sm"
                       style={{ borderLeft: `4px solid ${state.borderColor}` }}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -958,19 +958,19 @@ const CalendarBoardView = ({
 
       </aside>
 
-      <section className={`${mobileSidebarOpen ? "hidden" : "flex"} lg:flex min-h-0 min-w-0 flex-col rounded-2xl border border-[#e2e8f2] bg-white shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
+      <section className={`${mobileSidebarOpen ? "hidden" : "flex"} lg:flex min-h-0 min-w-0 flex-col rounded-2xl border border-line bg-white shadow-[0_2px_12px_rgba(15,27,45,0.07)]`}>
         {(errorMessage || localError) && (
           <div className="mx-3 mt-3 rounded-xl border border-urgent/30 bg-urgent-muted px-3 py-2 text-sm text-urgent">
             {errorMessage ?? localError}
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3 border-b border-[#e2e8f2] px-4 py-3">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setMobileSidebarOpen(true)}
-              className="shrink-0 rounded-[10px] border border-[#d7dff0] px-2.5 py-1.5 text-sm text-mid transition hover:bg-line lg:hidden"
+              className="shrink-0 rounded-[10px] border border-line px-2.5 py-1.5 text-sm text-mid transition hover:bg-line lg:hidden"
               aria-label="Opciones de calendario"
             >
               ☰
@@ -994,7 +994,7 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => onChangeWeek("prev")}
-              className="h-9 w-9 rounded-[10px] border border-[#d7dff0] text-mid transition hover:bg-line"
+              className="h-9 w-9 rounded-[10px] border border-line text-mid transition hover:bg-line"
               aria-label="Semana anterior"
             >
               ‹
@@ -1002,7 +1002,7 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => onChangeWeek("next")}
-              className="h-9 w-9 rounded-[10px] border border-[#d7dff0] text-mid transition hover:bg-line"
+              className="h-9 w-9 rounded-[10px] border border-line text-mid transition hover:bg-line"
               aria-label="Semana siguiente"
             >
               ›
@@ -1010,7 +1010,7 @@ const CalendarBoardView = ({
             <button
               type="button"
               onClick={() => openModal("evento")}
-              className="h-9 rounded-[10px] bg-[#4f6ef7] px-3 text-sm font-semibold text-white transition hover:bg-[#3f5ce0]"
+              className="h-9 rounded-[10px] bg-ink px-3 text-sm font-semibold text-white transition hover:bg-ink"
             >
               Nuevo evento
             </button>
@@ -1051,11 +1051,11 @@ const CalendarBoardView = ({
                     }}
                     className={`min-h-28 rounded-xl border p-2 text-left transition ${
                       isSelected
-                        ? "border-[#4f6ef7] bg-[#eff4ff]"
-                        : "border-[#e2e8f2] bg-white hover:border-[#cfd8ee]"
+                        ? "border-line bg-line"
+                        : "border-line bg-white hover:border-line"
                     } ${!isCurrentMonth ? "opacity-50" : ""}`}
                   >
-                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? "bg-[#4f6ef7] text-white" : "text-ink"}`}>
+                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? "bg-ink text-white" : "text-ink"}`}>
                       {day.getDate()}
                     </span>
                     <div className="mt-2 space-y-1">
@@ -1077,24 +1077,24 @@ const CalendarBoardView = ({
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
             <div
-              className="grid border-b border-[#e2e8f2] bg-[#f8faff]"
+              className="grid border-b border-line bg-line"
               style={{ gridTemplateColumns: gridColumnTemplate }}
             >
-              <div className="border-r border-[#e2e8f2] px-2 py-2 text-xs font-semibold text-mid">Hora</div>
+              <div className="border-r border-line px-2 py-2 text-xs font-semibold text-mid">Hora</div>
               {timelineDays.map((day, index) => {
                 const isToday = isSameDay(day, now);
                 const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                 return (
                   <div
                     key={`header-${day.toISOString()}`}
-                    className={`border-r border-[#e2e8f2] px-2 py-2 text-center ${
+                    className={`border-r border-line px-2 py-2 text-center ${
                       isWeekend ? "bg-line" : ""
-                    } ${isToday ? "bg-[#ecf2ff]" : ""}`}
+                    } ${isToday ? "bg-line" : ""}`}
                   >
                     <p className="text-[11px] font-semibold text-mid">{WEEKDAY_LONG[(day.getDay() + 6) % 7]}</p>
                     <span
                       className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${
-                        isToday ? "bg-[#4f6ef7] text-white" : "text-ink"
+                        isToday ? "bg-ink text-white" : "text-ink"
                       }`}
                     >
                       {day.getDate()}
@@ -1106,9 +1106,9 @@ const CalendarBoardView = ({
 
             <div ref={timeGridRef} className="calendar-hours-scroll min-h-0 flex-1 overflow-x-auto overflow-y-scroll">
               <div className="grid" style={{ gridTemplateColumns: gridColumnTemplate }}>
-                <div className="relative border-r border-[#e2e8f2] bg-white" style={{ height: GRID_TOTAL_HEIGHT }}>
+                <div className="relative border-r border-line bg-white" style={{ height: GRID_TOTAL_HEIGHT }}>
                   {hourRows.map((hour) => (
-                    <div key={`hour-${hour}`} className="border-b border-[#eef2f9] pr-2 text-right text-[11px] text-mid" style={{ height: GRID_HOUR_HEIGHT }}>
+                    <div key={`hour-${hour}`} className="border-b border-line pr-2 text-right text-[11px] text-mid" style={{ height: GRID_HOUR_HEIGHT }}>
                       <span className="relative -top-2 inline-block bg-white px-1">{formatHourLabel(hour)}</span>
                     </div>
                   ))}
@@ -1126,14 +1126,14 @@ const CalendarBoardView = ({
                   return (
                     <div
                       key={`column-${dayKey}`}
-                      className={`relative border-r border-[#e2e8f2] ${isWeekend ? "bg-line/50" : "bg-white"}`}
+                      className={`relative border-r border-line ${isWeekend ? "bg-line/50" : "bg-white"}`}
                       style={{ height: GRID_TOTAL_HEIGHT }}
                       onClick={(event) => handleGridClick(day, event)}
                     >
                       {Array.from({ length: GRID_TOTAL_MINUTES / 30 }, (_, index) => (
                         <div
                           key={`line-${dayKey}-${index}`}
-                          className={`${index % 2 === 0 ? "border-t border-[#eef2f9]" : "border-t border-dashed border-[#e7edf7]"}`}
+                          className={`${index % 2 === 0 ? "border-t border-line" : "border-t border-dashed border-line"}`}
                           style={{ height: 30 }}
                         />
                       ))}
@@ -1197,11 +1197,11 @@ const CalendarBoardView = ({
 
       {showModal ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4-[2px]"
           onClick={closeModal}
         >
           <div
-            className="w-full max-w-[520px] rounded-2xl border border-[#e2e8f2] bg-white p-4 shadow-xl transition"
+            className="w-full max-w-[520px] rounded-2xl border border-line bg-white p-4 shadow-xl transition"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -1209,13 +1209,13 @@ const CalendarBoardView = ({
               <button
                 type="button"
                 onClick={closeModal}
-                className="h-8 w-8 rounded-lg border border-[#d7dff0] text-mid transition hover:bg-line"
+                className="h-8 w-8 rounded-lg border border-line text-mid transition hover:bg-line"
               >
                 ✕
               </button>
             </div>
 
-            <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-[#e2e8f2] bg-[#f8faff] p-1">
+            <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-line bg-line p-1">
               {([
                 { value: "evento", label: "Evento" },
                 { value: "tarea", label: "Tarea" }
@@ -1226,7 +1226,7 @@ const CalendarBoardView = ({
                   onClick={() => setModalTab(tab.value)}
                   className={`h-9 rounded-[10px] text-sm font-semibold transition ${
                     modalTab === tab.value
-                      ? "bg-[#4f6ef7] text-white"
+                      ? "bg-ink text-white"
                       : "text-mid hover:bg-white"
                   }`}
                 >
@@ -1242,7 +1242,7 @@ const CalendarBoardView = ({
                   <input
                     value={eventTitle}
                     onChange={(event) => setEventTitle(event.target.value)}
-                    className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                    className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                     placeholder="Ej. Revisión semanal"
                   />
                 </label>
@@ -1254,7 +1254,7 @@ const CalendarBoardView = ({
                     onChange={(event) =>
                       setEventType(event.target.value as CalendarEventCreatePayload["eventType"])
                     }
-                    className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                    className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                   >
                     <option value="REUNION">Reunión</option>
                     <option value="CALL">Call</option>
@@ -1270,7 +1270,7 @@ const CalendarBoardView = ({
                       type="datetime-local"
                       value={eventStartsAt}
                       onChange={(event) => setEventStartsAt(event.target.value)}
-                      className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                      className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                     />
                   </label>
                   <label className="block space-y-1">
@@ -1279,14 +1279,14 @@ const CalendarBoardView = ({
                       type="datetime-local"
                       value={eventEndsAt}
                       onChange={(event) => setEventEndsAt(event.target.value)}
-                      className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                      className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                     />
                   </label>
                 </div>
 
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-mid">Invitados</p>
-                  <div className="max-h-32 space-y-1 overflow-y-auto rounded-[10px] border border-[#d7dff0] bg-white p-2">
+                  <div className="max-h-32 space-y-1 overflow-y-auto rounded-[10px] border border-line bg-white p-2">
                     {members.map((member) => {
                       const checked = selectedInviteIds.includes(member.userId);
                       return (
@@ -1308,7 +1308,7 @@ const CalendarBoardView = ({
                   <textarea
                     value={eventDescription}
                     onChange={(event) => setEventDescription(event.target.value)}
-                    className="h-24 w-full rounded-[10px] border border-[#d7dff0] px-3 py-2 text-sm"
+                    className="h-24 w-full rounded-[10px] border border-line px-3 py-2 text-sm"
                     placeholder="Opcional"
                   />
                 </label>
@@ -1317,7 +1317,7 @@ const CalendarBoardView = ({
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="h-10 rounded-[10px] border border-[#d7dff0] px-4 text-sm font-semibold text-mid"
+                    className="h-10 rounded-[10px] border border-line px-4 text-sm font-semibold text-mid"
                   >
                     Cancelar
                   </button>
@@ -1325,7 +1325,7 @@ const CalendarBoardView = ({
                     type="button"
                     onClick={handleSubmitEvent}
                     disabled={busy}
-                    className="h-10 rounded-[10px] bg-[#4f6ef7] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-10 rounded-[10px] bg-ink px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Crear evento
                   </button>
@@ -1338,7 +1338,7 @@ const CalendarBoardView = ({
                   <input
                     value={taskName}
                     onChange={(event) => setTaskName(event.target.value)}
-                    className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                    className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                     placeholder="Ej. Entregar módulo de autenticación"
                   />
                 </label>
@@ -1349,7 +1349,7 @@ const CalendarBoardView = ({
                     <select
                       value={taskStageId}
                       onChange={(event) => setTaskStageId(event.target.value)}
-                      className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                      className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                     >
                       <option value="">Sin etapa</option>
                       {stages.map((stage) => (
@@ -1364,7 +1364,7 @@ const CalendarBoardView = ({
                     <select
                       value={taskAssigneeId}
                       onChange={(event) => setTaskAssigneeId(event.target.value)}
-                      className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                      className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                     >
                       <option value="">Sin asignar</option>
                       {members.map((member) => (
@@ -1383,7 +1383,7 @@ const CalendarBoardView = ({
                       type="datetime-local"
                       value={taskStartAt}
                       onChange={(event) => setTaskStartAt(event.target.value)}
-                      className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                      className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                     />
                   </label>
                   <label className="block space-y-1">
@@ -1392,7 +1392,7 @@ const CalendarBoardView = ({
                       type="datetime-local"
                       value={taskDueAt}
                       onChange={(event) => setTaskDueAt(event.target.value)}
-                      className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                      className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                     />
                   </label>
                 </div>
@@ -1404,7 +1404,7 @@ const CalendarBoardView = ({
                     onChange={(event) =>
                       setTaskPriority(event.target.value as CalendarTaskCreatePayload["prioridad"])
                     }
-                    className="h-10 w-full rounded-[10px] border border-[#d7dff0] px-3 text-sm"
+                    className="h-10 w-full rounded-[10px] border border-line px-3 text-sm"
                   >
                     <option value="BAJA">Baja</option>
                     <option value="MEDIA">Media</option>
@@ -1418,7 +1418,7 @@ const CalendarBoardView = ({
                   <textarea
                     value={taskDescription}
                     onChange={(event) => setTaskDescription(event.target.value)}
-                    className="h-24 w-full rounded-[10px] border border-[#d7dff0] px-3 py-2 text-sm"
+                    className="h-24 w-full rounded-[10px] border border-line px-3 py-2 text-sm"
                     placeholder="Describe la actividad"
                   />
                 </label>
@@ -1431,7 +1431,7 @@ const CalendarBoardView = ({
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="h-10 rounded-[10px] border border-[#d7dff0] px-4 text-sm font-semibold text-mid"
+                    className="h-10 rounded-[10px] border border-line px-4 text-sm font-semibold text-mid"
                   >
                     Cancelar
                   </button>
@@ -1439,7 +1439,7 @@ const CalendarBoardView = ({
                     type="button"
                     onClick={handleSubmitTask}
                     disabled={busy}
-                    className="h-10 rounded-[10px] bg-[#4f6ef7] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-10 rounded-[10px] bg-ink px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Crear tarea
                   </button>

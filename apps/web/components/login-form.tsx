@@ -71,7 +71,7 @@ export const LoginForm = () => {
         <label className="block space-y-1.5">
           <span className="text-xs font-medium uppercase tracking-wide text-mid">Email</span>
           <input
-            className="h-10 w-full rounded-xl border border-line bg-paper px-3 text-sm text-ink placeholder:text-faint shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
+            className="h-10 w-full rounded-xl border border-line bg-paper px-3 text-sm text-ink placeholder:text-faint shadow-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
             type="email"
             autoComplete="email"
             disabled={loginMutation.isPending}
@@ -86,7 +86,7 @@ export const LoginForm = () => {
           <span className="text-xs font-medium uppercase tracking-wide text-mid">Contraseña</span>
           <div className="flex items-center gap-2">
             <input
-              className="h-10 w-full rounded-xl border border-line bg-paper px-3 text-sm text-ink shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
+              className="h-10 w-full rounded-xl border border-line bg-paper px-3 text-sm text-ink shadow-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               disabled={loginMutation.isPending}

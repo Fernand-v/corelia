@@ -19,6 +19,7 @@
     "security:audit": "corepack pnpm audit --prod --audit-level=high",
     "security:check-compose": "bash scripts/check-compose-secrets.sh",
     "security:check-unsafe-casts": "bash scripts/check-unsafe-casts.sh",
+    "style:check-swiss": "bash scripts/check-swiss-style.sh",
     "preflight:docker": "bash scripts/preflight-docker.sh",
     "data:demo": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/generate-demo-data.ts",
     "db:diagram:puml": "corepack pnpm --filter @corelia/api exec tsx ../../scripts/generate-db-puml.ts",

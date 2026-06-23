@@ -256,8 +256,8 @@ export const MaxGraphPalette = ({
   }, [search, viewModel.libraries]);
 
   return (
-    <aside className="flex h-full min-h-0 w-full flex-col overflow-hidden border-r border-[#e2e8f2] bg-white xl:w-[260px]">
-      <div className="border-b border-[#e2e8f2] p-3">
+    <aside className="flex h-full min-h-0 w-full flex-col overflow-hidden border-r border-line bg-white xl:w-[260px]">
+      <div className="border-b border-line p-3">
         <p className="text-[11px] uppercase tracking-wide text-mid">Paleta de Shapes</p>
         <input
           value={viewModel.search}

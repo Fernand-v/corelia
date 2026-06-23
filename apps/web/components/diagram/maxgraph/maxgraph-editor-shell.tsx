@@ -511,7 +511,7 @@ export const MaxGraphEditorShell = memo(({
   );
 
   return (
-    <div ref={rootRef} className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[#e2e8f2] bg-white shadow-sm">
+    <div ref={rootRef} className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white shadow-sm">
       <input
         ref={fileInputRef}
         type="file"
@@ -522,7 +522,7 @@ export const MaxGraphEditorShell = memo(({
 
       <MaxGraphToolbar state={toolbarState} actions={toolbarActions} />
 
-      <div className="flex items-center justify-between gap-2 border-b border-[#e2e8f2] bg-line px-2 py-1.5 lg:hidden">
+      <div className="flex items-center justify-between gap-2 border-b border-line bg-line px-2 py-1.5 lg:hidden">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -586,7 +586,7 @@ export const MaxGraphEditorShell = memo(({
               {peersInCurrentPage.map((peer) => (
                 <div
                   key={`presence-on-page-${peer.userId}`}
-                  className="rounded-md border border-white/70 bg-paper px-2 py-1 text-[11px] font-semibold text-ink shadow"
+                  className="rounded-md border border-line bg-paper px-2 py-1 text-[11px] font-semibold text-ink shadow"
                 >
                   <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: peer.color }} />
                   <span className="align-middle">{peer.name}</span>
@@ -632,7 +632,7 @@ export const MaxGraphEditorShell = memo(({
             ) : null}
 
             {concurrentFlash ? (
-              <div className="pointer-events-none absolute left-1/2 bottom-10 z-40 -translate-x-1/2 rounded-lg bg-ink/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+              <div className="pointer-events-none absolute left-1/2 bottom-10 z-40 -translate-x-1/2 rounded-lg bg-ink/90 px-3 py-1.5 text-xs font-medium text-white">
                 Cambios remotos aplicados
               </div>
             ) : null}
@@ -640,7 +640,7 @@ export const MaxGraphEditorShell = memo(({
             {minimapEnabled ? (
               <div
                 ref={outlineContainerRef}
-                className="absolute right-2 bottom-14 z-20 hidden h-[120px] w-[160px] overflow-hidden rounded-lg border border-line bg-paper shadow-lg backdrop-blur md:block lg:bottom-3 lg:h-[150px] lg:w-[200px]"
+                className="absolute right-2 bottom-14 z-20 hidden h-[120px] w-[160px] overflow-hidden rounded-lg border border-line bg-paper md:block lg:bottom-3 lg:h-[150px] lg:w-[200px]"
               />
             ) : null}
 
@@ -742,10 +742,10 @@ export const MaxGraphEditorShell = memo(({
           />
           <div
             className={`absolute top-0 bottom-0 z-10 w-[min(92vw,360px)] overflow-hidden bg-white shadow-xl ${
-              mobilePanel === "palette" ? "left-0 border-r border-[#e2e8f2]" : "right-0 border-l border-[#e2e8f2]"
+              mobilePanel === "palette" ? "left-0 border-r border-line" : "right-0 border-l border-line"
             }`}
           >
-            <div className="flex items-center justify-between border-b border-[#e2e8f2] px-3 py-2">
+            <div className="flex items-center justify-between border-b border-line px-3 py-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-mid">
                 {mobilePanel === "palette" ? "Paleta" : "Propiedades"}
               </p>
