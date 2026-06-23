@@ -131,7 +131,7 @@ export const DocumentsEditorWhiteboard = ({
   }, [yText]);
 
   return (
-    <div className="h-full min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="h-full min-h-[520px] overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
       <Excalidraw
         excalidrawAPI={(api: unknown) => {
           apiRef.current = api;

@@ -522,24 +522,24 @@ export const MaxGraphEditorShell = memo(({
 
       <MaxGraphToolbar state={toolbarState} actions={toolbarActions} />
 
-      <div className="flex items-center justify-between gap-2 border-b border-[#e2e8f2] bg-slate-50 px-2 py-1.5 lg:hidden">
+      <div className="flex items-center justify-between gap-2 border-b border-[#e2e8f2] bg-line px-2 py-1.5 lg:hidden">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setMobilePanel("palette")}
-            className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700"
+            className="inline-flex h-8 items-center rounded-md border border-line bg-white px-2 text-xs font-semibold text-ink"
           >
             Paleta
           </button>
           <button
             type="button"
             onClick={() => setMobilePanel("properties")}
-            className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700"
+            className="inline-flex h-8 items-center rounded-md border border-line bg-white px-2 text-xs font-semibold text-ink"
           >
             Propiedades
           </button>
         </div>
-        <span className="rounded-md bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+        <span className="rounded-md bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-mid">
           {diagramSyncLifecycle === "bootstrap"
             ? "bootstrap"
             : diagramSyncLifecycle === "reconnecting"
@@ -586,11 +586,11 @@ export const MaxGraphEditorShell = memo(({
               {peersInCurrentPage.map((peer) => (
                 <div
                   key={`presence-on-page-${peer.userId}`}
-                  className="rounded-md border border-white/70 bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow"
+                  className="rounded-md border border-white/70 bg-paper px-2 py-1 text-[11px] font-semibold text-ink shadow"
                 >
                   <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: peer.color }} />
                   <span className="align-middle">{peer.name}</span>
-                  <span className="ml-1 align-middle text-slate-500">
+                  <span className="ml-1 align-middle text-mid">
                     {Array.isArray(peer.selectedCellIds) && peer.selectedCellIds.length > 0
                       ? `selecciona ${peer.selectedCellIds.length}`
                       : "navegando"}
@@ -600,16 +600,16 @@ export const MaxGraphEditorShell = memo(({
               {peersInOtherPages.map((peer) => (
                 <div
                   key={`presence-other-page-${peer.userId}`}
-                  className="rounded-md border border-amber-200 bg-amber-50/95 px-2 py-1 text-[11px] font-semibold text-amber-700 shadow"
+                  className="rounded-md border border-line bg-paper/95 px-2 py-1 text-[11px] font-semibold text-ink shadow"
                 >
                   <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: peer.color }} />
                   <span className="align-middle">{peer.name}</span>
-                  <span className="ml-1 align-middle text-amber-600">en otra página</span>
+                  <span className="ml-1 align-middle text-ink">en otra página</span>
                 </div>
               ))}
             </div>
 
-            <div className="pointer-events-none absolute left-3 bottom-3 z-20 rounded bg-white/85 px-2 py-1 text-xs font-semibold text-slate-700 shadow">
+            <div className="pointer-events-none absolute left-3 bottom-3 z-20 rounded bg-paper px-2 py-1 text-xs font-semibold text-ink shadow">
               {zoomPercent}%
             </div>
 
@@ -617,10 +617,10 @@ export const MaxGraphEditorShell = memo(({
               <div
                 className={`pointer-events-none absolute right-3 bottom-3 z-20 rounded px-2 py-1 text-[11px] font-semibold shadow ${
                   diagramSyncLifecycle === "bootstrap"
-                    ? "bg-blue-100 text-blue-700"
+                    ? "bg-paper text-ink"
                     : diagramSyncLifecycle === "reconnecting"
-                      ? "animate-pulse bg-amber-100 text-amber-700"
-                      : "bg-red-100 text-red-700"
+                      ? "animate-pulse bg-paper text-ink"
+                      : "bg-urgent-muted text-urgent"
                 }`}
               >
                 {diagramSyncLifecycle === "bootstrap"
@@ -632,7 +632,7 @@ export const MaxGraphEditorShell = memo(({
             ) : null}
 
             {concurrentFlash ? (
-              <div className="pointer-events-none absolute left-1/2 bottom-10 z-40 -translate-x-1/2 rounded-lg bg-slate-800/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+              <div className="pointer-events-none absolute left-1/2 bottom-10 z-40 -translate-x-1/2 rounded-lg bg-ink/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
                 Cambios remotos aplicados
               </div>
             ) : null}
@@ -640,7 +640,7 @@ export const MaxGraphEditorShell = memo(({
             {minimapEnabled ? (
               <div
                 ref={outlineContainerRef}
-                className="absolute right-2 bottom-14 z-20 hidden h-[120px] w-[160px] overflow-hidden rounded-lg border border-slate-300 bg-white/80 shadow-lg backdrop-blur md:block lg:bottom-3 lg:h-[150px] lg:w-[200px]"
+                className="absolute right-2 bottom-14 z-20 hidden h-[120px] w-[160px] overflow-hidden rounded-lg border border-line bg-paper shadow-lg backdrop-blur md:block lg:bottom-3 lg:h-[150px] lg:w-[200px]"
               />
             ) : null}
 
@@ -736,7 +736,7 @@ export const MaxGraphEditorShell = memo(({
         <div className="absolute inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/35"
+            className="absolute inset-0 bg-ink/35"
             aria-label="Cerrar panel"
             onClick={() => setMobilePanel("none")}
           />
@@ -746,12 +746,12 @@ export const MaxGraphEditorShell = memo(({
             }`}
           >
             <div className="flex items-center justify-between border-b border-[#e2e8f2] px-3 py-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-wide text-mid">
                 {mobilePanel === "palette" ? "Paleta" : "Propiedades"}
               </p>
               <button
                 type="button"
-                className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700"
+                className="inline-flex h-8 items-center rounded-md border border-line bg-white px-2 text-xs font-semibold text-ink"
                 onClick={() => setMobilePanel("none")}
               >
                 Cerrar
@@ -832,14 +832,14 @@ export const MaxGraphEditorShell = memo(({
           <>
             <button
               type="button"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-line"
               onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
             >
               Cancelar
             </button>
             <button
               type="button"
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-xl bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink"
               onClick={() => {
                 confirmModal.onConfirm();
                 setConfirmModal((prev) => ({ ...prev, open: false }));
@@ -850,7 +850,7 @@ export const MaxGraphEditorShell = memo(({
           </>
         }
       >
-        <p className="text-sm text-slate-700">{confirmModal.message}</p>
+        <p className="text-sm text-ink">{confirmModal.message}</p>
       </UiModal>
 
       <UiModal
@@ -861,14 +861,14 @@ export const MaxGraphEditorShell = memo(({
           <>
             <button
               type="button"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-line"
               onClick={() => setRenamePageModal((prev) => ({ ...prev, open: false }))}
             >
               Cancelar
             </button>
             <button
               type="button"
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-xl bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink"
               onClick={() => {
                 handlers.onRenamePageConfirm(renamePageModal.pageId, renamePageModal.inputValue);
                 setRenamePageModal((prev) => ({ ...prev, open: false }));
@@ -881,7 +881,7 @@ export const MaxGraphEditorShell = memo(({
       >
         <input
           type="text"
-          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-line px-3 py-2 text-sm"
           value={renamePageModal.inputValue}
           onChange={(e) => setRenamePageModal((prev) => ({ ...prev, inputValue: e.target.value }))}
           onKeyDown={(e: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -902,14 +902,14 @@ export const MaxGraphEditorShell = memo(({
           <>
             <button
               type="button"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-line"
               onClick={() => setAddPageModal((prev) => ({ ...prev, open: false }))}
             >
               Cancelar
             </button>
             <button
               type="button"
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-xl bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink"
               onClick={() => {
                 handlers.onAddPageConfirm(addPageModal.inputValue);
                 setAddPageModal((prev) => ({ ...prev, open: false }));
@@ -922,7 +922,7 @@ export const MaxGraphEditorShell = memo(({
       >
         <input
           type="text"
-          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-line px-3 py-2 text-sm"
           value={addPageModal.inputValue}
           onChange={(e) => setAddPageModal((prev) => ({ ...prev, inputValue: e.target.value }))}
           onKeyDown={(e: ReactKeyboardEvent<HTMLInputElement>) => {

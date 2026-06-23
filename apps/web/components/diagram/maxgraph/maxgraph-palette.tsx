@@ -6,13 +6,13 @@ import type { PaletteActions, PaletteViewModel } from "@/components/diagram/maxg
 const COLLAPSE_KEY_PREFIX = "corelia.maxgraph.palette.section.";
 
 const sectionButtonClass =
-  "flex w-full items-center justify-between rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600";
+  "flex w-full items-center justify-between rounded-md bg-line px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-mid";
 
 const cardClass =
-  "group rounded-lg border border-slate-200 bg-white p-2 text-left transition hover:-translate-y-[1px] hover:border-blue-300 hover:bg-blue-50";
+  "group rounded-lg border border-line bg-white p-2 text-left transition hover:-translate-y-[1px] hover:border-line hover:bg-paper";
 
 const edgeCardClass =
-  "rounded-lg border border-slate-200 bg-white p-2 text-left transition hover:border-blue-300 hover:bg-blue-50";
+  "rounded-lg border border-line bg-white p-2 text-left transition hover:border-line hover:bg-paper";
 
 const ShapePreviewSvg = ({ style }: { style: Record<string, string | number | boolean> }) => {
   const fill = (style.fillColor as string | undefined) ?? "#ffffff";
@@ -173,10 +173,10 @@ const ShapeCard = ({
       }}
       onClick={() => onInsert(template)}
     >
-      <div className="mx-auto mb-1 w-20 overflow-hidden rounded-md border border-slate-200 shadow-sm">
+      <div className="mx-auto mb-1 w-20 overflow-hidden rounded-md border border-line shadow-sm">
         <ShapePreviewSvg style={template.style} />
       </div>
-      <p className="truncate text-center text-[11px] font-semibold text-slate-700">{template.label}</p>
+      <p className="truncate text-center text-[11px] font-semibold text-ink">{template.label}</p>
     </button>
   );
 };
@@ -195,14 +195,14 @@ const EdgeCard = ({
   <button
     type="button"
     className={`${edgeCardClass} ${
-      selected ? "border-blue-400 bg-blue-50" : ""
+      selected ? "border-line bg-paper" : ""
     } disabled:cursor-not-allowed disabled:opacity-45`}
     title={`${template.label} · ${template.description}`}
     disabled={readOnly}
     onClick={() => onSelect(template)}
   >
     <EdgePreview template={template} />
-    <p className="mt-1 truncate text-center text-[11px] font-semibold text-slate-700">{template.label}</p>
+    <p className="mt-1 truncate text-center text-[11px] font-semibold text-ink">{template.label}</p>
   </button>
 );
 
@@ -258,12 +258,12 @@ export const MaxGraphPalette = ({
   return (
     <aside className="flex h-full min-h-0 w-full flex-col overflow-hidden border-r border-[#e2e8f2] bg-white xl:w-[260px]">
       <div className="border-b border-[#e2e8f2] p-3">
-        <p className="text-[11px] uppercase tracking-wide text-slate-500">Paleta de Shapes</p>
+        <p className="text-[11px] uppercase tracking-wide text-mid">Paleta de Shapes</p>
         <input
           value={viewModel.search}
           onChange={(event) => actions.onSearch(event.target.value)}
           placeholder="Buscar en librerías..."
-          className="mt-2 h-9 w-full rounded-md border border-slate-200 px-2 text-xs text-slate-700 outline-none focus:border-blue-400"
+          className="mt-2 h-9 w-full rounded-md border border-line px-2 text-xs text-ink outline-none focus:border-line"
         />
       </div>
 
@@ -300,7 +300,7 @@ export const MaxGraphPalette = ({
 
                   {(library.edges ?? []).length > 0 ? (
                     <div className="space-y-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-mid">
                         Conectores
                       </p>
                       <div className="grid grid-cols-1 gap-2">

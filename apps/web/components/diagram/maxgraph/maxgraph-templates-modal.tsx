@@ -258,28 +258,28 @@ export const MaxGraphTemplatesModal = ({
   return (
     <UiModal open={open} onClose={onClose} title="Plantillas" widthClassName="max-w-4xl">
       <div className="space-y-3">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-mid">
           Selecciona una plantilla para <strong>{kind}</strong> y elige si reemplaza o se añade al canvas.
         </p>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {templates.map((template) => (
-            <article key={template.id} className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-sm font-semibold text-slate-800">{template.name}</p>
-              <p className="mt-1 text-xs text-slate-500">{template.description}</p>
-              <p className="mt-1 text-[11px] text-slate-400">Nodos: {template.nodes.length}</p>
+            <article key={template.id} className="rounded-lg border border-line bg-white p-3">
+              <p className="text-sm font-semibold text-ink">{template.name}</p>
+              <p className="mt-1 text-xs text-mid">{template.description}</p>
+              <p className="mt-1 text-[11px] text-faint">Nodos: {template.nodes.length}</p>
 
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"
-                  className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
+                  className="flex-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-semibold text-ink"
                   onClick={() => onApply(template, "append")}
                 >
                   Añadir
                 </button>
                 <button
                   type="button"
-                  className="flex-1 rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white"
+                  className="flex-1 rounded-md bg-ink px-2 py-1 text-xs font-semibold text-white"
                   onClick={() => onApply(template, "replace")}
                 >
                   Reemplazar

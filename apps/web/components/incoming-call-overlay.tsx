@@ -189,10 +189,10 @@ export const IncomingCallOverlay = () => {
           <button
             type="button"
             onClick={handleReject}
-            className="group flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-200 transition-all duration-150 hover:bg-red-500/25 active:scale-[0.98]"
+            className="group flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-urgent/50/30 bg-urgent/15 px-4 py-2.5 text-sm font-semibold text-urgent transition-all duration-150 hover:bg-urgent/25 active:scale-[0.98]"
             aria-label="Rechazar"
           >
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white transition-transform group-hover:rotate-[135deg]">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-urgent text-white transition-transform group-hover:rotate-[135deg]">
               <PhoneDownIcon />
             </span>
             Rechazar
@@ -201,10 +201,10 @@ export const IncomingCallOverlay = () => {
           <button
             type="button"
             onClick={handleAccept}
-            className="group flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.25)] transition-all duration-150 hover:bg-emerald-500/35 active:scale-[0.98]"
+            className="group flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-line/30 bg-white/20 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.25)] transition-all duration-150 hover:bg-white/35 active:scale-[0.98]"
             aria-label="Aceptar"
           >
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-white">
               {isVoice ? <PhoneIcon /> : <VideoIcon />}
             </span>
             Aceptar

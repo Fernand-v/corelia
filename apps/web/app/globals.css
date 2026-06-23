@@ -95,7 +95,7 @@ body {
   --ag-header-height: 30px;
   --ag-row-border-color: #e5e7eb;
   --ag-border-color: #d1d5db;
-  --ag-selected-row-background-color: rgba(10, 132, 255, 0.06);
+  --ag-selected-row-background-color: rgba(17, 17, 17, 0.06);
 }
 
 .ag-theme-quartz .ag-header-cell {
@@ -110,7 +110,7 @@ body {
 }
 
 .ag-theme-quartz .ag-cell-focus {
-  border: 2px solid #1a73e8 !important;
+  border: 2px solid #111111 !important;
   outline: none;
 }
 
@@ -122,7 +122,7 @@ body {
 
 /* Presentation editor - canvas slide shadow */
 .pres-canvas-slide {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 0 1px #e3e3e3;
 }
 
 /* Presentation editor - block hover feedback */
@@ -188,7 +188,7 @@ body {
   margin: 0 auto;
   background: #ffffff;
   padding: 72px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 1px rgba(0,0,0,0.08);
+  box-shadow: 0 0 0 1px #e3e3e3;
   border-radius: 0;
 }
 @media (max-width: 767px) {
@@ -245,7 +245,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: rgba(59, 130, 246, 0.16);
+  background: rgba(17, 17, 17, 0.10);
 }
 
 .word-page .ProseMirror img {
@@ -274,25 +274,23 @@ body {
 /* Teams-like call + meetings surface */
 .teams-call,
 .teams-meetings {
-  --teams-call-bg: #0f111a;
-  --teams-call-panel: rgba(27, 30, 45, 0.94);
-  --teams-call-surface-2: rgba(33, 37, 54, 0.92);
-  --teams-call-border: rgba(129, 141, 186, 0.28);
-  --teams-call-border-soft: rgba(129, 141, 186, 0.18);
-  --teams-call-text: #f3f5ff;
-  --teams-call-muted: #b9c1df;
-  --teams-call-accent: #6f77ff;
-  --teams-call-accent-hover: #838aff;
-  --teams-call-accent-soft: rgba(111, 119, 255, 0.4);
-  --teams-call-shadow: 0 10px 36px rgba(0, 0, 0, 0.34);
-  --teams-call-shadow-strong: 0 14px 42px rgba(0, 0, 0, 0.42);
+  /* Swiss-dark: negro plano, hairlines claras, un acento sobrio (sin glows) */
+  --teams-call-bg: #0b0b0c;
+  --teams-call-panel: #141416;
+  --teams-call-surface-2: #1c1c1f;
+  --teams-call-border: rgba(255, 255, 255, 0.16);
+  --teams-call-border-soft: rgba(255, 255, 255, 0.10);
+  --teams-call-text: #f4f4f5;
+  --teams-call-muted: #a1a1aa;
+  --teams-call-accent: #f4f4f5;
+  --teams-call-accent-hover: #ffffff;
+  --teams-call-accent-soft: rgba(255, 255, 255, 0.16);
+  --teams-call-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10);
+  --teams-call-shadow-strong: 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .teams-call {
-  background:
-    radial-gradient(100% 120% at 0% 0%, rgba(111, 119, 255, 0.2) 0%, transparent 45%),
-    radial-gradient(80% 120% at 100% 0%, rgba(84, 92, 204, 0.16) 0%, transparent 55%),
-    var(--teams-call-bg);
+  background: var(--teams-call-bg);
 }
 
 .teams-call-panel {
@@ -309,8 +307,8 @@ body {
 }
 
 .teams-call-pill--success {
-  border-color: rgba(65, 169, 106, 0.38);
-  background: rgba(38, 87, 59, 0.54);
+  border-color: var(--teams-call-border);
+  background: var(--teams-call-surface-2);
 }
 
 .teams-call-stage-surface {
@@ -370,16 +368,18 @@ body {
   background: var(--teams-call-surface-2);
 }
 .teams-call-dock-btn--warn {
-  border-color: rgba(206, 122, 59, 0.45);
-  background: rgba(112, 70, 33, 0.9);
+  border-color: var(--teams-call-border);
+  background: var(--teams-call-surface-2);
 }
 .teams-call-dock-btn--accent {
-  border-color: rgba(111, 119, 255, 0.5);
-  background: rgba(67, 74, 176, 0.95);
+  border-color: #ffffff;
+  background: #f4f4f5;
+  color: #0b0b0c;
 }
 .teams-call-dock-btn--danger {
-  border-color: rgba(205, 86, 108, 0.5);
-  background: rgba(156, 50, 70, 0.95);
+  border-color: #e4002b;
+  background: #e4002b;
+  color: #ffffff;
 }
 
 .teams-call :focus-visible,

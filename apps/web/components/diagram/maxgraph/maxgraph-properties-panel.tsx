@@ -30,13 +30,13 @@ export type SelectedCellView = {
 };
 
 const fieldClass =
-  "h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus:border-blue-400";
+  "h-9 w-full rounded-md border border-line bg-white px-2 text-xs text-ink outline-none focus:border-line";
 
 const textareaClass =
-  "w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-blue-400";
+  "w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs text-ink outline-none focus:border-line";
 
-const sectionClass = "space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-2";
-const titleClass = "text-[11px] font-semibold uppercase tracking-wide text-slate-500";
+const sectionClass = "space-y-2 rounded-lg border border-line bg-line p-2";
+const titleClass = "text-[11px] font-semibold uppercase tracking-wide text-mid";
 
 const diagramBadgeColor: Record<DiagramKind, string> = {
   FLUJO: "#4f6ef7",
@@ -101,9 +101,9 @@ export const MaxGraphPropertiesPanel = ({
       } border-[#e2e8f2] bg-white xl:w-[280px]`}
     >
       <header className="border-b border-[#e2e8f2] p-3">
-        <p className="text-[11px] uppercase tracking-wide text-slate-500">Propiedades</p>
+        <p className="text-[11px] uppercase tracking-wide text-mid">Propiedades</p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <p className="min-w-0 flex-1 text-sm font-semibold text-slate-800">
+          <p className="min-w-0 flex-1 text-sm font-semibold text-ink">
             {selected.type === "none" ? "Diagrama" : selected.type === "vertex" ? "Nodo" : "Conector"}
           </p>
           <span
@@ -117,7 +117,7 @@ export const MaxGraphPropertiesPanel = ({
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
         {selected.type === "none" ? (
-          <p className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          <p className="rounded-md border border-dashed border-line bg-line px-3 py-2 text-xs text-mid">
             Selecciona un nodo o un conector para editar sus propiedades.
           </p>
         ) : (
@@ -125,7 +125,7 @@ export const MaxGraphPropertiesPanel = ({
             <section className={sectionClass}>
               <p className={titleClass}>Contenido</p>
               <label className="block space-y-1">
-                <span className="text-[11px] font-medium text-slate-500">Label</span>
+                <span className="text-[11px] font-medium text-mid">Label</span>
                 <input
                   value={selected.label}
                   onChange={(event) => onLabelChange(event.target.value)}
@@ -141,7 +141,7 @@ export const MaxGraphPropertiesPanel = ({
                 <button
                   type="button"
                   onClick={onOpenStyleEditor}
-                  className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700"
+                  className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-semibold text-ink"
                 >
                   Editor avanzado
                 </button>
@@ -149,29 +149,29 @@ export const MaxGraphPropertiesPanel = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">Fondo</span>
+                  <span className="text-[11px] font-medium text-mid">Fondo</span>
                   <input
                     type="color"
                     value={fillColor}
                     onChange={(event) => onStylePatch({ fillColor: event.target.value })}
                     disabled={readOnly}
-                    className="h-9 w-full rounded-md border border-slate-200 bg-white p-1"
+                    className="h-9 w-full rounded-md border border-line bg-white p-1"
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">Borde</span>
+                  <span className="text-[11px] font-medium text-mid">Borde</span>
                   <input
                     type="color"
                     value={borderColor}
                     onChange={(event) => onStylePatch({ strokeColor: event.target.value })}
                     disabled={readOnly}
-                    className="h-9 w-full rounded-md border border-slate-200 bg-white p-1"
+                    className="h-9 w-full rounded-md border border-line bg-white p-1"
                   />
                 </label>
               </div>
 
               <label className="block space-y-1">
-                <span className="text-[11px] font-medium text-slate-500">Grosor borde</span>
+                <span className="text-[11px] font-medium text-mid">Grosor borde</span>
                 <input
                   type="range"
                   min={1}
@@ -185,7 +185,7 @@ export const MaxGraphPropertiesPanel = ({
               </label>
 
               <label className="block space-y-1">
-                <span className="text-[11px] font-medium text-slate-500">Opacidad</span>
+                <span className="text-[11px] font-medium text-mid">Opacidad</span>
                 <input
                   type="range"
                   min={0}
@@ -199,7 +199,7 @@ export const MaxGraphPropertiesPanel = ({
               </label>
 
               <label className="block space-y-1">
-                <span className="text-[11px] font-medium text-slate-500">Border radius</span>
+                <span className="text-[11px] font-medium text-mid">Border radius</span>
                 <input
                   type="range"
                   min={0}
@@ -214,7 +214,7 @@ export const MaxGraphPropertiesPanel = ({
                 />
               </label>
 
-              <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+              <label className="inline-flex items-center gap-2 text-xs text-mid">
                 <input
                   type="checkbox"
                   checked={shadow}
@@ -226,7 +226,7 @@ export const MaxGraphPropertiesPanel = ({
 
               {selected.type === "edge" ? (
                 <label className="block space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">Tipo de conector</span>
+                  <span className="text-[11px] font-medium text-mid">Tipo de conector</span>
                   <select
                     value={styleType}
                     onChange={(event) => onStylePatch({ edgeStyle: event.target.value })}
@@ -247,7 +247,7 @@ export const MaxGraphPropertiesPanel = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">Fuente</span>
+                  <span className="text-[11px] font-medium text-mid">Fuente</span>
                   <select
                     value={fontFamily}
                     onChange={(event) => onStylePatch({ fontFamily: event.target.value })}
@@ -261,7 +261,7 @@ export const MaxGraphPropertiesPanel = ({
                   </select>
                 </label>
                 <label className="space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">Tamaño</span>
+                  <span className="text-[11px] font-medium text-mid">Tamaño</span>
                   <input
                     type="number"
                     min={8}
@@ -275,20 +275,20 @@ export const MaxGraphPropertiesPanel = ({
               </div>
 
               <label className="block space-y-1">
-                <span className="text-[11px] font-medium text-slate-500">Color texto</span>
+                <span className="text-[11px] font-medium text-mid">Color texto</span>
                 <input
                   type="color"
                   value={textColor}
                   onChange={(event) => onStylePatch({ fontColor: event.target.value })}
                   disabled={readOnly}
-                  className="h-9 w-full rounded-md border border-slate-200 bg-white p-1"
+                  className="h-9 w-full rounded-md border border-line bg-white p-1"
                 />
               </label>
 
               <div className="flex gap-1">
                 <button
                   type="button"
-                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
+                  className="flex-1 rounded border border-line bg-white px-2 py-1 text-xs font-semibold text-ink"
                   onClick={() => onStylePatch({ fontStyle: 1 })}
                   disabled={readOnly}
                 >
@@ -296,7 +296,7 @@ export const MaxGraphPropertiesPanel = ({
                 </button>
                 <button
                   type="button"
-                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
+                  className="flex-1 rounded border border-line bg-white px-2 py-1 text-xs font-semibold text-ink"
                   onClick={() => onStylePatch({ fontStyle: 2 })}
                   disabled={readOnly}
                 >
@@ -304,7 +304,7 @@ export const MaxGraphPropertiesPanel = ({
                 </button>
                 <button
                   type="button"
-                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
+                  className="flex-1 rounded border border-line bg-white px-2 py-1 text-xs font-semibold text-ink"
                   onClick={() => onStylePatch({ fontStyle: 4 })}
                   disabled={readOnly}
                 >
@@ -317,7 +317,7 @@ export const MaxGraphPropertiesPanel = ({
               <p className={titleClass}>Geometría</p>
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">X</span>
+                  <span className="text-[11px] font-medium text-mid">X</span>
                   <input
                     type="number"
                     value={Math.round(selected.geometry?.x ?? 0)}
@@ -327,7 +327,7 @@ export const MaxGraphPropertiesPanel = ({
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">Y</span>
+                  <span className="text-[11px] font-medium text-mid">Y</span>
                   <input
                     type="number"
                     value={Math.round(selected.geometry?.y ?? 0)}
@@ -340,7 +340,7 @@ export const MaxGraphPropertiesPanel = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">Ancho</span>
+                  <span className="text-[11px] font-medium text-mid">Ancho</span>
                   <input
                     type="number"
                     value={Math.round(selected.geometry?.width ?? 0)}
@@ -361,7 +361,7 @@ export const MaxGraphPropertiesPanel = ({
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-[11px] font-medium text-slate-500">Alto</span>
+                  <span className="text-[11px] font-medium text-mid">Alto</span>
                   <input
                     type="number"
                     value={Math.round(selected.geometry?.height ?? 0)}
@@ -383,7 +383,7 @@ export const MaxGraphPropertiesPanel = ({
                 </label>
               </div>
 
-              <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+              <label className="inline-flex items-center gap-2 text-xs text-mid">
                 <input
                   type="checkbox"
                   checked={lockRatio}
@@ -396,7 +396,7 @@ export const MaxGraphPropertiesPanel = ({
                 type="button"
                 onClick={onCenter}
                 disabled={readOnly}
-                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Centrar en pantalla
               </button>
@@ -407,14 +407,14 @@ export const MaxGraphPropertiesPanel = ({
               {selected.connections.length > 0 ? (
                 <div className="space-y-2">
                   {selected.connections.map((connection) => (
-                    <div key={connection.id} className="rounded border border-slate-200 bg-white p-2">
-                      <p className="text-[11px] font-semibold text-slate-700">{connection.label}</p>
-                      <p className="text-[10px] uppercase tracking-wide text-slate-400">{connection.direction}</p>
+                    <div key={connection.id} className="rounded border border-line bg-white p-2">
+                      <p className="text-[11px] font-semibold text-ink">{connection.label}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-faint">{connection.direction}</p>
                       <div className="mt-2 flex gap-2">
                         <button
                           type="button"
                           onClick={() => onHighlightConnection(connection.id)}
-                          className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700"
+                          className="rounded border border-line bg-paper px-2 py-1 text-[11px] font-semibold text-ink"
                         >
                           Resaltar
                         </button>
@@ -422,7 +422,7 @@ export const MaxGraphPropertiesPanel = ({
                           type="button"
                           onClick={() => onDeleteConnection(connection.id)}
                           disabled={readOnly}
-                          className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 disabled:opacity-50"
+                          className="rounded border border-urgent/30 bg-urgent-muted px-2 py-1 text-[11px] font-semibold text-urgent disabled:opacity-50"
                         >
                           Eliminar
                         </button>
@@ -431,7 +431,7 @@ export const MaxGraphPropertiesPanel = ({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-500">Sin conexiones</p>
+                <p className="text-xs text-mid">Sin conexiones</p>
               )}
             </section>
 
@@ -458,7 +458,7 @@ export const MaxGraphPropertiesPanel = ({
                       type="button"
                       onClick={() => onRemoveMetadata(index)}
                       disabled={readOnly}
-                      className="h-9 rounded border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-700"
+                      className="h-9 rounded border border-urgent/30 bg-urgent-muted px-2 text-xs font-semibold text-urgent"
                     >
                       −
                     </button>
@@ -469,7 +469,7 @@ export const MaxGraphPropertiesPanel = ({
                 type="button"
                 onClick={onAddMetadata}
                 disabled={readOnly}
-                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700"
+                className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs font-semibold text-ink"
               >
                 + Añadir propiedad
               </button>

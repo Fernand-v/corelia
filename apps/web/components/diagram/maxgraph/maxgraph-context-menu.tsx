@@ -40,8 +40,8 @@ export const MaxGraphContextMenu = ({
   const Item = ({ label, onClick, danger = false }: { label: string; onClick: () => void; danger?: boolean }) => (
     <button
       type="button"
-      className={`w-full rounded px-2 py-1 text-left text-xs transition hover:bg-slate-100 ${
-        danger ? "text-red-600" : "text-slate-700"
+      className={`w-full rounded px-2 py-1 text-left text-xs transition hover:bg-line ${
+        danger ? "text-urgent" : "text-ink"
       }`}
       onClick={() => {
         onClick();
@@ -54,7 +54,7 @@ export const MaxGraphContextMenu = ({
 
   return (
     <div
-      className="absolute z-40 w-56 rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl"
+      className="absolute z-40 w-56 rounded-lg border border-line bg-white p-1.5 shadow-xl"
       style={{ left: state.x, top: state.y }}
       onMouseLeave={onClose}
     >

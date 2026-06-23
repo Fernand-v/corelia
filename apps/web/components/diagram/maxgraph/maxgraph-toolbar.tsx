@@ -1,17 +1,17 @@
 import type { GraphToolbarActions, GraphToolbarState } from "@/components/diagram/maxgraph/types";
 
 const iconButtonClass =
-  "inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-sm text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex h-9 w-9 items-center justify-center rounded-md border border-line bg-white text-sm text-ink transition hover:bg-line disabled:cursor-not-allowed disabled:opacity-40";
 
 const textButtonClass =
-  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-line bg-white px-2 text-[11px] font-semibold text-ink transition hover:bg-line disabled:cursor-not-allowed disabled:opacity-40";
 
 const activeToolClass =
-  "inline-flex h-9 w-9 items-center justify-center rounded-md border border-blue-400 bg-blue-50 text-sm text-blue-700 transition disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex h-9 w-9 items-center justify-center rounded-md border border-line bg-paper text-sm text-ink transition disabled:cursor-not-allowed disabled:opacity-40";
 
 const groupClass = "flex shrink-0 items-center gap-1";
 
-const Divider = () => <div className="h-6 w-px shrink-0 bg-slate-200" />;
+const Divider = () => <div className="h-6 w-px shrink-0 bg-line" />;
 
 export const MaxGraphToolbar = ({
   state,
@@ -82,7 +82,7 @@ export const MaxGraphToolbar = ({
             max={300}
             value={state.zoomPercent}
             onChange={(event) => actions.zoomToPercent(Number(event.target.value || 100))}
-            className="h-9 w-16 rounded-md border border-slate-200 px-2 text-xs font-semibold text-slate-700"
+            className="h-9 w-16 rounded-md border border-line px-2 text-xs font-semibold text-ink"
             title="Zoom %"
           />
           <button type="button" className={textButtonClass} title="Fit page (Ctrl+Shift+H)" onClick={actions.fit}>
@@ -102,7 +102,7 @@ export const MaxGraphToolbar = ({
           <select
             value={state.gridMode}
             onChange={(event) => actions.setGridMode(event.target.value as "dots" | "lines" | "none")}
-            className="h-9 rounded-md border border-slate-200 px-2 text-xs font-semibold text-slate-700"
+            className="h-9 rounded-md border border-line px-2 text-xs font-semibold text-ink"
             title="Grid"
           >
             <option value="dots">Grid puntos</option>

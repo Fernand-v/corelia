@@ -246,10 +246,10 @@ const MeetingTopBar = ({
         <span className="inline-flex items-center gap-1.5">
           <span className="relative flex h-1.5 w-1.5">
             <span
-              className={`absolute inline-flex h-full w-full rounded-full opacity-70 ${connected ? "animate-ping bg-emerald-400" : "bg-amber-400"}`}
+              className={`absolute inline-flex h-full w-full rounded-full opacity-70 ${connected ? "animate-ping bg-white" : "bg-faint"}`}
             />
             <span
-              className={`relative inline-flex h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-500" : "bg-amber-500"}`}
+              className={`relative inline-flex h-1.5 w-1.5 rounded-full ${connected ? "bg-white" : "bg-faint"}`}
             />
           </span>
           {connected ? `En vivo · ${participantCount} ${participantCount === 1 ? "participante" : "participantes"}` : "Sin conexión"}
@@ -349,7 +349,7 @@ const StageSurface = ({ participant, participantName }: StageSurfaceProps) => {
         <span>{header}</span>
       </div>
       <div className="pointer-events-none absolute bottom-3 left-3 inline-flex max-w-[70%] items-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${participant.hasLiveAudio ? "bg-emerald-400" : "bg-white/40"}`} />
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${participant.hasLiveAudio ? "bg-white" : "bg-white/40"}`} />
         <span className="truncate">{participantName}</span>
       </div>
     </div>
@@ -423,7 +423,7 @@ const ParticipantRail = ({
                   ) : null}
                   <span
                     className={`inline-flex h-5 w-5 items-center justify-center rounded-md backdrop-blur-sm ${
-                      participant.audioOn ? "bg-black/60 text-white" : "bg-red-500/80 text-white"
+                      participant.audioOn ? "bg-black/60 text-white" : "bg-urgent/80 text-white"
                     }`}
                     title={participant.audioOn ? "Micrófono activado" : "Silenciado"}
                   >
@@ -541,9 +541,9 @@ type DockButtonProps = {
 const DockButton = ({ icon, label, tone, disabled, onClick, pressed, title, stateText }: DockButtonProps) => {
   const toneClass: Record<DockButtonProps["tone"], string> = {
     active: "border-white/10 bg-white/[0.06] hover:bg-white/[0.12] text-white",
-    warn: "border-amber-400/40 bg-amber-500/20 hover:bg-amber-500/30 text-amber-100",
+    warn: "border-line/40 bg-faint/20 hover:bg-faint/30 text-faint",
     accent: "border-[color:var(--teams-call-accent)]/60 bg-[color:var(--teams-call-accent)]/30 hover:bg-[color:var(--teams-call-accent)]/45 text-white",
-    danger: "border-red-400/40 bg-red-500/80 hover:bg-red-500 text-white",
+    danger: "border-urgent/50/40 bg-urgent/80 hover:bg-urgent text-white",
     disabled: "border-white/5 bg-white/[0.03] text-white/35"
   };
   return (
@@ -1283,11 +1283,11 @@ export const MeetingCallRoom = ({
                         <span
                           className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
                             participant.hasLiveAudio
-                              ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-200"
+                              ? "border-line/30 bg-white/15 text-faint"
                               : "border-white/10 bg-white/5 text-[--teams-call-muted]"
                           }`}
                         >
-                          <span className={`h-1.5 w-1.5 rounded-full ${participant.hasLiveAudio ? "bg-emerald-400" : "bg-white/40"}`} />
+                          <span className={`h-1.5 w-1.5 rounded-full ${participant.hasLiveAudio ? "bg-white" : "bg-white/40"}`} />
                           {participant.hasLiveAudio ? "Hablando" : "En silencio"}
                         </span>
                       </div>

@@ -186,7 +186,7 @@ export const OnlyOfficeEditor = ({
 
   if (loading) {
     return (
-      <div className="flex h-full min-h-[520px] items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm text-slate-500 shadow-sm">
+      <div className="flex h-full min-h-[520px] items-center justify-center rounded-2xl border border-line bg-white text-sm text-mid shadow-sm">
         Cargando ONLYOFFICE para este {titleLabel}...
       </div>
     );
@@ -194,7 +194,7 @@ export const OnlyOfficeEditor = ({
 
   if (errorMessage) {
     return (
-      <div className="flex h-full min-h-[520px] items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-6 text-center text-sm text-red-700 shadow-sm">
+      <div className="flex h-full min-h-[520px] items-center justify-center rounded-2xl border border-urgent/30 bg-urgent-muted px-6 text-center text-sm text-urgent shadow-sm">
         <div>
           <p className="font-semibold">No se pudo abrir {documentName || titleLabel}</p>
           <p className="mt-2">{errorMessage}</p>
@@ -204,7 +204,7 @@ export const OnlyOfficeEditor = ({
   }
 
   return (
-    <div className="h-full min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="h-full min-h-[520px] overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
       <div id={containerIdRef.current} className="h-full w-full" />
     </div>
   );

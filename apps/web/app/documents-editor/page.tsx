@@ -42,8 +42,8 @@ export default async function DocumentsEditorPage({ searchParams }: DocumentsEdi
     return (
       <div className="flex h-screen items-center justify-center bg-[#f5f7fa]">
         <div className="rounded-2xl border border-[rgba(0,0,0,0.08)] bg-white px-8 py-10 shadow-md text-center max-w-sm">
-          <p className="text-sm font-semibold text-slate-700">Enlace inválido</p>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="text-sm font-semibold text-ink">Enlace inválido</p>
+          <p className="mt-2 text-xs text-mid">
             Vuelve a abrir el documento desde la sección Documentos para generar un enlace válido.
           </p>
         </div>

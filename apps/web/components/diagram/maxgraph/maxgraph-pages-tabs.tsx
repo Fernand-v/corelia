@@ -18,12 +18,12 @@ export const MaxGraphPagesTabs = ({
           <div
             key={page.id}
             className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 ${
-              active ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white"
+              active ? "border-line bg-paper" : "border-line bg-white"
             }`}
           >
             <button
               type="button"
-              className="max-w-[140px] truncate text-xs font-semibold text-slate-700"
+              className="max-w-[140px] truncate text-xs font-semibold text-ink"
               onClick={() => onSetActive(page.id)}
             >
               {page.name}
@@ -32,7 +32,7 @@ export const MaxGraphPagesTabs = ({
               <>
                 <button
                   type="button"
-                  className="rounded px-1 text-[10px] text-slate-500 hover:bg-slate-100"
+                  className="rounded px-1 text-[10px] text-mid hover:bg-line"
                   onClick={() => onRename(page.id)}
                   title="Renombrar"
                 >
@@ -40,7 +40,7 @@ export const MaxGraphPagesTabs = ({
                 </button>
                 <button
                   type="button"
-                  className="rounded px-1 text-[10px] text-slate-500 hover:bg-slate-100"
+                  className="rounded px-1 text-[10px] text-mid hover:bg-line"
                   onClick={() => onDuplicate(page.id)}
                   title="Duplicar"
                 >
@@ -48,7 +48,7 @@ export const MaxGraphPagesTabs = ({
                 </button>
                 <button
                   type="button"
-                  className="rounded px-1 text-[10px] text-red-500 hover:bg-red-50"
+                  className="rounded px-1 text-[10px] text-urgent hover:bg-urgent-muted"
                   onClick={() => onRemove(page.id)}
                   title="Eliminar"
                   disabled={document.pages.length <= 1}
@@ -65,7 +65,7 @@ export const MaxGraphPagesTabs = ({
         <button
           type="button"
           onClick={onAdd}
-          className="inline-flex h-7 items-center justify-center rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          className="inline-flex h-7 items-center justify-center rounded-md border border-line bg-white px-2 text-xs font-semibold text-ink hover:bg-line"
           title="Nueva página"
         >
           +
