@@ -166,10 +166,10 @@ const mentionNodes = (content: string) => {
 };
 
 const statusBadge = (status: TeamMember["status"]) => {
-  if (status === "EN_REUNION") return "bg-amber-100 text-amber-800";
-  if (status === "AUSENTE") return "bg-slate-200 text-slate-700";
-  if (status === "OCUPADO") return "bg-red-100 text-red-700";
-  return "bg-emerald-100 text-emerald-700";
+  if (status === "EN_REUNION") return "bg-paper text-ink";
+  if (status === "AUSENTE") return "bg-line text-ink";
+  if (status === "OCUPADO") return "bg-urgent-muted text-urgent";
+  return "bg-paper text-ink";
 };
 
 const statusLabel: Record<NonNullable<TeamMember["status"]>, string> = {
@@ -285,7 +285,7 @@ const LazyMediaLoader = ({
 };
 
 const MediaSkeleton = ({ className }: { className?: string }) => (
-  <div className={`animate-pulse rounded-xl bg-slate-200/60 ${className ?? "h-48 w-64"}`} />
+  <div className={`animate-pulse rounded-xl bg-line/60 ${className ?? "h-48 w-64"}`} />
 );
 
 const ChatImageAttachment = ({
@@ -307,7 +307,7 @@ const ChatImageAttachment = ({
           <button
             type="button"
             onClick={onPreview}
-            className="flex h-32 w-full max-w-[280px] items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-500 hover:bg-slate-200"
+            className="flex h-32 w-full max-w-[280px] items-center justify-center rounded-xl bg-line text-xs text-mid hover:bg-line"
           >
             Cargar imagen
           </button>
@@ -350,7 +350,7 @@ const ChatVideoAttachment = ({
           <button
             type="button"
             onClick={onPreview}
-            className="flex h-40 w-full max-w-[320px] items-center justify-center rounded-xl bg-slate-900/90 text-white hover:bg-slate-800"
+            className="flex h-40 w-full max-w-[320px] items-center justify-center rounded-xl bg-ink/90 text-white hover:bg-ink"
           >
             <span className="flex flex-col items-center gap-1">
               <span className="text-3xl">▶</span>
@@ -372,7 +372,7 @@ const ChatVideoAttachment = ({
             }}
           />
           <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-2xl text-slate-900 shadow-lg transition group-hover:scale-110">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-paper text-2xl text-ink shadow-lg transition group-hover:scale-110">
               ▶
             </span>
           </span>
@@ -430,13 +430,13 @@ const ChatAudioAttachment = ({
         if (loading) return <MediaSkeleton className="h-14 w-64" />;
         if (!url) {
           return (
-            <div className="flex h-14 w-64 items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-500">
+            <div className="flex h-14 w-64 items-center justify-center rounded-xl bg-line text-xs text-mid">
               Audio no disponible
             </div>
           );
         }
         return (
-          <div className={`flex w-64 items-center gap-3 rounded-xl p-2 ${isMine ? "bg-[#c5f0c0]" : "bg-slate-50"}`}>
+          <div className={`flex w-64 items-center gap-3 rounded-xl p-2 ${isMine ? "bg-[#c5f0c0]" : "bg-line"}`}>
             <audio
               ref={audioRef}
               src={url}
@@ -459,7 +459,7 @@ const ChatAudioAttachment = ({
             </button>
             <div className="min-w-0 flex-1">
               <div
-                className="relative h-[6px] cursor-pointer rounded-full bg-slate-300"
+                className="relative h-[6px] cursor-pointer rounded-full bg-ink"
                 onClick={handleSeek}
                 role="progressbar"
                 aria-valuenow={progress}
@@ -614,13 +614,13 @@ const VoiceRecorder = ({
         <button
           type="button"
           onClick={cancelRecording}
-          className="rounded-full p-2 text-red-500 hover:bg-red-50"
+          className="rounded-full p-2 text-urgent hover:bg-urgent-muted"
           title="Cancelar"
         >
           ✕
         </button>
-        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
-        <span className="text-xs font-medium text-red-600">{formatElapsed(elapsed)}</span>
+        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-urgent-muted0" />
+        <span className="text-xs font-medium text-urgent">{formatElapsed(elapsed)}</span>
         <button
           type="button"
           onClick={sendRecording}
@@ -693,13 +693,13 @@ const VoiceNotePlayer = ({
         if (loading) return <MediaSkeleton className="h-14 w-64" />;
         if (!url) {
           return (
-            <div className="flex h-14 w-64 items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-500">
+            <div className="flex h-14 w-64 items-center justify-center rounded-xl bg-line text-xs text-mid">
               Nota de voz no disponible
             </div>
           );
         }
         return (
-          <div className={`flex w-64 items-center gap-2 rounded-2xl p-2 ${isMine ? "bg-[#c5f0c0]" : "bg-slate-50"}`}>
+          <div className={`flex w-64 items-center gap-2 rounded-2xl p-2 ${isMine ? "bg-[#c5f0c0]" : "bg-line"}`}>
             <audio
               ref={audioRef}
               src={url}
@@ -724,7 +724,7 @@ const VoiceNotePlayer = ({
               <div className="flex items-center gap-1">
                 <span className="text-[#128c7e]">🎤</span>
                 <div
-                  className="relative h-[5px] flex-1 cursor-pointer rounded-full bg-slate-300"
+                  className="relative h-[5px] flex-1 cursor-pointer rounded-full bg-ink"
                   onClick={handleSeek}
                   role="progressbar"
                   aria-valuenow={progress}
@@ -763,9 +763,9 @@ const ChatPdfAttachment = ({
   <button
     type="button"
     onClick={onPreview}
-    className="group flex w-64 items-center gap-3 rounded-xl border border-[#e4e9f0] bg-white/90 p-3 transition hover:bg-slate-50"
+    className="group flex w-64 items-center gap-3 rounded-xl border border-[#e4e9f0] bg-paper p-3 transition hover:bg-line"
   >
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-red-100 text-xl text-red-600">
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-urgent-muted text-xl text-urgent">
       PDF
     </span>
     <span className="min-w-0 flex-1 text-left">
@@ -790,9 +790,9 @@ const ChatGenericAttachment = ({
     <button
       type="button"
       onClick={onDownload}
-      className="group flex w-64 items-center gap-3 rounded-xl border border-[#e4e9f0] bg-white/90 p-3 transition hover:bg-slate-50"
+      className="group flex w-64 items-center gap-3 rounded-xl border border-[#e4e9f0] bg-paper p-3 transition hover:bg-line"
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-600">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-paper text-xs font-bold text-ink">
         {ext.slice(0, 4)}
       </span>
       <span className="min-w-0 flex-1 text-left">
@@ -846,12 +846,12 @@ const UploadProgressBubble = ({ progress }: { progress: UploadProgress }) => {
           : "Enviado";
 
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-white/80 p-2">
+    <div className="flex items-center gap-2 rounded-xl bg-paper p-2">
       {progress.status === "error" ? (
-        <span className="text-xs text-red-600">{label}</span>
+        <span className="text-xs text-urgent">{label}</span>
       ) : (
         <>
-          <div className="h-1.5 flex-1 rounded-full bg-slate-200">
+          <div className="h-1.5 flex-1 rounded-full bg-line">
             <div
               className="h-full rounded-full bg-[#25d366] transition-all"
               style={{ width: `${progress.status === "done" ? 100 : progress.progress}%` }}
@@ -895,7 +895,7 @@ const PendingFilePreview = ({
             type="button"
             onClick={() => pendingFiles.forEach((f) => onRemove?.(f.id))}
             disabled={anyUploading}
-            className="rounded-lg px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+            className="rounded-lg px-2 py-1 text-xs text-urgent hover:bg-urgent-muted disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -927,24 +927,24 @@ const PendingFilePreview = ({
                   ) : null}
                 </div>
               ) : pf.type === "video" ? (
-                <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-[#e4e9f0] bg-slate-900">
+                <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-[#e4e9f0] bg-ink">
                   {pf.previewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={pf.previewUrl} alt={pf.file.name} className="h-full w-full object-cover opacity-70" />
                   ) : null}
                   <span className="absolute text-2xl text-white">▶</span>
                   {prog && prog.status !== "done" ? (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-700">
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-ink">
                       <div className="h-full bg-[#25d366]" style={{ width: `${prog.progress}%` }} />
                     </div>
                   ) : null}
                 </div>
               ) : pf.type === "audio" ? (
-                <div className="flex h-20 w-28 flex-col items-center justify-center rounded-xl border border-[#e4e9f0] bg-slate-50 px-2">
+                <div className="flex h-20 w-28 flex-col items-center justify-center rounded-xl border border-[#e4e9f0] bg-line px-2">
                   <span className="text-2xl">🎵</span>
-                  <span className="mt-1 w-full truncate text-center text-[9px] text-slate-600">{pf.file.name}</span>
+                  <span className="mt-1 w-full truncate text-center text-[9px] text-mid">{pf.file.name}</span>
                   {prog && prog.status !== "done" ? (
-                    <div className="mt-1 h-1 w-full rounded-full bg-slate-200">
+                    <div className="mt-1 h-1 w-full rounded-full bg-line">
                       <div className="h-full rounded-full bg-[#25d366]" style={{ width: `${prog.progress}%` }} />
                     </div>
                   ) : null}
@@ -952,8 +952,8 @@ const PendingFilePreview = ({
               ) : (
                 <div className="flex h-20 w-28 flex-col items-center justify-center rounded-xl border border-[#e4e9f0] bg-white px-2">
                   <span className="text-lg">{pf.type === "pdf" ? "📕" : "📄"}</span>
-                  <span className="mt-1 w-full truncate text-center text-[9px] text-slate-700">{pf.file.name}</span>
-                  <span className="text-[9px] text-slate-500">{formatFileSize(pf.file.size)}</span>
+                  <span className="mt-1 w-full truncate text-center text-[9px] text-ink">{pf.file.name}</span>
+                  <span className="text-[9px] text-mid">{formatFileSize(pf.file.size)}</span>
                 </div>
               )}
               {!prog || prog.status === "error" ? (
@@ -966,7 +966,7 @@ const PendingFilePreview = ({
                       onRemove?.(pf.id);
                     }
                   }}
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[10px] text-white shadow hover:bg-red-600"
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[10px] text-white shadow hover:bg-urgent"
                 >
                   {prog?.status === "error" ? "↻" : "✕"}
                 </button>
@@ -1224,7 +1224,7 @@ export const MessagingModule = ({
                   <div className="flex items-start gap-3">
                     <div className="relative h-11 w-11 shrink-0 rounded-full bg-[#128c7e] text-center text-sm font-bold leading-[2.75rem] text-white">
                       {initialsFromName(conversation.name)}
-                      <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${conversation.isOnline ? "bg-[#25d366]" : "bg-slate-300"}`} />
+                      <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${conversation.isOnline ? "bg-[#25d366]" : "bg-ink"}`} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
@@ -1279,7 +1279,7 @@ export const MessagingModule = ({
                   type="button"
                   onClick={onLoadOlderMessages}
                   disabled={isLoadingOlderMessages}
-                  className="rounded-full bg-white/80 px-4 py-1 text-xs font-medium text-[#667781] shadow-sm transition hover:bg-white disabled:opacity-60"
+                  className="rounded-full bg-paper px-4 py-1 text-xs font-medium text-[#667781] shadow-sm transition hover:bg-white disabled:opacity-60"
                 >
                   {isLoadingOlderMessages ? "Cargando…" : "Cargar mensajes anteriores"}
                 </button>
@@ -1299,7 +1299,7 @@ export const MessagingModule = ({
                 <div key={message.id} className="mb-2">
                   {showDateDivider ? (
                     <div className="mb-3 text-center">
-                      <span className="inline-flex rounded-lg bg-white/80 px-3 py-1 text-[11px] text-[#667781] shadow-sm">
+                      <span className="inline-flex rounded-lg bg-paper px-3 py-1 text-[11px] text-[#667781] shadow-sm">
                         {formatDate(message.createdAt)}
                       </span>
                     </div>
@@ -1343,17 +1343,17 @@ export const MessagingModule = ({
 
                       {/* Missed Call */}
                       {message.kind === "LLAMADA_PERDIDA" ? (
-                        <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2">
-                          <span className="text-red-500">📞</span>
-                          <span className="text-xs font-semibold text-red-600">{message.content || "Llamada perdida"}</span>
+                        <div className="flex items-center gap-2 rounded-xl bg-urgent-muted px-3 py-2">
+                          <span className="text-urgent">📞</span>
+                          <span className="text-xs font-semibold text-urgent">{message.content || "Llamada perdida"}</span>
                         </div>
                       ) : null}
 
                       {/* Call Ended */}
                       {message.kind === "LLAMADA_FINALIZADA" ? (
-                        <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2">
-                          <span className="text-slate-500">📞</span>
-                          <span className="text-xs font-medium text-slate-600">{message.content}</span>
+                        <div className="flex items-center gap-2 rounded-xl bg-line px-3 py-2">
+                          <span className="text-mid">📞</span>
+                          <span className="text-xs font-medium text-mid">{message.content}</span>
                         </div>
                       ) : null}
 
@@ -1363,7 +1363,7 @@ export const MessagingModule = ({
 
                       {message.kind === "CALL_INVITE" ? (
                         message.callExpired ? (
-                          <span className="mt-2 inline-flex rounded-full bg-slate-300 px-3 py-1 text-xs font-semibold text-slate-700">
+                          <span className="mt-2 inline-flex rounded-full bg-ink px-3 py-1 text-xs font-semibold text-ink">
                             Llamada vencida
                           </span>
                         ) : message.meetingUrl ? (
@@ -1525,7 +1525,7 @@ export const MessagingModule = ({
                 </div>
               ) : null}
             </div>
-            {actionError ? <p className="mt-2 text-xs text-red-600">{actionError}</p> : null}
+            {actionError ? <p className="mt-2 text-xs text-urgent">{actionError}</p> : null}
           </footer>
         </main>
 

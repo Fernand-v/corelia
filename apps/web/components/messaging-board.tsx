@@ -1229,7 +1229,7 @@ export const MessagingBoard = () => {
 
       {previewAttachment ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
           role="presentation"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
@@ -1241,12 +1241,12 @@ export const MessagingBoard = () => {
             role="dialog"
             aria-modal="true"
             aria-label={`Previsualizar ${previewAttachment.name}`}
-            className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-line bg-white shadow-2xl"
           >
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+            <div className="flex items-center justify-between border-b border-line px-5 py-3">
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold text-slate-900">{previewAttachment.name}</h3>
-                <p className="text-xs text-slate-500">{previewAttachment.mimeType ?? "Archivo adjunto"}</p>
+                <h3 className="truncate text-sm font-semibold text-ink">{previewAttachment.name}</h3>
+                <p className="text-xs text-mid">{previewAttachment.mimeType ?? "Archivo adjunto"}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1254,14 +1254,14 @@ export const MessagingBoard = () => {
                   onClick={() => {
                     void downloadAttachment(previewAttachment.id, previewAttachment.name);
                   }}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:bg-line"
                 >
                   Descargar
                 </button>
                 <button
                   type="button"
                   onClick={closePreview}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-mid hover:bg-line"
                 >
                   Cerrar
                 </button>
@@ -1271,11 +1271,11 @@ export const MessagingBoard = () => {
             <div className="flex-1 overflow-auto p-1">
               {previewLoading ? (
                 <div className="flex h-96 items-center justify-center">
-                  <p className="text-sm text-slate-500">Cargando previsualizacion...</p>
+                  <p className="text-sm text-mid">Cargando previsualizacion...</p>
                 </div>
               ) : previewError ? (
                 <div className="flex h-96 items-center justify-center px-6">
-                  <p className="text-center text-sm text-slate-500">{previewError}</p>
+                  <p className="text-center text-sm text-mid">{previewError}</p>
                 </div>
               ) : previewUrl ? (
                 isImageMime(previewAttachment.mimeType) ? (
@@ -1320,14 +1320,14 @@ export const MessagingBoard = () => {
                   />
                 ) : (
                   <div className="flex h-96 items-center justify-center px-6">
-                    <p className="text-center text-sm text-slate-500">
+                    <p className="text-center text-sm text-mid">
                       Este tipo de archivo no admite previsualizacion.
                     </p>
                   </div>
                 )
               ) : (
                 <div className="flex h-96 items-center justify-center">
-                  <p className="text-sm text-slate-500">No se pudo cargar la previsualizacion</p>
+                  <p className="text-sm text-mid">No se pudo cargar la previsualizacion</p>
                 </div>
               )}
             </div>
@@ -1348,23 +1348,23 @@ export const MessagingBoard = () => {
       >
         <div className="space-y-3">
           <label className="block space-y-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Buscar usuario</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-mid">Buscar usuario</span>
             <input
               type="text"
               value={privateSearch}
               onChange={(event) => setPrivateSearch(event.target.value)}
               placeholder="Nombre o correo"
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
             />
           </label>
 
           <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Selecciona un usuario</p>
-            <div className="h-64 overflow-y-auto rounded-xl border border-slate-200">
+            <p className="text-xs font-medium uppercase tracking-wide text-mid">Selecciona un usuario</p>
+            <div className="h-64 overflow-y-auto rounded-xl border border-line">
               {privateCandidates.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-slate-500">No hay usuarios que coincidan con tu búsqueda.</p>
+                <p className="px-3 py-4 text-sm text-mid">No hay usuarios que coincidan con tu búsqueda.</p>
               ) : (
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-line">
                   {privateCandidates.map((candidate) => {
                     const selected = candidate.userId === privateTargetUserId;
                     return (
@@ -1373,21 +1373,21 @@ export const MessagingBoard = () => {
                           type="button"
                           onClick={() => setPrivateTargetUserId(candidate.userId)}
                           className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition ${
-                            selected ? "bg-slate-900 text-white" : "hover:bg-slate-50"
+                            selected ? "bg-ink text-white" : "hover:bg-line"
                           }`}
                         >
                           <span className="min-w-0">
                             <span className="block truncate text-sm font-medium">{candidate.fullName}</span>
-                            <span className={`block truncate text-xs ${selected ? "text-slate-200" : "text-slate-500"}`}>
+                            <span className={`block truncate text-xs ${selected ? "text-faint" : "text-mid"}`}>
                               {candidate.contact.email}
                             </span>
-                            <span className={`block truncate text-xs ${selected ? "text-slate-300" : "text-slate-500"}`}>
+                            <span className={`block truncate text-xs ${selected ? "text-faint" : "text-mid"}`}>
                               {candidate.activeRole}
                               {candidate.teamName ? ` · ${candidate.teamName}` : ""}
                             </span>
                           </span>
                           {selected ? (
-                            <span className="rounded-full bg-white/20 px-2 py-1 text-[11px] font-semibold">
+                            <span className="rounded-full bg-paper px-2 py-1 text-[11px] font-semibold">
                               Seleccionado
                             </span>
                           ) : null}
@@ -1406,7 +1406,7 @@ export const MessagingBoard = () => {
             type="button"
             onClick={() => setPrivateModalOpen(false)}
             disabled={createDirectChannelMutation.isPending}
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl border border-line px-3 py-2 text-sm text-ink hover:bg-line disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancelar
           </button>
@@ -1421,7 +1421,7 @@ export const MessagingBoard = () => {
               createDirectChannelMutation.mutate(privateTargetUserId);
             }}
             disabled={!privateTargetUserId || createDirectChannelMutation.isPending}
-            className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-ink disabled:cursor-not-allowed disabled:bg-ink"
           >
             {createDirectChannelMutation.isPending
               ? "Creando..."
