@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Corelia · Home — preview Swiss editorial</title>
+    <style>
+      /* ---- Swiss editorial: blanco puro, una familia sans, un rojo, hairlines ---- */
+      :root {
+        --paper: #ffffff;
+        --ink: #111111;
+        --mid: #6b6b6b;
+        --faint: #9a9a9a;
+        --line: #e3e3e3;
+        --red: #e4002b;
+      }
+
+      * { box-sizing: border-box; }
+
+      html { -webkit-font-smoothing: antialiased; }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 40px 32px 96px;
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      /* condensed numerals as composition */
+      .num {
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        font-variant-numeric: tabular-nums;
+        transform: scaleX(0.88);
+        transform-origin: left;
+        display: inline-block;
+      }
+
+      .red { color: var(--red); }
+      .mid { color: var(--mid); }
+      .faint { color: var(--faint); }
+
+      /* ---------- masthead ---------- */
+      .masthead {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--ink);
+      }
+      .masthead h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .masthead .ctx {
+        margin-top: 2px;
+        font-size: 12.5px;
+        color: var(--mid);
+      }
+      .masthead .ctx b { color: var(--ink); font-weight: 600; }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11.5px;
+        color: var(--faint);
+        white-space: nowrap;
+      }
+      .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); display: inline-block; }
+      .dot.r { background: var(--red); }
+      .bell {
+        margin-left: 18px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--ink);
+        border: 1px solid var(--ink);
+        padding: 4px 10px;
+      }
+      .bell .count { color: var(--red); font-weight: 700; }
+
+      .quick {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0;
+        margin-top: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .quick a {
+        font-size: 12px;
+        color: var(--mid);
+        padding: 8px 16px 8px 0;
+        margin-right: 16px;
+      }
+      .quick a:hover { color: var(--red); }
+
+      /* ---------- section ---------- */
+      section { margin-top: 44px; }
+      .head {
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        border-top: 1px solid var(--ink);
+        padding-top: 10px;
+        margin-bottom: 18px;
+      }
+      .folio {
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -0.05em;
+        line-height: 1;
+        transform: scaleX(0.82);
+        transform-origin: left;
+      }
+      .head h2 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .head .meta { margin-left: auto; font-size: 12px; color: var(--mid); }
+      .head .meta .red { font-weight: 700; }
+
+      /* ---------- mi dia ---------- */
+      .myday { display: grid; grid-template-columns: 1fr 232px; gap: 0; }
+      .myday .rail { border-left: 1px solid var(--line); padding-left: 24px; margin-left: 24px; }
+
+      ul.rows { list-style: none; margin: 0; padding: 0; }
+      ul.rows li {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      ul.rows li:first-child { border-top: 1px solid var(--line); }
+      .tick { width: 2px; align-self: stretch; background: transparent; flex: 0 0 2px; }
+      .tick.over { background: var(--red); }
+      .task-title { font-weight: 500; }
+      .leader { flex: 1; border-bottom: 1px dotted var(--line); transform: translateY(-3px); }
+      .task-meta { font-size: 12px; color: var(--mid); white-space: nowrap; }
+      .task-meta .over { color: var(--red); font-weight: 600; }
+
+      .rail .block { margin-bottom: 26px; }
+      .rail .label {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .rail .big { font-size: 46px; line-height: 1; margin-top: 6px; }
+      .rail .when { font-size: 13px; font-weight: 600; margin-top: 6px; }
+      .rail .sub { font-size: 12px; color: var(--mid); }
+      .rail a.join { font-size: 12px; color: var(--red); font-weight: 600; display: inline-block; margin-top: 8px; }
+
+      /* ---------- proyectos ---------- */
+      ul.projects { list-style: none; margin: 0; padding: 0; }
+      ul.projects li {
+        display: grid;
+        grid-template-columns: 200px 1fr auto;
+        align-items: center;
+        gap: 24px;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      ul.projects li:first-child { border-top: 1px solid var(--line); }
+      .pname { font-weight: 600; display: flex; align-items: center; gap: 9px; }
+      .track { height: 1px; background: var(--line); position: relative; }
+      .track .fill { position: absolute; left: 0; top: -0.5px; height: 2px; background: var(--ink); }
+      .track .fill.risk { background: var(--red); }
+      .pct { font-size: 40px; line-height: 1; min-width: 86px; text-align: right; }
+      .pct sup { font-size: 14px; font-weight: 600; letter-spacing: 0; margin-left: 1px; }
+
+      /* ---------- actividad ---------- */
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+      .two .col + .col { border-left: 1px solid var(--line); padding-left: 28px; margin-left: 28px; }
+      .col .label {
+        font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--faint); margin-bottom: 8px;
+      }
+      .note { padding: 10px 0; border-bottom: 1px solid var(--line); }
+      .note .t { font-weight: 500; }
+      .note .b { font-size: 12.5px; color: var(--mid); }
+      .note .ago { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+
+      /* ---------- anuncios ---------- */
+      ul.ann { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+      ul.ann li { padding: 14px 24px 14px 0; border-top: 1px solid var(--line); }
+      ul.ann li:nth-child(2n) { padding-left: 24px; border-left: 1px solid var(--line); }
+      ul.ann .at { font-weight: 600; display: flex; justify-content: space-between; gap: 10px; }
+      ul.ann .new { color: var(--red); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; }
+      ul.ann .ab { font-size: 12.5px; color: var(--mid); margin-top: 4px; }
+      ul.ann .ax { font-size: 11.5px; color: var(--faint); margin-top: 8px; }
+
+      /* ---------- metricas ---------- */
+      table.metrics { width: 100%; border-collapse: collapse; }
+      table.metrics td {
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+        vertical-align: bottom;
+        width: 25%;
+      }
+      table.metrics tr:first-child td { border-top: 1px solid var(--line); }
+      .metrics .mlabel { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+      .metrics .mval { font-size: 38px; line-height: 1; margin-top: 6px; }
+
+      .pagenote {
+        margin-top: 72px;
+        padding-top: 12px;
+        border-top: 1px solid var(--ink);
+        font-size: 11px;
+        color: var(--faint);
+        display: flex;
+        justify-content: space-between;
+      }
+
+      @media (max-width: 760px) {
+        .myday, .two, ul.ann { grid-template-columns: 1fr; }
+        .myday .rail, .two .col + .col { border-left: 0; padding-left: 0; margin-left: 0; border-top: 1px solid var(--line); padding-top: 20px; margin-top: 20px; }
+        ul.projects li { grid-template-columns: 1fr auto; }
+        ul.projects .track { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- masthead -->
+      <div class="masthead">
+        <div>
+          <h1>Buenos días, Javier</h1>
+          <div class="ctx"><b>Corelia</b> · Proyecto · Plataforma intranet</div>
+        </div>
+        <div style="text-align: right">
+          <span class="status"><span class="dot"></span> Actualizado hace 2 min</span>
+          <a class="bell" href="#">Notificaciones <span class="count">3</span></a>
+        </div>
+      </div>
+
+      <nav class="quick">
+        <a href="#">Nueva tarea</a>
+        <a href="#">Crear anuncio</a>
+        <a href="#">Solicitar ausencia</a>
+        <a href="#">Ir a mensajes</a>
+      </nav>
+
+      <!-- 01 mi dia -->
+      <section>
+        <div class="head">
+          <span class="folio">01</span>
+          <h2>Mi día</h2>
+          <span class="meta"><span class="red">3 vencidas</span> · 2 para hoy</span>
+        </div>
+
+        <div class="myday">
+          <ul class="rows">
+            <li>
+              <span class="tick over"></span>
+              <span class="task-title">Rediseñar endpoint de autenticación</span>
+              <span class="leader"></span>
+              <span class="task-meta">Plataforma intranet · <span class="over">venció ayer</span></span>
+            </li>
+            <li>
+              <span class="tick over"></span>
+              <span class="task-title">Revisar migración de base de datos</span>
+              <span class="leader"></span>
+              <span class="task-meta">Plataforma intranet · <span class="over">vencida</span></span>
+            </li>
+            <li>
+              <span class="tick"></span>
+              <span class="task-title">Cerrar cobertura de tests del módulo documents</span>
+              <span class="leader"></span>
+              <span class="task-meta">Plataforma intranet · hoy 17:00</span>
+            </li>
+            <li>
+              <span class="tick"></span>
+              <span class="task-title">Preparar demo del rediseño del home</span>
+              <span class="leader"></span>
+              <span class="task-meta">Plataforma intranet · hoy</span>
+            </li>
+          </ul>
+
+          <aside class="rail">
+            <div class="block">
+              <div class="label">Próxima reunión</div>
+              <div class="when">Comité semanal</div>
+              <div class="sub">Hoy 14:30 · en 1 h 10 min</div>
+              <a class="join" href="#">Unirme →</a>
+            </div>
+            <div class="block">
+              <div class="label">Solicitudes pendientes</div>
+              <div class="big num">4</div>
+              <div class="sub"><a href="#" class="red">Revisar →</a></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 02 proyectos -->
+      <section>
+        <div class="head">
+          <span class="folio">02</span>
+          <h2>Proyectos activos</h2>
+          <span class="meta">3 proyectos</span>
+        </div>
+        <ul class="projects">
+          <li>
+            <span class="pname"><span class="dot"></span>Plataforma intranet</span>
+            <span class="track"><span class="fill" style="width: 72%"></span></span>
+            <span class="pct"><span class="num">72</span><sup>%</sup></span>
+          </li>
+          <li>
+            <span class="pname"><span class="dot r"></span>Portal de clientes</span>
+            <span class="track"><span class="fill risk" style="width: 40%"></span></span>
+            <span class="pct"><span class="num">40</span><sup>%</sup></span>
+          </li>
+          <li>
+            <span class="pname"><span class="dot"></span>App de campo</span>
+            <span class="track"><span class="fill" style="width: 88%"></span></span>
+            <span class="pct"><span class="num">88</span><sup>%</sup></span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- 03 actividad -->
+      <section>
+        <div class="head">
+          <span class="folio">03</span>
+          <h2>Actividad reciente</h2>
+        </div>
+        <div class="two">
+          <div class="col">
+            <div class="label">Notificaciones no leídas</div>
+            <div class="note">
+              <div class="t">Se te asignó una tarea</div>
+              <div class="b">Revisar migración de base de datos en Plataforma intranet</div>
+              <div class="ago">hace 18 min</div>
+            </div>
+            <div class="note">
+              <div class="t">Mención en un comentario</div>
+              <div class="b">Ana Pérez te mencionó en Portal de clientes</div>
+              <div class="ago">hace 1 h</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="label">Cambios en tareas</div>
+            <div class="note">
+              <div class="t">Cerrar cobertura de tests</div>
+              <div class="b">Cambio de estado · En progreso</div>
+              <div class="ago">hace 25 min</div>
+            </div>
+            <div class="note">
+              <div class="t">Preparar demo del home</div>
+              <div class="b">Reasignación · ahora es tuya</div>
+              <div class="ago">hace 2 h</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 anuncios -->
+      <section>
+        <div class="head">
+          <span class="folio">04</span>
+          <h2>Anuncios activos</h2>
+          <span class="meta"><a href="#" class="red">Nuevo →</a></span>
+        </div>
+        <ul class="ann">
+          <li>
+            <div class="at">Mantenimiento programado <span class="new">NUEVO</span></div>
+            <div class="ab">El sábado de 02:00 a 04:00 habrá indisponibilidad del portal.</div>
+            <div class="ax">Expira 28 jun 2026</div>
+          </li>
+          <li>
+            <div class="at">Nueva política de ausencias</div>
+            <div class="ab">Las solicitudes se aprueban ahora desde el módulo de solicitudes.</div>
+            <div class="ax">Expira 30 jun 2026</div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- 05 metricas -->
+      <section>
+        <div class="head">
+          <span class="folio">05</span>
+          <h2>Resumen operativo</h2>
+        </div>
+        <table class="metrics">
+          <tr>
+            <td><div class="mlabel">Proyectos activos</div><div class="mval num">12</div></td>
+            <td><div class="mlabel">Tareas activas</div><div class="mval num">340</div></td>
+            <td><div class="mlabel">Tareas vencidas</div><div class="mval num red">8</div></td>
+            <td><div class="mlabel">Automatizaciones fallidas 24 h</div><div class="mval num red">1</div></td>
+          </tr>
+        </table>
+      </section>
+
+      <div class="pagenote">
+        <span>Corelia — vista previa de diseño (Swiss editorial)</span>
+        <span class="num">Home</span>
+      </div>
+    </div>
+  </body>
+</html>

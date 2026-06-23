@@ -5,15 +5,10 @@ export interface CardProps extends PropsWithChildren {
   className?: string;
 }
 
+// Swiss: superficie blanca delimitada por hairline 1px. Sin sombra, blur ni radio.
 export const Card = ({ children, className }: CardProps) => {
   return (
-    <section
-      className={cn(
-        "rounded-2xl border bg-white/80 p-4 shadow-card backdrop-blur-sm",
-        "border-[rgba(0,0,0,0.07)]",
-        className
-      )}
-    >
+    <section className={cn("border border-line bg-paper p-5", className)}>
       {children}
     </section>
   );

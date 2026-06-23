@@ -3,18 +3,19 @@ import { cn } from "./utils.js";
 
 type AlertVariant = "info" | "success" | "warning" | "danger";
 
+// Swiss: aviso hairline; rojo de urgencia solo en warning/danger.
 const containerStyles: Record<AlertVariant, string> = {
-  info: "bg-blue-50 border-blue-200 text-blue-800",
-  success: "bg-emerald-50 border-emerald-200 text-emerald-800",
-  warning: "bg-amber-50 border-amber-200 text-amber-800",
-  danger: "bg-red-50 border-red-200 text-red-800"
+  info: "bg-paper border-line text-ink",
+  success: "bg-paper border-line text-ink",
+  warning: "bg-urgent-muted border-urgent/30 text-ink",
+  danger: "bg-urgent-muted border-urgent/30 text-ink"
 };
 
 const iconColor: Record<AlertVariant, string> = {
-  info: "text-blue-500",
-  success: "text-emerald-500",
-  warning: "text-amber-500",
-  danger: "text-red-500"
+  info: "text-mid",
+  success: "text-ink",
+  warning: "text-urgent",
+  danger: "text-urgent"
 };
 
 const AlertIcon = ({ variant }: { variant: AlertVariant }) => {

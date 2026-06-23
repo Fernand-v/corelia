@@ -1,5 +1,9 @@
 import type { Config } from "tailwindcss";
 
+// Sistema "Swiss editorial": blanco puro, una grotesk, tinta + un rojo
+// reservado a urgencia, hairlines 1px, cero glass/sombra/blur, esquinas duras.
+// Los nombres de token heredados (accent, glass, sidebar…) se conservan pero
+// se remapean a la paleta Swiss para que las clases existentes migren solas.
 const config: Config = {
   content: [
     "./app/**/*.{ts,tsx}",
@@ -9,50 +13,91 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        appBg: "#e8edf2",
+        // Paleta Swiss
+        paper: "#ffffff",
+        ink: "#111111",
+        mid: "#6b6b6b",
+        faint: "#9a9a9a",
+        line: "#e3e3e3",
+        urgent: {
+          DEFAULT: "#e4002b",
+          muted: "rgba(228,0,43,0.06)"
+        },
+
+        // Heredados, remapeados a Swiss
+        appBg: "#ffffff",
         panel: "#ffffff",
+        // accent = acción primaria → tinta (negro), no azul
         accent: {
-          DEFAULT: "#0a84ff",
-          hover: "#0071e3",
-          muted: "rgba(10,132,255,0.12)",
-          ring: "rgba(10,132,255,0.35)"
+          DEFAULT: "#111111",
+          hover: "#000000",
+          muted: "rgba(17,17,17,0.06)",
+          ring: "rgba(17,17,17,0.30)"
         },
+        // glass → superficie blanca plana + hairline
         glass: {
-          DEFAULT: "rgba(255,255,255,0.72)",
-          heavy: "rgba(255,255,255,0.88)",
-          border: "rgba(0,0,0,0.07)"
+          DEFAULT: "#ffffff",
+          heavy: "#ffffff",
+          border: "#e3e3e3"
         },
-        sidebar: "rgba(246,248,250,0.90)",
-        "nav-active-text": "#0a84ff",
-        "nav-active-bg": "rgba(10,132,255,0.10)",
-        "admin-active-bg": "rgba(220,38,38,0.10)",
-        "admin-active-text": "#dc2626"
+        sidebar: "#ffffff",
+        "nav-active-text": "#111111",
+        "nav-active-bg": "rgba(17,17,17,0.05)",
+        "admin-active-bg": "rgba(228,0,43,0.06)",
+        "admin-active-text": "#e4002b"
       },
       fontFamily: {
         sans: [
-          "SF Pro Display",
-          "SF Pro Text",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
+          "var(--font-archivo)",
+          "Helvetica Neue",
+          "Helvetica",
+          "Arial",
+          "sans-serif"
+        ],
+        condensed: [
+          "var(--font-archivo-narrow)",
+          "var(--font-archivo)",
+          "Helvetica Neue",
+          "Arial Narrow",
           "sans-serif"
         ]
       },
+      // Swiss = sin sombras. Neutralizamos toda la escala (incl. sm/md/lg).
       boxShadow: {
-        panel: "0 2px 16px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05)",
-        card: "0 1px 4px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.05)",
-        dropdown: "0 8px 32px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.08)",
-        header: "0 1px 0 rgba(0,0,0,0.06)"
+        none: "none",
+        sm: "none",
+        DEFAULT: "none",
+        md: "none",
+        lg: "none",
+        xl: "none",
+        "2xl": "none",
+        inner: "none",
+        panel: "none",
+        card: "none",
+        dropdown: "0 0 0 1px #e3e3e3",
+        header: "0 1px 0 #e3e3e3"
       },
+      // Esquinas duras: aplanamos la escala a 2px; círculos siguen redondos.
       borderRadius: {
-        "2xl": "16px",
-        "3xl": "20px"
+        none: "0px",
+        sm: "2px",
+        DEFAULT: "2px",
+        md: "2px",
+        lg: "2px",
+        xl: "2px",
+        "2xl": "2px",
+        "3xl": "2px",
+        full: "9999px"
       },
+      // Sin desenfoque.
       backdropBlur: {
-        xs: "4px",
-        sidebar: "20px",
-        header: "24px",
-        dropdown: "28px"
+        none: "0",
+        xs: "0",
+        sm: "0",
+        DEFAULT: "0",
+        sidebar: "0",
+        header: "0",
+        dropdown: "0"
       },
       transitionTimingFunction: {
         macos: "cubic-bezier(0.25, 0.46, 0.45, 0.94)"

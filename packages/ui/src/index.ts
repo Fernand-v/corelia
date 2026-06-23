@@ -5,6 +5,7 @@ export * from "./button.js";
 export * from "./card.js";
 export * from "./empty.js";
 export * from "./progress.js";
+export * from "./section.js";
 export * from "./spinner.js";
 export * from "./stat.js";
 export * from "./utils.js";

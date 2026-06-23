@@ -16,7 +16,7 @@ const DefaultIcon = () => (
     strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-10 w-10 text-slate-300"
+    className="h-10 w-10 text-faint"
     aria-hidden="true"
   >
     <circle cx="24" cy="24" r="20" />
@@ -31,8 +31,8 @@ export const Empty = ({ title, description, action, icon, className, ...props }:
       {...props}
     >
       <div className="mb-4">{icon ?? <DefaultIcon />}</div>
-      <p className="text-sm font-semibold text-slate-700">{title}</p>
-      {description && <p className="mt-1 max-w-xs text-sm text-slate-500">{description}</p>}
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      {description && <p className="mt-1 max-w-xs text-sm text-mid">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

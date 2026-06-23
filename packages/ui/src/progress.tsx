@@ -3,18 +3,19 @@ import { cn } from "./utils.js";
 
 type ProgressVariant = "default" | "success" | "warning" | "danger";
 
+// Swiss: pista hairline; relleno en tinta salvo urgencia (rojo).
 const trackStyles: Record<ProgressVariant, string> = {
-  default: "bg-slate-100",
-  success: "bg-emerald-50",
-  warning: "bg-amber-50",
-  danger: "bg-red-50"
+  default: "bg-line",
+  success: "bg-line",
+  warning: "bg-line",
+  danger: "bg-line"
 };
 
 const fillStyles: Record<ProgressVariant, string> = {
-  default: "bg-slate-700",
-  success: "bg-emerald-500",
-  warning: "bg-amber-500",
-  danger: "bg-red-500"
+  default: "bg-ink",
+  success: "bg-ink",
+  warning: "bg-urgent",
+  danger: "bg-urgent"
 };
 
 export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -42,9 +43,9 @@ export const Progress = ({
     <div className={cn("w-full", className)} {...props}>
       {(label || showValue) && (
         <div className="mb-1 flex items-center justify-between gap-2">
-          {label && <span className="text-xs text-slate-600">{label}</span>}
+          {label && <span className="text-xs text-mid">{label}</span>}
           {showValue && (
-            <span className="text-xs font-medium text-slate-700">
+            <span className="text-xs font-medium tabular-nums text-ink">
               {new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(pct)}%
             </span>
           )}
@@ -55,10 +56,10 @@ export const Progress = ({
         aria-valuenow={value}
         aria-valuemin={0}
         aria-valuemax={max}
-        className={cn("w-full overflow-hidden rounded-full", trackStyles[variant], size === "sm" ? "h-1.5" : "h-2")}
+        className={cn("w-full overflow-hidden", trackStyles[variant], size === "sm" ? "h-px" : "h-0.5")}
       >
         <div
-          className={cn("h-full rounded-full transition-all duration-500", fillStyles[variant])}
+          className={cn("h-full transition-all duration-500", fillStyles[variant])}
           style={{ width: `${pct}%` }}
         />
       </div>

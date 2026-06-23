@@ -12,10 +12,11 @@ export interface StatProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: React.ReactNode;
 }
 
+// Swiss: sin verde semántico. Caída → rojo de urgencia; resto en tinta/gris.
 const trendStyles: Record<StatTrend, string> = {
-  up: "text-emerald-600",
-  down: "text-red-500",
-  neutral: "text-slate-500"
+  up: "text-ink",
+  down: "text-urgent",
+  neutral: "text-mid"
 };
 
 const TrendIcon = ({ trend }: { trend: StatTrend }) => {
@@ -43,19 +44,14 @@ const TrendIcon = ({ trend }: { trend: StatTrend }) => {
 export const Stat = ({ label, value, description, trend, trendLabel, icon, className, ...props }: StatProps) => {
   return (
     <div
-      className={cn(
-        "rounded-2xl border border-[rgba(0,0,0,0.07)] bg-white/80 p-4 shadow-sm backdrop-blur-sm",
-        className
-      )}
+      className={cn("border border-line bg-paper p-4", className)}
       {...props}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-        {icon && (
-          <span className="shrink-0 rounded-lg bg-slate-50 p-1.5 text-slate-500">{icon}</span>
-        )}
+        <p className="text-[11px] font-medium uppercase tracking-widest text-faint">{label}</p>
+        {icon && <span className="shrink-0 text-faint">{icon}</span>}
       </div>
-      <p className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">{value}</p>
+      <p className="mt-2 font-condensed text-4xl font-bold tabular-nums tracking-tight text-ink">{value}</p>
       {(trend !== undefined || description) && (
         <div className="mt-1.5 flex items-center gap-1">
           {trend !== undefined && (
@@ -65,10 +61,10 @@ export const Stat = ({ label, value, description, trend, trendLabel, icon, class
             </span>
           )}
           {description && !trendLabel && (
-            <span className="text-xs text-slate-500">{description}</span>
+            <span className="text-xs text-mid">{description}</span>
           )}
           {description && trendLabel && (
-            <span className="text-xs text-slate-400">{description}</span>
+            <span className="text-xs text-faint">{description}</span>
           )}
         </div>
       )}
