@@ -146,12 +146,12 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
   renderCollaboratorAvatar
 }: CollaborativeDocumentsExplorerViewProps) => (
   <div data-testid="documents-v2-explorer" className="flex h-full min-h-0 flex-col bg-[#f5f7fb]">
-    <header className="border-b border-slate-200 bg-white px-3 py-3 md:px-5">
+    <header className="border-b border-line bg-white px-3 py-3 md:px-5">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-medium text-slate-500">{project.name} · Documentos</p>
-            <h1 className="text-xl font-semibold text-slate-900">Documentos</h1>
+            <p className="text-xs font-medium text-mid">{project.name} · Documentos</p>
+            <h1 className="text-xl font-semibold text-ink">Documentos</h1>
           </div>
           <Button
             appearance="primary"
@@ -222,12 +222,12 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
 
     <div className="flex min-h-0 flex-1">
       <aside
-        className={`hidden border-r border-slate-200 bg-white transition-[width] duration-150 md:flex md:flex-col ${
+        className={`hidden border-r border-line bg-white transition-[width] duration-150 md:flex md:flex-col ${
           preferences.sidebarCollapsed ? "w-16" : "w-64"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-2 py-2">
-          <span className={`text-xs font-semibold uppercase tracking-wide text-slate-500 ${preferences.sidebarCollapsed ? "sr-only" : ""}`}>
+        <div className="flex items-center justify-between border-b border-line px-2 py-2">
+          <span className={`text-xs font-semibold uppercase tracking-wide text-mid ${preferences.sidebarCollapsed ? "sr-only" : ""}`}>
             Tipos
           </span>
           <Button
@@ -254,14 +254,14 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
             }}
             data-testid="documents-v2-filter-ALL"
             className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-              typeFilter === "ALL" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-slate-700 hover:bg-slate-50"
+              typeFilter === "ALL" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-ink hover:bg-line"
             }`}
           >
             <span className="text-base">📁</span>
             {!preferences.sidebarCollapsed ? (
               <>
                 <span className="flex-1 font-medium">Todos</span>
-                <span className="text-xs text-slate-500">{rows.length}</span>
+                <span className="text-xs text-mid">{rows.length}</span>
               </>
             ) : null}
           </button>
@@ -280,7 +280,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                 }}
                 data-testid={`documents-v2-filter-${type}`}
                 className={`mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                  isActive ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-slate-700 hover:bg-slate-50"
+                  isActive ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-ink hover:bg-line"
                 }`}
               >
                 <span aria-hidden className="text-base">
@@ -289,14 +289,14 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                 {!preferences.sidebarCollapsed ? (
                   <>
                     <span className="flex-1 font-medium">{meta.label}</span>
-                    <span className="text-xs text-slate-500">{typeCounts[type]}</span>
+                    <span className="text-xs text-mid">{typeCounts[type]}</span>
                   </>
                 ) : null}
               </button>
             );
           })}
 
-          <div className="mt-3 border-t border-slate-100 pt-3">
+          <div className="mt-3 border-t border-line pt-3">
             <button
               type="button"
               onClick={() => {
@@ -306,14 +306,14 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
               }}
               data-testid="documents-v2-filter-FAVORITES"
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                typeFilter === "FAVORITES" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-slate-700 hover:bg-slate-50"
+                typeFilter === "FAVORITES" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-ink hover:bg-line"
               }`}
             >
               <span className="text-base">⭐</span>
               {!preferences.sidebarCollapsed ? (
                 <>
                   <span className="flex-1 font-medium">Favoritos</span>
-                  <span className="text-xs text-slate-500">{favoriteRows.length}</span>
+                  <span className="text-xs text-mid">{favoriteRows.length}</span>
                 </>
               ) : null}
             </button>
@@ -327,7 +327,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
               }}
               data-testid="documents-v2-filter-TRASH"
               className={`mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                typeFilter === "TRASH" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-slate-700 hover:bg-slate-50"
+                typeFilter === "TRASH" ? "bg-[#e8f0ff] text-[#0f4d9d]" : "text-ink hover:bg-line"
               }`}
             >
               <span className="text-base">🗑️</span>
@@ -340,7 +340,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
       </aside>
 
       <main className="min-h-0 flex-1 overflow-hidden">
-        <div className="border-b border-slate-200 bg-white px-3 py-2 md:hidden">
+        <div className="border-b border-line bg-white px-3 py-2 md:hidden">
           <div className="flex flex-wrap gap-2">
             <Button
               size="small"
@@ -371,7 +371,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
         ) : null}
 
         {!loading && errorMessage ? (
-          <div className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="m-4 rounded-xl border border-urgent/30 bg-urgent-muted p-4 text-sm text-urgent">
             <p>{errorMessage}</p>
             {onRetry ? (
               <Button className="mt-3" appearance="secondary" onClick={onRetry}>
@@ -393,7 +393,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                   <>
                     <table className="w-full border-collapse">
                       <thead className="sticky top-0 z-10 bg-white">
-                        <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                        <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-mid">
                           {onBatchRestore ? <th className="w-10 px-3 py-2" /> : null}
                           <th className="px-3 py-2">Nombre</th>
                           <th className="px-3 py-2">Tipo</th>
@@ -411,21 +411,21 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                               )
                             : 0;
                           return (
-                            <tr key={doc.id} className="border-b border-slate-100 h-12 bg-white hover:bg-slate-50">
+                            <tr key={doc.id} className="border-b border-line h-12 bg-white hover:bg-line">
                               {onBatchRestore ? (
                                 <td className="px-3">
                                   <input
                                     type="checkbox"
                                     checked={selectedIds.has(doc.id)}
                                     onChange={() => toggleDocSelection(doc.id)}
-                                    className="h-4 w-4 rounded border-slate-300"
+                                    className="h-4 w-4 rounded border-line"
                                   />
                                 </td>
                               ) : null}
-                              <td className="px-3 text-sm font-semibold text-slate-900">{doc.name}</td>
-                              <td className="px-3 text-sm text-slate-600">{doc.type}</td>
-                              <td className="px-3 text-sm text-slate-500">{doc.deletedAt ? formatDateTime(doc.deletedAt) : "—"}</td>
-                              <td className="px-3 text-sm text-slate-500">{daysLeft} días</td>
+                              <td className="px-3 text-sm font-semibold text-ink">{doc.name}</td>
+                              <td className="px-3 text-sm text-mid">{doc.type}</td>
+                              <td className="px-3 text-sm text-mid">{doc.deletedAt ? formatDateTime(doc.deletedAt) : "—"}</td>
+                              <td className="px-3 text-sm text-mid">{daysLeft} días</td>
                               <td className="px-3 text-right">
                                 <Button
                                   size="small"
@@ -442,7 +442,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                       </tbody>
                     </table>
                     {trashItems.length === 0 ? (
-                      <div className="px-6 py-12 text-center text-sm text-slate-500">
+                      <div className="px-6 py-12 text-center text-sm text-mid">
                         La papelera está vacía.
                       </div>
                     ) : null}
@@ -453,7 +453,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
               <div className="h-full overflow-auto">
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 z-10 bg-white">
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-mid">
                       <th className="px-3 py-2">Nombre</th>
                       <th className="px-3 py-2">Tipo</th>
                       <th className="px-3 py-2">Modificado</th>
@@ -462,14 +462,14 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                   </thead>
                   <tbody>
                     {favoriteRows.map((row) => (
-                      <tr key={row.id} className="border-b border-slate-100 h-12 bg-white hover:bg-slate-50">
+                      <tr key={row.id} className="border-b border-line h-12 bg-white hover:bg-line">
                         <td className="px-3">
-                          <button type="button" onClick={() => onOpenDocument(row.document)} className="text-left font-semibold text-slate-900 hover:text-[#0a84ff]">
+                          <button type="button" onClick={() => onOpenDocument(row.document)} className="text-left font-semibold text-ink hover:text-[#0a84ff]">
                             {row.name}
                           </button>
                         </td>
-                        <td className="px-3 text-sm text-slate-600">{row.typeLabel}</td>
-                        <td className="px-3 text-sm text-slate-500">{formatDateTime(row.updatedAt)}</td>
+                        <td className="px-3 text-sm text-mid">{row.typeLabel}</td>
+                        <td className="px-3 text-sm text-mid">{formatDateTime(row.updatedAt)}</td>
                         <td className="px-3 text-right">
                           <Button size="small" icon={<Open24Regular />} onClick={() => onOpenDocument(row.document)}>
                             Abrir
@@ -480,7 +480,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                   </tbody>
                 </table>
                 {favoriteRows.length === 0 ? (
-                  <div className="px-6 py-12 text-center text-sm text-slate-500">
+                  <div className="px-6 py-12 text-center text-sm text-mid">
                     No tienes documentos favoritos.
                   </div>
                 ) : null}
@@ -488,19 +488,19 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
             ) : (
               <>
                 {typeFilter === "ALL" && recentDocs.length > 0 && !search.trim() ? (
-                  <div className="border-b border-slate-200 bg-white px-4 py-3">
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Recientes</h3>
+                  <div className="border-b border-line bg-white px-4 py-3">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-mid">Recientes</h3>
                     <div className="flex gap-3 overflow-x-auto pb-1">
                       {recentDocs.map((row) => (
                         <button
                           key={row.id}
                           type="button"
                           onClick={() => onOpenDocument(row.document)}
-                          className="flex min-w-[160px] max-w-[200px] shrink-0 flex-col rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-left transition-colors hover:bg-white"
+                          className="flex min-w-[160px] max-w-[200px] shrink-0 flex-col rounded-lg border border-line bg-line p-2.5 text-left transition-colors hover:bg-white"
                         >
                           <div className="mb-1 h-1 w-8 rounded-full" style={{ backgroundColor: row.typeAccent }} />
-                          <span className="line-clamp-1 text-xs font-semibold text-slate-800">{row.name}</span>
-                          <span className="text-[10px] text-slate-500">{row.typeLabel} · {formatDateTime(row.updatedAt)}</span>
+                          <span className="line-clamp-1 text-xs font-semibold text-ink">{row.name}</span>
+                          <span className="text-[10px] text-mid">{row.typeLabel} · {formatDateTime(row.updatedAt)}</span>
                         </button>
                       ))}
                     </div>
@@ -511,7 +511,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                   <div className="h-full overflow-auto">
                     <table className="w-full border-collapse">
                       <thead className="sticky top-0 z-10 bg-white">
-                        <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                        <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-mid">
                           {onBatchDelete ? <th className="w-10 px-3 py-2" /> : null}
                           {onToggleFavorite ? <th className="w-10 px-3 py-2" /> : null}
                           <th className="px-3 py-2">Nombre</th>
@@ -529,8 +529,8 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                             <tr
                               key={row.id}
                               data-testid={`documents-v2-row-${row.id}`}
-                              className={`border-b border-slate-100 ${explorerDensityRowClass} ${
-                                isSelected ? "bg-[#eef4ff]" : "bg-white hover:bg-slate-50"
+                              className={`border-b border-line ${explorerDensityRowClass} ${
+                                isSelected ? "bg-[#eef4ff]" : "bg-white hover:bg-line"
                               }`}
                               onClick={() => setSelectedDocumentId(row.id)}
                               onDoubleClick={() => onOpenDocument(row.document)}
@@ -541,7 +541,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                                     type="checkbox"
                                     checked={selectedIds.has(row.id)}
                                     onChange={() => toggleDocSelection(row.id)}
-                                    className="h-4 w-4 rounded border-slate-300"
+                                    className="h-4 w-4 rounded border-line"
                                   />
                                 </td>
                               ) : null}
@@ -550,9 +550,9 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                                   <button
                                     type="button"
                                     onClick={() => onToggleFavorite(row.document)}
-                                    className="text-slate-400 hover:text-yellow-500"
+                                    className="text-faint hover:text-ink"
                                   >
-                                    {row.isFavorite ? <span className="text-yellow-500"><Star24Filled /></span> : <Star24Regular />}
+                                    {row.isFavorite ? <span className="text-ink"><Star24Filled /></span> : <Star24Regular />}
                                   </button>
                                 </td>
                               ) : null}
@@ -561,25 +561,25 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                                   type="button"
                                   onClick={() => onOpenDocument(row.document)}
                                   data-testid={`documents-v2-open-${row.id}`}
-                                  className="text-left font-semibold text-slate-900 hover:text-[#0a84ff]"
+                                  className="text-left font-semibold text-ink hover:text-[#0a84ff]"
                                 >
                                   {row.name}
                                 </button>
                               </td>
-                              <td className="px-3 text-slate-600">{row.typeLabel}</td>
-                              <td className="px-3 text-slate-500">{formatDateTime(row.updatedAt)}</td>
+                              <td className="px-3 text-mid">{row.typeLabel}</td>
+                              <td className="px-3 text-mid">{formatDateTime(row.updatedAt)}</td>
                               <td className="px-3">
                                 <div className="flex items-center gap-1">
                                   {row.collaborators.slice(0, 3).map(renderCollaboratorAvatar)}
                                   {row.collaborators.length > 3 ? (
-                                    <span className="text-xs text-slate-500">+{row.collaborators.length - 3}</span>
+                                    <span className="text-xs text-mid">+{row.collaborators.length - 3}</span>
                                   ) : null}
                                   {row.collaborators.length === 0 ? (
-                                    <span className="text-xs text-slate-400">Sin actividad</span>
+                                    <span className="text-xs text-faint">Sin actividad</span>
                                   ) : null}
                                 </div>
                               </td>
-                              <td className="px-3 text-slate-500">v{row.currentVersion}</td>
+                              <td className="px-3 text-mid">v{row.currentVersion}</td>
                               <td className="px-3">
                                 <div className="flex items-center justify-end gap-1">
                                   <Button
@@ -638,7 +638,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                       </tbody>
                     </table>
                     {filteredRows.length === 0 ? (
-                      <div className="px-6 py-12 text-center text-sm text-slate-500">
+                      <div className="px-6 py-12 text-center text-sm text-mid">
                         No hay documentos para los filtros seleccionados.
                       </div>
                     ) : null}
@@ -649,7 +649,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                       <article
                         key={row.id}
                         className={`rounded-xl border bg-white p-4 shadow-sm ${
-                          selectedDocumentId === row.id ? "border-[#8ab4f8]" : "border-slate-200"
+                          selectedDocumentId === row.id ? "border-[#8ab4f8]" : "border-line"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -663,25 +663,25 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                                 type="checkbox"
                                 checked={selectedIds.has(row.id)}
                                 onChange={() => toggleDocSelection(row.id)}
-                                className="h-4 w-4 rounded border-slate-300"
+                                className="h-4 w-4 rounded border-line"
                               />
                             ) : null}
                             {onToggleFavorite ? (
-                              <button type="button" onClick={() => onToggleFavorite(row.document)} className="text-slate-400 hover:text-yellow-500">
-                                {row.isFavorite ? <span className="text-yellow-500"><Star24Filled /></span> : <Star24Regular />}
+                              <button type="button" onClick={() => onToggleFavorite(row.document)} className="text-faint hover:text-ink">
+                                {row.isFavorite ? <span className="text-ink"><Star24Filled /></span> : <Star24Regular />}
                               </button>
                             ) : null}
                           </div>
                         </div>
-                        <div className="mb-1 text-xs font-semibold text-slate-500">{row.typeLabel}</div>
-                        <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-slate-900">
+                        <div className="mb-1 text-xs font-semibold text-mid">{row.typeLabel}</div>
+                        <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-ink">
                           {row.name}
                         </h3>
-                        <p className="text-xs text-slate-500">{formatDateTime(row.updatedAt)}</p>
+                        <p className="text-xs text-mid">{formatDateTime(row.updatedAt)}</p>
                         <div className="mt-3 flex items-center gap-2">
                           {row.collaborators.slice(0, 3).map(renderCollaboratorAvatar)}
                           {row.collaborators.length > 3 ? (
-                            <span className="text-xs text-slate-500">+{row.collaborators.length - 3}</span>
+                            <span className="text-xs text-mid">+{row.collaborators.length - 3}</span>
                           ) : null}
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -725,7 +725,7 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
                       </article>
                     ))}
                     {filteredRows.length === 0 ? (
-                      <div className="col-span-full rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
+                      <div className="col-span-full rounded-xl border border-dashed border-line bg-white p-10 text-center text-sm text-mid">
                         No hay documentos para los filtros seleccionados.
                       </div>
                     ) : null}
@@ -735,8 +735,8 @@ export const CollaborativeDocumentsModuleV2ExplorerView = ({
             )}
 
             {selectedIds.size > 0 ? (
-              <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-lg">
-                <span className="text-sm font-medium text-slate-700">{selectedIds.size} seleccionados</span>
+              <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-line bg-white px-5 py-3 shadow-lg">
+                <span className="text-sm font-medium text-ink">{selectedIds.size} seleccionados</span>
                 {showTrash && onBatchRestore ? (
                   <Button
                     size="small"

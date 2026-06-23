@@ -7,7 +7,7 @@ const DocumentsBoard = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+      <div className="flex h-full items-center justify-center text-sm text-mid">
         Cargando documentos...
       </div>
     )

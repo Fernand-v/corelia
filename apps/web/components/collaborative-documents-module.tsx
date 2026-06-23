@@ -181,19 +181,19 @@ export type CollaborativeDocumentsModuleProps = {
 const syncLabelByState: Record<DocumentEditorSyncState, { label: string; tone: string }> = {
   synced: {
     label: "🟢 Conectado",
-    tone: "bg-emerald-100 text-emerald-700"
+    tone: "bg-paper text-ink"
   },
   saving: {
     label: "Guardando…",
-    tone: "bg-amber-50 text-amber-600"
+    tone: "bg-paper text-ink"
   },
   reconnecting: {
     label: "🟡 Reconectando",
-    tone: "bg-yellow-100 text-yellow-700"
+    tone: "bg-paper text-ink"
   },
   offline: {
     label: "🔴 Sin conexión",
-    tone: "bg-red-100 text-red-700"
+    tone: "bg-urgent-muted text-urgent"
   }
 };
 
@@ -309,21 +309,21 @@ export const CollaborativeDocumentsModule = ({
     if (syncState === "saving" || savingVersion) {
       return {
         label: "Guardando...",
-        tone: "bg-amber-100 text-amber-700"
+        tone: "bg-paper text-ink"
       };
     }
 
     if (activeIsDirty) {
       return {
         label: "● Cambios sin guardar",
-        tone: "bg-blue-100 text-blue-700"
+        tone: "bg-paper text-ink"
       };
     }
 
     if (activeWasSavedRecently) {
       return {
         label: "✓ Guardado",
-        tone: "bg-emerald-100 text-emerald-700"
+        tone: "bg-paper text-ink"
       };
     }
 
@@ -794,7 +794,7 @@ export const CollaborativeDocumentsModule = ({
 
     if (!isProviderOffline && !yjsProvider && !isOnlyOfficeDocumentType(activeDocument.type)) {
       return (
-        <div className="rounded-2xl border border-[rgba(0,0,0,0.07)] bg-white p-6 text-sm text-slate-500 shadow-sm">
+        <div className="rounded-2xl border border-[rgba(0,0,0,0.07)] bg-white p-6 text-sm text-mid shadow-sm">
           Preparando el editor, un momento…
         </div>
       );
@@ -979,13 +979,13 @@ export const CollaborativeDocumentsModule = ({
       <ErrorBoundary
         fallback={
           <div className="flex h-full min-h-[360px] flex-col items-center justify-center gap-4 p-6 text-center">
-            <h2 className="text-lg font-semibold text-slate-900">No se pudo cargar Documentos V2</h2>
-            <p className="text-sm text-slate-600">
+            <h2 className="text-lg font-semibold text-ink">No se pudo cargar Documentos V2</h2>
+            <p className="text-sm text-mid">
               Intenta recargar el módulo para continuar trabajando.
             </p>
             <button
               type="button"
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+              className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink"
               onClick={() => {
                 if (onRetry) {
                   onRetry();
@@ -1009,7 +1009,7 @@ export const CollaborativeDocumentsModule = ({
         widthClassName="max-w-2xl"
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">¿Qué tipo de documento quieres crear?</p>
+          <p className="text-sm text-mid">¿Qué tipo de documento quieres crear?</p>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {DOCUMENT_TYPE_ORDER.map((type) => {
               const meta = DOCUMENT_TYPE_META[type];
@@ -1022,21 +1022,21 @@ export const CollaborativeDocumentsModule = ({
                   className={`rounded-xl border p-3 text-left transition-colors ${
                     active
                       ? "border-accent/30 bg-accent/8"
-                      : "border-slate-200 bg-white hover:bg-slate-50"
+                      : "border-line bg-white hover:bg-line"
                   }`}
                 >
                   <p className="text-2xl" aria-hidden>
                     {meta.icon}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-800">{meta.label}</p>
-                  <p className="text-xs text-slate-500">{meta.hint}</p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{meta.label}</p>
+                  <p className="text-xs text-mid">{meta.hint}</p>
                 </button>
               );
             })}
           </div>
 
           {selectedType ? (
-            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="space-y-3 rounded-xl border border-line bg-line p-3">
               <p className="text-xs font-medium text-accent">
                 ⚡ Los cambios se sincronizan en tiempo real con otros colaboradores
               </p>
@@ -1045,18 +1045,18 @@ export const CollaborativeDocumentsModule = ({
                 value={newDocumentName}
                 onChange={(event) => setNewDocumentName(event.target.value)}
                 placeholder={DOCUMENT_TYPE_META[selectedType].placeholder}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-accent"
+                className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm outline-none focus:border-accent"
                 maxLength={80}
               />
               {selectedType === "DIAGRAMA" ? (
                 <label className="block space-y-1">
-                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <span className="text-xs font-medium uppercase tracking-wide text-mid">
                     Tipo de diagrama
                   </span>
                   <select
                     value={selectedDiagramKind}
                     onChange={(event) => setSelectedDiagramKind(event.target.value as DiagramKind)}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-accent"
+                    className="h-10 w-full rounded-xl border border-line bg-white px-3 text-sm outline-none focus:border-accent"
                   >
                     {DIAGRAM_KIND_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1070,7 +1070,7 @@ export const CollaborativeDocumentsModule = ({
                 <button
                   type="button"
                   onClick={closeCreateModal}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700"
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink"
                 >
                   Cancelar
                 </button>
@@ -1100,7 +1100,7 @@ export const CollaborativeDocumentsModule = ({
           <input
             value={renameValue}
             onChange={(event) => setRenameValue(event.target.value)}
-            className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-accent"
+            className="h-11 w-full rounded-xl border border-line px-3 text-sm outline-none focus:border-accent"
             maxLength={80}
           />
           <div className="flex justify-end gap-2">
@@ -1110,7 +1110,7 @@ export const CollaborativeDocumentsModule = ({
                 setRenameTarget(null);
                 setRenameValue("");
               }}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700"
+              className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink"
             >
               Cancelar
             </button>
@@ -1139,14 +1139,14 @@ export const CollaborativeDocumentsModule = ({
         title="Eliminar documento"
       >
         <div className="space-y-3">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-mid">
             El documento se moverá a papelera durante 7 días antes de purgarse automáticamente.
           </p>
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setDeleteTarget(null)}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700"
+              className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink"
             >
               Cancelar
             </button>
@@ -1162,7 +1162,7 @@ export const CollaborativeDocumentsModule = ({
                   onCloseDocument();
                 }
               }}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white"
+              className="rounded-lg bg-urgent px-3 py-1.5 text-xs font-semibold text-white"
             >
               Confirmar
             </button>
@@ -1179,7 +1179,7 @@ export const CollaborativeDocumentsModule = ({
         title={previewTitle || "Preview versión"}
         widthClassName="max-w-3xl"
       >
-        <pre className="max-h-[60vh] overflow-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700">
+        <pre className="max-h-[60vh] overflow-auto rounded-xl bg-line p-3 text-xs text-ink">
           {previewContent}
         </pre>
       </UiModal>

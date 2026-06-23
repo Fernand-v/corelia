@@ -37,10 +37,10 @@ export const CollaborativeDocumentsModuleV2TemplateSaveModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-4 text-lg font-semibold text-slate-900">Guardar como plantilla</h3>
+        <h3 className="mb-4 text-lg font-semibold text-ink">Guardar como plantilla</h3>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Nombre</label>
+            <label className="mb-1 block text-xs font-medium text-mid">Nombre</label>
             <Input
               value={templateName}
               onChange={(_, data) => setTemplateName(data.value)}
@@ -49,7 +49,7 @@ export const CollaborativeDocumentsModuleV2TemplateSaveModal = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Descripción (opcional)</label>
+            <label className="mb-1 block text-xs font-medium text-mid">Descripción (opcional)</label>
             <Input
               value={templateDesc}
               onChange={(_, data) => setTemplateDesc(data.value)}
@@ -114,8 +114,8 @@ export const CollaborativeDocumentsModuleV2RestoreConfirmModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-2 text-lg font-semibold text-slate-900">Restaurar versión</h3>
-        <p className="mb-4 text-sm text-slate-600">
+        <h3 className="mb-2 text-lg font-semibold text-ink">Restaurar versión</h3>
+        <p className="mb-4 text-sm text-mid">
           ¿Estás seguro de que deseas restaurar la versión <strong>v{restoreConfirm.version.versionNumber}</strong>?
           El contenido actual del documento será reemplazado.
         </p>
@@ -168,7 +168,7 @@ export const CollaborativeDocumentsModuleV2SvgPreviewModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">{svgPreview.title}</h3>
+          <h3 className="text-lg font-semibold text-ink">{svgPreview.title}</h3>
           <Button
             appearance="subtle"
             icon={<Dismiss24Regular />}
@@ -176,7 +176,7 @@ export const CollaborativeDocumentsModuleV2SvgPreviewModal = ({
           />
         </div>
         <div
-          className="max-h-[60vh] overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4"
+          className="max-h-[60vh] overflow-auto rounded-lg border border-line bg-line p-4"
           dangerouslySetInnerHTML={{
             __html: DOMPurify.sanitize(svgPreview.svg, {
               USE_PROFILES: { svg: true, svgFilters: true }
