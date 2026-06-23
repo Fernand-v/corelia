@@ -83,10 +83,10 @@ const BarChart = ({ data }: { data: { label: string; value: number; max: number 
         const pct = item.max > 0 ? Math.max(4, (item.value / item.max) * 100) : 4;
         return (
           <div key={item.label} className="flex flex-1 flex-col items-center gap-0.5">
-            <span className="text-[10px] text-slate-500 tabular-nums">{item.value}</span>
+            <span className="text-[10px] text-mid tabular-nums">{item.value}</span>
             <div className="w-full flex items-end" style={{ height: "40px" }}>
               <div
-                className="w-full rounded-t bg-slate-700/20 hover:bg-slate-700/40 transition-colors"
+                className="w-full rounded-t bg-ink/20 hover:bg-ink/40 transition-colors"
                 style={{ height: `${pct}%` }}
                 title={`${item.label}: ${item.value}`}
               />
@@ -109,7 +109,7 @@ export const AdminOverviewDashboard = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Spinner size="lg" className="text-slate-400" />
+        <Spinner size="lg" className="text-faint" />
       </div>
     );
   }
@@ -121,7 +121,7 @@ export const AdminOverviewDashboard = () => {
         <button
           type="button"
           onClick={() => refetch()}
-          className="ml-2 underline text-red-700 hover:text-red-900 text-xs"
+          className="ml-2 underline text-urgent hover:text-urgent text-xs"
         >
           Reintentar
         </button>
@@ -150,10 +150,10 @@ export const AdminOverviewDashboard = () => {
       {/* Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
+          <h1 className="text-xl font-semibold text-ink tracking-tight">
             Resumen del Sistema
           </h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="mt-0.5 text-sm text-mid">
             {organization.name} · Generado el {fmtDate(data.generatedAt)}
           </p>
         </div>
@@ -211,14 +211,14 @@ export const AdminOverviewDashboard = () => {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Estado de servicios */}
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">Estado de servicios</h2>
+          <h2 className="mb-3 text-sm font-semibold text-ink">Estado de servicios</h2>
           <div className="space-y-2">
             {system.services.map((svc) => (
               <div key={svc.service} className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-700">{serviceLabel[svc.service] ?? svc.service}</span>
+                <span className="text-sm text-ink">{serviceLabel[svc.service] ?? svc.service}</span>
                 <div className="flex items-center gap-2">
                   {svc.detail && (
-                    <span className="max-w-[180px] truncate text-xs text-slate-500" title={svc.detail}>
+                    <span className="max-w-[180px] truncate text-xs text-mid" title={svc.detail}>
                       {svc.detail}
                     </span>
                   )}
@@ -233,7 +233,7 @@ export const AdminOverviewDashboard = () => {
 
         {/* Carga de tareas */}
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">Carga de tareas</h2>
+          <h2 className="mb-3 text-sm font-semibold text-ink">Carga de tareas</h2>
           <div className="space-y-3">
             <Progress
               value={overduePct}
@@ -241,24 +241,24 @@ export const AdminOverviewDashboard = () => {
               label="Tareas vencidas"
               showValue
             />
-            <div className="flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center justify-between text-xs text-mid">
               <span>Total: {fmt(totals.tasks)} tareas</span>
-              <span className="font-medium text-red-600">{fmt(totals.overdueTasks)} vencidas</span>
+              <span className="font-medium text-urgent">{fmt(totals.overdueTasks)} vencidas</span>
             </div>
           </div>
 
           <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.06)]">
-            <h3 className="mb-2 text-xs font-semibold text-slate-600 uppercase tracking-wide">
+            <h3 className="mb-2 text-xs font-semibold text-mid uppercase tracking-wide">
               Automatizaciones
             </h3>
             <div className="flex gap-4 text-sm">
               <div>
-                <span className="font-semibold text-slate-900">{fmt(automations.enabled)}</span>
-                <span className="ml-1 text-slate-500">activas</span>
+                <span className="font-semibold text-ink">{fmt(automations.enabled)}</span>
+                <span className="ml-1 text-mid">activas</span>
               </div>
               <div>
-                <span className="font-semibold text-slate-900">{fmt(automations.total)}</span>
-                <span className="ml-1 text-slate-500">total</span>
+                <span className="font-semibold text-ink">{fmt(automations.total)}</span>
+                <span className="ml-1 text-mid">total</span>
               </div>
               {automations.failedLast24h > 0 && (
                 <Badge variant="danger" dot>
@@ -274,15 +274,15 @@ export const AdminOverviewDashboard = () => {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Formularios */}
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">Formularios y solicitudes</h2>
+          <h2 className="mb-3 text-sm font-semibold text-ink">Formularios y solicitudes</h2>
           <div className="flex gap-4 mb-4 text-sm">
             <div>
-              <span className="font-semibold text-slate-900">{fmt(forms.activeRequests)}</span>
-              <span className="ml-1 text-slate-500">activas</span>
+              <span className="font-semibold text-ink">{fmt(forms.activeRequests)}</span>
+              <span className="ml-1 text-mid">activas</span>
             </div>
             <div>
-              <span className="font-semibold text-amber-600">{fmt(forms.pendingApproval)}</span>
-              <span className="ml-1 text-slate-500">pendientes de aprobación</span>
+              <span className="font-semibold text-ink">{fmt(forms.pendingApproval)}</span>
+              <span className="ml-1 text-mid">pendientes de aprobación</span>
             </div>
           </div>
           {formsByStatus.length > 0 ? (
@@ -290,11 +290,11 @@ export const AdminOverviewDashboard = () => {
               <BarChart data={formsByStatus} />
               <div className="mt-2 flex flex-wrap gap-2">
                 {forms.byStatus.map((s) => (
-                  <span key={s.status} className="flex items-center gap-1 text-xs text-slate-500">
+                  <span key={s.status} className="flex items-center gap-1 text-xs text-mid">
                     <Badge variant={requestStatusVariant(s.status)}>
                       {requestStatusLabel[s.status] ?? s.status}
                     </Badge>
-                    <span className="font-medium text-slate-700">{fmt(s.total)}</span>
+                    <span className="font-medium text-ink">{fmt(s.total)}</span>
                   </span>
                 ))}
               </div>
@@ -306,38 +306,38 @@ export const AdminOverviewDashboard = () => {
 
         {/* Webhooks */}
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">Integraciones y webhooks</h2>
+          <h2 className="mb-3 text-sm font-semibold text-ink">Integraciones y webhooks</h2>
           <div className="flex gap-4 mb-4 text-sm">
             <div>
-              <span className="font-semibold text-slate-900">{fmt(integrations.webhooksConfigured)}</span>
-              <span className="ml-1 text-slate-500">configurados</span>
+              <span className="font-semibold text-ink">{fmt(integrations.webhooksConfigured)}</span>
+              <span className="ml-1 text-mid">configurados</span>
             </div>
             <div>
-              <span className="font-semibold text-emerald-600">{fmt(integrations.webhooksEnabled)}</span>
-              <span className="ml-1 text-slate-500">habilitados</span>
+              <span className="font-semibold text-ink">{fmt(integrations.webhooksEnabled)}</span>
+              <span className="ml-1 text-mid">habilitados</span>
             </div>
             {webhookSuccessRate !== null && (
               <div>
                 <span
-                  className={`font-semibold ${webhookSuccessRate >= 80 ? "text-emerald-600" : "text-red-600"}`}
+                  className={`font-semibold ${webhookSuccessRate >= 80 ? "text-ink" : "text-urgent"}`}
                 >
                   {new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 }).format(webhookSuccessRate)}%
                 </span>
-                <span className="ml-1 text-slate-500">éxito</span>
+                <span className="ml-1 text-mid">éxito</span>
               </div>
             )}
           </div>
           {integrations.latestDeliveries.length > 0 ? (
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+              <p className="text-xs font-medium text-mid uppercase tracking-wide mb-2">
                 Últimos envíos
               </p>
               {integrations.latestDeliveries.slice(0, 5).map((d) => (
                 <div key={d.id} className="flex items-center justify-between gap-3 text-xs">
-                  <span className="text-slate-500 truncate">{fmtDate(d.attemptedAt)}</span>
+                  <span className="text-mid truncate">{fmtDate(d.attemptedAt)}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {d.statusCode && (
-                      <span className="text-slate-400 font-mono">{d.statusCode}</span>
+                      <span className="text-faint font-mono">{d.statusCode}</span>
                     )}
                     <Badge variant={d.success ? "success" : "danger"} dot>
                       {d.success ? "OK" : "Error"}
@@ -356,7 +356,7 @@ export const AdminOverviewDashboard = () => {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Anuncios */}
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">
+          <h2 className="mb-3 text-sm font-semibold text-ink">
             Anuncios activos
             <Badge className="ml-2" variant={announcements.active > 0 ? "info" : "neutral"}>
               {fmt(announcements.active)}
@@ -367,10 +367,10 @@ export const AdminOverviewDashboard = () => {
               {announcements.recent.map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-start justify-between gap-3 rounded-xl bg-slate-50/80 px-3 py-2"
+                  className="flex items-start justify-between gap-3 rounded-xl bg-line/80 px-3 py-2"
                 >
-                  <span className="text-sm font-medium text-slate-800 truncate">{a.title}</span>
-                  <span className="shrink-0 text-xs text-slate-400">{fmtDate(a.expiresAt)}</span>
+                  <span className="text-sm font-medium text-ink truncate">{a.title}</span>
+                  <span className="shrink-0 text-xs text-faint">{fmtDate(a.expiresAt)}</span>
                 </div>
               ))}
             </div>
@@ -381,17 +381,17 @@ export const AdminOverviewDashboard = () => {
 
         {/* Importaciones */}
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">Importaciones recientes</h2>
+          <h2 className="mb-3 text-sm font-semibold text-ink">Importaciones recientes</h2>
           {imports.latestJobs.length > 0 ? (
             <div className="space-y-2">
               {imports.latestJobs.map((job) => (
                 <div
                   key={job.id}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-slate-50/80 px-3 py-2"
+                  className="flex items-center justify-between gap-3 rounded-xl bg-line/80 px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{job.filename}</p>
-                    <p className="text-xs text-slate-500">{fmtDate(job.startedAt)}</p>
+                    <p className="text-sm font-medium text-ink truncate">{job.filename}</p>
+                    <p className="text-xs text-mid">{fmtDate(job.startedAt)}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Badge variant="neutral">{importSourceLabel[job.source] ?? job.source}</Badge>
@@ -410,7 +410,7 @@ export const AdminOverviewDashboard = () => {
 
       {/* Auditoría reciente */}
       <Card>
-        <h2 className="mb-3 text-sm font-semibold text-slate-800">Auditoría reciente</h2>
+        <h2 className="mb-3 text-sm font-semibold text-ink">Auditoría reciente</h2>
         {audit.latestEvents.length > 0 ? (
           <div className="divide-y divide-[rgba(0,0,0,0.05)]">
             {audit.latestEvents.map((ev) => (
@@ -419,14 +419,14 @@ export const AdminOverviewDashboard = () => {
                   <Badge variant="neutral">
                     {entityLabel[ev.entityType] ?? ev.entityType}
                   </Badge>
-                  <span className="text-sm text-slate-600 truncate">
+                  <span className="text-sm text-mid truncate">
                     {actionLabel[ev.action] ?? ev.action}
                     {ev.userName && (
-                      <span className="text-slate-400"> · {ev.userName}</span>
+                      <span className="text-faint"> · {ev.userName}</span>
                     )}
                   </span>
                 </div>
-                <span className="shrink-0 text-xs text-slate-400">{fmtDate(ev.createdAt)}</span>
+                <span className="shrink-0 text-xs text-faint">{fmtDate(ev.createdAt)}</span>
               </div>
             ))}
           </div>

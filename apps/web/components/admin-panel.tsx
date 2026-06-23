@@ -133,10 +133,10 @@ const ActionCard = ({
   buttonLabel: string;
   onOpen: () => void;
 }) => (
-  <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-    <p className="text-sm font-semibold text-slate-900">{title}</p>
-    <p className="mt-1 text-xs text-slate-600">{description}</p>
-    {helper ? <p className="mt-2 text-xs text-slate-500">{helper}</p> : null}
+  <article className="rounded-2xl border border-line bg-white p-4 shadow-sm">
+    <p className="text-sm font-semibold text-ink">{title}</p>
+    <p className="mt-1 text-xs text-mid">{description}</p>
+    {helper ? <p className="mt-2 text-xs text-mid">{helper}</p> : null}
     <div className="mt-3">
       <Button type="button" className="h-8 px-3 text-xs" onClick={onOpen}>
         {buttonLabel}
@@ -742,7 +742,7 @@ export const AdminPanelView = () => {
   if (session.isLoading || !session.data) {
     return (
       <Card>
-        <p className="text-sm text-slate-600">Cargando sesión...</p>
+        <p className="text-sm text-mid">Cargando sesión...</p>
       </Card>
     );
   }
@@ -750,8 +750,8 @@ export const AdminPanelView = () => {
   if (session.data.activeRole !== "ADMINISTRADOR") {
     return (
       <Card>
-        <h2 className="text-lg font-semibold text-slate-900">Acceso restringido</h2>
-        <p className="text-sm text-slate-600">
+        <h2 className="text-lg font-semibold text-ink">Acceso restringido</h2>
+        <p className="text-sm text-mid">
           Solo el rol Administrador puede acceder al Panel de Administración.
         </p>
       </Card>
@@ -777,15 +777,15 @@ export const AdminPanelView = () => {
   return (
     <div className="space-y-6">
       <Card className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Panel de Administración</p>
-        <h1 className="text-2xl font-semibold text-slate-900">
+        <p className="text-xs uppercase tracking-wide text-mid">Panel de Administración</p>
+        <h1 className="text-2xl font-semibold text-ink">
           Administración {frontendSettings.organizationName}
         </h1>
-        <p className="text-sm text-slate-600">Acciones administrativas principales en un solo lugar.</p>
+        <p className="text-sm text-mid">Acciones administrativas principales en un solo lugar.</p>
       </Card>
 
       <Card className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Acciones</h2>
+        <h2 className="text-lg font-semibold text-ink">Acciones</h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <ActionCard
             title="Crear usuario"
@@ -878,14 +878,14 @@ export const AdminPanelView = () => {
 
       {(teamsQuery.data?.items.length ?? 0) > 0 ? (
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Equipos</h2>
+          <h2 className="text-lg font-semibold text-ink">Equipos</h2>
           <ul className="space-y-2">
             {teamsQuery.data?.items.map((team) => (
-              <li key={team.id} className="rounded-xl border border-slate-200 p-3">
+              <li key={team.id} className="rounded-xl border border-line p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{team.name}</p>
-                    <p className="text-xs text-slate-600">
+                    <p className="text-sm font-medium text-ink">{team.name}</p>
+                    <p className="text-xs text-mid">
                       Coordinador: {team.coordinator?.fullName ?? "No asignado"} · Miembros: {team.membersCount}
                     </p>
                   </div>
@@ -898,14 +898,14 @@ export const AdminPanelView = () => {
 
       {(internalInvitesQuery.data?.items.length ?? 0) > 0 || internalInviteLinkPreview ? (
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Invitaciones internas</h2>
+          <h2 className="text-lg font-semibold text-ink">Invitaciones internas</h2>
           <ul className="space-y-2">
             {internalInvitesQuery.data?.items.map((invite) => (
-              <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
+              <li key={invite.id} className="rounded-xl border border-line p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{invite.email}</p>
-                    <p className="text-xs text-slate-600">
+                    <p className="text-sm font-medium text-ink">{invite.email}</p>
+                    <p className="text-xs text-mid">
                       {invite.baseRole} · {invite.teamName ?? "Sin equipo"} · expira {formatDateTime(invite.expiresAt)}
                     </p>
                   </div>
@@ -936,7 +936,7 @@ export const AdminPanelView = () => {
             ))}
           </ul>
           {internalInviteLinkPreview ? (
-            <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            <p className="rounded-xl border border-line bg-paper p-3 text-sm text-ink">
               Enlace interno: {internalInviteLinkPreview}
             </p>
           ) : null}
@@ -945,14 +945,14 @@ export const AdminPanelView = () => {
 
       {(invitesQuery.data?.items.length ?? 0) > 0 || externalInviteLinkPreview ? (
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Invitaciones externas</h2>
+          <h2 className="text-lg font-semibold text-ink">Invitaciones externas</h2>
           <ul className="space-y-2">
             {invitesQuery.data?.items.map((invite) => (
-              <li key={invite.id} className="rounded-xl border border-slate-200 p-3">
+              <li key={invite.id} className="rounded-xl border border-line p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{invite.email}</p>
-                    <p className="text-xs text-slate-600">
+                    <p className="text-sm font-medium text-ink">{invite.email}</p>
+                    <p className="text-xs text-mid">
                       PROYECTO · {invite.resourceScopeId} · expira {formatDateTime(invite.expiresAt)}
                     </p>
                   </div>
@@ -981,7 +981,7 @@ export const AdminPanelView = () => {
             ))}
           </ul>
           {externalInviteLinkPreview ? (
-            <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            <p className="rounded-xl border border-line bg-paper p-3 text-sm text-ink">
               Enlace externo: {externalInviteLinkPreview}
             </p>
           ) : null}
@@ -990,26 +990,26 @@ export const AdminPanelView = () => {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900">Integraciones</p>
-          <p className="text-xs text-slate-600">
+          <p className="text-sm font-semibold text-ink">Integraciones</p>
+          <p className="text-xs text-mid">
             Webhooks: {overview?.integrations.webhooksConfigured ?? 0} · activos: {overview?.integrations.webhooksEnabled ?? 0}
           </p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900">Automatizaciones</p>
-          <p className="text-xs text-slate-600">
+          <p className="text-sm font-semibold text-ink">Automatizaciones</p>
+          <p className="text-xs text-mid">
             Total: {overview?.automations.total ?? 0} · Activas: {overview?.automations.enabled ?? 0} · Fallidas 24h: {overview?.automations.failedLast24h ?? 0}
           </p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900">Formularios</p>
-          <p className="text-xs text-slate-600">
+          <p className="text-sm font-semibold text-ink">Formularios</p>
+          <p className="text-xs text-mid">
             Activas: {overview?.forms.activeRequests ?? 0} · Pendientes: {overview?.forms.pendingApproval ?? 0}
           </p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900">Importaciones</p>
-          <p className="text-xs text-slate-600">Últimos jobs: {overview?.imports.latestJobs.length ?? 0}</p>
+          <p className="text-sm font-semibold text-ink">Importaciones</p>
+          <p className="text-xs text-mid">Últimos jobs: {overview?.imports.latestJobs.length ?? 0}</p>
         </Card>
       </div>
 
@@ -1047,22 +1047,22 @@ export const AdminPanelView = () => {
           </>
         }
       >
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-mid">
           Configura nombre de empresa, colores de estados de tarea y vigencia de videollamadas instantáneas sin editar código.
         </p>
 
         {adminFrontendSettingsQuery.isLoading ? (
-          <p className="text-sm text-slate-600">Cargando configuración visual...</p>
+          <p className="text-sm text-mid">Cargando configuración visual...</p>
         ) : null}
         {adminFrontendSettingsQuery.error ? (
-          <p className="text-sm text-red-600">{adminFrontendSettingsQuery.error.message}</p>
+          <p className="text-sm text-urgent">{adminFrontendSettingsQuery.error.message}</p>
         ) : null}
 
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Nombre de empresa</span>
+            <span className="text-xs font-medium text-mid">Nombre de empresa</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={visualSettingsForm.organizationName}
               onChange={(event) => {
                 setVisualSettingsFeedback(null);
@@ -1075,24 +1075,24 @@ export const AdminPanelView = () => {
               placeholder="Nombre de empresa"
             />
           </label>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vista previa</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">
+          <div className="rounded-xl border border-line bg-line px-3 py-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-mid">Vista previa</p>
+            <p className="mt-1 text-sm font-semibold text-ink">
               {visualSettingsForm.organizationName.trim() || frontendSettingsDefaults.organizationName}
             </p>
-            <p className="text-xs text-slate-600">Nombre aplicado en login, shell, admin y home.</p>
+            <p className="text-xs text-mid">Nombre aplicado en login, shell, admin y home.</p>
           </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Vigencia de videollamada instantánea (horas)</span>
+            <span className="text-xs font-medium text-mid">Vigencia de videollamada instantánea (horas)</span>
             <input
               type="number"
               min={1}
               max={720}
               step={1}
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={visualSettingsForm.instantCallExpiryHours}
               onChange={(event) => {
                 setVisualSettingsFeedback(null);
@@ -1105,12 +1105,12 @@ export const AdminPanelView = () => {
               placeholder="24"
             />
           </label>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vista previa</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">
+          <div className="rounded-xl border border-line bg-line px-3 py-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-mid">Vista previa</p>
+            <p className="mt-1 text-sm font-semibold text-ink">
               {visualInstantCallHoursValid ? `${visualInstantCallHours} horas` : "Valor no válido"}
             </p>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-mid">
               Después de este tiempo el botón de ingreso pasa a gris y se bloquea el acceso.
             </p>
           </div>
@@ -1120,12 +1120,12 @@ export const AdminPanelView = () => {
           {TASK_STATUS_OPTIONS.map((item) => {
             const color = visualSettingsForm.taskStatusColors[item.status];
             return (
-              <div key={item.status} className="rounded-xl border border-slate-200 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+              <div key={item.status} className="rounded-xl border border-line p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-mid">{item.label}</p>
                 <div className="mt-2 flex items-center gap-2">
                   <input
                     type="color"
-                    className="h-9 w-11 cursor-pointer rounded border border-slate-300 bg-white p-1"
+                    className="h-9 w-11 cursor-pointer rounded border border-line bg-white p-1"
                     value={visualColorRegex.test(color) ? color : "#64748B"}
                     onChange={(event) => {
                       const nextColor = event.target.value.toUpperCase();
@@ -1141,7 +1141,7 @@ export const AdminPanelView = () => {
                     }}
                   />
                   <input
-                    className="h-9 w-full rounded-md border border-slate-300 px-2 text-xs font-medium uppercase"
+                    className="h-9 w-full rounded-md border border-line px-2 text-xs font-medium uppercase"
                     value={color}
                     onChange={(event) => {
                       const nextColor = event.target.value.toUpperCase();
@@ -1175,17 +1175,17 @@ export const AdminPanelView = () => {
         </div>
 
         {!visualSettingsValid ? (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-urgent">
             Verifica nombre, colores hex válidos (formato #RRGGBB) y vigencia en horas (1 a 720).
           </p>
         ) : null}
         {saveVisualSettingsMutation.error ? (
-          <p className="text-sm text-red-600">{saveVisualSettingsMutation.error.message}</p>
+          <p className="text-sm text-urgent">{saveVisualSettingsMutation.error.message}</p>
         ) : null}
         {resetVisualSettingsMutation.error ? (
-          <p className="text-sm text-red-600">{resetVisualSettingsMutation.error.message}</p>
+          <p className="text-sm text-urgent">{resetVisualSettingsMutation.error.message}</p>
         ) : null}
-        {visualSettingsFeedback ? <p className="text-sm text-emerald-700">{visualSettingsFeedback}</p> : null}
+        {visualSettingsFeedback ? <p className="text-sm text-ink">{visualSettingsFeedback}</p> : null}
       </UiModal>
 
       <UiModal
@@ -1199,27 +1199,27 @@ export const AdminPanelView = () => {
           </Button>
         }
       >
-        <p className="text-xs text-slate-500">Vista de los permisos asignados a cada rol del sistema.</p>
-        {rolesQuery.isLoading ? <p className="text-sm text-slate-600">Cargando roles...</p> : null}
-        {rolesQuery.error ? <p className="text-sm text-red-600">{rolesQuery.error.message}</p> : null}
+        <p className="text-xs text-mid">Vista de los permisos asignados a cada rol del sistema.</p>
+        {rolesQuery.isLoading ? <p className="text-sm text-mid">Cargando roles...</p> : null}
+        {rolesQuery.error ? <p className="text-sm text-urgent">{rolesQuery.error.message}</p> : null}
         {(rolesQuery.data?.length ?? 0) === 0 && !rolesQuery.isLoading ? (
-          <p className="text-sm text-slate-600">No hay roles disponibles para mostrar.</p>
+          <p className="text-sm text-mid">No hay roles disponibles para mostrar.</p>
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {rolesQuery.data?.map((item) => (
-            <article key={item.role} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="mb-2 text-sm font-semibold text-slate-900">{item.role}</p>
+            <article key={item.role} className="rounded-2xl border border-line bg-white p-4 shadow-sm">
+              <p className="mb-2 text-sm font-semibold text-ink">{item.role}</p>
               <div className="flex flex-wrap gap-1.5">
                 {item.permissions.map((permission) => (
                   <span
                     key={permission}
-                    className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                    className="inline-flex rounded-full border border-line bg-line px-2 py-0.5 text-[11px] font-medium text-mid"
                   >
                     {permission}
                   </span>
                 ))}
                 {item.permissions.length === 0 ? (
-                  <span className="text-xs text-slate-400">Sin permisos asignados</span>
+                  <span className="text-xs text-faint">Sin permisos asignados</span>
                 ) : null}
               </div>
             </article>
@@ -1250,36 +1250,36 @@ export const AdminPanelView = () => {
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Nombre</span>
+            <span className="text-xs font-medium text-mid">Nombre</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="Nombre"
               value={createUserForm.firstName}
               onChange={(event) => setCreateUserForm((prev) => ({ ...prev, firstName: event.target.value }))}
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Apellido</span>
+            <span className="text-xs font-medium text-mid">Apellido</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="Apellido"
               value={createUserForm.lastName}
               onChange={(event) => setCreateUserForm((prev) => ({ ...prev, lastName: event.target.value }))}
             />
           </label>
           <label className="block space-y-1 sm:col-span-2">
-            <span className="text-xs font-medium text-slate-600">Email corporativo</span>
+            <span className="text-xs font-medium text-mid">Email corporativo</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="usuario@empresa.com"
               value={createUserForm.email}
               onChange={(event) => setCreateUserForm((prev) => ({ ...prev, email: event.target.value }))}
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Rol base</span>
+            <span className="text-xs font-medium text-mid">Rol base</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={createUserForm.baseRole}
               onChange={(event) => setCreateUserForm((prev) => ({ ...prev, baseRole: event.target.value as RoleCode }))}
             >
@@ -1291,9 +1291,9 @@ export const AdminPanelView = () => {
             </select>
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Equipo (opcional)</span>
+            <span className="text-xs font-medium text-mid">Equipo (opcional)</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={createUserForm.teamId}
               onChange={(event) => setCreateUserForm((prev) => ({ ...prev, teamId: event.target.value }))}
             >
@@ -1305,7 +1305,7 @@ export const AdminPanelView = () => {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 sm:col-span-2">
+          <label className="flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-ink sm:col-span-2">
             <input
               type="checkbox"
               checked={createUserForm.startOnboarding}
@@ -1314,7 +1314,7 @@ export const AdminPanelView = () => {
             Iniciar proceso de onboarding
           </label>
         </div>
-        {createUserMutation.error ? <p className="text-sm text-red-600">{createUserMutation.error.message}</p> : null}
+        {createUserMutation.error ? <p className="text-sm text-urgent">{createUserMutation.error.message}</p> : null}
       </UiModal>
 
       <UiModal
@@ -1358,9 +1358,9 @@ export const AdminPanelView = () => {
           {!resetPasswordForm.userId ? (
             <>
               <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">Buscar usuario</span>
+                <span className="text-xs font-medium text-mid">Buscar usuario</span>
                 <input
-                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                   placeholder="Nombre o email..."
                   value={resetPasswordUserSearch}
                   onChange={(event) => setResetPasswordUserSearch(event.target.value)}
@@ -1380,7 +1380,7 @@ export const AdminPanelView = () => {
                     <li key={user.id}>
                       <button
                         type="button"
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        className="w-full rounded-xl border border-line px-3 py-2 text-left text-sm hover:bg-line"
                         onClick={() =>
                           setResetPasswordForm((prev) => ({
                             ...prev,
@@ -1389,8 +1389,8 @@ export const AdminPanelView = () => {
                           }))
                         }
                       >
-                        <span className="font-medium text-slate-900">{user.fullName}</span>
-                        <span className="ml-2 text-xs text-slate-500">{user.email}</span>
+                        <span className="font-medium text-ink">{user.fullName}</span>
+                        <span className="ml-2 text-xs text-mid">{user.email}</span>
                       </button>
                     </li>
                   ))}
@@ -1398,14 +1398,14 @@ export const AdminPanelView = () => {
             </>
           ) : (
             <>
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+              <div className="flex items-center justify-between rounded-xl border border-line px-3 py-2">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{resetPasswordForm.fullName}</p>
-                  <p className="text-xs text-slate-500">Usuario seleccionado</p>
+                  <p className="text-sm font-medium text-ink">{resetPasswordForm.fullName}</p>
+                  <p className="text-xs text-mid">Usuario seleccionado</p>
                 </div>
                 <button
                   type="button"
-                  className="text-xs text-slate-400 hover:text-slate-700"
+                  className="text-xs text-faint hover:text-ink"
                   onClick={() =>
                     setResetPasswordForm((prev) => ({ ...prev, userId: "", fullName: "" }))
                   }
@@ -1414,20 +1414,20 @@ export const AdminPanelView = () => {
                 </button>
               </div>
               <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">Nueva contraseña</span>
+                <span className="text-xs font-medium text-mid">Nueva contraseña</span>
                 <input
                   type="password"
-                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                   placeholder="Mínimo 8 caracteres"
                   value={resetPasswordForm.newPassword}
                   onChange={(event) => setResetPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
                 />
               </label>
               <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">Confirmar contraseña</span>
+                <span className="text-xs font-medium text-mid">Confirmar contraseña</span>
                 <input
                   type="password"
-                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                   placeholder="Repite la contraseña"
                   value={resetPasswordForm.confirmPassword}
                   onChange={(event) => setResetPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
@@ -1437,11 +1437,11 @@ export const AdminPanelView = () => {
           )}
         </div>
         {adminPasswordResetFeedback ? (
-          <p className={`text-sm ${adminResetPasswordMutation.isSuccess ? "text-emerald-700" : "text-red-600"}`}>
+          <p className={`text-sm ${adminResetPasswordMutation.isSuccess ? "text-ink" : "text-urgent"}`}>
             {adminPasswordResetFeedback}
           </p>
         ) : null}
-        {adminResetPasswordMutation.error ? <p className="text-sm text-red-600">{adminResetPasswordMutation.error.message}</p> : null}
+        {adminResetPasswordMutation.error ? <p className="text-sm text-urgent">{adminResetPasswordMutation.error.message}</p> : null}
       </UiModal>
 
       <UiModal
@@ -1482,7 +1482,7 @@ export const AdminPanelView = () => {
       >
         <div className="grid gap-2 md:grid-cols-3">
           <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 rounded-xl border border-line px-3 text-sm"
             value={offboardingForm.userId}
             onChange={(event) => setOffboardingForm((prev) => ({ ...prev, userId: event.target.value }))}
           >
@@ -1494,7 +1494,7 @@ export const AdminPanelView = () => {
             ))}
           </select>
           <select
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 rounded-xl border border-line px-3 text-sm"
             value={offboardingForm.primaryTransferToUserId}
             onChange={(event) => setOffboardingForm((prev) => ({ ...prev, primaryTransferToUserId: event.target.value }))}
           >
@@ -1506,35 +1506,35 @@ export const AdminPanelView = () => {
             ))}
           </select>
           <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 rounded-xl border border-line px-3 text-sm"
             placeholder="Motivo"
             value={offboardingForm.reason}
             onChange={(event) => setOffboardingForm((prev) => ({ ...prev, reason: event.target.value }))}
           />
         </div>
 
-        {previewOffboardingMutation.error ? <p className="text-sm text-red-600">{previewOffboardingMutation.error.message}</p> : null}
-        {executeOffboardingMutation.error ? <p className="text-sm text-red-600">{executeOffboardingMutation.error.message}</p> : null}
+        {previewOffboardingMutation.error ? <p className="text-sm text-urgent">{previewOffboardingMutation.error.message}</p> : null}
+        {executeOffboardingMutation.error ? <p className="text-sm text-urgent">{executeOffboardingMutation.error.message}</p> : null}
 
         {offboardingPreview ? (
-          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
-            <p className="text-sm text-slate-700">
+          <div className="space-y-3 rounded-xl border border-line p-3">
+            <p className="text-sm text-ink">
               Tareas activas: {offboardingPreview.activeTasks.length} · Roles de liderazgo: {offboardingPreview.leadershipProjects.length} · Documentos propietarios: {offboardingPreview.ownedDocuments.length}
             </p>
             {missingOffboardingAssignments > 0 ? (
-              <p className="text-sm text-amber-700">Faltan {missingOffboardingAssignments} asignaciones por definir antes de ejecutar.</p>
+              <p className="text-sm text-ink">Faltan {missingOffboardingAssignments} asignaciones por definir antes de ejecutar.</p>
             ) : null}
 
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Transferencia de tareas</p>
+              <p className="text-xs uppercase tracking-wide text-mid">Transferencia de tareas</p>
               {offboardingPreview.activeTasks.map((task) => (
-                <div key={task.id} className="grid gap-2 rounded-lg border border-slate-200 p-2 md:grid-cols-[1fr_220px]">
+                <div key={task.id} className="grid gap-2 rounded-lg border border-line p-2 md:grid-cols-[1fr_220px]">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{task.title}</p>
-                    <p className="text-xs text-slate-600">{task.projectName}</p>
+                    <p className="text-sm font-medium text-ink">{task.title}</p>
+                    <p className="text-xs text-mid">{task.projectName}</p>
                   </div>
                   <select
-                    className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+                    className="h-9 rounded-lg border border-line px-2 text-sm"
                     value={offboardingTransfers.tasks[task.id] ?? offboardingForm.primaryTransferToUserId}
                     onChange={(event) =>
                       setOffboardingTransfers((prev) => ({
@@ -1558,15 +1558,15 @@ export const AdminPanelView = () => {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Transferencia de liderazgo</p>
+              <p className="text-xs uppercase tracking-wide text-mid">Transferencia de liderazgo</p>
               {offboardingPreview.leadershipProjects.map((project) => (
-                <div key={project.projectId} className="grid gap-2 rounded-lg border border-slate-200 p-2 md:grid-cols-[1fr_220px]">
+                <div key={project.projectId} className="grid gap-2 rounded-lg border border-line p-2 md:grid-cols-[1fr_220px]">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{project.projectName}</p>
-                    <p className="text-xs text-slate-600">{project.role}</p>
+                    <p className="text-sm font-medium text-ink">{project.projectName}</p>
+                    <p className="text-xs text-mid">{project.role}</p>
                   </div>
                   <select
-                    className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+                    className="h-9 rounded-lg border border-line px-2 text-sm"
                     value={offboardingTransfers.leadership[project.projectId] ?? offboardingForm.primaryTransferToUserId}
                     onChange={(event) =>
                       setOffboardingTransfers((prev) => ({
@@ -1590,12 +1590,12 @@ export const AdminPanelView = () => {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Transferencia de documentos</p>
+              <p className="text-xs uppercase tracking-wide text-mid">Transferencia de documentos</p>
               {offboardingPreview.ownedDocuments.map((document) => (
-                <div key={document.fileId} className="grid gap-2 rounded-lg border border-slate-200 p-2 md:grid-cols-[1fr_220px]">
-                  <p className="text-sm font-medium text-slate-900">{document.originalName}</p>
+                <div key={document.fileId} className="grid gap-2 rounded-lg border border-line p-2 md:grid-cols-[1fr_220px]">
+                  <p className="text-sm font-medium text-ink">{document.originalName}</p>
                   <select
-                    className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+                    className="h-9 rounded-lg border border-line px-2 text-sm"
                     value={offboardingTransfers.documents[document.fileId] ?? offboardingForm.primaryTransferToUserId}
                     onChange={(event) =>
                       setOffboardingTransfers((prev) => ({
@@ -1640,23 +1640,23 @@ export const AdminPanelView = () => {
           </>
         }
       >
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-mid">
           Aquí no defines contraseña. La persona invitada la crea al abrir el enlace de activación.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1 sm:col-span-2">
-            <span className="text-xs font-medium text-slate-600">Email corporativo</span>
+            <span className="text-xs font-medium text-mid">Email corporativo</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="usuario@empresa.com"
               value={internalInviteForm.email}
               onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, email: event.target.value }))}
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Rol base</span>
+            <span className="text-xs font-medium text-mid">Rol base</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={internalInviteForm.baseRole}
               onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, baseRole: event.target.value as RoleCode }))}
             >
@@ -1668,9 +1668,9 @@ export const AdminPanelView = () => {
             </select>
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Equipo (opcional)</span>
+            <span className="text-xs font-medium text-mid">Equipo (opcional)</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={internalInviteForm.teamId}
               onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, teamId: event.target.value }))}
             >
@@ -1683,16 +1683,16 @@ export const AdminPanelView = () => {
             </select>
           </label>
           <label className="block space-y-1 sm:col-span-2">
-            <span className="text-xs font-medium text-slate-600">Fecha de expiración</span>
+            <span className="text-xs font-medium text-mid">Fecha de expiración</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               type="datetime-local"
               value={internalInviteForm.expiresAt}
               onChange={(event) => setInternalInviteForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
             />
           </label>
         </div>
-        {createInternalInviteMutation.error ? <p className="text-sm text-red-600">{createInternalInviteMutation.error.message}</p> : null}
+        {createInternalInviteMutation.error ? <p className="text-sm text-urgent">{createInternalInviteMutation.error.message}</p> : null}
       </UiModal>
 
       <UiModal
@@ -1714,20 +1714,20 @@ export const AdminPanelView = () => {
           </>
         }
       >
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-mid">
           La invitación externa usa enlace temporal al recurso. No crea cuenta interna ni contraseña.
         </p>
         <div className="grid gap-2 md:grid-cols-2">
           <input
-            className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 rounded-xl border border-line px-3 text-sm"
             placeholder="Email invitado externo"
             value={inviteForm.email}
             onChange={(event) => setInviteForm((prev) => ({ ...prev, email: event.target.value }))}
           />
           <label className="space-y-1">
-            <span className="block text-xs font-medium text-slate-600">Proyecto</span>
+            <span className="block text-xs font-medium text-mid">Proyecto</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={inviteForm.resourceScopeId}
               onChange={(event) => setInviteForm((prev) => ({ ...prev, resourceScopeId: event.target.value }))}
             >
@@ -1740,16 +1740,16 @@ export const AdminPanelView = () => {
             </select>
           </label>
           <label className="space-y-1 md:col-span-2">
-            <span className="block text-xs font-medium text-slate-600">Fecha de expiración</span>
+            <span className="block text-xs font-medium text-mid">Fecha de expiración</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               type="datetime-local"
               value={inviteForm.expiresAt}
               onChange={(event) => setInviteForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
             />
           </label>
         </div>
-        {createInviteMutation.error ? <p className="text-sm text-red-600">{createInviteMutation.error.message}</p> : null}
+        {createInviteMutation.error ? <p className="text-sm text-urgent">{createInviteMutation.error.message}</p> : null}
       </UiModal>
 
       <UiModal
@@ -1773,27 +1773,27 @@ export const AdminPanelView = () => {
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Nombre del equipo</span>
+            <span className="text-xs font-medium text-mid">Nombre del equipo</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="Ej. Equipo Backend"
               value={createTeamForm.name}
               onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, name: event.target.value }))}
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Descripción (opcional)</span>
+            <span className="text-xs font-medium text-mid">Descripción (opcional)</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               placeholder="Descripción breve"
               value={createTeamForm.description}
               onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, description: event.target.value }))}
             />
           </label>
           <label className="block space-y-1 sm:col-span-2">
-            <span className="text-xs font-medium text-slate-600">Coordinador (opcional)</span>
+            <span className="text-xs font-medium text-mid">Coordinador (opcional)</span>
             <select
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={createTeamForm.coordinatorUserId}
               onChange={(event) => setCreateTeamForm((prev) => ({ ...prev, coordinatorUserId: event.target.value }))}
             >
@@ -1806,7 +1806,7 @@ export const AdminPanelView = () => {
             </select>
           </label>
         </div>
-        {createTeamMutation.error ? <p className="text-sm text-red-600">{createTeamMutation.error.message}</p> : null}
+        {createTeamMutation.error ? <p className="text-sm text-urgent">{createTeamMutation.error.message}</p> : null}
       </UiModal>
 
       <UiModal
@@ -1830,9 +1830,9 @@ export const AdminPanelView = () => {
         }
       >
         <label className="space-y-1">
-          <span className="block text-xs font-medium text-slate-600">Proyecto</span>
+          <span className="block text-xs font-medium text-mid">Proyecto</span>
           <select
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-xl border border-line px-3 text-sm"
             value={accessLookupForm.projectId}
             onChange={(event) => setAccessLookupForm({ projectId: event.target.value })}
           >
@@ -1845,13 +1845,13 @@ export const AdminPanelView = () => {
           </select>
         </label>
 
-        {accessLookupMutation.error ? <p className="text-sm text-red-600">{accessLookupMutation.error.message}</p> : null}
+        {accessLookupMutation.error ? <p className="text-sm text-urgent">{accessLookupMutation.error.message}</p> : null}
         {accessLookupMutation.data ? (
           <ul className="space-y-2">
             {accessLookupMutation.data.map((item) => (
-              <li key={item.userId} className="rounded-xl border border-slate-200 p-3">
-                <p className="text-sm font-medium text-slate-900">{item.fullName}</p>
-                <p className="text-xs text-slate-600">
+              <li key={item.userId} className="rounded-xl border border-line p-3">
+                <p className="text-sm font-medium text-ink">{item.fullName}</p>
+                <p className="text-xs text-mid">
                   {item.email} · {item.accessLevel}
                 </p>
               </li>
@@ -1889,13 +1889,13 @@ export const AdminPanelView = () => {
           </>
         }
       >
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-mid">
           Para generar el backup, confirma la operación con tu contraseña actual de administrador.
         </p>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">Contraseña de administrador</span>
+          <span className="text-xs font-medium text-mid">Contraseña de administrador</span>
           <input
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+            className="h-10 w-full rounded-xl border border-line px-3 text-sm"
             type="password"
             autoComplete="current-password"
             value={databaseBackupPassword}
@@ -1904,7 +1904,7 @@ export const AdminPanelView = () => {
           />
         </label>
         {databaseBackupMutation.error ? (
-          <p className="text-sm text-red-600">{databaseBackupMutation.error.message}</p>
+          <p className="text-sm text-urgent">{databaseBackupMutation.error.message}</p>
         ) : null}
       </UiModal>
 
@@ -1935,31 +1935,31 @@ export const AdminPanelView = () => {
       >
         <div className="grid gap-2 md:grid-cols-2">
           <label className="space-y-1">
-            <span className="block text-xs font-medium text-slate-600">Desde</span>
+            <span className="block text-xs font-medium text-mid">Desde</span>
             <input
               type="datetime-local"
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={auditFilters.from}
               onChange={(event) => setAuditFilters((prev) => ({ ...prev, from: event.target.value, page: 1 }))}
             />
           </label>
           <label className="space-y-1">
-            <span className="block text-xs font-medium text-slate-600">Hasta</span>
+            <span className="block text-xs font-medium text-mid">Hasta</span>
             <input
               type="datetime-local"
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={auditFilters.to}
               onChange={(event) => setAuditFilters((prev) => ({ ...prev, to: event.target.value, page: 1 }))}
             />
           </label>
         </div>
 
-        {auditReportQuery.error ? <p className="text-sm text-red-600">{auditReportQuery.error.message}</p> : null}
-        {auditReportQuery.isLoading ? <p className="text-sm text-slate-600">Cargando auditoría...</p> : null}
+        {auditReportQuery.error ? <p className="text-sm text-urgent">{auditReportQuery.error.message}</p> : null}
+        {auditReportQuery.isLoading ? <p className="text-sm text-mid">Cargando auditoría...</p> : null}
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <div className="overflow-x-auto rounded-xl border border-line">
           <table className="min-w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-line text-mid">
               <tr>
                 <th className="px-3 py-2">Fecha</th>
                 <th className="px-3 py-2">Actor</th>
@@ -1970,17 +1970,17 @@ export const AdminPanelView = () => {
             </thead>
             <tbody>
               {auditReportQuery.data?.items.map((item) => (
-                <tr key={item.id} className="border-t border-slate-200">
-                  <td className="px-3 py-2 text-slate-700">{formatDateTime(item.createdAt)}</td>
-                  <td className="px-3 py-2 text-slate-700">{item.actorName ?? (item.userId ? item.userId : "Sistema")}</td>
-                  <td className="px-3 py-2 text-slate-700">{item.entityType}</td>
-                  <td className="px-3 py-2 text-slate-700">{item.action}</td>
-                  <td className="px-3 py-2 text-slate-700">{item.reason ?? item.reasonCatalogId ?? "-"}</td>
+                <tr key={item.id} className="border-t border-line">
+                  <td className="px-3 py-2 text-ink">{formatDateTime(item.createdAt)}</td>
+                  <td className="px-3 py-2 text-ink">{item.actorName ?? (item.userId ? item.userId : "Sistema")}</td>
+                  <td className="px-3 py-2 text-ink">{item.entityType}</td>
+                  <td className="px-3 py-2 text-ink">{item.action}</td>
+                  <td className="px-3 py-2 text-ink">{item.reason ?? item.reasonCatalogId ?? "-"}</td>
                 </tr>
               ))}
               {!auditReportQuery.data || auditReportQuery.data.items.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-4 text-center text-slate-500" colSpan={5}>
+                  <td className="px-3 py-4 text-center text-mid" colSpan={5}>
                     Sin eventos para el rango seleccionado.
                   </td>
                 </tr>
@@ -1990,7 +1990,7 @@ export const AdminPanelView = () => {
         </div>
 
         {auditReportQuery.data ? (
-          <div className="flex items-center justify-between text-xs text-slate-600">
+          <div className="flex items-center justify-between text-xs text-mid">
             <p>
               Página {auditReportQuery.data.page} · Total {auditReportQuery.data.total}
             </p>

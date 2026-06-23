@@ -310,7 +310,7 @@ export const AdminAccessView = () => {
   if (session.isLoading || !session.data) {
     return (
       <Card>
-        <p className="text-sm text-slate-600">Cargando sesión...</p>
+        <p className="text-sm text-mid">Cargando sesión...</p>
       </Card>
     );
   }
@@ -318,8 +318,8 @@ export const AdminAccessView = () => {
   if (session.data.activeRole !== "ADMINISTRADOR") {
     return (
       <Card>
-        <h2 className="text-lg font-semibold text-slate-900">Acceso restringido</h2>
-        <p className="text-sm text-slate-600">Solo el rol Administrador puede acceder a esta vista.</p>
+        <h2 className="text-lg font-semibold text-ink">Acceso restringido</h2>
+        <p className="text-sm text-mid">Solo el rol Administrador puede acceder a esta vista.</p>
       </Card>
     );
   }
@@ -327,9 +327,9 @@ export const AdminAccessView = () => {
   return (
     <div className="space-y-6">
       <Card className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Administración</p>
-        <h1 className="text-2xl font-semibold text-slate-900">Accesos</h1>
-        <p className="text-sm text-slate-600">Gestiona programas, permisos y su asignación por rol.</p>
+        <p className="text-xs uppercase tracking-wide text-mid">Administración</p>
+        <h1 className="text-2xl font-semibold text-ink">Accesos</h1>
+        <p className="text-sm text-mid">Gestiona programas, permisos y su asignación por rol.</p>
       </Card>
 
       <Card className="space-y-4">
@@ -361,19 +361,19 @@ export const AdminAccessView = () => {
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-4">
               <input
-                className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 rounded-xl border border-line px-3 text-sm"
                 placeholder="Código (opcional)"
                 value={programCreateForm.code}
                 onChange={(event) => setProgramCreateForm((prev) => ({ ...prev, code: event.target.value }))}
               />
               <input
-                className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 rounded-xl border border-line px-3 text-sm"
                 placeholder="Nombre"
                 value={programCreateForm.displayName}
                 onChange={(event) => setProgramCreateForm((prev) => ({ ...prev, displayName: event.target.value }))}
               />
               <input
-                className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 rounded-xl border border-line px-3 text-sm"
                 placeholder="Descripción"
                 value={programCreateForm.description}
                 onChange={(event) => setProgramCreateForm((prev) => ({ ...prev, description: event.target.value }))}
@@ -381,7 +381,7 @@ export const AdminAccessView = () => {
               <div className="flex gap-2">
                 <input
                   type="number"
-                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                   placeholder="Orden"
                   value={programCreateForm.sortOrder}
                   onChange={(event) => setProgramCreateForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
@@ -397,23 +397,23 @@ export const AdminAccessView = () => {
             </div>
 
             {createProgramMutation.error ? (
-              <p className="text-sm text-red-600">{createProgramMutation.error.message}</p>
+              <p className="text-sm text-urgent">{createProgramMutation.error.message}</p>
             ) : null}
 
             <div className="space-y-2">
               {(programsQuery.data ?? []).map((program) => (
-                <div key={program.id} className="rounded-xl border border-slate-200 p-3">
+                <div key={program.id} className="rounded-xl border border-line p-3">
                   {programEditForm?.id === program.id ? (
                     <div className="grid gap-2 md:grid-cols-5">
                       <input
-                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
                         value={programEditForm.displayName}
                         onChange={(event) =>
                           setProgramEditForm((prev) => (prev ? { ...prev, displayName: event.target.value } : prev))
                         }
                       />
                       <input
-                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
                         value={programEditForm.description}
                         onChange={(event) =>
                           setProgramEditForm((prev) => (prev ? { ...prev, description: event.target.value } : prev))
@@ -421,13 +421,13 @@ export const AdminAccessView = () => {
                       />
                       <input
                         type="number"
-                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
                         value={programEditForm.sortOrder}
                         onChange={(event) =>
                           setProgramEditForm((prev) => (prev ? { ...prev, sortOrder: event.target.value } : prev))
                         }
                       />
-                      <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <label className="flex items-center gap-2 text-sm text-ink">
                         <input
                           type="checkbox"
                           checked={programEditForm.isActive}
@@ -449,8 +449,8 @@ export const AdminAccessView = () => {
                   ) : (
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{program.displayName}</p>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-sm font-semibold text-ink">{program.displayName}</p>
+                        <p className="text-xs text-mid">
                           {program.code} · orden {program.sortOrder} · {program.isActive ? "activo" : "inactivo"}
                         </p>
                       </div>
@@ -493,25 +493,25 @@ export const AdminAccessView = () => {
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-5">
               <input
-                className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 rounded-xl border border-line px-3 text-sm"
                 placeholder="Código (opcional)"
                 value={permissionCreateForm.code}
                 onChange={(event) => setPermissionCreateForm((prev) => ({ ...prev, code: event.target.value }))}
               />
               <input
-                className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 rounded-xl border border-line px-3 text-sm"
                 placeholder="Nombre"
                 value={permissionCreateForm.displayName}
                 onChange={(event) => setPermissionCreateForm((prev) => ({ ...prev, displayName: event.target.value }))}
               />
               <input
-                className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 rounded-xl border border-line px-3 text-sm"
                 placeholder="Descripción"
                 value={permissionCreateForm.description}
                 onChange={(event) => setPermissionCreateForm((prev) => ({ ...prev, description: event.target.value }))}
               />
               <select
-                className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 rounded-xl border border-line px-3 text-sm"
                 value={permissionCreateForm.categoryCode}
                 onChange={(event) =>
                   setPermissionCreateForm((prev) => ({ ...prev, categoryCode: event.target.value }))
@@ -525,7 +525,7 @@ export const AdminAccessView = () => {
               </select>
               <div className="flex gap-2">
                 <select
-                  className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
                   value={permissionCreateForm.programCode}
                   onChange={(event) =>
                     setPermissionCreateForm((prev) => ({ ...prev, programCode: event.target.value }))
@@ -548,30 +548,30 @@ export const AdminAccessView = () => {
             </div>
 
             {createPermissionMutation.error ? (
-              <p className="text-sm text-red-600">{createPermissionMutation.error.message}</p>
+              <p className="text-sm text-urgent">{createPermissionMutation.error.message}</p>
             ) : null}
 
             <div className="space-y-2">
               {(permissionsQuery.data ?? []).map((permission) => (
-                <div key={permission.id} className="rounded-xl border border-slate-200 p-3">
+                <div key={permission.id} className="rounded-xl border border-line p-3">
                   {permissionEditForm?.id === permission.id ? (
                     <div className="grid gap-2 md:grid-cols-6">
                       <input
-                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
                         value={permissionEditForm.displayName}
                         onChange={(event) =>
                           setPermissionEditForm((prev) => (prev ? { ...prev, displayName: event.target.value } : prev))
                         }
                       />
                       <input
-                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
                         value={permissionEditForm.description}
                         onChange={(event) =>
                           setPermissionEditForm((prev) => (prev ? { ...prev, description: event.target.value } : prev))
                         }
                       />
                       <select
-                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
                         value={permissionEditForm.categoryCode}
                         onChange={(event) =>
                           setPermissionEditForm((prev) => (prev ? { ...prev, categoryCode: event.target.value } : prev))
@@ -584,7 +584,7 @@ export const AdminAccessView = () => {
                         ))}
                       </select>
                       <select
-                        className="h-9 rounded-md border border-slate-300 px-2 text-sm"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
                         value={permissionEditForm.programCode}
                         onChange={(event) =>
                           setPermissionEditForm((prev) => (prev ? { ...prev, programCode: event.target.value } : prev))
@@ -596,7 +596,7 @@ export const AdminAccessView = () => {
                           </option>
                         ))}
                       </select>
-                      <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <label className="flex items-center gap-2 text-sm text-ink">
                         <input
                           type="checkbox"
                           checked={permissionEditForm.isActive}
@@ -618,8 +618,8 @@ export const AdminAccessView = () => {
                   ) : (
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{permission.displayName}</p>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-sm font-semibold text-ink">{permission.displayName}</p>
+                        <p className="text-xs text-mid">
                           {permission.code} · {permission.programDisplayName} · {permission.categoryDisplayName} · {permission.isActive ? "activo" : "inactivo"}
                         </p>
                       </div>
@@ -663,7 +663,7 @@ export const AdminAccessView = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <select
-                className="h-10 min-w-72 rounded-xl border border-slate-300 px-3 text-sm"
+                className="h-10 min-w-72 rounded-xl border border-line px-3 text-sm"
                 value={selectedRoleId}
                 onChange={(event) => setSelectedRoleId(event.target.value)}
               >
@@ -679,39 +679,39 @@ export const AdminAccessView = () => {
             </div>
 
             {saveRoleAccessMutation.error ? (
-              <p className="text-sm text-red-600">{saveRoleAccessMutation.error.message}</p>
+              <p className="text-sm text-urgent">{saveRoleAccessMutation.error.message}</p>
             ) : null}
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-sm font-semibold text-slate-900">Programas</p>
+              <div className="rounded-xl border border-line p-3">
+                <p className="mb-2 text-sm font-semibold text-ink">Programas</p>
                 <div className="space-y-2">
                   {activePrograms.map((program) => (
-                    <label key={program.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <label key={program.id} className="flex items-center gap-2 text-sm text-ink">
                       <input
                         type="checkbox"
                         checked={selectedProgramCodes.includes(program.code)}
                         onChange={() => toggleCode(program.code, setSelectedProgramCodes)}
                       />
                       <span>{program.displayName}</span>
-                      <span className="text-xs text-slate-500">({program.code})</span>
+                      <span className="text-xs text-mid">({program.code})</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-sm font-semibold text-slate-900">Permisos</p>
+              <div className="rounded-xl border border-line p-3">
+                <p className="mb-2 text-sm font-semibold text-ink">Permisos</p>
                 <div className="max-h-96 space-y-2 overflow-auto pr-1">
                   {activePermissions.map((permission) => (
-                    <label key={permission.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <label key={permission.id} className="flex items-center gap-2 text-sm text-ink">
                       <input
                         type="checkbox"
                         checked={selectedPermissionCodes.includes(permission.code)}
                         onChange={() => toggleCode(permission.code, setSelectedPermissionCodes)}
                       />
                       <span>{permission.displayName}</span>
-                      <span className="text-xs text-slate-500">({permission.code})</span>
+                      <span className="text-xs text-mid">({permission.code})</span>
                     </label>
                   ))}
                 </div>

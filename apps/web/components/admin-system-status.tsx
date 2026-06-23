@@ -64,12 +64,12 @@ const statusLabel: Record<SystemService["status"], string> = {
 
 const toneForStatus = (status: SystemService["status"]) => {
   if (status === "down") {
-    return "text-red-700 bg-red-50 border-red-200";
+    return "text-urgent bg-urgent-muted border-urgent/30";
   }
   if (status === "degraded") {
-    return "text-amber-700 bg-amber-50 border-amber-200";
+    return "text-ink bg-paper border-line";
   }
-  return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  return "text-ink bg-paper border-line";
 };
 
 const fetchSystemStatus = async (): Promise<AdminSystemStatusResponse> =>
@@ -157,8 +157,8 @@ export const AdminSystemStatusView = () => {
 
   const summaryTone =
     statusQuery.data?.overallStatus === "ERROR"
-      ? "border-red-200 bg-red-50 text-red-700"
-      : "border-emerald-200 bg-emerald-50 text-emerald-700";
+      ? "border-urgent/30 bg-urgent-muted text-urgent"
+      : "border-line bg-paper text-ink";
 
   return (
     <div className="space-y-6">
@@ -198,7 +198,7 @@ export const AdminSystemStatusView = () => {
           </div>
         </div>
 
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-mid">
           Último check:{" "}
           {statusQuery.data
             ? new Date(statusQuery.data.now).toLocaleString("es-ES", {
@@ -208,16 +208,16 @@ export const AdminSystemStatusView = () => {
             : "Sin datos"}
         </p>
         {!canManageMaintenance ? (
-          <p className="text-xs text-slate-500">Solo administradores pueden cambiar mantenimiento.</p>
+          <p className="text-xs text-mid">Solo administradores pueden cambiar mantenimiento.</p>
         ) : null}
         {statusCheckMutation.error ? (
-          <p className="text-sm text-red-600">{statusCheckMutation.error.message}</p>
+          <p className="text-sm text-urgent">{statusCheckMutation.error.message}</p>
         ) : null}
       </Card>
 
       <Card className="space-y-3">
-        {statusQuery.isLoading ? <p className="text-sm text-slate-600">Cargando estado...</p> : null}
-        {statusQuery.error ? <p className="text-sm text-red-600">{statusQuery.error.message}</p> : null}
+        {statusQuery.isLoading ? <p className="text-sm text-mid">Cargando estado...</p> : null}
+        {statusQuery.error ? <p className="text-sm text-urgent">{statusQuery.error.message}</p> : null}
         <ul className="space-y-2">
           {statusQuery.data?.services.map((service) => (
             <li
@@ -228,7 +228,7 @@ export const AdminSystemStatusView = () => {
                 <p className="text-sm font-medium">{serviceLabel[service.service]}</p>
                 <p className="text-xs">{statusLabel[service.status]}</p>
               </div>
-              <details className="mt-2 rounded-lg border border-current/20 bg-white/60 px-2 py-1">
+              <details className="mt-2 rounded-lg border border-current/20 bg-paper px-2 py-1">
                 <summary className="cursor-pointer text-xs font-medium">Detalle técnico</summary>
                 <p className="mt-1 text-xs">{service.detail ?? "Sin detalle adicional"}</p>
               </details>
@@ -238,20 +238,20 @@ export const AdminSystemStatusView = () => {
       </Card>
 
       <Card className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cambios recientes</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-mid">Cambios recientes</p>
         {statusQuery.data?.recentChanges.length ? (
           <ul className="space-y-3">
             {statusQuery.data.recentChanges.map((change) => (
-              <li key={change.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs text-slate-600">
+              <li key={change.id} className="rounded-xl border border-line bg-line p-3">
+                <p className="text-xs text-mid">
                   {new Date(change.createdAt).toLocaleString("es-ES", {
                     dateStyle: "medium",
                     timeStyle: "short"
                   })}{" "}
                   · {change.overallStatus}
                 </p>
-                {change.reason ? <p className="text-xs text-slate-600">{change.reason}</p> : null}
-                <ul className="mt-2 space-y-1 text-xs text-slate-700">
+                {change.reason ? <p className="text-xs text-mid">{change.reason}</p> : null}
+                <ul className="mt-2 space-y-1 text-xs text-ink">
                   {change.changedServices.map((serviceChange, index) => (
                     <li key={`${change.id}-${serviceChange.service}-${index}`}>
                       {serviceLabel[serviceChange.service]}:{" "}
@@ -264,7 +264,7 @@ export const AdminSystemStatusView = () => {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-600">No hay cambios de estado registrados.</p>
+          <p className="text-sm text-mid">No hay cambios de estado registrados.</p>
         )}
       </Card>
 
@@ -277,22 +277,22 @@ export const AdminSystemStatusView = () => {
         }}
         title={maintenanceTargetEnabled ? "Activar mantenimiento" : "Desactivar mantenimiento"}
       >
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-ink">
           {maintenanceTargetEnabled
             ? "Se activará el modo mantenimiento para todos los usuarios."
             : "Se desactivará el modo mantenimiento y el sistema volverá a modo normal."}
         </p>
         {maintenanceTargetEnabled ? (
           <label className="block space-y-1">
-            <span className="text-sm font-medium text-slate-700">Mensaje para usuarios</span>
+            <span className="text-sm font-medium text-ink">Mensaje para usuarios</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               value={maintenanceMessage}
               onChange={(event) => setMaintenanceMessage(event.target.value)}
             />
           </label>
         ) : null}
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-ink">
           <input
             type="checkbox"
             checked={maintenanceConfirm}
@@ -301,7 +301,7 @@ export const AdminSystemStatusView = () => {
           Confirmo que deseo ejecutar este cambio.
         </label>
         {maintenanceMutation.error ? (
-          <p className="text-sm text-red-600">{maintenanceMutation.error.message}</p>
+          <p className="text-sm text-urgent">{maintenanceMutation.error.message}</p>
         ) : null}
         <div className="flex justify-end gap-2">
           <Button

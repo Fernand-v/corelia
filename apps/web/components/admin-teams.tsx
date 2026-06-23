@@ -202,7 +202,7 @@ export const AdminTeamsView = () => {
   if (session.isLoading || !session.data) {
     return (
       <Card>
-        <p className="text-sm text-slate-600">Cargando sesión...</p>
+        <p className="text-sm text-mid">Cargando sesión...</p>
       </Card>
     );
   }
@@ -210,8 +210,8 @@ export const AdminTeamsView = () => {
   if (session.data.activeRole !== "ADMINISTRADOR") {
     return (
       <Card>
-        <h2 className="text-lg font-semibold text-slate-900">Acceso restringido</h2>
-        <p className="text-sm text-slate-600">Solo administradores pueden gestionar equipos.</p>
+        <h2 className="text-lg font-semibold text-ink">Acceso restringido</h2>
+        <p className="text-sm text-mid">Solo administradores pueden gestionar equipos.</p>
       </Card>
     );
   }
@@ -220,26 +220,26 @@ export const AdminTeamsView = () => {
     <div className="space-y-6">
       <Card className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Equipos</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-mid">Equipos</p>
           <Button type="button" className="h-9 px-3 text-xs" onClick={openCreateTeamModal}>
             Nuevo equipo
           </Button>
         </div>
 
-        {teamsQuery.isLoading ? <p className="text-sm text-slate-600">Cargando equipos...</p> : null}
-        {teamsQuery.error ? <p className="text-sm text-red-600">{teamsQuery.error.message}</p> : null}
+        {teamsQuery.isLoading ? <p className="text-sm text-mid">Cargando equipos...</p> : null}
+        {teamsQuery.error ? <p className="text-sm text-urgent">{teamsQuery.error.message}</p> : null}
 
         <ul className="space-y-2">
           {teamsQuery.data?.items.map((team) => (
-            <li key={team.id} className="rounded-xl border border-slate-200 p-3">
+            <li key={team.id} className="rounded-xl border border-line p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{team.name}</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-sm font-medium text-ink">{team.name}</p>
+                  <p className="text-xs text-mid">
                     Coordinador: {team.coordinator?.fullName ?? "No asignado"} · Miembros:{" "}
                     {team.membersCount} · Proyectos activos: {team.activeProjects}
                   </p>
-                  {team.description ? <p className="text-xs text-slate-600">{team.description}</p> : null}
+                  {team.description ? <p className="text-xs text-mid">{team.description}</p> : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -307,7 +307,7 @@ export const AdminTeamsView = () => {
         >
           <div className="grid gap-2 md:grid-cols-2">
             <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 rounded-xl border border-line px-3 text-sm"
               placeholder="Nombre del equipo"
               value={form.name}
               onChange={(event) =>
@@ -318,7 +318,7 @@ export const AdminTeamsView = () => {
               }
             />
             <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 rounded-xl border border-line px-3 text-sm"
               placeholder="Descripción (opcional)"
               value={form.description}
               onChange={(event) =>
@@ -329,7 +329,7 @@ export const AdminTeamsView = () => {
               }
             />
             <select
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 rounded-xl border border-line px-3 text-sm"
               value={form.coordinatorUserId}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -346,20 +346,20 @@ export const AdminTeamsView = () => {
               ))}
             </select>
             <input
-              className="h-10 rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 rounded-xl border border-line px-3 text-sm"
               placeholder="Buscar miembros"
               value={memberSearch}
               onChange={(event) => setMemberSearch(event.target.value)}
             />
           </div>
 
-          <div className="max-h-56 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3">
+          <div className="max-h-56 space-y-2 overflow-y-auto rounded-xl border border-line p-3">
             {filteredUsers.map((user) => {
               const checked = form.memberIds.includes(user.id);
               return (
                 <label
                   key={user.id}
-                  className="flex items-center justify-between gap-2 text-sm text-slate-700"
+                  className="flex items-center justify-between gap-2 text-sm text-ink"
                 >
                   <span>
                     {user.fullName} · {user.email}
@@ -382,10 +382,10 @@ export const AdminTeamsView = () => {
           </div>
 
           {createTeamMutation.error ? (
-            <p className="text-sm text-red-600">{createTeamMutation.error.message}</p>
+            <p className="text-sm text-urgent">{createTeamMutation.error.message}</p>
           ) : null}
           {updateTeamMutation.error ? (
-            <p className="text-sm text-red-600">{updateTeamMutation.error.message}</p>
+            <p className="text-sm text-urgent">{updateTeamMutation.error.message}</p>
           ) : null}
         </form>
         <div className="flex justify-end gap-2">
@@ -416,16 +416,16 @@ export const AdminTeamsView = () => {
         title="Miembros del equipo"
         widthClassName="max-w-2xl"
       >
-        {selectedTeamQuery.isLoading ? <p className="text-sm text-slate-600">Cargando miembros...</p> : null}
-        {selectedTeamQuery.error ? <p className="text-sm text-red-600">{selectedTeamQuery.error.message}</p> : null}
+        {selectedTeamQuery.isLoading ? <p className="text-sm text-mid">Cargando miembros...</p> : null}
+        {selectedTeamQuery.error ? <p className="text-sm text-urgent">{selectedTeamQuery.error.message}</p> : null}
 
         {selectedTeamQuery.data ? (
           <ul className="space-y-2">
             {selectedTeamQuery.data.members.map((member) => (
-              <li key={member.userId} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
+              <li key={member.userId} className="flex items-center justify-between rounded-xl border border-line p-3">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{member.fullName}</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-sm font-medium text-ink">{member.fullName}</p>
+                  <p className="text-xs text-mid">
                     {member.email} · {member.baseRole}
                   </p>
                 </div>
@@ -455,7 +455,7 @@ export const AdminTeamsView = () => {
         onClose={() => setMemberRemovalTarget(null)}
         title="Quitar miembro"
       >
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-ink">
           ¿Confirmas quitar a {memberRemovalTarget?.memberName} del equipo?
         </p>
         <div className="flex justify-end gap-2">
@@ -495,7 +495,7 @@ export const AdminTeamsView = () => {
         onClose={() => setDissolveTarget(null)}
         title="Disolver equipo"
       >
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-ink">
           ¿Confirmas disolver el equipo {dissolveTarget?.name}? Esta acción no se puede deshacer.
         </p>
         <div className="flex justify-end gap-2">
