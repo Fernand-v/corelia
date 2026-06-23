@@ -51,10 +51,10 @@ export default function ProfilePage() {
     presenceQuery.data?.items.find((item) => item.userId === session.data?.id)?.status ?? "DESCONECTADO";
   const presenceTone =
     presenceStatus === "EN_REUNION"
-      ? "border-amber-200 bg-amber-50 text-amber-700"
+      ? "border-line bg-paper text-ink"
       : presenceStatus === "EN_LINEA"
-        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-        : "border-slate-200 bg-slate-50 text-slate-700";
+        ? "border-line bg-paper text-ink"
+        : "border-line bg-line text-ink";
   const presenceLabel =
     presenceStatus === "EN_REUNION"
       ? "En reunión"
@@ -89,15 +89,15 @@ export default function ProfilePage() {
       <h1 className="sr-only">Perfil</h1>
 
       {passwordFeedback ? (
-        <Card className="border-emerald-200 bg-emerald-50 p-3">
-          <p className="text-sm text-emerald-800">{passwordFeedback}</p>
+        <Card className="border-line bg-paper p-3">
+          <p className="text-sm text-ink">{passwordFeedback}</p>
         </Card>
       ) : null}
 
       <section className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <Card className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cuenta</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-mid">Cuenta</p>
             <Button
               type="button"
               className="h-9 px-3 text-xs"
@@ -110,10 +110,10 @@ export default function ProfilePage() {
             </Button>
           </div>
 
-          {session.isLoading ? <p className="text-sm text-slate-600">Cargando perfil...</p> : null}
-          {session.error ? <p className="text-sm text-red-600">{session.error.message}</p> : null}
+          {session.isLoading ? <p className="text-sm text-mid">Cargando perfil...</p> : null}
+          {session.error ? <p className="text-sm text-urgent">{session.error.message}</p> : null}
           {session.data ? (
-            <div className="grid gap-2 text-sm text-slate-900 sm:grid-cols-2">
+            <div className="grid gap-2 text-sm text-ink sm:grid-cols-2">
               <p>
                 <span className="font-medium">Nombre:</span> {session.data.firstName} {session.data.lastName}
               </p>
@@ -137,18 +137,18 @@ export default function ProfilePage() {
         </Card>
 
         <Card className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Resumen</p>
-          {membershipSummary.isLoading ? <p className="text-sm text-slate-600">Cargando resumen...</p> : null}
-          {membershipSummary.error ? <p className="text-sm text-red-600">{membershipSummary.error.message}</p> : null}
+          <p className="text-xs font-semibold uppercase tracking-wide text-mid">Resumen</p>
+          {membershipSummary.isLoading ? <p className="text-sm text-mid">Cargando resumen...</p> : null}
+          {membershipSummary.error ? <p className="text-sm text-urgent">{membershipSummary.error.message}</p> : null}
           {membershipSummary.data ? (
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                <p className="text-xl font-semibold text-slate-900">{membershipSummary.data.projects.length}</p>
-                <p className="text-xs text-slate-600">Proyectos</p>
+              <div className="rounded-xl border border-line bg-line px-3 py-2">
+                <p className="text-xl font-semibold text-ink">{membershipSummary.data.projects.length}</p>
+                <p className="text-xs text-mid">Proyectos</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                <p className="text-xl font-semibold text-slate-900">{membershipSummary.data.teams.length}</p>
-                <p className="text-xs text-slate-600">Equipos</p>
+              <div className="rounded-xl border border-line bg-line px-3 py-2">
+                <p className="text-xl font-semibold text-ink">{membershipSummary.data.teams.length}</p>
+                <p className="text-xs text-mid">Equipos</p>
               </div>
             </div>
           ) : null}
@@ -157,18 +157,18 @@ export default function ProfilePage() {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Equipos</p>
-          {membershipSummary.isLoading ? <p className="text-sm text-slate-600">Cargando equipos...</p> : null}
+          <p className="text-xs font-semibold uppercase tracking-wide text-mid">Equipos</p>
+          {membershipSummary.isLoading ? <p className="text-sm text-mid">Cargando equipos...</p> : null}
           {membershipSummary.data && membershipSummary.data.teams.length === 0 ? (
-            <p className="text-sm text-slate-600">No tienes equipos asignados.</p>
+            <p className="text-sm text-mid">No tienes equipos asignados.</p>
           ) : null}
           {membershipSummary.data?.teams.length ? (
             <ul className="space-y-2">
               {membershipSummary.data.teams.map((team) => (
-                <li key={team.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-sm font-medium text-slate-900">{team.name}</p>
-                  <p className="text-xs text-slate-600">{team.description || "Sin descripción"}</p>
-                  <p className="text-[11px] text-slate-500">
+                <li key={team.id} className="rounded-xl border border-line bg-line px-3 py-2">
+                  <p className="text-sm font-medium text-ink">{team.name}</p>
+                  <p className="text-xs text-mid">{team.description || "Sin descripción"}</p>
+                  <p className="text-[11px] text-mid">
                     Desde: {new Date(team.joinedAt).toLocaleDateString("es-ES")}
                   </p>
                 </li>
@@ -179,30 +179,30 @@ export default function ProfilePage() {
 
         <Card className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proyectos</p>
-            <Link href={"/projects" as Route} className="text-xs text-blue-700 hover:underline">
+            <p className="text-xs font-semibold uppercase tracking-wide text-mid">Proyectos</p>
+            <Link href={"/projects" as Route} className="text-xs text-ink hover:underline">
               Ver todos
             </Link>
           </div>
 
-          {membershipSummary.isLoading ? <p className="text-sm text-slate-600">Cargando proyectos...</p> : null}
+          {membershipSummary.isLoading ? <p className="text-sm text-mid">Cargando proyectos...</p> : null}
           {membershipSummary.data && membershipSummary.data.projects.length === 0 ? (
-            <p className="text-sm text-slate-600">No tienes proyectos asignados.</p>
+            <p className="text-sm text-mid">No tienes proyectos asignados.</p>
           ) : null}
           {membershipSummary.data?.projects.length ? (
             <ul className="space-y-2">
               {membershipSummary.data.projects.map((project) => (
-                <li key={project.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-sm font-medium text-slate-900">{project.name}</p>
-                  <p className="text-xs text-slate-600">
+                <li key={project.id} className="rounded-xl border border-line bg-line px-3 py-2">
+                  <p className="text-sm font-medium text-ink">{project.name}</p>
+                  <p className="text-xs text-mid">
                     {project.template} · {project.isOwner ? "Owner" : project.role ?? "Miembro"}
                   </p>
                   {project.joinedAt ? (
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[11px] text-mid">
                       Desde: {new Date(project.joinedAt).toLocaleDateString("es-ES")}
                     </p>
                   ) : (
-                    <p className="text-[11px] text-slate-500">Participación desde creación del proyecto</p>
+                    <p className="text-[11px] text-mid">Participación desde creación del proyecto</p>
                   )}
                 </li>
               ))}
@@ -222,9 +222,9 @@ export default function ProfilePage() {
       >
         <form id="change-password-form" className="space-y-3" onSubmit={handlePasswordSubmit}>
           <label className="block space-y-1">
-            <span className="text-sm font-medium text-slate-700">Contraseña actual</span>
+            <span className="text-sm font-medium text-ink">Contraseña actual</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               type={showPasswords ? "text" : "password"}
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
@@ -233,9 +233,9 @@ export default function ProfilePage() {
           </label>
 
           <label className="block space-y-1">
-            <span className="text-sm font-medium text-slate-700">Nueva contraseña</span>
+            <span className="text-sm font-medium text-ink">Nueva contraseña</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               type={showPasswords ? "text" : "password"}
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
@@ -244,9 +244,9 @@ export default function ProfilePage() {
           </label>
 
           <label className="block space-y-1">
-            <span className="text-sm font-medium text-slate-700">Confirmar nueva contraseña</span>
+            <span className="text-sm font-medium text-ink">Confirmar nueva contraseña</span>
             <input
-              className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+              className="h-10 w-full rounded-xl border border-line px-3 text-sm"
               type={showPasswords ? "text" : "password"}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
@@ -264,7 +264,7 @@ export default function ProfilePage() {
           </Button>
 
           {changePasswordMutation.error ? (
-            <p className="text-sm text-red-600">{changePasswordMutation.error.message}</p>
+            <p className="text-sm text-urgent">{changePasswordMutation.error.message}</p>
           ) : null}
         </form>
         <div className="flex justify-end gap-2">

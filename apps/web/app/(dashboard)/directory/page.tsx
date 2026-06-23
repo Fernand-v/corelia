@@ -24,9 +24,9 @@ const presenceLabel: Record<NonNullable<DirectoryProfile["presence"]>, string> =
 };
 
 const presenceTone: Record<NonNullable<DirectoryProfile["presence"]>, string> = {
-  EN_LINEA: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  DESCONECTADO: "border-slate-200 bg-slate-50 text-slate-700",
-  EN_REUNION: "border-amber-200 bg-amber-50 text-amber-700"
+  EN_LINEA: "border-line bg-paper text-ink",
+  DESCONECTADO: "border-line bg-line text-ink",
+  EN_REUNION: "border-line bg-paper text-ink"
 };
 
 export default function DirectoryPage() {
@@ -39,30 +39,30 @@ export default function DirectoryPage() {
   return (
     <main className="mx-auto w-full max-w-7xl space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Directorio</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-ink">Directorio</h1>
+        <p className="text-sm text-mid">
           Personas y equipos dentro de {frontendSettings.organizationName}
         </p>
       </header>
 
       <Card className="space-y-3">
-        {query.isLoading ? <p className="text-sm text-slate-600">Cargando directorio...</p> : null}
-        {query.error ? <p className="text-sm text-red-600">{query.error.message}</p> : null}
+        {query.isLoading ? <p className="text-sm text-mid">Cargando directorio...</p> : null}
+        {query.error ? <p className="text-sm text-urgent">{query.error.message}</p> : null}
         <ul className="space-y-2">
           {query.data?.map((person) => (
-            <li key={person.userId} className="rounded-xl border border-slate-200 p-3">
+            <li key={person.userId} className="rounded-xl border border-line p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium text-slate-900">{person.fullName}</p>
+                <p className="text-sm font-medium text-ink">{person.fullName}</p>
                 {person.presence ? (
                   <span className={`inline-flex rounded-lg border px-2 py-0.5 text-[11px] ${presenceTone[person.presence]}`}>
                     {presenceLabel[person.presence]}
                   </span>
                 ) : null}
               </div>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-mid">
                 {person.activeRole} · {person.teamName ?? "Sin equipo"}
               </p>
-              <p className="text-xs text-slate-600">{person.contact.email}</p>
+              <p className="text-xs text-mid">{person.contact.email}</p>
             </li>
           ))}
         </ul>
