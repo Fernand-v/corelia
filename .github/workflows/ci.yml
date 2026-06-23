@@ -75,3 +75,48 @@ jobs:
 
       - name: Runtime audit (high+critical)
         run: pnpm security:audit
+
+  integration-db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: corelia_test
+          POSTGRES_PASSWORD: corelia_test
+          POSTGRES_DB: corelia_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U corelia_test -d corelia_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://corelia_test:corelia_test@localhost:5433/corelia_test?schema=public
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client & build shared packages
+        run: |
+          pnpm prisma:generate
+          pnpm --filter @corelia/types build
+
+      - name: Integration tests (real DB)
+        run: pnpm --filter @corelia/api test:db

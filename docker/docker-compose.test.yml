@@ -1,0 +1,19 @@
+# Postgres efímero para la suite de integración con DB real (`pnpm test:db`).
+# Datos en tmpfs (RAM): rápido y se descarta al parar el contenedor.
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: corelia-test-pg
+    environment:
+      POSTGRES_USER: corelia_test
+      POSTGRES_PASSWORD: corelia_test
+      POSTGRES_DB: corelia_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U corelia_test -d corelia_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

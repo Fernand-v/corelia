@@ -30,7 +30,7 @@ const buildMembershipKey = (userId: string, projectId: string) => `rbac:member:$
 
 type UserContext = { baseRoleId: string | null; baseRoleKey: string | null };
 
-const loadUserContext = async (app: FastifyInstance, userId: string): Promise<UserContext> => {
+export const loadUserContext = async (app: FastifyInstance, userId: string): Promise<UserContext> => {
   const cacheKey = buildUserContextKey(userId);
   const cached = await app.redis.get(cacheKey);
   if (cached) {
@@ -61,7 +61,7 @@ const loadUserContext = async (app: FastifyInstance, userId: string): Promise<Us
   return context;
 };
 
-const loadMembershipRoleId = async (
+export const loadMembershipRoleId = async (
   app: FastifyInstance,
   userId: string,
   projectId: string

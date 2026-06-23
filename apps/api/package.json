@@ -11,6 +11,7 @@
     "start": "node dist/main.js",
     "lint": "eslint src --ext .ts",
     "test": "vitest run --coverage",
+    "test:db": "vitest run --config vitest.db.config.ts",
     "typecheck": "rm -f dist/tsconfig.tsbuildinfo && tsc -p tsconfig.json --noEmit",
     "format": "prettier --check src prisma",
     "postinstall": "prisma generate",
