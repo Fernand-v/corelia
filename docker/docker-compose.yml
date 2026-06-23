@@ -149,7 +149,29 @@ services:
     #   - "3200:3200"
     #   - "4318:4318"
 
+  # One-shot migration runner: applies `prisma migrate deploy` exactly once
+  # before the API (and any replicas) start. Keeping migrations out of the API
+  # boot avoids races when scaling the API to multiple instances.
+  migrate:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+      target: runner
+      args:
+        PNPM_VERSION: ${PNPM_VERSION:-9.12.3}
+        PRISMA_CLI_VERSION: ${PRISMA_CLI_VERSION:-6.19.2}
+    image: corelia-api:local
+    container_name: corelia-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB}?schema=public
+    command: ["prisma", "migrate", "deploy", "--schema", "apps/api/prisma/schema.prisma"]
+
   api:
+    image: corelia-api:local
     build:
       context: ..
       dockerfile: apps/api/Dockerfile
@@ -170,6 +192,8 @@ services:
         condition: service_completed_successfully
       meilisearch:
         condition: service_started
+      migrate:
+        condition: service_completed_successfully
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -188,7 +212,9 @@ services:
       CORS_ALLOW_PRIVATE_NETWORK: ${CORS_ALLOW_PRIVATE_NETWORK:-false}
       ACCESS_TOKEN_TTL_MINUTES: 15
       REFRESH_TOKEN_TTL_DAYS: 30
-      AUTO_MIGRATE_ON_START: ${AUTO_MIGRATE_ON_START:-true}
+      # Migrations are applied by the dedicated `migrate` service above, so the
+      # API must not migrate on boot (prevents multi-instance races).
+      AUTO_MIGRATE_ON_START: ${AUTO_MIGRATE_ON_START:-false}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_USE_SSL: false
