@@ -45,9 +45,9 @@ export const ExpenseForm = ({ details, initial, onSubmit, onCancel, isPending }:
       }}
     >
       <label className="block space-y-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Partida</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-mid">Partida</span>
         <select
-          className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+          className="h-10 w-full rounded-xl border border-line px-3 text-sm"
           value={projectDetailId}
           onChange={(e) => setProjectDetailId(e.target.value)}
         >
@@ -57,31 +57,31 @@ export const ExpenseForm = ({ details, initial, onSubmit, onCancel, isPending }:
         </select>
       </label>
       <label className="block space-y-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Descripcion</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-mid">Descripcion</span>
         <input
-          className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+          className="h-10 w-full rounded-xl border border-line px-3 text-sm"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Ej. Licencia software X"
         />
       </label>
       <label className="block space-y-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Monto</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-mid">Monto</span>
         <input
           type="number"
           min="0"
           step="0.01"
-          className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+          className="h-10 w-full rounded-xl border border-line px-3 text-sm"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.00"
         />
       </label>
       <label className="block space-y-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Fecha</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-mid">Fecha</span>
         <input
           type="date"
-          className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+          className="h-10 w-full rounded-xl border border-line px-3 text-sm"
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />

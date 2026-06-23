@@ -255,7 +255,7 @@ const StarRating = ({
         );
       })}
       {value > 0 && (
-        <span className="ml-2 text-sm font-medium text-amber-600">{value}/5</span>
+        <span className="ml-2 text-sm font-medium text-ink">{value}/5</span>
       )}
     </div>
   );
@@ -281,18 +281,18 @@ const NpsScale = ({
           className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
             value === score
               ? score <= 6
-                ? "bg-red-500 text-white"
+                ? "bg-urgent-muted0 text-white"
                 : score <= 8
-                  ? "bg-amber-400 text-white"
-                  : "bg-emerald-500 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "bg-ink text-white"
+                  : "bg-paper0 text-white"
+              : "bg-line text-mid hover:bg-line"
           } disabled:cursor-not-allowed disabled:opacity-50`}
         >
           {score}
         </button>
       ))}
     </div>
-    <div className="flex justify-between text-xs text-slate-400">
+    <div className="flex justify-between text-xs text-faint">
       <span>Nada probable</span>
       <span>Muy probable</span>
     </div>
@@ -427,7 +427,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
     return (
       <main className="mx-auto w-full max-w-2xl px-4 py-8">
         <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-indigo-600" />
         </div>
       </main>
     );
@@ -437,17 +437,17 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
     return (
       <main className="mx-auto w-full max-w-2xl px-4 py-8">
         <div className="rounded-xl bg-white p-8 shadow-sm text-center space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-6 w-6 text-red-500">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-urgent-muted">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-6 w-6 text-urgent">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <p className="text-sm text-red-600">{formQuery.error?.message ?? "No se pudo cargar el formulario."}</p>
+          <p className="text-sm text-urgent">{formQuery.error?.message ?? "No se pudo cargar el formulario."}</p>
           <Link
             href={withContext("/forms")}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink transition-colors"
           >
             Volver a formularios
           </Link>
@@ -465,7 +465,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
       <div className="flex items-center gap-2 mb-2">
         <Link
           href={withContext("/forms")}
-          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
+          className="inline-flex items-center gap-1 text-sm text-mid hover:text-ink transition-colors"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
             <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
@@ -475,7 +475,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
         {canManageForms && (
           <Link
             href={withContext(`/forms/${form.id}/summary`)}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-line bg-paper px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper transition-colors"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
               <path d="M15.5 2A1.5 1.5 0 0017 3.5v13a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 013 16.5v-13A1.5 1.5 0 014.5 2h11zM6 7a1 1 0 000 2h2a1 1 0 000-2H6zm0 4a1 1 0 000 2h8a1 1 0 000-2H6z" />
@@ -487,18 +487,18 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
 
       {/* Form header card */}
       <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-        <div className="h-2.5 bg-indigo-600" />
+        <div className="h-2.5 bg-ink" />
         <div className="p-6 space-y-2">
-          <h1 className="text-2xl font-semibold text-slate-900">{form.title}</h1>
+          <h1 className="text-2xl font-semibold text-ink">{form.title}</h1>
           {form.description && (
-            <p className="text-sm text-slate-600">{form.description}</p>
+            <p className="text-sm text-mid">{form.description}</p>
           )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-mid">
               {form.totalResponses} {form.totalResponses === 1 ? "respuesta" : "respuestas"}
             </span>
             {form.isAnonymous && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-line px-2 py-0.5 text-xs text-mid">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
                   <path fillRule="evenodd" d="M3.28 2.22a.75.75 0 00-1.06 1.06l14.5 14.5a.75.75 0 101.06-1.06l-1.745-1.745a10.029 10.029 0 003.3-4.38 1.651 1.651 0 000-1.185A10.004 10.004 0 009.999 3a9.956 9.956 0 00-4.744 1.194L3.28 2.22zM7.752 6.69l1.092 1.092a2.5 2.5 0 013.374 3.373l1.092 1.092a4 4 0 00-5.558-5.558z" clipRule="evenodd" />
                   <path d="M10.748 13.93l2.523 2.523a9.987 9.987 0 01-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 010-1.186A10.007 10.007 0 012.839 6.02L6.07 9.252a4 4 0 004.678 4.678z" />
@@ -507,57 +507,57 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
               </span>
             )}
             {!form.isActive && (
-              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+              <span className="inline-flex items-center rounded-full bg-paper px-2 py-0.5 text-xs font-medium text-ink">
                 Borrador
               </span>
             )}
           </div>
-          <p className="text-xs text-red-500 pt-1">* Indica una pregunta obligatoria</p>
+          <p className="text-xs text-urgent pt-1">* Indica una pregunta obligatoria</p>
         </div>
       </div>
 
       {/* Alerts */}
       {!form.isActive && (
-        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-amber-500 shrink-0 mt-0.5">
+        <div className="rounded-xl bg-paper border border-line p-4 flex items-start gap-3">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-ink shrink-0 mt-0.5">
             <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
           </svg>
-          <p className="text-sm text-amber-800">
+          <p className="text-sm text-ink">
             Este formulario esta en borrador. Solo puede responderse cuando este publicado.
           </p>
         </div>
       )}
 
       {alreadySubmittedAndBlocked && (
-        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-amber-500 shrink-0 mt-0.5">
+        <div className="rounded-xl bg-paper border border-line p-4 flex items-start gap-3">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-ink shrink-0 mt-0.5">
             <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
           </svg>
-          <p className="text-sm text-amber-800">
+          <p className="text-sm text-ink">
             Ya enviaste respuestas y este formulario no permite multiples envios.
           </p>
         </div>
       )}
 
       {submitError && (
-        <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-red-500 shrink-0 mt-0.5">
+        <div className="rounded-xl bg-urgent-muted border border-urgent/30 p-4 flex items-start gap-3">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-urgent shrink-0 mt-0.5">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
           </svg>
-          <p className="text-sm text-red-700">{submitError}</p>
+          <p className="text-sm text-urgent">{submitError}</p>
         </div>
       )}
 
       {submitSuccess && (
-        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-emerald-500 shrink-0">
+        <div className="rounded-xl bg-paper border border-line p-4 flex items-center gap-3">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-ink shrink-0">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-emerald-800">{submitSuccess}</p>
+            <p className="text-sm font-medium text-ink">{submitSuccess}</p>
             <Link
               href={withContext("/forms")}
-              className="text-xs text-emerald-600 hover:text-emerald-700 underline"
+              className="text-xs text-ink hover:text-ink underline"
             >
               Volver a formularios
             </Link>
@@ -568,10 +568,10 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
       {/* Question cards */}
       {form.questions.length === 0 ? (
         <div className="rounded-xl bg-white shadow-sm p-8 text-center">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto h-10 w-10 text-slate-300 mb-3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto h-10 w-10 text-faint mb-3">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
           </svg>
-          <p className="text-sm text-slate-500">Este formulario aun no tiene preguntas.</p>
+          <p className="text-sm text-mid">Este formulario aun no tiene preguntas.</p>
         </div>
       ) : (
         form.questions.map((question) => {
@@ -594,9 +594,9 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
           return (
             <div key={question.id} className="rounded-xl bg-white shadow-sm p-6 space-y-4">
               <div>
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-medium text-ink">
                   {question.label}
-                  {question.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {question.required && <span className="text-urgent ml-0.5">*</span>}
                 </p>
               </div>
 
@@ -604,7 +604,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
                 <input
                   type="text"
                   placeholder="Tu respuesta"
-                  className="w-full border-0 border-b-2 border-slate-200 bg-transparent px-0 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-0 transition-colors"
+                  className="w-full border-0 border-b-2 border-line bg-transparent px-0 py-2 text-sm text-ink placeholder-slate-400 focus:border-line focus:outline-none focus:ring-0 transition-colors"
                   value={textValue}
                   onChange={(event) => setAnswerValue(question.id, event.target.value)}
                   disabled={!canSubmit}
@@ -615,7 +615,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
                 <textarea
                   placeholder="Tu respuesta"
                   rows={4}
-                  className="w-full border-0 border-b-2 border-slate-200 bg-transparent px-0 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-0 transition-colors resize-none"
+                  className="w-full border-0 border-b-2 border-line bg-transparent px-0 py-2 text-sm text-ink placeholder-slate-400 focus:border-line focus:outline-none focus:ring-0 transition-colors resize-none"
                   value={textValue}
                   onChange={(event) => setAnswerValue(question.id, event.target.value)}
                   disabled={!canSubmit}
@@ -632,11 +632,11 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
                       <span className="relative flex h-5 w-5 shrink-0 items-center justify-center">
                         <span className={`h-5 w-5 rounded-full border-2 transition-colors ${
                           textValue === option
-                            ? "border-indigo-600"
-                            : "border-slate-300 group-hover:border-slate-400"
+                            ? "border-line"
+                            : "border-line group-hover:border-line"
                         }`} />
                         {textValue === option && (
-                          <span className="absolute h-2.5 w-2.5 rounded-full bg-indigo-600" />
+                          <span className="absolute h-2.5 w-2.5 rounded-full bg-ink" />
                         )}
                       </span>
                       <input
@@ -647,7 +647,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
                         onChange={() => setAnswerValue(question.id, option)}
                         disabled={!canSubmit}
                       />
-                      <span className="text-sm text-slate-700">{option}</span>
+                      <span className="text-sm text-ink">{option}</span>
                     </label>
                   ))}
                 </div>
@@ -664,8 +664,8 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
                       >
                         <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded transition-colors ${
                           checked
-                            ? "bg-indigo-600 border-2 border-indigo-600"
-                            : "border-2 border-slate-300 group-hover:border-slate-400"
+                            ? "bg-ink border-2 border-line"
+                            : "border-2 border-line group-hover:border-line"
                         }`}>
                           {checked && (
                             <svg viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2" className="h-3 w-3">
@@ -680,7 +680,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
                           onChange={(event) => handleCheckboxToggle(question.id, option, event.target.checked)}
                           disabled={!canSubmit}
                         />
-                        <span className="text-sm text-slate-700">{option}</span>
+                        <span className="text-sm text-ink">{option}</span>
                       </label>
                     );
                   })}
@@ -698,7 +698,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
               {question.type === "date" && (
                 <input
                   type="date"
-                  className="w-full max-w-xs border-0 border-b-2 border-slate-200 bg-transparent px-0 py-2 text-sm text-slate-900 focus:border-indigo-600 focus:outline-none focus:ring-0 transition-colors"
+                  className="w-full max-w-xs border-0 border-b-2 border-line bg-transparent px-0 py-2 text-sm text-ink focus:border-line focus:outline-none focus:ring-0 transition-colors"
                   value={textValue}
                   onChange={(event) => setAnswerValue(question.id, event.target.value)}
                   disabled={!canSubmit}
@@ -716,9 +716,9 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
               {question.type === "file_upload" && (
                 <div className="space-y-2">
                   {textValue && (
-                    <p className="text-xs text-emerald-600 truncate">Archivo subido: {textValue.split("/").pop()}</p>
+                    <p className="text-xs text-ink truncate">Archivo subido: {textValue.split("/").pop()}</p>
                   )}
-                  <label className={`inline-flex items-center gap-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 cursor-pointer hover:border-indigo-400 hover:text-indigo-600 transition-colors ${!canSubmit ? "opacity-50 pointer-events-none" : ""}`}>
+                  <label className={`inline-flex items-center gap-2 rounded-lg border-2 border-dashed border-line px-4 py-3 text-sm text-mid cursor-pointer hover:border-line hover:text-ink transition-colors ${!canSubmit ? "opacity-50 pointer-events-none" : ""}`}>
                     <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
                       <path d="M9.25 13.25a.75.75 0 001.5 0V4.636l2.955 3.129a.75.75 0 001.09-1.03l-4.25-4.5a.75.75 0 00-1.09 0l-4.25 4.5a.75.75 0 101.09 1.03L9.25 4.636v8.614z" />
                       <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
@@ -757,7 +757,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
         <div className="flex items-center justify-between pt-2 pb-8">
           <button
             type="button"
-            className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            className="rounded-lg bg-ink px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-ink focus:outline-none focus:ring-2 focus:ring-line focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             onClick={handleSubmit}
             disabled={!canSubmit || form.questions.length === 0}
           >
@@ -765,7 +765,7 @@ export const DynamicFormAnswerModule = ({ formId }: { formId: string }) => {
           </button>
           <button
             type="button"
-            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+            className="text-sm text-ink hover:text-ink font-medium transition-colors"
             onClick={() => setAnswersByQuestionId({})}
             disabled={!canSubmit}
           >

@@ -336,23 +336,23 @@ export const DynamicFormsModule = () => {
         <button
           type="button"
           onClick={() => setView("list")}
-          className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          className="inline-flex items-center gap-1 text-sm font-medium text-ink hover:text-ink"
         >
           ← Volver a formularios
         </button>
 
         {/* Form header card */}
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-2.5 bg-indigo-600" />
+        <div className="overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+          <div className="h-2.5 bg-ink" />
           <div className="space-y-4 p-6">
             <input
-              className="w-full border-0 border-b-2 border-slate-200 pb-2 text-3xl font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-600"
+              className="w-full border-0 border-b-2 border-line pb-2 text-3xl font-semibold text-ink outline-none placeholder:text-faint focus:border-line"
               placeholder="Formulario sin titulo"
               value={createFormState.title}
               onChange={(e) => setCreateFormState((c) => ({ ...c, title: e.target.value }))}
             />
             <input
-              className="w-full border-0 border-b border-slate-200 pb-1 text-sm text-slate-600 outline-none placeholder:text-slate-400 focus:border-indigo-600"
+              className="w-full border-0 border-b border-line pb-1 text-sm text-mid outline-none placeholder:text-faint focus:border-line"
               placeholder="Descripcion del formulario"
               value={createFormState.description}
               onChange={(e) => setCreateFormState((c) => ({ ...c, description: e.target.value }))}
@@ -361,20 +361,20 @@ export const DynamicFormsModule = () => {
         </div>
 
         {/* Settings card */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-slate-700">Configuracion</h3>
+        <div className="rounded-xl border border-line bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-ink">Configuracion</h3>
           <div className="space-y-4">
             {/* Visibility selector */}
             <div className="space-y-2">
-              <span className="text-xs font-medium text-slate-600">Visibilidad</span>
+              <span className="text-xs font-medium text-mid">Visibilidad</span>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setCreateFormState((c) => ({ ...c, projectId: "" }))}
                   className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition ${
                     !createFormState.projectId
-                      ? "border-indigo-300 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      ? "border-line bg-paper text-ink ring-1 ring-line"
+                      : "border-line text-mid hover:bg-line"
                   }`}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -382,7 +382,7 @@ export const DynamicFormsModule = () => {
                   </svg>
                   <span>
                     <span className="block font-medium">Global</span>
-                    <span className="block text-[11px] text-slate-500">Visible para toda la organizacion</span>
+                    <span className="block text-[11px] text-mid">Visible para toda la organizacion</span>
                   </span>
                 </button>
                 <button
@@ -390,8 +390,8 @@ export const DynamicFormsModule = () => {
                   onClick={() => setCreateFormState((c) => ({ ...c, projectId: projectIdFromContext || c.projectId || "proyecto" }))}
                   className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition ${
                     createFormState.projectId
-                      ? "border-indigo-300 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      ? "border-line bg-paper text-ink ring-1 ring-line"
+                      : "border-line text-mid hover:bg-line"
                   }`}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -399,46 +399,46 @@ export const DynamicFormsModule = () => {
                   </svg>
                   <span>
                     <span className="block font-medium">Proyecto</span>
-                    <span className="block text-[11px] text-slate-500">Solo miembros del proyecto</span>
+                    <span className="block text-[11px] text-mid">Solo miembros del proyecto</span>
                   </span>
                 </button>
               </div>
               {createFormState.projectId && !projectIdFromContext ? (
                 <input
-                  className="h-9 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  className="h-9 w-full rounded-lg border border-line px-3 text-sm outline-none placeholder:text-faint focus:border-line focus:ring-1 focus:ring-line"
                   placeholder="ID del proyecto"
                   value={createFormState.projectId === "proyecto" ? "" : createFormState.projectId}
                   onChange={(e) => setCreateFormState((c) => ({ ...c, projectId: e.target.value }))}
                 />
               ) : null}
               {projectIdFromContext && createFormState.projectId ? (
-                <p className="text-xs text-slate-500">Asociado al proyecto del contexto actual</p>
+                <p className="text-xs text-mid">Asociado al proyecto del contexto actual</p>
               ) : null}
             </div>
 
             <div className="flex flex-wrap gap-x-6 gap-y-2">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-ink">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="h-4 w-4 rounded border-line text-ink focus:ring-line"
                   checked={createFormState.allowMultipleSubmissions}
                   onChange={(e) => setCreateFormState((c) => ({ ...c, allowMultipleSubmissions: e.target.checked }))}
                 />
                 Permitir multiples envios
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-ink">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="h-4 w-4 rounded border-line text-ink focus:ring-line"
                   checked={createFormState.isAnonymous}
                   onChange={(e) => setCreateFormState((c) => ({ ...c, isAnonymous: e.target.checked }))}
                 />
                 Respuestas anonimas
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-ink">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="h-4 w-4 rounded border-line text-ink focus:ring-line"
                   checked={createFormState.isActive}
                   onChange={(e) => setCreateFormState((c) => ({ ...c, isActive: e.target.checked }))}
                 />
@@ -449,7 +449,7 @@ export const DynamicFormsModule = () => {
         </div>
 
         {builderError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{builderError}</div>
+          <div className="rounded-xl border border-urgent/30 bg-urgent-muted px-4 py-3 text-sm text-urgent">{builderError}</div>
         ) : null}
 
         <div className="flex justify-end">
@@ -476,7 +476,7 @@ export const DynamicFormsModule = () => {
               if (pid.length > 0) payload.projectId = pid;
               createFormMutation.mutate(payload);
             }}
-            className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-lg bg-ink px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-ink disabled:opacity-50"
           >
             {createFormMutation.isPending ? "Creando..." : "Crear formulario y agregar preguntas"}
           </button>
@@ -493,7 +493,7 @@ export const DynamicFormsModule = () => {
           <button
             type="button"
             onClick={() => { setView("list"); setSelectedFormId(null); }}
-            className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            className="inline-flex items-center gap-1 text-sm font-medium text-ink hover:text-ink"
           >
             ← Volver a formularios
           </button>
@@ -503,14 +503,14 @@ export const DynamicFormsModule = () => {
                 <Link
                   href={linkWithContext(`/forms/${selectedForm.id}`)}
                   onClick={() => sessionStorage.setItem("forms:editFormId", selectedForm.id)}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                  className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink shadow-sm hover:bg-line"
                 >
                   Vista previa
                 </Link>
                 <Link
                   href={linkWithContext(`/forms/${selectedForm.id}/summary`)}
                   onClick={() => sessionStorage.setItem("forms:editFormId", selectedForm.id)}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-600 shadow-sm hover:bg-indigo-50"
+                  className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink shadow-sm hover:bg-paper"
                 >
                   Respuestas ({selectedForm.totalResponses})
                 </Link>
@@ -520,8 +520,8 @@ export const DynamicFormsModule = () => {
                   onClick={() => updateFormMutation.mutate({ formId: selectedForm.id, payload: { isActive: !selectedForm.isActive } })}
                   className={`rounded-lg px-4 py-1.5 text-xs font-semibold shadow-sm ${
                     selectedForm.isActive
-                      ? "border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                      ? "border border-line bg-paper text-ink hover:bg-paper"
+                      : "bg-ink text-white hover:bg-ink"
                   }`}
                 >
                   {selectedForm.isActive ? "Desactivar" : "Publicar"}
@@ -532,33 +532,33 @@ export const DynamicFormsModule = () => {
         </div>
 
         {builderError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{builderError}</div>
+          <div className="rounded-xl border border-urgent/30 bg-urgent-muted px-4 py-3 text-sm text-urgent">{builderError}</div>
         ) : null}
 
         {selectedFormQuery.isLoading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Cargando editor...</div>
+          <div className="rounded-xl border border-line bg-white p-8 text-center text-sm text-mid">Cargando editor...</div>
         ) : null}
 
         {selectedForm ? (
           <>
             {/* Form header */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="h-2.5 bg-indigo-600" />
+            <div className="overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+              <div className="h-2.5 bg-ink" />
               <div className="p-6">
-                <p className="text-2xl font-semibold text-slate-900">{selectedForm.title}</p>
+                <p className="text-2xl font-semibold text-ink">{selectedForm.title}</p>
                 {selectedForm.description ? (
-                  <p className="mt-1 text-sm text-slate-600">{selectedForm.description}</p>
+                  <p className="mt-1 text-sm text-mid">{selectedForm.description}</p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    selectedForm.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
+                    selectedForm.isActive ? "bg-paper text-ink" : "bg-line text-mid"
                   }`}>
                     {selectedForm.isActive ? "Publicado" : "Borrador"}
                   </span>
-                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                  <span className="inline-flex items-center rounded-full bg-line px-2.5 py-0.5 text-xs font-medium text-mid">
                     {selectedForm.questions.length} preguntas
                   </span>
-                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                  <span className="inline-flex items-center rounded-full bg-line px-2.5 py-0.5 text-xs font-medium text-mid">
                     {selectedForm.totalResponses} respuestas
                   </span>
                 </div>
@@ -576,11 +576,11 @@ export const DynamicFormsModule = () => {
               };
 
               return (
-                <div key={question.id} className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-indigo-300">
+                <div key={question.id} className="group rounded-xl border border-line bg-white p-5 shadow-sm transition-all hover:border-line">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-400">Pregunta {index + 1}</span>
+                    <span className="text-xs font-medium text-faint">Pregunta {index + 1}</span>
                     <select
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600 outline-none focus:border-indigo-500"
+                      className="rounded-lg border border-line bg-line px-2 py-1 text-xs text-mid outline-none focus:border-line"
                       value={draft.type}
                       onChange={(e) => {
                         const nextType = e.target.value as DynamicFormQuestionType;
@@ -597,7 +597,7 @@ export const DynamicFormsModule = () => {
                   </div>
 
                   <input
-                    className="w-full border-0 border-b-2 border-transparent pb-1 text-base font-medium text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500"
+                    className="w-full border-0 border-b-2 border-transparent pb-1 text-base font-medium text-ink outline-none placeholder:text-faint focus:border-line"
                     placeholder="Escribe la pregunta"
                     value={draft.label}
                     onChange={(e) => setQuestionDrafts((c) => ({ ...c, [question.id]: { ...draft, label: e.target.value } }))}
@@ -605,18 +605,18 @@ export const DynamicFormsModule = () => {
 
                   {supportsOptions(draft.type) ? (
                     <div className="mt-3">
-                      <p className="mb-1 text-xs text-slate-500">Opciones (una por linea)</p>
+                      <p className="mb-1 text-xs text-mid">Opciones (una por linea)</p>
                       <textarea
-                        className="min-h-[80px] w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        className="min-h-[80px] w-full rounded-lg border border-line p-3 text-sm outline-none focus:border-line focus:ring-1 focus:ring-line"
                         value={draft.optionsText}
                         onChange={(e) => setQuestionDrafts((c) => ({ ...c, [question.id]: { ...draft, optionsText: e.target.value } }))}
                       />
                     </div>
                   ) : null}
 
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                  <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
                     <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <label className="flex items-center gap-2 text-sm text-mid">
                         <div className="relative">
                           <input
                             type="checkbox"
@@ -624,17 +624,17 @@ export const DynamicFormsModule = () => {
                             checked={draft.required}
                             onChange={(e) => setQuestionDrafts((c) => ({ ...c, [question.id]: { ...draft, required: e.target.checked } }))}
                           />
-                          <div className="h-5 w-9 rounded-full bg-slate-200 peer-checked:bg-indigo-600 transition-colors" />
+                          <div className="h-5 w-9 rounded-full bg-line peer-checked:bg-ink transition-colors" />
                           <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
                         </div>
                         Obligatoria
                       </label>
-                      <label className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <label className="flex items-center gap-1.5 text-xs text-mid">
                         Orden:
                         <input
                           type="number"
                           min={0}
-                          className="w-14 rounded border border-slate-200 px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                          className="w-14 rounded border border-line px-2 py-1 text-xs outline-none focus:border-line"
                           value={draft.order}
                           onChange={(e) => {
                             const v = Number(e.target.value);
@@ -663,7 +663,7 @@ export const DynamicFormsModule = () => {
                           if (options && options.length > 0) payload.options = options;
                           updateQuestionMutation.mutate({ questionId: question.id, payload });
                         }}
-                        className="rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+                        className="rounded-lg bg-paper px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper"
                       >
                         Guardar
                       </button>
@@ -671,7 +671,7 @@ export const DynamicFormsModule = () => {
                         type="button"
                         disabled={isBusy}
                         onClick={() => deleteQuestionMutation.mutate(question.id)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        className="rounded-lg p-1.5 text-faint hover:bg-urgent-muted hover:text-urgent"
                         title="Eliminar pregunta"
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
@@ -683,11 +683,11 @@ export const DynamicFormsModule = () => {
             })}
 
             {/* Add question card */}
-            <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white p-5">
-              <h3 className="mb-3 text-sm font-semibold text-slate-700">Agregar pregunta</h3>
+            <div className="rounded-xl border-2 border-dashed border-line bg-white p-5">
+              <h3 className="mb-3 text-sm font-semibold text-ink">Agregar pregunta</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <select
-                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500"
+                  className="h-10 rounded-lg border border-line px-3 text-sm outline-none focus:border-line"
                   value={newQuestionState.type}
                   onChange={(e) =>
                     setNewQuestionState((c) => ({
@@ -702,31 +702,31 @@ export const DynamicFormsModule = () => {
                   ))}
                 </select>
                 <input
-                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500"
+                  className="h-10 rounded-lg border border-line px-3 text-sm outline-none focus:border-line"
                   placeholder="Orden (opcional)"
                   value={newQuestionState.order}
                   onChange={(e) => setNewQuestionState((c) => ({ ...c, order: e.target.value }))}
                 />
               </div>
               <input
-                className="mt-3 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500"
+                className="mt-3 h-10 w-full rounded-lg border border-line px-3 text-sm outline-none focus:border-line"
                 placeholder="Escribe la pregunta"
                 value={newQuestionState.label}
                 onChange={(e) => setNewQuestionState((c) => ({ ...c, label: e.target.value }))}
               />
               {supportsOptions(newQuestionState.type) ? (
                 <textarea
-                  className="mt-3 min-h-[80px] w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-indigo-500"
+                  className="mt-3 min-h-[80px] w-full rounded-lg border border-line p-3 text-sm outline-none focus:border-line"
                   placeholder="Opciones (una por linea)"
                   value={newQuestionState.optionsText}
                   onChange={(e) => setNewQuestionState((c) => ({ ...c, optionsText: e.target.value }))}
                 />
               ) : null}
               <div className="mt-3 flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-slate-600">
+                <label className="flex items-center gap-2 text-sm text-mid">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                    className="h-4 w-4 rounded border-line text-ink"
                     checked={newQuestionState.required}
                     onChange={(e) => setNewQuestionState((c) => ({ ...c, required: e.target.checked }))}
                   />
@@ -750,7 +750,7 @@ export const DynamicFormsModule = () => {
                     if (options && options.length > 0) payload.options = options;
                     addQuestionMutation.mutate({ formId: selectedForm.id, payload });
                   }}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink disabled:opacity-50"
                 >
                   {addQuestionMutation.isPending ? "Agregando..." : "Agregar"}
                 </button>
@@ -767,8 +767,8 @@ export const DynamicFormsModule = () => {
     <main className="mx-auto w-full max-w-4xl space-y-6 py-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Formularios</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-ink">Formularios</h1>
+          <p className="mt-0.5 text-sm text-mid">
             Crea formularios, compartilos con tu equipo y analiza resultados.
           </p>
         </div>
@@ -776,7 +776,7 @@ export const DynamicFormsModule = () => {
           <button
             type="button"
             onClick={() => setView("create")}
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+            className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-ink"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4"><path d="M12 5v14M5 12h14" /></svg>
             Nuevo formulario
@@ -787,29 +787,29 @@ export const DynamicFormsModule = () => {
       {formsQuery.isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={`skel-${i}`} className="h-28 animate-pulse rounded-xl border border-slate-200 bg-white" />
+            <div key={`skel-${i}`} className="h-28 animate-pulse rounded-xl border border-line bg-white" />
           ))}
         </div>
       ) : null}
 
       {formsQuery.error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{formsQuery.error.message}</div>
+        <div className="rounded-xl border border-urgent/30 bg-urgent-muted px-4 py-3 text-sm text-urgent">{formsQuery.error.message}</div>
       ) : null}
 
       {!formsQuery.isLoading && forms.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white px-8 py-16 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-indigo-500">
+        <div className="rounded-xl border-2 border-dashed border-line bg-white px-8 py-16 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-paper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-ink">
               <path d="M9 12h6M12 9v6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
             </svg>
           </div>
-          <p className="text-base font-semibold text-slate-800">No hay formularios todavia</p>
-          <p className="mt-1 text-sm text-slate-500">Crea tu primer formulario para empezar a recopilar respuestas.</p>
+          <p className="text-base font-semibold text-ink">No hay formularios todavia</p>
+          <p className="mt-1 text-sm text-mid">Crea tu primer formulario para empezar a recopilar respuestas.</p>
           {canManageForms ? (
             <button
               type="button"
               onClick={() => setView("create")}
-              className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="mt-4 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink"
             >
               Crear formulario
             </button>
@@ -821,32 +821,32 @@ export const DynamicFormsModule = () => {
         {forms.map((form) => {
           const editable = canManageForms && (session.data?.id === form.createdById || actorRole === "ADMINISTRADOR");
           return (
-            <div key={form.id} className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-md">
-              <div className={`h-2 ${form.isActive ? "bg-indigo-600" : "bg-slate-300"}`} />
+            <div key={form.id} className="group overflow-hidden rounded-xl border border-line bg-white shadow-sm transition-all hover:shadow-md">
+              <div className={`h-2 ${form.isActive ? "bg-ink" : "bg-ink"}`} />
               <div className="p-4">
                 <div className="mb-3 flex items-start justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-slate-900 line-clamp-2">{form.title}</h3>
+                  <h3 className="text-sm font-semibold text-ink line-clamp-2">{form.title}</h3>
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    form.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
+                    form.isActive ? "bg-paper text-ink" : "bg-line text-mid"
                   }`}>
                     {form.isActive ? "Activo" : "Borrador"}
                   </span>
                 </div>
-                <p className="mb-3 text-xs text-slate-500 line-clamp-2">{form.description ?? "Sin descripcion"}</p>
-                <div className="mb-3 flex items-center gap-3 text-xs text-slate-500">
+                <p className="mb-3 text-xs text-mid line-clamp-2">{form.description ?? "Sin descripcion"}</p>
+                <div className="mb-3 flex items-center gap-3 text-xs text-mid">
                   <span>{form.questionCount} preguntas</span>
-                  <span className="text-slate-300">|</span>
+                  <span className="text-faint">|</span>
                   <span>{form.responseCount} respuestas</span>
                 </div>
-                <p className="mb-4 text-[11px] text-slate-400">
+                <p className="mb-4 text-[11px] text-faint">
                   {form.createdBy?.fullName ?? "Desconocido"} · {formatDateTime(form.createdAt)}
                 </p>
                 {/* Visibility badge */}
                 <div className="mb-3 flex items-center gap-1.5">
                   <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                     form.projectId
-                      ? "bg-blue-50 text-blue-600"
-                      : "bg-purple-50 text-purple-600"
+                      ? "bg-paper text-ink"
+                      : "bg-paper text-ink"
                   }`}>
                     {form.projectId ? (
                       <>
@@ -864,14 +864,14 @@ export const DynamicFormsModule = () => {
                 <div className="flex items-center gap-2">
                   <Link
                     href={linkWithContext(`/forms/${form.id}`)}
-                    className="flex-1 rounded-lg bg-indigo-50 py-2 text-center text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                    className="flex-1 rounded-lg bg-paper py-2 text-center text-xs font-semibold text-ink hover:bg-paper"
                   >
                     {form.submittedByMe && !form.allowMultipleSubmissions ? "Ver" : "Responder"}
                   </Link>
                   {canManageForms ? (
                     <Link
                       href={linkWithContext(`/forms/${form.id}/summary`)}
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      className="rounded-lg border border-line px-3 py-2 text-xs font-medium text-mid hover:bg-line"
                     >
                       Resumen
                     </Link>
@@ -880,7 +880,7 @@ export const DynamicFormsModule = () => {
                     <button
                       type="button"
                       onClick={() => { setSelectedFormId(form.id); setView("edit"); }}
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      className="rounded-lg border border-line px-3 py-2 text-xs font-medium text-mid hover:bg-line"
                     >
                       Editar
                     </button>
@@ -891,7 +891,7 @@ export const DynamicFormsModule = () => {
                         type="button"
                         disabled={isBusy}
                         onClick={() => updateFormMutation.mutate({ formId: form.id, payload: { isActive: false } })}
-                        className="rounded-lg border border-amber-200 px-2.5 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50"
+                        className="rounded-lg border border-line px-2.5 py-2 text-xs font-medium text-ink hover:bg-paper"
                         title="No se puede eliminar porque tiene respuestas. Se ocultara."
                       >
                         {form.isActive ? "Ocultar" : "Oculto"}
@@ -901,7 +901,7 @@ export const DynamicFormsModule = () => {
                         type="button"
                         disabled={isBusy}
                         onClick={() => setConfirmDeleteFormId(form.id)}
-                        className="rounded-lg border border-red-200 px-2.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
+                        className="rounded-lg border border-urgent/30 px-2.5 py-2 text-xs font-medium text-urgent hover:bg-urgent-muted"
                         title="Eliminar formulario"
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
@@ -919,15 +919,15 @@ export const DynamicFormsModule = () => {
       {confirmDeleteFormId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-base font-semibold text-slate-900">Eliminar formulario</h3>
-            <p className="mt-2 text-sm text-slate-600">
+            <h3 className="text-base font-semibold text-ink">Eliminar formulario</h3>
+            <p className="mt-2 text-sm text-mid">
               Esta accion es irreversible. El formulario y todas sus preguntas seran eliminados permanentemente.
             </p>
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmDeleteFormId(null)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="rounded-lg border border-line px-4 py-2 text-sm font-medium text-mid hover:bg-line"
               >
                 Cancelar
               </button>
@@ -935,7 +935,7 @@ export const DynamicFormsModule = () => {
                 type="button"
                 disabled={deleteFormMutation.isPending}
                 onClick={() => deleteFormMutation.mutate(confirmDeleteFormId)}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-lg bg-urgent px-4 py-2 text-sm font-semibold text-white hover:bg-urgent disabled:opacity-50"
               >
                 {deleteFormMutation.isPending ? "Eliminando..." : "Eliminar"}
               </button>

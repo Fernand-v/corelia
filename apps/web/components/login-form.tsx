@@ -53,8 +53,8 @@ export const LoginForm = () => {
   return (
     <Card className="mx-auto w-full max-w-sm space-y-5 p-7 shadow-dropdown">
       <header className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Iniciar sesión</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">Iniciar sesión</h1>
+        <p className="text-sm text-mid">
           Accede a {frontendSettings.organizationName} con tu cuenta corporativa
         </p>
       </header>
@@ -69,24 +69,24 @@ export const LoginForm = () => {
         })}
       >
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Email</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-mid">Email</span>
           <input
-            className="h-10 w-full rounded-xl border border-glass-border bg-white/70 px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
+            className="h-10 w-full rounded-xl border border-line bg-paper px-3 text-sm text-ink placeholder:text-faint shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
             type="email"
             autoComplete="email"
             disabled={loginMutation.isPending}
             {...form.register("email", clearErrorOnInput)}
           />
           {form.formState.errors.email ? (
-            <span className="text-xs text-red-500">{form.formState.errors.email.message}</span>
+            <span className="text-xs text-urgent">{form.formState.errors.email.message}</span>
           ) : null}
         </label>
 
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Contraseña</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-mid">Contraseña</span>
           <div className="flex items-center gap-2">
             <input
-              className="h-10 w-full rounded-xl border border-glass-border bg-white/70 px-3 text-sm text-slate-900 shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
+              className="h-10 w-full rounded-xl border border-line bg-paper px-3 text-sm text-ink shadow-sm backdrop-blur-sm transition-shadow focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               disabled={loginMutation.isPending}
@@ -123,12 +123,12 @@ export const LoginForm = () => {
             </Button>
           </div>
           {form.formState.errors.password ? (
-            <span className="text-xs text-red-500">{form.formState.errors.password.message}</span>
+            <span className="text-xs text-urgent">{form.formState.errors.password.message}</span>
           ) : null}
         </label>
 
         {loginMutation.error ? (
-          <p className="rounded-xl border border-red-100 bg-red-50/80 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-xl border border-urgent/30 bg-urgent-muted/80 px-3 py-2 text-sm text-urgent">
             {loginMutation.error.message}
           </p>
         ) : null}
