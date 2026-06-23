@@ -168,7 +168,7 @@ const fileTypeMeta = (file: FileItem) => {
     return {
       icon: "📕",
       label: "PDF",
-      badge: "bg-red-100 text-red-700"
+      badge: "bg-urgent-muted text-urgent"
     };
   }
   if (
@@ -181,28 +181,28 @@ const fileTypeMeta = (file: FileItem) => {
     return {
       icon: "📗",
       label: "Excel",
-      badge: "bg-emerald-100 text-emerald-700"
+      badge: "bg-paper text-ink"
     };
   }
   if (mime.startsWith("image/")) {
     return {
       icon: "🖼️",
       label: "Imagen",
-      badge: "bg-pink-100 text-pink-700"
+      badge: "bg-paper text-ink"
     };
   }
   if (mime.startsWith("video/")) {
     return {
       icon: "🎬",
       label: "Video",
-      badge: "bg-violet-100 text-violet-700"
+      badge: "bg-paper text-ink"
     };
   }
   if (mime.startsWith("audio/")) {
     return {
       icon: "🎵",
       label: "Audio",
-      badge: "bg-cyan-100 text-cyan-700"
+      badge: "bg-paper text-ink"
     };
   }
   if (
@@ -214,7 +214,7 @@ const fileTypeMeta = (file: FileItem) => {
     return {
       icon: "🗜️",
       label: "ZIP",
-      badge: "bg-amber-100 text-amber-700"
+      badge: "bg-paper text-ink"
     };
   }
   if (
@@ -225,13 +225,13 @@ const fileTypeMeta = (file: FileItem) => {
     return {
       icon: "📘",
       label: "Word",
-      badge: "bg-blue-100 text-blue-700"
+      badge: "bg-paper text-ink"
     };
   }
   return {
     icon: "📄",
     label: "Archivo",
-    badge: "bg-slate-100 text-slate-700"
+    badge: "bg-line text-ink"
   };
 };
 
@@ -251,7 +251,7 @@ const FilesSkeleton = () => (
     {Array.from({ length: 5 }).map((_, index) => (
       <div
         key={`file-skeleton-${index}`}
-        className="h-14 animate-pulse rounded-[12px] bg-slate-100"
+        className="h-14 animate-pulse rounded-[12px] bg-line"
       />
     ))}
   </div>
@@ -369,18 +369,18 @@ export const FilesModule = ({
 
   return (
     <section
-      className={`${dmSans.className} files-module-scroll h-full w-full overflow-hidden bg-[#f6f8fb] text-slate-900`}
+      className={`${dmSans.className} files-module-scroll h-full w-full overflow-hidden bg-[#f6f8fb] text-ink`}
       style={{ scrollbarWidth: "thin" }}
     >
       <div className="flex h-full flex-col">
-        <header className="sticky top-0 z-20 border-b border-[#e4e9f0] bg-white/95 px-5 py-4 backdrop-blur">
+        <header className="sticky top-0 z-20 border-b border-[#e4e9f0] bg-paper px-5 py-4 backdrop-blur">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               {currentFolder ? (
                 <button
                   type="button"
                   onClick={onGoBack}
-                  className="rounded-[10px] border border-[#e4e9f0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-[10px] border border-[#e4e9f0] bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-line"
                 >
                   ← Volver
                 </button>
@@ -398,7 +398,7 @@ export const FilesModule = ({
                       onGoBack();
                     }
                   }}
-                  className="rounded-[8px] px-1 py-0.5 font-medium text-[#3b6cf6] hover:bg-blue-50"
+                  className="rounded-[8px] px-1 py-0.5 font-medium text-[#3b6cf6] hover:bg-paper"
                 >
                   Archivos
                 </button>
@@ -407,14 +407,14 @@ export const FilesModule = ({
                   const isLast = index === folderPath.length - 1;
                   return (
                     <span key={item.id} className="flex min-w-0 items-center gap-1">
-                      <span className="text-slate-400">›</span>
+                      <span className="text-faint">›</span>
                       <button
                         type="button"
                         onClick={() => onOpenFolder(item)}
                         className={`truncate rounded-[8px] px-1 py-0.5 text-left ${
                           isLast
-                            ? `${sora.className} font-semibold text-slate-900`
-                            : "text-slate-600 hover:bg-slate-100"
+                            ? `${sora.className} font-semibold text-ink`
+                            : "text-mid hover:bg-line"
                         }`}
                       >
                         {item.name}
@@ -429,7 +429,7 @@ export const FilesModule = ({
               <button
                 type="button"
                 onClick={() => onViewChanges?.()}
-                className="rounded-[10px] border border-[#d8dee9] bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-[10px] border border-[#d8dee9] bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-line"
               >
                 Ver cambios
               </button>
@@ -447,7 +447,7 @@ export const FilesModule = ({
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {errorMessage ? (
-            <div className="mb-4 rounded-[12px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-4 rounded-[12px] border border-urgent/30 bg-urgent-muted px-4 py-3 text-sm text-urgent">
               {errorMessage}
             </div>
           ) : null}
@@ -460,7 +460,7 @@ export const FilesModule = ({
             onDragLeave={() => setDragActive(false)}
             onDrop={handleDrop}
             className={`rounded-[14px] border-2 border-dashed bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,27,45,.07)] transition-all ${
-              dragActive ? "border-[#3b6cf6] bg-blue-50/40" : "border-[#d5deeb]"
+              dragActive ? "border-[#3b6cf6] bg-paper/40" : "border-[#d5deeb]"
             }`}
           >
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -469,14 +469,14 @@ export const FilesModule = ({
                 onClick={() => uploadInputRef.current?.click()}
                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
               >
-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl text-[#3b6cf6]">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper text-xl text-[#3b6cf6]">
                   ☁️
                 </span>
                 <span className="min-w-0">
-                  <span className={`${sora.className} block text-sm font-semibold text-slate-900`}>
+                  <span className={`${sora.className} block text-sm font-semibold text-ink`}>
                     Arrastra archivos aquí
                   </span>
-                  <span className="block text-xs text-slate-500">
+                  <span className="block text-xs text-mid">
                     o haz clic para buscar en tu computadora
                   </span>
                 </span>
@@ -484,7 +484,7 @@ export const FilesModule = ({
               <button
                 type="button"
                 onClick={() => uploadInputRef.current?.click()}
-                className="rounded-[10px] border border-[#3b6cf6] bg-white px-3 py-2 text-xs font-semibold text-[#3b6cf6] hover:bg-blue-50"
+                className="rounded-[10px] border border-[#3b6cf6] bg-white px-3 py-2 text-xs font-semibold text-[#3b6cf6] hover:bg-paper"
               >
                 Subir archivo
               </button>
@@ -500,7 +500,7 @@ export const FilesModule = ({
           <section className="mt-4 rounded-[14px] border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(15,27,45,.07)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-[320px] flex-1 items-center gap-2">
-                <span className="text-sm text-slate-500">📁</span>
+                <span className="text-sm text-mid">📁</span>
                 <input
                   ref={folderInputRef}
                   value={folderName}
@@ -529,7 +529,7 @@ export const FilesModule = ({
                     type="button"
                     onClick={() => setViewMode("grid")}
                     className={`rounded-[8px] px-2 py-1 text-xs ${
-                      viewMode === "grid" ? "bg-blue-50 text-[#3b6cf6]" : "text-slate-500"
+                      viewMode === "grid" ? "bg-paper text-[#3b6cf6]" : "text-mid"
                     }`}
                   >
                     ⬚
@@ -538,7 +538,7 @@ export const FilesModule = ({
                     type="button"
                     onClick={() => setViewMode("list")}
                     className={`rounded-[8px] px-2 py-1 text-xs ${
-                      viewMode === "list" ? "bg-blue-50 text-[#3b6cf6]" : "text-slate-500"
+                      viewMode === "list" ? "bg-paper text-[#3b6cf6]" : "text-mid"
                     }`}
                   >
                     ☰
@@ -556,9 +556,9 @@ export const FilesModule = ({
 
           <section className="mt-4">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className={`${sora.className} text-sm font-semibold text-slate-900`}>
+              <h2 className={`${sora.className} text-sm font-semibold text-ink`}>
                 Carpetas
-                <span className="ml-2 text-xs font-medium text-slate-500">
+                <span className="ml-2 text-xs font-medium text-mid">
                   ({filteredFolders.length})
                 </span>
               </h2>
@@ -570,7 +570,7 @@ export const FilesModule = ({
               filteredFolders.length === 0 ? (
               <div className="rounded-[14px] border border-dashed border-[#d5deeb] bg-white px-6 py-10 text-center shadow-[0_2px_12px_rgba(15,27,45,.07)]">
                 <p className="text-4xl opacity-30">📁</p>
-                <p className={`${sora.className} mt-2 text-sm font-semibold text-slate-800`}>
+                <p className={`${sora.className} mt-2 text-sm font-semibold text-ink`}>
                   No hay carpetas aquí todavía
                 </p>
                 <button
@@ -588,15 +588,15 @@ export const FilesModule = ({
                     key={folder.id}
                     type="button"
                     onClick={() => onOpenFolder(folder)}
-                    className="group relative overflow-hidden rounded-[14px] border border-[#e4e9f0] bg-white p-4 text-left opacity-0 shadow-[0_2px_12px_rgba(15,27,45,.07)] transition-all duration-150 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_8px_18px_rgba(15,27,45,.12)] [animation:coreliaFadeUp_280ms_ease_forwards]"
+                    className="group relative overflow-hidden rounded-[14px] border border-[#e4e9f0] bg-white p-4 text-left opacity-0 shadow-[0_2px_12px_rgba(15,27,45,.07)] transition-all duration-150 hover:-translate-y-0.5 hover:border-line hover:shadow-[0_8px_18px_rgba(15,27,45,.12)] [animation:coreliaFadeUp_280ms_ease_forwards]"
                     style={{ animationDelay: `${index * 45}ms` }}
                   >
                     <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#3b6cf6] to-[#5b8bff] opacity-0 transition group-hover:opacity-100" />
                     <p className="text-2xl">📁</p>
-                    <p className={`${sora.className} mt-2 truncate text-sm font-semibold text-slate-900`}>
+                    <p className={`${sora.className} mt-2 truncate text-sm font-semibold text-ink`}>
                       {folder.name}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-mid">
                       {folder.fileCount == null
                         ? "Archivos: sin detalle"
                         : `${folder.fileCount.toLocaleString("es-ES")} archivos`}{" "}
@@ -605,7 +605,7 @@ export const FilesModule = ({
                         ? "Tamaño: sin detalle"
                         : formatBytes(folder.sizeBytes)}
                     </p>
-                    <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                    <div className="mt-3 flex items-center justify-between text-xs text-mid">
                       <span>{folder.sizeBytes == null ? "Sin tamaño" : formatBytes(folder.sizeBytes)}</span>
                       <span>⋯</span>
                     </div>
@@ -615,7 +615,7 @@ export const FilesModule = ({
                 <button
                   type="button"
                   onClick={() => folderInputRef.current?.focus()}
-                  className="rounded-[14px] border border-dashed border-[#d5deeb] bg-white p-4 text-left text-xs text-slate-500 transition hover:border-[#3b6cf6] hover:text-[#3b6cf6]"
+                  className="rounded-[14px] border border-dashed border-[#d5deeb] bg-white p-4 text-left text-xs text-mid transition hover:border-[#3b6cf6] hover:text-[#3b6cf6]"
                 >
                   <p className="text-xl">＋</p>
                   <p className="mt-2 font-semibold">Nueva carpeta</p>
@@ -625,16 +625,16 @@ export const FilesModule = ({
             ) : explorerRows.length === 0 ? (
               <div className="rounded-[14px] border border-dashed border-[#d5deeb] bg-white px-6 py-10 text-center shadow-[0_2px_12px_rgba(15,27,45,.07)]">
                 <p className="text-4xl opacity-30">📂</p>
-                <p className={`${sora.className} mt-2 text-sm font-semibold text-slate-800`}>
+                <p className={`${sora.className} mt-2 text-sm font-semibold text-ink`}>
                   Esta carpeta no tiene elementos
                 </p>
-                <p className="mt-1 text-xs text-slate-500">Crea una subcarpeta o sube un archivo para comenzar.</p>
+                <p className="mt-1 text-xs text-mid">Crea una subcarpeta o sube un archivo para comenzar.</p>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-[14px] border border-[#e4e9f0] bg-white shadow-[0_2px_12px_rgba(15,27,45,.07)]">
                 <table className="w-full min-w-[900px] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#eef2f8] text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b border-[#eef2f8] text-xs uppercase tracking-wide text-mid">
                       <th className="px-3 py-2">Nombre</th>
                       <th className="px-3 py-2">Tipo</th>
                       <th className="px-3 py-2">Tamaño</th>
@@ -648,28 +648,28 @@ export const FilesModule = ({
                       if (row.kind === "folder") {
                         const folder = row.folder;
                         return (
-                          <tr key={row.id} className="border-b border-[#f1f4f9] transition hover:bg-slate-50">
+                          <tr key={row.id} className="border-b border-[#f1f4f9] transition hover:bg-line">
                             <td className="px-3 py-3">
                               <button
                                 type="button"
                                 onClick={() => onOpenFolder(folder)}
-                                className="flex items-center gap-2 text-left text-sm font-semibold text-slate-900 hover:text-[#3b6cf6]"
+                                className="flex items-center gap-2 text-left text-sm font-semibold text-ink hover:text-[#3b6cf6]"
                               >
                                 <span>📁</span>
                                 <span className="truncate">{folder.name}</span>
                               </button>
                             </td>
                             <td className="px-3 py-3">
-                              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                              <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-semibold text-ink">
                                 Carpeta
                               </span>
                             </td>
-                            <td className="px-3 py-3 text-slate-700">
+                            <td className="px-3 py-3 text-ink">
                               {folder.sizeBytes == null ? "-" : formatBytes(folder.sizeBytes)}
                             </td>
-                            <td className="px-3 py-3 text-slate-500">-</td>
-                            <td className="px-3 py-3 text-slate-500">-</td>
-                            <td className="px-3 py-3 text-slate-500">Abrir</td>
+                            <td className="px-3 py-3 text-mid">-</td>
+                            <td className="px-3 py-3 text-mid">-</td>
+                            <td className="px-3 py-3 text-mid">Abrir</td>
                           </tr>
                         );
                       }
@@ -680,13 +680,13 @@ export const FilesModule = ({
                         file.uploadedById === currentUser.id || file.uploadedBy === currentUser.name;
 
                       return (
-                        <tr key={row.id} className="border-b border-[#f1f4f9] transition hover:bg-slate-50">
+                        <tr key={row.id} className="border-b border-[#f1f4f9] transition hover:bg-line">
                           <td className="px-3 py-3">
                             <div className="flex min-w-0 items-start gap-2">
                               <span className="text-xl">{type.icon}</span>
                               <span className="min-w-0">
-                                <p className="truncate font-semibold text-slate-900">{file.name}</p>
-                                <p className="truncate text-xs text-slate-500">
+                                <p className="truncate font-semibold text-ink">{file.name}</p>
+                                <p className="truncate text-xs text-mid">
                                   {file.folderPath ?? currentFolder?.name ?? "/"}
                                 </p>
                               </span>
@@ -697,14 +697,14 @@ export const FilesModule = ({
                               {type.label}
                             </span>
                           </td>
-                          <td className="px-3 py-3 text-slate-700">{formatBytes(file.sizeBytes)}</td>
-                          <td className="px-3 py-3 text-slate-700">{formatRelativeDate(file.modifiedAt)}</td>
+                          <td className="px-3 py-3 text-ink">{formatBytes(file.sizeBytes)}</td>
+                          <td className="px-3 py-3 text-ink">{formatRelativeDate(file.modifiedAt)}</td>
                           <td className="px-3 py-3">
                             <span className="inline-flex items-center gap-2">
-                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700">
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-line text-[11px] font-semibold text-ink">
                                 {initialsFromName(file.uploadedBy)}
                               </span>
-                              <span className="text-slate-700">
+                              <span className="text-ink">
                                 {file.uploadedBy}
                                 {isCurrentUser ? " (Tú)" : ""}
                               </span>
@@ -717,7 +717,7 @@ export const FilesModule = ({
                                   type="button"
                                   onClick={() => void onPreviewFile(file)}
                                   title="Previsualizar"
-                                  className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                  className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-mid hover:bg-white"
                                 >
                                   👁
                                 </button>
@@ -725,21 +725,21 @@ export const FilesModule = ({
                               <button
                                 type="button"
                                 onClick={() => void onDownloadFile(file)}
-                                className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-mid hover:bg-white"
                               >
                                 ⬇
                               </button>
                               <button
                                 type="button"
                                 onClick={() => void onShareFile(file)}
-                                className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-mid hover:bg-white"
                               >
                                 ↗
                               </button>
                               <button
                                 type="button"
                                 onClick={() => void onDeleteFile(file)}
-                                className="rounded-[8px] border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                                className="rounded-[8px] border border-urgent/30 px-2 py-1 text-xs text-urgent hover:bg-urgent-muted"
                               >
                                 🗑
                               </button>
@@ -757,9 +757,9 @@ export const FilesModule = ({
           {showFilesTable ? (
             <section className="mt-4 rounded-[14px] border border-[#e4e9f0] bg-white shadow-[0_2px_12px_rgba(15,27,45,.07)]">
               <div className="border-b border-[#eef2f8] px-4 py-3">
-                <h3 className={`${sora.className} text-sm font-semibold text-slate-900`}>
+                <h3 className={`${sora.className} text-sm font-semibold text-ink`}>
                   Archivos en esta carpeta
-                  <span className="ml-2 text-xs font-medium text-slate-500">
+                  <span className="ml-2 text-xs font-medium text-mid">
                     ({filteredFiles.length})
                   </span>
                 </h3>
@@ -771,10 +771,10 @@ export const FilesModule = ({
                 ) : filteredFiles.length === 0 ? (
                   <div className="rounded-[12px] border border-dashed border-[#d5deeb] bg-[#f9fbff] px-5 py-8 text-center">
                     <p className="text-4xl opacity-30">📄</p>
-                    <p className={`${sora.className} mt-2 text-sm font-semibold text-slate-800`}>
+                    <p className={`${sora.className} mt-2 text-sm font-semibold text-ink`}>
                       Esta carpeta está vacía
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-mid">
                       Sube el primer archivo usando el área de arriba
                     </p>
                   </div>
@@ -782,7 +782,7 @@ export const FilesModule = ({
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[880px] text-left text-sm">
                       <thead>
-                        <tr className="border-b border-[#eef2f8] text-xs uppercase tracking-wide text-slate-500">
+                        <tr className="border-b border-[#eef2f8] text-xs uppercase tracking-wide text-mid">
                           <th className="px-2 py-2">Nombre</th>
                           <th className="px-2 py-2">Tipo</th>
                           <th className="px-2 py-2">Tamaño</th>
@@ -800,14 +800,14 @@ export const FilesModule = ({
                           return (
                             <tr
                               key={file.id}
-                              className="border-b border-[#f1f4f9] transition hover:bg-slate-50"
+                              className="border-b border-[#f1f4f9] transition hover:bg-line"
                             >
                               <td className="px-2 py-3">
                                 <div className="flex min-w-0 items-start gap-2">
                                   <span className="text-xl">{type.icon}</span>
                                   <span className="min-w-0">
-                                    <p className="truncate font-semibold text-slate-900">{file.name}</p>
-                                    <p className="truncate text-xs text-slate-500">
+                                    <p className="truncate font-semibold text-ink">{file.name}</p>
+                                    <p className="truncate text-xs text-mid">
                                       {file.folderPath ?? currentFolder?.name ?? "/"}
                                     </p>
                                   </span>
@@ -818,16 +818,16 @@ export const FilesModule = ({
                                   {type.label}
                                 </span>
                               </td>
-                              <td className="px-2 py-3 text-slate-700">{formatBytes(file.sizeBytes)}</td>
-                              <td className="px-2 py-3 text-slate-700">
+                              <td className="px-2 py-3 text-ink">{formatBytes(file.sizeBytes)}</td>
+                              <td className="px-2 py-3 text-ink">
                                 {formatRelativeDate(file.modifiedAt)}
                               </td>
                               <td className="px-2 py-3">
                                 <span className="inline-flex items-center gap-2">
-                                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700">
+                                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-line text-[11px] font-semibold text-ink">
                                     {initialsFromName(file.uploadedBy)}
                                   </span>
-                                  <span className="text-slate-700">
+                                  <span className="text-ink">
                                     {file.uploadedBy}
                                     {isCurrentUser ? " (Tú)" : ""}
                                   </span>
@@ -840,7 +840,7 @@ export const FilesModule = ({
                                       type="button"
                                       onClick={() => void onPreviewFile(file)}
                                       title="Previsualizar"
-                                      className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                      className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-mid hover:bg-white"
                                     >
                                       👁
                                     </button>
@@ -848,21 +848,21 @@ export const FilesModule = ({
                                   <button
                                     type="button"
                                     onClick={() => void onDownloadFile(file)}
-                                    className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                    className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-mid hover:bg-white"
                                   >
                                     ⬇
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => void onShareFile(file)}
-                                    className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-slate-600 hover:bg-white"
+                                    className="rounded-[8px] border border-[#e4e9f0] px-2 py-1 text-xs text-mid hover:bg-white"
                                   >
                                     ↗
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => void onDeleteFile(file)}
-                                    className="rounded-[8px] border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                                    className="rounded-[8px] border border-urgent/30 px-2 py-1 text-xs text-urgent hover:bg-urgent-muted"
                                   >
                                     🗑
                                   </button>
@@ -886,8 +886,8 @@ export const FilesModule = ({
               onClick={() => setShowFilesTable((v) => !v)}
               className={`inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-xs font-semibold transition ${
                 showFilesTable
-                  ? "border-[#3b6cf6] bg-blue-50 text-[#3b6cf6]"
-                  : "border-[#e4e9f0] bg-white text-slate-700 hover:bg-slate-50"
+                  ? "border-[#3b6cf6] bg-paper text-[#3b6cf6]"
+                  : "border-[#e4e9f0] bg-white text-ink hover:bg-line"
               }`}
             >
               <span className="text-sm leading-none">📄</span>
@@ -900,8 +900,8 @@ export const FilesModule = ({
                 onClick={() => setShowRecentFiles((v) => !v)}
                 className={`inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-xs font-semibold transition ${
                   showRecentFiles
-                    ? "border-[#3b6cf6] bg-blue-50 text-[#3b6cf6]"
-                    : "border-[#e4e9f0] bg-white text-slate-700 hover:bg-slate-50"
+                    ? "border-[#3b6cf6] bg-paper text-[#3b6cf6]"
+                    : "border-[#e4e9f0] bg-white text-ink hover:bg-line"
                 }`}
               >
                 <span className="text-sm leading-none">🕐</span>
@@ -914,8 +914,8 @@ export const FilesModule = ({
               onClick={() => setShowChangeLog((v) => !v)}
               className={`inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-xs font-semibold transition ${
                 showChangeLog
-                  ? "border-[#3b6cf6] bg-blue-50 text-[#3b6cf6]"
-                  : "border-[#e4e9f0] bg-white text-slate-700 hover:bg-slate-50"
+                  ? "border-[#3b6cf6] bg-paper text-[#3b6cf6]"
+                  : "border-[#e4e9f0] bg-white text-ink hover:bg-line"
               }`}
             >
               <span className="text-sm leading-none">📋</span>
@@ -926,7 +926,7 @@ export const FilesModule = ({
 
           {showRecentFiles && recentFiles.length > 0 ? (
             <section className="mt-2 rounded-[14px] border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(15,27,45,.07)]">
-              <h4 className={`${sora.className} mb-2 text-sm font-semibold text-slate-900`}>
+              <h4 className={`${sora.className} mb-2 text-sm font-semibold text-ink`}>
                 Últimos archivos subidos
               </h4>
               <div className="flex flex-wrap gap-2">
@@ -935,7 +935,7 @@ export const FilesModule = ({
                     key={file.id}
                     type="button"
                     onClick={() => void onDownloadFile(file)}
-                    className="rounded-full border border-[#e4e9f0] bg-slate-50 px-3 py-1 text-xs text-slate-700 hover:bg-white"
+                    className="rounded-full border border-[#e4e9f0] bg-line px-3 py-1 text-xs text-ink hover:bg-white"
                   >
                     {file.name}
                   </button>
@@ -947,45 +947,45 @@ export const FilesModule = ({
           {showChangeLog ? (
             <section className="mt-2 rounded-[14px] border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_2px_12px_rgba(15,27,45,.07)]">
               <div className="mb-2 flex items-center justify-between">
-                <h4 className={`${sora.className} text-sm font-semibold text-slate-900`}>
+                <h4 className={`${sora.className} text-sm font-semibold text-ink`}>
                   Historial de cambios
                 </h4>
                 <button
                   type="button"
                   onClick={() => onViewChanges?.()}
-                  className="rounded-[10px] border border-[#e4e9f0] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  className="rounded-[10px] border border-[#e4e9f0] bg-white px-3 py-1.5 text-xs font-semibold text-mid hover:bg-line"
                 >
                   Ver todos
                 </button>
               </div>
 
               {changeLog.length === 0 ? (
-                <p className="text-sm text-slate-500">Sin cambios registrados aún</p>
+                <p className="text-sm text-mid">Sin cambios registrados aún</p>
               ) : (
                 <ul className="space-y-2">
                   {changeLog.map((change) => (
                     <li
                       key={change.id}
-                      className="flex items-start justify-between gap-3 rounded-[12px] border border-[#eef2f8] bg-slate-50 px-3 py-2"
+                      className="flex items-start justify-between gap-3 rounded-[12px] border border-[#eef2f8] bg-line px-3 py-2"
                     >
                       <div className="min-w-0">
                         <div className="flex items-start gap-2">
-                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700">
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-line text-[11px] font-semibold text-ink">
                             {initialsFromName(change.actorName)}
                           </span>
-                          <p className="min-w-0 text-sm text-slate-700">
-                            <span className="font-semibold text-slate-900">{change.actorName}</span>{" "}
+                          <p className="min-w-0 text-sm text-ink">
+                            <span className="font-semibold text-ink">{change.actorName}</span>{" "}
                             {change.description}{" "}
                             {change.fileName ? (
                               <span className="font-semibold text-[#3b6cf6]">{change.fileName}</span>
                             ) : null}
                             {change.folderPath ? (
-                              <span className="text-slate-500"> en {change.folderPath}</span>
+                              <span className="text-mid"> en {change.folderPath}</span>
                             ) : null}
                           </p>
                         </div>
                       </div>
-                      <span className="shrink-0 text-xs text-slate-500">
+                      <span className="shrink-0 text-xs text-mid">
                         {formatRelativeDate(change.occurredAt)}
                       </span>
                     </li>
@@ -999,18 +999,18 @@ export const FilesModule = ({
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🗄️</span>
-                <h4 className={`${sora.className} text-sm font-semibold text-slate-900`}>
+                <h4 className={`${sora.className} text-sm font-semibold text-ink`}>
                   Almacenamiento usado
                 </h4>
               </div>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-mid">
                 {storageTotal > 0
                   ? `${formatBytes(storageUsed)} de ${formatBytes(storageTotal)}`
                   : `${formatBytes(storageUsed)} usados`}
               </p>
             </div>
 
-            <div className="mt-2 h-2 rounded-full bg-slate-200">
+            <div className="mt-2 h-2 rounded-full bg-line">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#3b6cf6] to-[#10b981] transition-all"
                 style={{ width: `${storagePct}%` }}
@@ -1018,7 +1018,7 @@ export const FilesModule = ({
             </div>
 
             <div className="mt-2 flex items-center justify-between">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-mid">
                 {storageTotal > 0
                   ? `Espacio disponible: ${formatBytes(spaceAvailable)}`
                   : "Cuota de almacenamiento no reportada por la API"}
@@ -1026,7 +1026,7 @@ export const FilesModule = ({
               {storageTotal > 0 && storagePct >= 80 ? (
                 <button
                   type="button"
-                  className="rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                  className="rounded-[10px] border border-line bg-paper px-3 py-1.5 text-xs font-semibold text-ink hover:bg-paper"
                 >
                   Ampliar
                 </button>

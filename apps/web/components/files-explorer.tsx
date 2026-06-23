@@ -506,9 +506,9 @@ export const FilesExplorer = ({
         }}
         title="Eliminar archivo"
       >
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-ink">
           ¿Seguro que deseas eliminar{" "}
-          <span className="font-semibold text-slate-900">{deleteTarget?.name ?? "-"}</span>?
+          <span className="font-semibold text-ink">{deleteTarget?.name ?? "-"}</span>?
         </p>
 
         <div className="flex justify-end gap-2">
@@ -516,7 +516,7 @@ export const FilesExplorer = ({
             type="button"
             onClick={() => setDeleteTarget(null)}
             disabled={deleteFileMutation.isPending}
-            className="rounded-[10px] border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-[10px] border border-line px-3 py-2 text-sm text-ink hover:bg-line disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancelar
           </button>
@@ -530,7 +530,7 @@ export const FilesExplorer = ({
               setDeleteTarget(null);
             }}
             disabled={deleteFileMutation.isPending}
-            className="rounded-[10px] bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-[10px] bg-urgent px-3 py-2 text-sm font-semibold text-white hover:bg-urgent disabled:cursor-not-allowed disabled:opacity-60"
           >
             {deleteFileMutation.isPending ? "Eliminando..." : "Eliminar"}
           </button>
@@ -539,7 +539,7 @@ export const FilesExplorer = ({
 
       {previewFile ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
           role="presentation"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
@@ -551,12 +551,12 @@ export const FilesExplorer = ({
             role="dialog"
             aria-modal="true"
             aria-label={`Previsualizar ${previewFile.name}`}
-            className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-line bg-white shadow-2xl"
           >
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+            <div className="flex items-center justify-between border-b border-line px-5 py-3">
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold text-slate-900">{previewFile.name}</h3>
-                <p className="text-xs text-slate-500">{previewFile.mimeType}</p>
+                <h3 className="truncate text-sm font-semibold text-ink">{previewFile.name}</h3>
+                <p className="text-xs text-mid">{previewFile.mimeType}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -566,14 +566,14 @@ export const FilesExplorer = ({
                       setActionError(error.message);
                     });
                   }}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:bg-line"
                 >
                   Descargar
                 </button>
                 <button
                   type="button"
                   onClick={closePreview}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-mid hover:bg-line"
                 >
                   Cerrar
                 </button>
@@ -583,7 +583,7 @@ export const FilesExplorer = ({
             <div className="flex-1 overflow-auto p-1">
               {previewLoading ? (
                 <div className="flex h-96 items-center justify-center">
-                  <p className="text-sm text-slate-500">Cargando previsualizacion...</p>
+                  <p className="text-sm text-mid">Cargando previsualizacion...</p>
                 </div>
               ) : previewUrl ? (
                 isImageFile(previewFile) ? (
@@ -619,14 +619,14 @@ export const FilesExplorer = ({
                   />
                 ) : (
                   <div className="flex h-96 items-center justify-center px-6">
-                    <p className="text-center text-sm text-slate-500">
+                    <p className="text-center text-sm text-mid">
                       Este tipo de archivo no admite previsualizacion.
                     </p>
                   </div>
                 )
               ) : (
                 <div className="flex h-96 items-center justify-center">
-                  <p className="text-sm text-slate-500">No se pudo cargar la previsualizacion</p>
+                  <p className="text-sm text-mid">No se pudo cargar la previsualizacion</p>
                 </div>
               )}
             </div>
