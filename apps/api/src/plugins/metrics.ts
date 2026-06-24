@@ -1,7 +1,18 @@
+import { timingSafeEqual } from "node:crypto";
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import client from "prom-client";
 import { env } from "../config/env.js";
+
+// Comparación en tiempo constante del bearer de métricas (evita timing attacks).
+const isValidMetricsBearer = (authHeader: string | undefined, secret: string): boolean => {
+  if (!authHeader) {
+    return false;
+  }
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const provided = Buffer.from(authHeader);
+  return expected.length === provided.length && timingSafeEqual(expected, provided);
+};
 
 const metricsPlugin = async (app: FastifyInstance) => {
   const register = new client.Registry();
@@ -53,10 +64,12 @@ const metricsPlugin = async (app: FastifyInstance) => {
     },
     async (request, reply) => {
       if (env.METRICS_SECRET) {
-        const authHeader = request.headers.authorization;
-        if (!authHeader || authHeader !== `Bearer ${env.METRICS_SECRET}`) {
+        if (!isValidMetricsBearer(request.headers.authorization, env.METRICS_SECRET)) {
           return reply.code(401).send({ message: "No autorizado" });
         }
+      } else if (env.NODE_ENV === "production") {
+        // En producción no hay fallback por IP (spoofeable tras proxy): default-deny.
+        return reply.code(403).send({ message: "Métricas deshabilitadas: configura METRICS_SECRET" });
       } else {
         const ip = request.ip;
         const isLocal = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";

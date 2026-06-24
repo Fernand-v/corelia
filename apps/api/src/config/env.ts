@@ -21,7 +21,10 @@ const envSchema = z.object({
   REDIS_URL: z.string().url(),
   REDIS_PASSWORD: z.string().min(1),
   JWT_ACCESS_SECRET: z.string().min(16),
-  JWT_REFRESH_SECRET: z.string().min(16).optional(),
+  // Configuración de proxy de confianza para resolver request.ip desde
+  // X-Forwarded-For. La API debe desplegarse tras un proxy de confianza
+  // (nginx). Valores: "true"/"false" o un nº de saltos a confiar.
+  TRUST_PROXY: z.string().default("true"),
   ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   COLLAB_AUTH_SECRET: z.string().min(16),

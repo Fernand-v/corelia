@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import { env } from "./config/env.js";
 import { auditPlugin } from "./plugins/audit.js";
 import { authPlugin } from "./plugins/auth.js";
 import { maintenancePlugin } from "./plugins/maintenance.js";
@@ -40,12 +41,21 @@ import { adminRouter } from "./modules/admin/router.js";
 import { reportsRouter } from "./modules/reports/router.js";
 import { expensesRouter } from "./modules/expenses/router.js";
 
+const resolveTrustProxy = (value: string): boolean | number => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "false") return false;
+  if (normalized === "true") return true;
+  const hops = Number.parseInt(normalized, 10);
+  return Number.isFinite(hops) && hops >= 0 ? hops : true;
+};
+
 export const createApp = async (): Promise<FastifyInstance> => {
   const app = Fastify({
     logger: {
       level: process.env.NODE_ENV === "production" ? "info" : "debug"
     },
-    trustProxy: true
+    // Debe ir tras un proxy de confianza (nginx); ver TRUST_PROXY en env.
+    trustProxy: resolveTrustProxy(env.TRUST_PROXY)
   });
 
   app.setErrorHandler((error, _request, reply) => {

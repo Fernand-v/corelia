@@ -70,6 +70,44 @@ export class DocumentOnlyOfficeService {
     return `${base}/api/v1`;
   }
 
+  /**
+   * Hosts permitidos para descargar el archivo guardado por ONLYOFFICE.
+   * Derivados de la config del servidor (interno/público). Mitiga SSRF: el
+   * callback no debe descargar URLs arbitrarias del body.
+   */
+  private getAllowedOnlyOfficeHosts(): Set<string> {
+    const hosts = new Set<string>();
+    for (const raw of [env.ONLYOFFICE_INTERNAL_URL, env.ONLYOFFICE_DOCUMENT_SERVER_URL]) {
+      const value = raw.trim();
+      if (!value || !/^https?:\/\//i.test(value)) {
+        continue;
+      }
+      try {
+        hosts.add(new URL(value).host.toLowerCase());
+      } catch {
+        // URL inválida en config → se ignora.
+      }
+    }
+    return hosts;
+  }
+
+  private assertAllowedDownloadUrl(rawUrl: string) {
+    let parsed: URL;
+    try {
+      parsed = new URL(rawUrl);
+    } catch {
+      throw new Error("URL de archivo de ONLYOFFICE inválida");
+    }
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      throw new Error("URL de archivo de ONLYOFFICE inválida");
+    }
+    const allowed = this.getAllowedOnlyOfficeHosts();
+    // Si hay hosts configurados, exigir coincidencia; si no, no se puede validar.
+    if (allowed.size > 0 && !allowed.has(parsed.host.toLowerCase())) {
+      throw new Error("URL de archivo de ONLYOFFICE no permitida");
+    }
+  }
+
   private async signOnlyOfficeFileToken(input: {
     documentId: string;
     userId: string;
@@ -317,6 +355,8 @@ export class DocumentOnlyOfficeService {
     if (!input.body.url) {
       throw new Error("ONLYOFFICE no envió la URL del archivo");
     }
+
+    this.assertAllowedDownloadUrl(input.body.url);
 
     const response = await fetch(input.body.url);
     if (!response.ok) {

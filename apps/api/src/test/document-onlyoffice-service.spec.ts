@@ -297,6 +297,40 @@ describe("DocumentOnlyOfficeService.handleOnlyOfficeCallback", () => {
     ).rejects.toThrow(/no envió la URL/);
   });
 
+  it("rejects a download URL whose host is not the configured ONLYOFFICE host (SSRF)", async () => {
+    env.ONLYOFFICE_INTERNAL_URL = "http://onlyoffice";
+    const saveVersion = vi.fn();
+    vi.stubGlobal("fetch", vi.fn());
+    const { service } = buildService({ app: buildCallbackApp(), saveVersion });
+
+    await expect(
+      service.handleOnlyOfficeCallback({
+        documentId: "doc-1",
+        token: "t",
+        body: { status: 2, url: "http://169.254.169.254/latest/meta-data" }
+      })
+    ).rejects.toThrow(/no permitida/);
+    expect(saveVersion).not.toHaveBeenCalled();
+  });
+
+  it("accepts a download URL from the configured ONLYOFFICE host", async () => {
+    env.ONLYOFFICE_INTERNAL_URL = "http://onlyoffice";
+    const saveVersion = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(4)) })
+    );
+    const { service } = buildService({ app: buildCallbackApp(), saveVersion });
+
+    await service.handleOnlyOfficeCallback({
+      documentId: "doc-1",
+      token: "t",
+      body: { status: 2, url: "http://onlyoffice/cache/files/doc-1.docx" }
+    });
+
+    expect(saveVersion).toHaveBeenCalled();
+  });
+
   it("saves a MANUAL version on status 2", async () => {
     const saveVersion = vi.fn().mockResolvedValue(undefined);
     const fetchMock = vi

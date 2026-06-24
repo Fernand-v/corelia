@@ -187,10 +187,16 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       const content = await service.getFileContent({ fileId: params.fileId, userId: request.authUser!.id });
       const encodedFileName = encodeURIComponent(content.file.originalName);
 
-      reply.header("Content-Type", content.file.mimeType || "application/octet-stream");
+      const mimeType = content.file.mimeType || "application/octet-stream";
+      // Tipos que ejecutan script si se renderizan inline (XSS almacenado):
+      // se fuerzan a descarga aunque se pida inline.
+      const INLINE_UNSAFE = /(svg|html|xhtml|xml)/i;
+      const disposition = INLINE_UNSAFE.test(mimeType) ? "attachment" : query.mode;
+
+      reply.header("Content-Type", mimeType);
       reply.header(
         "Content-Disposition",
-        `${query.mode}; filename*=UTF-8''${encodedFileName}`
+        `${disposition}; filename*=UTF-8''${encodedFileName}`
       );
       reply.header("X-Content-Type-Options", "nosniff");
       return reply.send(content.stream);
