@@ -214,3 +214,14 @@ Todos los hallazgos atendidos:
 - **R6 ✅** `trustProxy` configurable vía `TRUST_PROXY` (default `true`) y documentado que la API va tras proxy de confianza ([app.ts](../apps/api/src/app.ts)).
 - **R7 ✅** El gate `security:check-unsafe-casts` ya cubre `as any` (además de `as never`/`as unknown as`) con baseline; bloquea nuevos casts inseguros.
 
+## R8 — Endurecimiento de contenedores (2026-06-24)
+
+**Hallazgo:** los Dockerfiles no definían `USER` (corrían como root); compose usaba `minio/minio:latest` y `minio/mc:latest`; sin `no-new-privileges` ni `cap_drop`.
+
+**Remediación:**
+- **Usuario no-root** en los 4 Dockerfiles (`USER node`, incluido en las imágenes oficiales) — api, web, workers, hocuspocus.
+- **Imágenes pinneadas:** `minio/minio` y `minio/mc` a tag `RELEASE.*` (vía `MINIO_VERSION`/`MINIO_MC_VERSION`, sin `latest`).
+- **Compose endurecido:** `security_opt: [no-new-privileges:true]` en todos los servicios principales; `cap_drop: [ALL]` en los servicios node (migrate, api, web, hocuspocus, workers) que escuchan en puertos altos y no requieren capacidades.
+
+**Follow-up (requiere validación con el stack en marcha):** `read_only: true` + `tmpfs` por servicio y `cap_drop` selectivo en infra (postgres/redis/minio/nginx/onlyoffice) — no aplicado sin poder probar cada arranque; añadir tras un despliegue de prueba.
+

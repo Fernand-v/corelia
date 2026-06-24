@@ -30,5 +30,7 @@ COPY --from=prod-deps /app/apps/hocuspocus/node_modules ./apps/hocuspocus/node_m
 COPY apps/hocuspocus ./apps/hocuspocus
 
 WORKDIR /app/apps/hocuspocus
+# Ejecutar como usuario no-root (incluido en la imagen oficial de node).
+USER node
 EXPOSE 1234
 CMD ["node", "server.js"]

@@ -50,5 +50,7 @@ COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
 WORKDIR /app/apps/web
+# Ejecutar como usuario no-root (incluido en la imagen oficial de node).
+USER node
 EXPOSE 3000
 CMD ["node", "server.js"]

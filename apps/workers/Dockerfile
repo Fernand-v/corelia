@@ -55,4 +55,6 @@ COPY --from=builder /app/apps/workers/dist ./apps/workers/dist
 COPY --from=builder /app/apps/workers/package.json ./apps/workers/package.json
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
+# Ejecutar como usuario no-root (incluido en la imagen oficial de node).
+USER node
 CMD ["node", "apps/workers/dist/main.js"]

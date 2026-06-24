@@ -62,5 +62,7 @@ COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
+# Ejecutar como usuario no-root (incluido en la imagen oficial de node).
+USER node
 EXPOSE 4000
 CMD ["node", "apps/api/dist/main.js"]
