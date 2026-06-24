@@ -160,3 +160,45 @@ Editores pesados (`@excalidraw/excalidraw`, `@maxgraph/core`, Tiptap, AG Grid) y
 | 9 | BAJA | Extender gate de casts a `as any` | S |
 
 > Esfuerzo: S (<1d), M (1-3d), L (>3d).
+
+---
+
+# Re-auditoría de seguridad (2026-06-24)
+
+> Revisión estática del estado actual tras cerrar Fases 2.x/3.x/4.x. `pnpm audit --prod --audit-level=moderate` = **sin vulnerabilidades conocidas**.
+
+## Resuelto desde la auditoría original
+- **2.1** Escalada cross-proyecto → precedencia de `projectId` del body en RBAC ✅
+- **2.2** Refresh token → cookie `httpOnly` + `sameSite:strict` ✅
+- **2.3** Endurecer login → rate limit 5/min + lockout por intentos ✅
+- **3.1** Caché RBAC usuario/rol en Redis (TTL + invalidación) ✅
+- **3.2** Tests de integración con DB real (`*.dbtest.spec.ts`, CI) ✅
+- **4.2** Migraciones en paso dedicado (no en boot) ✅
+- **§5** `pnpm build` + Node 22 en CI ✅
+
+## Base sólida (verificado)
+- `@fastify/helmet`: CSP (`default/script/style-src 'self'`, `img 'self' data:`), HSTS preload, `X-Frame-Options: deny`, `nosniff`.
+- CORS con allowlist + matcher de comodines; `credentials:true`; private-network gateado por env.
+- Rate limit global 300/min, key por `x-forwarded-for` validado con fallback a `request.ip`.
+- Contraseñas con `bcryptjs`; secretos validados con longitud mínima en `config/env.ts`.
+- Prisma parametrizado — **sin `$queryRawUnsafe`/`$executeRawUnsafe` en runtime**.
+- Subida de archivos: allowlist de MIME + extensiones peligrosas bloqueadas + `Content-Disposition: attachment` por defecto + `nosniff`.
+- Endpoints públicos acotados (status, auth, y descargas con token firmado en documents/announcements).
+
+## Hallazgos pendientes (nuevos / no abordados)
+
+| # | Severidad | Hallazgo | Detalle / fix |
+|---|-----------|----------|---------------|
+| R1 | MEDIA | **`/metrics` sin secreto** ([plugins/metrics.ts:55](../apps/api/src/plugins/metrics.ts#L55)) | Si `METRICS_SECRET` no está definido, sólo se restringe por IP local. Detrás de nginx en el mismo host, `request.ip` puede resolver a local y exponer métricas. **Fix:** exigir `METRICS_SECRET` en producción (default-deny) o validar por XFF. |
+| R2 | MEDIA-BAJA | **SSRF en callback OnlyOffice** ([document-onlyoffice-service.ts:321](../apps/api/src/modules/documents/document-onlyoffice-service.ts#L321)) | `fetch(input.body.url)` descarga una URL del body. Mitigado por token de callback firmado, pero la URL no se valida contra el host de OnlyOffice. **Fix:** allowlist de host (`ONLYOFFICE_*_URL`). |
+| R3 | BAJA | **SVG inline servible** ([files/router.ts:190](../apps/api/src/modules/files/router.ts#L190)) | `mode=inline` + `image/` en allowlist permite servir SVG inline (XSS potencial). Mitigado por CSP `script-src 'self'` + `nosniff`. **Fix:** forzar `attachment` para `image/svg+xml` o sanitizar. |
+| R4 | BAJA | **Hash de contraseña** | `bcryptjs` (JS puro) es funcional; `argon2id` o `bcrypt` nativo dan mayor coste/calidad. Opcional. |
+| R5 | INFO | **`JWT_REFRESH_SECRET` sin uso real** | Los refresh tokens son opacos en DB (no JWT), así que el secreto es legacy/inofensivo. Limpiar para evitar confusión. |
+| R6 | INFO | **Trust proxy** | El rate limit confía en el primer IP de `x-forwarded-for`; correcto detrás de nginx. Si la API se expone directa, es spoofeable — documentar/forzar despliegue tras proxy. |
+| R7 | BAJA | **Gate `as any`** (§3.5 original) | Aún no se extendió el gate de casts inseguros a `as any`. |
+
+## Recomendación de prioridad
+1. **R1** (exigir `METRICS_SECRET` en prod) — rápido, cierra exposición de métricas.
+2. **R2** (allowlist de host en callback OnlyOffice) — defensa en profundidad SSRF.
+3. **R3** (attachment forzado para SVG) — cierra XSS residual.
+
