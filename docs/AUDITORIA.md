@@ -202,3 +202,15 @@ Editores pesados (`@excalidraw/excalidraw`, `@maxgraph/core`, Tiptap, AG Grid) y
 2. **R2** (allowlist de host en callback OnlyOffice) — defensa en profundidad SSRF.
 3. **R3** (attachment forzado para SVG) — cierra XSS residual.
 
+## Estado de remediación (2026-06-24)
+
+Todos los hallazgos atendidos:
+
+- **R1 ✅** `/metrics` con default-deny en producción si falta `METRICS_SECRET`; comparación del bearer en tiempo constante ([plugins/metrics.ts](../apps/api/src/plugins/metrics.ts)).
+- **R2 ✅** Allowlist de host en el callback de OnlyOffice antes del `fetch` (deriva los hosts de `ONLYOFFICE_INTERNAL_URL`/`ONLYOFFICE_DOCUMENT_SERVER_URL`); + tests SSRF.
+- **R3 ✅** Se fuerza `Content-Disposition: attachment` para `svg/html/xml` aunque se pida inline ([files/router.ts](../apps/api/src/modules/files/router.ts)).
+- **R4 ✅** Hash con **argon2id** (`@node-rs/argon2`, prebuilt) con verificación dual para hashes bcrypt heredados ([lib/password.ts](../apps/api/src/lib/password.ts)).
+- **R5 ✅** Eliminado `JWT_REFRESH_SECRET` legacy (refresh es opaco en DB) de env, `.env.example`, compose y docs.
+- **R6 ✅** `trustProxy` configurable vía `TRUST_PROXY` (default `true`) y documentado que la API va tras proxy de confianza ([app.ts](../apps/api/src/app.ts)).
+- **R7 ✅** El gate `security:check-unsafe-casts` ya cubre `as any` (además de `as never`/`as unknown as`) con baseline; bloquea nuevos casts inseguros.
+
