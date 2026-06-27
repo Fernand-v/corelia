@@ -68,7 +68,33 @@ describe("Socket realtime integration", () => {
         findFirst: vi.fn().mockResolvedValue({ id: "cm-1" })
       },
       user: {
-        findFirst: vi.fn().mockResolvedValue(null)
+        findFirst: vi.fn().mockResolvedValue(null),
+        findUnique: vi.fn().mockResolvedValue({
+          baseRoleId: "role-1",
+          baseRole: { key: "COLABORADOR" }
+        })
+      },
+      role: {
+        findUnique: vi.fn().mockImplementation(async ({ where }: { where: { key?: string; id?: string } }) => {
+          if (where.key === "INVITADO_EXTERNO") {
+            return { id: "role-guest" };
+          }
+          return {
+            id: "role-1",
+            key: "COLABORADOR",
+            displayName: "Colaborador",
+            rank: 2,
+            programRoles: [
+              { program: { key: "REUNIONES" } },
+              { program: { key: "MENSAJERIA" } },
+              { program: { key: "LLAMADAS" } }
+            ],
+            rolePermissions: [
+              { permission: { key: "LLAMADA_ACCEDER" } },
+              { permission: { key: "MENSAJE_ESCRIBIR" } }
+            ]
+          };
+        })
       },
       meeting: {
         findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id: string } }) => {
@@ -204,6 +230,11 @@ describe("Socket realtime integration", () => {
     };
 
     app.decorate("prisma", prisma as never);
+    // Redis falso: las lecturas de caché RBAC fallan a DB (mock prisma.role).
+    app.decorate("redis", {
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue("OK")
+    } as never);
     app.decorate("media", {
       getHealth: () => ({
         enabled: true,

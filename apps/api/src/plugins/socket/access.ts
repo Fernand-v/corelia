@@ -1,6 +1,17 @@
 import type { FastifyInstance } from "fastify";
+import { permissionKey, type ActionCode, type ResourceCode } from "@corelia/types";
 import { resolveInstantCallExpiryStatus } from "../../lib/instant-call-expiry.js";
-import type { MeetingAccessResult } from "./types.js";
+import type { MeetingAccessResult, SocketWithUser } from "./types.js";
+
+/**
+ * Verifica un permiso recurso×acción contra los permisos del rol cargados en la
+ * conexión del socket. La key canónica es `${recurso}_${acción}`.
+ */
+export const socketHasPermission = (
+  socket: SocketWithUser,
+  resource: ResourceCode,
+  action: ActionCode
+): boolean => socket.data.user.permissions.includes(permissionKey(resource, action));
 
 export const createMeetingAccessChecker =
   (app: FastifyInstance) =>

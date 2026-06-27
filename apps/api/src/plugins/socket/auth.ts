@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { loadBaseAccess } from "../rbac.js";
 import type { SocketWithUser } from "./types.js";
 
 const socketAuthPayloadSchema = z.object({
@@ -40,9 +41,16 @@ export const authenticateSocket = async (
 
     const raw = await app.jwt.verify(authToken);
     const payload = socketAuthPayloadSchema.parse(raw);
+
+    // Carga los permisos/programas del rol base una vez por conexión para gatear
+    // eventos de socket (p. ej. acceso a llamadas) sin pasar por el ciclo HTTP.
+    const access = await loadBaseAccess(app, payload.id);
+
     socket.data.user = {
       id: payload.id,
-      email: payload.email
+      email: payload.email,
+      permissions: access.permissions,
+      programs: access.programs
     };
     socket.join(`user:${payload.id}`);
 

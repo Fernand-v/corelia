@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { socketHasPermission } from "./access.js";
 import type { SocketBaseContext } from "./types.js";
 
 const callAnswerSchema = z.object({
@@ -23,6 +24,7 @@ export const registerIncomingCallEvents = ({
       async () => {
         const parsed = callAnswerSchema.safeParse(payload);
         if (!parsed.success) return;
+        if (!socketHasPermission(socket, "LLAMADA", "ACCEDER")) return;
 
         io.to(`channel:${parsed.data.channelId}`).emit("call:answered", {
           meetingId: parsed.data.meetingId,

@@ -9,6 +9,8 @@ export interface SocketAuthPayload {
 export interface SocketUser {
   id: string;
   email: string;
+  permissions: string[];
+  programs: string[];
 }
 
 export type SocketWithUser = Socket & {

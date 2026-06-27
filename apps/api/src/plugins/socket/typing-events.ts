@@ -1,8 +1,12 @@
+import { socketHasPermission } from "./access.js";
 import type { SocketBaseContext } from "./types.js";
 
 export const registerTypingEvents = ({ socket }: SocketBaseContext) => {
+  // Solo quien puede escribir mensajes emite el indicador "escribiendo…".
+  const canWrite = () => socketHasPermission(socket, "MENSAJE", "ESCRIBIR");
+
   socket.on("channel:typing:start", (channelId: string) => {
-    if (!channelId) {
+    if (!channelId || !canWrite()) {
       return;
     }
 
@@ -14,7 +18,7 @@ export const registerTypingEvents = ({ socket }: SocketBaseContext) => {
   });
 
   socket.on("channel:typing:stop", (channelId: string) => {
-    if (!channelId) {
+    if (!channelId || !canWrite()) {
       return;
     }
 

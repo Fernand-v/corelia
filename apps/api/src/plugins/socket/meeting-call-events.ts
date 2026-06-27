@@ -7,6 +7,7 @@ import {
   meetingWebRtcSignalSchema
 } from "./schemas.js";
 import { markSocketOffline } from "./presence.js";
+import { socketHasPermission } from "./access.js";
 import type { CallRuntimeContext } from "./types.js";
 
 const formatCallDuration = (ms: number): string => {
@@ -115,6 +116,11 @@ export const registerMeetingCallEvents = ({
           const parsed = meetingCallJoinInputSchema.safeParse(payload);
           if (!parsed.success) {
             ack?.({ ok: false, message: parsed.error.issues[0]?.message ?? "Payload inválido" });
+            return;
+          }
+
+          if (!socketHasPermission(socket, "LLAMADA", "ACCEDER")) {
+            ack?.({ ok: false, message: "No tienes permiso para acceder a llamadas" });
             return;
           }
 

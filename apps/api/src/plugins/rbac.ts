@@ -247,6 +247,23 @@ const getGuestRole = async (app: FastifyInstance) => {
   return guestRole;
 };
 
+/**
+ * Permisos y programas del rol base de un usuario (contexto global, sin
+ * proyecto). Reutiliza la caché Redis de roles. Pensado para gatear acciones
+ * fuera del ciclo HTTP (p. ej. eventos de Socket.IO).
+ */
+export const loadBaseAccess = async (
+  app: FastifyInstance,
+  userId: string
+): Promise<{ permissions: Permission[]; programs: ProgramCode[] }> => {
+  const user = await loadUserContext(app, userId);
+  const guestRole = await getGuestRole(app);
+  const roleId = user.baseRoleId ?? guestRole.id;
+  const cacheVersion = await getRbacCacheVersion(app);
+  const roleContext = await loadRoleContext(app, roleId, cacheVersion);
+  return { permissions: roleContext.permissions, programs: roleContext.programs };
+};
+
 export const rbacPlugin = fp(async (app) => {
   // Warm up guest role cache on startup
   app.addHook("onReady", async () => {

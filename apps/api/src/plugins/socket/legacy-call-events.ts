@@ -7,6 +7,7 @@ import {
   callTranscriptInputSchema,
   conversationInputSchema
 } from "./schemas.js";
+import { socketHasPermission } from "./access.js";
 import type { CallRuntimeContext } from "./types.js";
 
 export const registerLegacyCallEvents = ({
@@ -40,6 +41,11 @@ export const registerLegacyCallEvents = ({
           const parsed = conversationInputSchema.safeParse(payload);
           if (!parsed.success) {
             ack?.({ error: parsed.error.issues[0]?.message ?? "Payload inválido" });
+            return;
+          }
+
+          if (!socketHasPermission(socket, "LLAMADA", "ACCEDER")) {
+            ack?.({ error: "No tienes permiso para acceder a llamadas" });
             return;
           }
 
@@ -146,6 +152,11 @@ export const registerLegacyCallEvents = ({
           const parsed = conversationInputSchema.safeParse(payload);
           if (!parsed.success) {
             ack?.({ error: parsed.error.issues[0]?.message ?? "Payload inválido" });
+            return;
+          }
+
+          if (!socketHasPermission(socket, "LLAMADA", "ACCEDER")) {
+            ack?.({ error: "No tienes permiso para acceder a llamadas" });
             return;
           }
 
