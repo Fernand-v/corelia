@@ -12,7 +12,8 @@ export const messagesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "MENSAJERIA",
-        requiredPermission: "MENSAJE_ESCRIBIR"
+        requiredResource: "MENSAJE",
+        requiredAction: "ESCRIBIR"
       }
     },
     async (request, reply) => {
@@ -31,7 +32,8 @@ export const messagesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "MENSAJERIA",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {

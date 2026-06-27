@@ -261,7 +261,6 @@ export const rbacPlugin = fp(async (app) => {
           requiredProgram?: ProgramCode;
           requiredResource?: ResourceCode;
           requiredAction?: ActionCode;
-          requiredPermission?: Permission;
         }
       | undefined;
 
@@ -305,15 +304,12 @@ export const rbacPlugin = fp(async (app) => {
     }
 
     // La key canónica de un permiso es `${recurso}_${acción}`, por lo que el
-    // guard la reconstruye sin necesidad de un índice adicional. Se admite el
-    // requiredPermission heredado para rutas aún sin migrar.
-    const requiredPermission =
-      config?.requiredResource && config?.requiredAction
-        ? (permissionKey(config.requiredResource, config.requiredAction) as Permission)
-        : config?.requiredPermission;
-
-    if (requiredPermission && !roleContext.permissions.includes(requiredPermission)) {
-      return reply.code(403).send({ message: "Forbidden" });
+    // guard la reconstruye sin necesidad de un índice adicional.
+    if (config?.requiredResource && config?.requiredAction) {
+      const requiredPermission = permissionKey(config.requiredResource, config.requiredAction) as Permission;
+      if (!roleContext.permissions.includes(requiredPermission)) {
+        return reply.code(403).send({ message: "Forbidden" });
+      }
     }
   });
 });

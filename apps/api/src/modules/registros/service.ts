@@ -28,11 +28,14 @@ const notFoundError = (message: string) => {
 const optional = <T>(value: T | undefined, fallback: T | null = null) =>
   value === undefined ? fallback : value;
 
+// Tope defensivo para listados sin paginación (evita cargar tablas enteras a RAM).
+const LIST_LIMIT = 200;
+
 export class EmpresaService {
   constructor(private readonly app: FastifyInstance) {}
 
   list() {
-    return this.app.prisma.empresa.findMany({ orderBy: { razonSocial: "asc" } });
+    return this.app.prisma.empresa.findMany({ orderBy: { razonSocial: "asc" }, take: LIST_LIMIT });
   }
 
   async get(id: string) {
@@ -117,7 +120,8 @@ export class CiudadService {
   list() {
     return this.app.prisma.ciudad.findMany({
       include: { pais: { select: { id: true, descripcion: true } } },
-      orderBy: { descripcion: "asc" }
+      orderBy: { descripcion: "asc" },
+      take: LIST_LIMIT
     });
   }
 
@@ -214,6 +218,7 @@ export class SexoService {
 
 const personaInclude = {
   empresa: { select: { id: true, razonSocial: true } },
+  tipoDocumento: { select: { id: true, descripcion: true } },
   pais: { select: { id: true, descripcion: true } },
   ciudad: { select: { id: true, descripcion: true } },
   sexo: { select: { id: true, descripcion: true } }
@@ -225,7 +230,8 @@ export class PersonaService {
   list() {
     return this.app.prisma.persona.findMany({
       include: personaInclude,
-      orderBy: { razonSocial: "asc" }
+      orderBy: { razonSocial: "asc" },
+      take: LIST_LIMIT
     });
   }
 
@@ -267,14 +273,13 @@ export class PersonaService {
     const email = input.email ? input.email : null;
     return {
       empresaId: input.empresaId,
-      ...(input.tipoDocumento !== undefined ? { tipoDocumento: input.tipoDocumento } : {}),
+      tipoDocumentoId: optional(input.tipoDocumentoId),
       ruc: input.ruc,
       dv: optional(input.dv),
       razonSocial: input.razonSocial,
       nombreFantasia: optional(input.nombreFantasia),
       propietario: optional(input.propietario),
       direccion: input.direccion,
-      localidad: optional(input.localidad),
       barrio: optional(input.barrio),
       paisId: optional(input.paisId),
       ciudadId: optional(input.ciudadId),
@@ -305,6 +310,13 @@ export class PersonaService {
     });
     if (!empresa) throw validationError("La empresa indicada no existe");
 
+    if (input.tipoDocumentoId) {
+      const tipoDocumento = await this.app.prisma.tipoDocumento.findUnique({
+        where: { id: input.tipoDocumentoId },
+        select: { id: true }
+      });
+      if (!tipoDocumento) throw validationError("El tipo de documento indicado no existe");
+    }
     if (input.paisId) {
       const pais = await this.app.prisma.pais.findUnique({
         where: { id: input.paisId },
@@ -339,7 +351,8 @@ export class SucursalService {
   list() {
     return this.app.prisma.sucursal.findMany({
       include: sucursalInclude,
-      orderBy: [{ empresaId: "asc" }, { codigo: "asc" }]
+      orderBy: [{ empresaId: "asc" }, { codigo: "asc" }],
+      take: LIST_LIMIT
     });
   }
 

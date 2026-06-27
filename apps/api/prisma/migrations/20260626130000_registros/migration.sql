@@ -86,14 +86,13 @@ CREATE TABLE "Persona" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "codigo" SERIAL NOT NULL,
     "empresaId" UUID NOT NULL,
-    "tipoDocumento" INTEGER NOT NULL DEFAULT 1,
+    "tipoDocumentoId" UUID,
     "ruc" TEXT NOT NULL,
     "dv" TEXT,
     "razonSocial" TEXT NOT NULL,
     "nombreFantasia" TEXT,
     "propietario" TEXT,
     "direccion" TEXT NOT NULL,
-    "localidad" TEXT,
     "barrio" TEXT,
     "paisId" UUID,
     "ciudadId" UUID,
@@ -111,6 +110,19 @@ CREATE TABLE "Persona" (
 
     CONSTRAINT "Persona_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateTable
+CREATE TABLE "TipoDocumento" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "codigo" INTEGER NOT NULL,
+    "descripcion" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "TipoDocumento_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TipoDocumento_codigo_key" ON "TipoDocumento"("codigo");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Empresa_codigo_key" ON "Empresa"("codigo");
@@ -140,6 +152,9 @@ CREATE UNIQUE INDEX "Persona_codigo_key" ON "Persona"("codigo");
 CREATE INDEX "Persona_empresaId_idx" ON "Persona"("empresaId");
 
 -- CreateIndex
+CREATE INDEX "Persona_tipoDocumentoId_idx" ON "Persona"("tipoDocumentoId");
+
+-- CreateIndex
 CREATE INDEX "Persona_paisId_idx" ON "Persona"("paisId");
 
 -- CreateIndex
@@ -161,6 +176,9 @@ ALTER TABLE "Sucursal" ADD CONSTRAINT "Sucursal_empresaId_fkey" FOREIGN KEY ("em
 ALTER TABLE "Persona" ADD CONSTRAINT "Persona_empresaId_fkey" FOREIGN KEY ("empresaId") REFERENCES "Empresa"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Persona" ADD CONSTRAINT "Persona_tipoDocumentoId_fkey" FOREIGN KEY ("tipoDocumentoId") REFERENCES "TipoDocumento"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Persona" ADD CONSTRAINT "Persona_paisId_fkey" FOREIGN KEY ("paisId") REFERENCES "Pais"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -174,4 +192,11 @@ INSERT INTO "Sexo" ("id", "codigo", "descripcion") VALUES
     (gen_random_uuid(), 'M', 'Masculino'),
     (gen_random_uuid(), 'F', 'Femenino'),
     (gen_random_uuid(), 'X', 'No binario / Otro')
+ON CONFLICT ("codigo") DO NOTHING;
+
+-- Seed: catálogo de tipos de documento (estándar Paraguay)
+INSERT INTO "TipoDocumento" ("id", "codigo", "descripcion") VALUES
+    (gen_random_uuid(), 1, 'RUC'),
+    (gen_random_uuid(), 2, 'Cédula de identidad'),
+    (gen_random_uuid(), 3, 'Pasaporte')
 ON CONFLICT ("codigo") DO NOTHING;

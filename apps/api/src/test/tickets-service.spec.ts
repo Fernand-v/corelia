@@ -48,11 +48,13 @@ describe("TicketService", () => {
   it("sets the creator id and notifies the support team on creation", async () => {
     const create = vi.fn().mockResolvedValue(baseTicketRow);
     const prioridadFind = vi.fn().mockResolvedValue({ id: 2 });
+    const estadoFirst = vi.fn().mockResolvedValue({ id: 1 });
     const supportUsers = vi.fn().mockResolvedValue([]);
     const app = {
       prisma: {
         ticket: { create },
         ticketPrioridad: { findUnique: prioridadFind },
+        ticketEstado: { findFirst: estadoFirst },
         user: { findMany: supportUsers }
       }
     } as unknown as App;
@@ -61,7 +63,7 @@ describe("TicketService", () => {
     await service.createTicket({ title: "Impresora sin tinta", prioridadId: 2 }, "u-1");
 
     expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ createdById: "u-1" }) })
+      expect.objectContaining({ data: expect.objectContaining({ createdById: "u-1", estadoId: 1 }) })
     );
     expect(supportUsers).toHaveBeenCalledTimes(1);
   });

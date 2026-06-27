@@ -91,8 +91,6 @@ declare module "fastify" {
      */
     requiredResource?: ResourceCode;
     requiredAction?: ActionCode;
-    /** @deprecated Usar requiredResource + requiredAction. */
-    requiredPermission?: Permission;
     skipMaintenance?: boolean;
     rateLimit?: {
       max: number;

@@ -75,7 +75,7 @@ const loadPlugin = async (app: ReturnType<typeof buildMockApp>["app"]) => {
 };
 
 const buildRequest = (overrides: Record<string, unknown> = {}) => ({
-  routeOptions: { config: { requiresAuth: true, requiredPermission: undefined } },
+  routeOptions: { config: { requiresAuth: true } },
   authUser: { id: "user-1" },
   accessContext: undefined as unknown,
   headers: {} as Record<string, string>,
@@ -212,7 +212,7 @@ describe("rbacPlugin — preHandler middleware", () => {
     await loadPlugin(app);
 
     const request = buildRequest({
-      routeOptions: { config: { requiresAuth: true, requiredPermission: "ARCHIVO_SUBIR" } }
+      routeOptions: { config: { requiresAuth: true, requiredResource: "ARCHIVO", requiredAction: "SUBIR" } }
     });
     const reply = buildReply();
 
@@ -305,7 +305,7 @@ describe("rbacPlugin — preHandler middleware", () => {
     await loadPlugin(app);
 
     const request = buildRequest({
-      routeOptions: { config: { requiresAuth: true, requiredPermission: "PROYECTO_LEER" } },
+      routeOptions: { config: { requiresAuth: true, requiredResource: "PROYECTO", requiredAction: "LEER" } },
       body: { projectId: "project-x" }
     });
     const reply = buildReply();

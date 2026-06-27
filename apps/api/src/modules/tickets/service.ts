@@ -116,7 +116,9 @@ export class TicketService {
         assignee: userSelect,
         createdBy: userSelect
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      // Tope defensivo: evita cargar todos los tickets a memoria.
+      take: 200
     });
 
     return tickets.map((ticket) => this.mapTicket(ticket));
@@ -147,10 +149,20 @@ export class TicketService {
   async createTicket(input: CreateTicketInput, createdById: string) {
     await this.ensurePrioridad(input.prioridadId);
 
+    // Estado inicial = primer estado del catálogo (orden por id). Sin id mágico hardcodeado.
+    const estadoInicial = await this.app.prisma.ticketEstado.findFirst({
+      orderBy: { id: "asc" },
+      select: { id: true }
+    });
+    if (!estadoInicial) {
+      throw validationError("No hay estados de ticket configurados");
+    }
+
     const ticket = await this.app.prisma.ticket.create({
       data: {
         title: input.title,
         description: input.description ?? null,
+        estadoId: estadoInicial.id,
         prioridadId: input.prioridadId,
         createdById
       },
@@ -341,14 +353,17 @@ export class TicketService {
       select: { id: true }
     });
 
-    for (const recipient of recipients) {
-      await this.notifyBoth(recipient.id, {
-        event: payload.event,
-        title: payload.title,
-        body: payload.body,
-        groupKey: `ticket:${ticketId}:nuevo`
-      });
-    }
+    // En paralelo: cada destinatario es independiente (evita await secuencial N+1).
+    await Promise.all(
+      recipients.map((recipient) =>
+        this.notifyBoth(recipient.id, {
+          event: payload.event,
+          title: payload.title,
+          body: payload.body,
+          groupKey: `ticket:${ticketId}:nuevo`
+        })
+      )
+    );
   }
 
   // Crea notificación in-app y por correo para el mismo destinatario.

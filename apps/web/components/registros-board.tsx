@@ -152,7 +152,6 @@ export function RegistrosBoard() {
         { name: "nombreFantasia", label: "Nombre fantasía", type: "text" },
         { name: "propietario", label: "Propietario", type: "text" },
         { name: "direccion", label: "Dirección", type: "textarea", required: true },
-        { name: "localidad", label: "Localidad", type: "text" },
         { name: "barrio", label: "Barrio", type: "text" },
         {
           name: "paisId",

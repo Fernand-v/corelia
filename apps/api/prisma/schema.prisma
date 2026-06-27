@@ -2160,8 +2160,8 @@ model Ticket {
   code        Int      @default(autoincrement()) @unique
   title       String
   description String?
-  estadoId    Int      @default(1)
-  prioridadId Int      @default(2)
+  estadoId    Int
+  prioridadId Int
   assigneeId  String?  @db.Uuid
   createdById String   @db.Uuid
   resolvedAt  DateTime?
@@ -2284,18 +2284,26 @@ model Sexo {
   personas Persona[]
 }
 
+model TipoDocumento {
+  id          String  @id @default(uuid()) @db.Uuid
+  codigo      Int     @unique
+  descripcion String
+  isActive    Boolean @default(true)
+
+  personas Persona[]
+}
+
 model Persona {
   id               String    @id @default(uuid()) @db.Uuid
   codigo           Int       @unique @default(autoincrement())
   empresaId        String    @db.Uuid
-  tipoDocumento    Int       @default(1)
+  tipoDocumentoId  String?   @db.Uuid
   ruc              String
   dv               String?
   razonSocial      String
   nombreFantasia   String?
   propietario      String?
   direccion        String
-  localidad        String?
   barrio           String?
   paisId           String?   @db.Uuid
   ciudadId         String?   @db.Uuid
@@ -2311,13 +2319,15 @@ model Persona {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  pais    Pais?   @relation(fields: [paisId], references: [id], onDelete: SetNull)
-  ciudad  Ciudad? @relation(fields: [ciudadId], references: [id], onDelete: SetNull)
-  sexo    Sexo?   @relation(fields: [sexoId], references: [id], onDelete: SetNull)
+  empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  tipoDocumento TipoDocumento? @relation(fields: [tipoDocumentoId], references: [id], onDelete: SetNull)
+  pais          Pais?          @relation(fields: [paisId], references: [id], onDelete: SetNull)
+  ciudad        Ciudad?        @relation(fields: [ciudadId], references: [id], onDelete: SetNull)
+  sexo          Sexo?          @relation(fields: [sexoId], references: [id], onDelete: SetNull)
 
   @@unique([empresaId, ruc])
   @@index([empresaId])
+  @@index([tipoDocumentoId])
   @@index([paisId])
   @@index([ciudadId])
   @@index([sexoId])
