@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   RBAC_SYSTEM_ROLES,
+  RBAC_PERMISSIONS,
+  RBAC_PERMISSIONS_ENRICHED,
   createUserInputSchema,
   externalCalendarConnectInputSchema,
   meetingParticipantStateUpdateSchema,
+  permissionKey,
+  splitPermissionKey,
   taskReassignmentInputSchema,
   taskStatusTransitionInputSchema
 } from "./index.js";
@@ -62,5 +66,26 @@ describe("shared schemas", () => {
     });
 
     expect(parsed.provider).toBe("GOOGLE");
+  });
+
+  it("splits every catalog permission into resource + action that round-trips to its key", () => {
+    for (const permission of RBAC_PERMISSIONS) {
+      const { resource, action } = splitPermissionKey(permission.code);
+      expect(resource.length).toBeGreaterThan(0);
+      expect(action.length).toBeGreaterThan(0);
+      expect(permissionKey(resource, action)).toBe(permission.code);
+    }
+  });
+
+  it("enriches every permission with resource and action", () => {
+    expect(RBAC_PERMISSIONS_ENRICHED).toHaveLength(RBAC_PERMISSIONS.length);
+    for (const permission of RBAC_PERMISSIONS_ENRICHED) {
+      expect(permission.resource).toBeTruthy();
+      expect(permission.action).toBeTruthy();
+    }
+  });
+
+  it("throws when a permission key has no recognised action suffix", () => {
+    expect(() => splitPermissionKey("RECURSO_DESCONOCIDO_XYZ")).toThrowError();
   });
 });

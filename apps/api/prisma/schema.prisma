@@ -53,6 +53,9 @@ enum NotificationEvent {
   TAREA_PROXIMA_VENCER
   TAREA_BLOQUEADA
   SOLICITUD_RESUELTA
+  TICKET_CREADO
+  TICKET_ACTUALIZADO
+  TICKET_COMENTARIO
 }
 
 enum NotificationPriority {
@@ -321,6 +324,43 @@ model Program {
   @@index([isActive])
 }
 
+model Resource {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        Int      @default(autoincrement()) @unique
+  key         String   @unique
+  displayName String
+  description String?
+  sortOrder   Int      @default(0)
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions Permission[]
+
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
+model Action {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        Int      @default(autoincrement()) @unique
+  key         String   @unique
+  displayName String
+  description String?
+  kind        String   @default("write")
+  sortOrder   Int      @default(0)
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions Permission[]
+
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
 model Permission {
   id          String   @id @default(uuid()) @db.Uuid
   code        Int      @default(autoincrement()) @unique
@@ -329,6 +369,8 @@ model Permission {
   description String?
   programId   String   @db.Uuid
   categoryId  String   @db.Uuid
+  resourceId  String   @db.Uuid
+  actionId    String   @db.Uuid
   isSystem    Boolean  @default(false)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -336,10 +378,15 @@ model Permission {
 
   program         Program            @relation(fields: [programId], references: [id], onDelete: Restrict)
   category        PermissionCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  resource        Resource           @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  action          Action             @relation(fields: [actionId], references: [id], onDelete: Restrict)
   rolePermissions RolePermission[]
 
+  @@unique([resourceId, actionId])
   @@index([programId])
   @@index([categoryId])
+  @@index([resourceId])
+  @@index([actionId])
   @@index([isActive])
 }
 
@@ -461,6 +508,9 @@ model User {
   createdDynamicForms                  DynamicForm[]                  @relation("DynamicFormCreator")
   dynamicFormResponses                 DynamicFormResponse[]          @relation("DynamicFormResponder")
   messageReceipts                      MessageReceipt[]
+  ticketsAsignados                     Ticket[]                       @relation("TicketAssignee")
+  ticketsCreados                       Ticket[]                       @relation("TicketCreator")
+  ticketComments                       TicketComment[]                @relation("TicketCommentAuthor")
 
   @@index([baseRoleId])
   @@index([isActive])
@@ -2087,4 +2137,188 @@ model MessageReceipt {
   @@index([messageId])
   @@index([userId])
   @@index([messageId, status])
+}
+
+model TicketEstado {
+  id      Int      @id
+  nombre  String   @unique
+  tickets Ticket[]
+
+  @@map("estados_ticket")
+}
+
+model TicketPrioridad {
+  id      Int      @id
+  nombre  String   @unique
+  tickets Ticket[]
+
+  @@map("prioridades_ticket")
+}
+
+model Ticket {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        Int      @default(autoincrement()) @unique
+  title       String
+  description String?
+  estadoId    Int      @default(1)
+  prioridadId Int      @default(2)
+  assigneeId  String?  @db.Uuid
+  createdById String   @db.Uuid
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  estado    TicketEstado    @relation(fields: [estadoId], references: [id], onDelete: Restrict)
+  prioridad TicketPrioridad @relation(fields: [prioridadId], references: [id], onDelete: Restrict)
+  assignee  User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy User            @relation("TicketCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  comments  TicketComment[]
+
+  @@index([assigneeId])
+  @@index([createdById])
+  @@index([estadoId])
+  @@index([prioridadId])
+}
+
+model TicketComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  ticketId  String   @db.Uuid
+  authorId  String   @db.Uuid
+  content   String
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation("TicketCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([authorId])
+}
+
+// ----------------------------------------------------------
+// Registros: empresas, catálogos geográficos y personas
+// ----------------------------------------------------------
+
+model Empresa {
+  id                     String   @id @default(uuid()) @db.Uuid
+  codigo                 Int      @unique @default(autoincrement())
+  razonSocial            String
+  nombreFantasia         String?
+  direccion              String?
+  telefono               String?
+  fax                    String?
+  localidad              String?
+  ruc                    String?
+  dv                     String?
+  nroInscripcionIps      String?
+  nroInscripcionBnt      String?
+  explotacion            String?
+  nombreContador         String?
+  rucContador            String?
+  nombreRepresentante    String?
+  rucRepresentante       String?
+  descripcionFactura     String?
+  urlReports             String?
+  logoUrl                String?
+  esExportador           Boolean  @default(false)
+  esExterna              Boolean  @default(false)
+  facturadorElectronico  Boolean  @default(false)
+  habilitada             Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  personas   Persona[]
+  sucursales Sucursal[]
+}
+
+model Sucursal {
+  id            String   @id @default(uuid()) @db.Uuid
+  empresaId     String   @db.Uuid
+  codigo        Int
+  descripcion   String
+  direccion     String?
+  telefono      String?
+  fax           String?
+  localidad     String?
+  departamento  String?
+  ruc           String?
+  abreviatura   String?
+  esCasaCentral Boolean  @default(false)
+  logoUrl       String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, codigo])
+  @@index([empresaId])
+}
+
+model Pais {
+  id           String  @id @default(uuid()) @db.Uuid
+  codigo       Int     @unique
+  descripcion  String
+  nacionalidad String?
+
+  ciudades Ciudad[]
+  personas Persona[]
+}
+
+model Ciudad {
+  id          String @id @default(uuid()) @db.Uuid
+  codigo      Int    @unique
+  descripcion String
+  paisId      String @db.Uuid
+
+  pais     Pais      @relation(fields: [paisId], references: [id], onDelete: Restrict)
+  personas Persona[]
+
+  @@index([paisId])
+}
+
+model Sexo {
+  id          String @id @default(uuid()) @db.Uuid
+  codigo      String @unique
+  descripcion String
+
+  personas Persona[]
+}
+
+model Persona {
+  id               String    @id @default(uuid()) @db.Uuid
+  codigo           Int       @unique @default(autoincrement())
+  empresaId        String    @db.Uuid
+  tipoDocumento    Int       @default(1)
+  ruc              String
+  dv               String?
+  razonSocial      String
+  nombreFantasia   String?
+  propietario      String?
+  direccion        String
+  localidad        String?
+  barrio           String?
+  paisId           String?   @db.Uuid
+  ciudadId         String?   @db.Uuid
+  sexoId           String?   @db.Uuid
+  telefono         String
+  celular          String?
+  email            String?
+  personaContacto  String?
+  fechaAniversario DateTime?
+  esPep            Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  createdById      String?   @db.Uuid
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  pais    Pais?   @relation(fields: [paisId], references: [id], onDelete: SetNull)
+  ciudad  Ciudad? @relation(fields: [ciudadId], references: [id], onDelete: SetNull)
+  sexo    Sexo?   @relation(fields: [sexoId], references: [id], onDelete: SetNull)
+
+  @@unique([empresaId, ruc])
+  @@index([empresaId])
+  @@index([paisId])
+  @@index([ciudadId])
+  @@index([sexoId])
 }

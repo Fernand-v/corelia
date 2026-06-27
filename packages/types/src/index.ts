@@ -30,3 +30,5 @@ export * from "./admin.js";
 export * from "./frontend-settings.js";
 export * from "./reports.js";
 export * from "./expenses.js";
+export * from "./tickets.js";
+export * from "./registros.js";

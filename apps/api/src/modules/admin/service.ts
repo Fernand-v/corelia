@@ -181,6 +181,38 @@ export class AdminService {
     return this.rolesAccessService.deactivateProgram(...args);
   }
 
+  async listResources(...args: Parameters<AdminRolesAccessService["listResources"]>) {
+    return this.rolesAccessService.listResources(...args);
+  }
+
+  async createResource(...args: Parameters<AdminRolesAccessService["createResource"]>) {
+    return this.rolesAccessService.createResource(...args);
+  }
+
+  async updateResource(...args: Parameters<AdminRolesAccessService["updateResource"]>) {
+    return this.rolesAccessService.updateResource(...args);
+  }
+
+  async deactivateResource(...args: Parameters<AdminRolesAccessService["deactivateResource"]>) {
+    return this.rolesAccessService.deactivateResource(...args);
+  }
+
+  async listActions(...args: Parameters<AdminRolesAccessService["listActions"]>) {
+    return this.rolesAccessService.listActions(...args);
+  }
+
+  async createAction(...args: Parameters<AdminRolesAccessService["createAction"]>) {
+    return this.rolesAccessService.createAction(...args);
+  }
+
+  async updateAction(...args: Parameters<AdminRolesAccessService["updateAction"]>) {
+    return this.rolesAccessService.updateAction(...args);
+  }
+
+  async deactivateAction(...args: Parameters<AdminRolesAccessService["deactivateAction"]>) {
+    return this.rolesAccessService.deactivateAction(...args);
+  }
+
   async listPermissionCategories(...args: Parameters<AdminRolesAccessService["listPermissionCategories"]>) {
     return this.rolesAccessService.listPermissionCategories(...args);
   }

@@ -1,7 +1,6 @@
 {
   "extends": "@corelia/config/tsconfig.react",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     },

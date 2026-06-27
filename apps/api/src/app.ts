@@ -40,6 +40,8 @@ import { homeRouter } from "./modules/home/router.js";
 import { adminRouter } from "./modules/admin/router.js";
 import { reportsRouter } from "./modules/reports/router.js";
 import { expensesRouter } from "./modules/expenses/router.js";
+import { ticketsRouter } from "./modules/tickets/router.js";
+import { registrosRouter } from "./modules/registros/router.js";
 
 const resolveTrustProxy = (value: string): boolean | number => {
   const normalized = value.trim().toLowerCase();
@@ -159,6 +161,8 @@ export const createApp = async (): Promise<FastifyInstance> => {
   // Expenses routes are intentionally scoped under /api/v1/projects/:projectId/
   // because all endpoints are project-level resources (budget details, expenses, summary).
   await app.register(expensesRouter, { prefix: "/api/v1" });
+  await app.register(ticketsRouter, { prefix: "/api/v1/tickets" });
+  await app.register(registrosRouter, { prefix: "/api/v1/registros" });
 
   return app;
 };

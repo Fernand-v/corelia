@@ -14,7 +14,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -34,7 +35,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "SOLICITUD_APROBAR"
+        requiredResource: "SOLICITUD",
+        requiredAction: "APROBAR"
       }
     },
     async (request, reply) => {
@@ -65,7 +67,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -79,7 +82,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -95,7 +99,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -111,7 +116,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -127,7 +133,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -144,7 +151,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -160,7 +168,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -177,7 +186,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -194,7 +204,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -260,7 +271,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -276,7 +288,8 @@ export const formsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "FORMULARIOS",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {

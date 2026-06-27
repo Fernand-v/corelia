@@ -14,7 +14,8 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ANUNCIOS",
-        requiredPermission: "ANUNCIO_PUBLICAR",
+        requiredResource: "ANUNCIO",
+        requiredAction: "PUBLICAR",
       },
     },
     async (request, reply) => {
@@ -47,7 +48,8 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ANUNCIOS",
-        requiredPermission: "USUARIO_LEER",
+        requiredResource: "USUARIO",
+        requiredAction: "LEER",
       },
     },
     async (request) => {
@@ -61,7 +63,8 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ANUNCIOS",
-        requiredPermission: "ANUNCIO_PUBLICAR",
+        requiredResource: "ANUNCIO",
+        requiredAction: "PUBLICAR",
       },
     },
     async (request, reply) => {
@@ -96,7 +99,8 @@ export const announcementsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ANUNCIOS",
-        requiredPermission: "ANUNCIO_PUBLICAR",
+        requiredResource: "ANUNCIO",
+        requiredAction: "PUBLICAR",
       },
     },
     async (request, reply) => {

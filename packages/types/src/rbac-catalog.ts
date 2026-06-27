@@ -12,7 +12,9 @@ export const RBAC_PERMISSION_CATEGORIES = [
   { code: "OBJETIVO", displayName: "Objetivos", description: null, sortOrder: 10 },
   { code: "AUTOMATIZACION", displayName: "Automatizaciones", description: null, sortOrder: 11 },
   { code: "AUDITORIA", displayName: "Auditoria", description: null, sortOrder: 12 },
-  { code: "PRESUPUESTO", displayName: "Presupuesto", description: null, sortOrder: 13 }
+  { code: "PRESUPUESTO", displayName: "Presupuesto", description: null, sortOrder: 13 },
+  { code: "TICKET", displayName: "Tickets", description: null, sortOrder: 14 },
+  { code: "PERSONA", displayName: "Personas y catalogos", description: null, sortOrder: 15 }
 ] as const;
 
 export const RBAC_PROGRAMS = [
@@ -38,7 +40,9 @@ export const RBAC_PROGRAMS = [
   { code: "INTEGRACIONES", displayName: "Integraciones", description: null, sortOrder: 19 },
   { code: "IMPORTACIONES", displayName: "Importaciones", description: null, sortOrder: 20 },
   { code: "DISPONIBILIDAD", displayName: "Disponibilidad", description: null, sortOrder: 21 },
-  { code: "TIEMPO", displayName: "Tiempo", description: null, sortOrder: 22 }
+  { code: "TIEMPO", displayName: "Tiempo", description: null, sortOrder: 22 },
+  { code: "TICKETS", displayName: "Tickets IT", description: null, sortOrder: 23 },
+  { code: "PERSONAS", displayName: "Personas", description: null, sortOrder: 24 }
 ] as const;
 
 export const RBAC_PERMISSIONS = [
@@ -195,6 +199,69 @@ export const RBAC_PERMISSIONS = [
     description: null,
     categoryCode: "PRESUPUESTO",
     programCode: "PRESUPUESTO"
+  },
+  {
+    code: "TICKET_CREAR",
+    displayName: "Crear tickets",
+    description: null,
+    categoryCode: "TICKET",
+    programCode: "TICKETS"
+  },
+  {
+    code: "TICKET_LEER",
+    displayName: "Leer tickets",
+    description: null,
+    categoryCode: "TICKET",
+    programCode: "TICKETS"
+  },
+  {
+    code: "TICKET_GESTIONAR",
+    displayName: "Gestionar tickets",
+    description: null,
+    categoryCode: "TICKET",
+    programCode: "TICKETS"
+  },
+  {
+    code: "TICKET_ASIGNAR",
+    displayName: "Asignar tickets",
+    description: null,
+    categoryCode: "TICKET",
+    programCode: "TICKETS"
+  },
+  {
+    code: "TICKET_COMENTAR",
+    displayName: "Comentar tickets",
+    description: null,
+    categoryCode: "TICKET",
+    programCode: "TICKETS"
+  },
+  {
+    code: "CATALOGO_LEER",
+    displayName: "Leer catalogos (paises, ciudades, sexo, empresas)",
+    description: null,
+    categoryCode: "PERSONA",
+    programCode: "PERSONAS"
+  },
+  {
+    code: "CATALOGO_GESTIONAR",
+    displayName: "Gestionar catalogos (paises, ciudades, sexo, empresas)",
+    description: null,
+    categoryCode: "PERSONA",
+    programCode: "PERSONAS"
+  },
+  {
+    code: "PERSONA_LEER",
+    displayName: "Leer personas",
+    description: null,
+    categoryCode: "PERSONA",
+    programCode: "PERSONAS"
+  },
+  {
+    code: "PERSONA_GESTIONAR",
+    displayName: "Gestionar personas",
+    description: null,
+    categoryCode: "PERSONA",
+    programCode: "PERSONAS"
   }
 ] as const;
 
@@ -246,6 +313,14 @@ export const RBAC_SYSTEM_ROLES = [
     scope: "GLOBAL",
     rank: 5,
     isSystem: true
+  },
+  {
+    code: "SOPORTE_IT",
+    displayName: "Soporte IT",
+    description: "Equipo de informatica responsable de gestionar tickets",
+    scope: "GLOBAL",
+    rank: 3,
+    isSystem: true
   }
 ] as const;
 
@@ -272,7 +347,10 @@ export const RBAC_ROLE_PERMISSION_MATRIX: Record<string, readonly string[]> = {
     "AUTOMATIZACION_GESTIONAR",
     "AUDITORIA_LEER",
     "PRESUPUESTO_LEER",
-    "PRESUPUESTO_GESTIONAR"
+    "PRESUPUESTO_GESTIONAR",
+    "TICKET_CREAR",
+    "TICKET_LEER",
+    "TICKET_COMENTAR"
   ],
   COORDINADOR_EQUIPO: [
     "USUARIO_LEER",
@@ -292,7 +370,10 @@ export const RBAC_ROLE_PERMISSION_MATRIX: Record<string, readonly string[]> = {
     "SOLICITUD_APROBAR",
     "AUDITORIA_LEER",
     "PRESUPUESTO_LEER",
-    "PRESUPUESTO_GESTIONAR"
+    "PRESUPUESTO_GESTIONAR",
+    "TICKET_CREAR",
+    "TICKET_LEER",
+    "TICKET_COMENTAR"
   ],
   COLABORADOR: [
     "USUARIO_LEER",
@@ -305,7 +386,10 @@ export const RBAC_ROLE_PERMISSION_MATRIX: Record<string, readonly string[]> = {
     "MENSAJE_ESCRIBIR",
     "NOTIFICACION_LEER",
     "ARCHIVO_SUBIR",
-    "PRESUPUESTO_LEER"
+    "PRESUPUESTO_LEER",
+    "TICKET_CREAR",
+    "TICKET_LEER",
+    "TICKET_COMENTAR"
   ],
   OBSERVADOR: [
     "USUARIO_LEER",
@@ -314,7 +398,83 @@ export const RBAC_ROLE_PERMISSION_MATRIX: Record<string, readonly string[]> = {
     "CALENDARIO_LEER",
     "REUNION_LEER",
     "NOTIFICACION_LEER",
-    "PRESUPUESTO_LEER"
+    "PRESUPUESTO_LEER",
+    "TICKET_CREAR",
+    "TICKET_LEER",
+    "TICKET_COMENTAR"
+  ],
+  SOPORTE_IT: [
+    "USUARIO_LEER",
+    "NOTIFICACION_LEER",
+    "ARCHIVO_SUBIR",
+    "MENSAJE_ESCRIBIR",
+    "TICKET_CREAR",
+    "TICKET_LEER",
+    "TICKET_GESTIONAR",
+    "TICKET_ASIGNAR",
+    "TICKET_COMENTAR"
   ],
   INVITADO_EXTERNO: ["PROYECTO_LEER", "TAREA_LEER", "REUNION_LEER"]
 };
+
+/**
+ * Acciones canónicas del modelo recurso×acción. Cada permiso del catálogo es
+ * exactamente `${recurso}_${acción}`, por lo que el guard reconstruye la key
+ * sin necesidad de un índice adicional. `kind` agrupa lectura vs escritura
+ * para la grilla de administración y para los toggles masivos ("todo lectura").
+ */
+export const RBAC_ACTIONS = [
+  { code: "LEER", displayName: "Leer", kind: "read" },
+  { code: "ESCRIBIR", displayName: "Escribir", kind: "write" },
+  { code: "CREAR", displayName: "Crear", kind: "write" },
+  { code: "GESTIONAR", displayName: "Gestionar", kind: "write" },
+  { code: "ASIGNAR", displayName: "Asignar", kind: "write" },
+  { code: "COMENTAR", displayName: "Comentar", kind: "write" },
+  { code: "CAMBIAR_ESTADO", displayName: "Cambiar estado", kind: "write" },
+  { code: "REASIGNAR", displayName: "Reasignar", kind: "write" },
+  { code: "SUBIR", displayName: "Subir", kind: "write" },
+  { code: "PUBLICAR", displayName: "Publicar", kind: "write" },
+  { code: "APROBAR", displayName: "Aprobar", kind: "write" }
+] as const;
+
+// Ordenadas de mayor a menor longitud para que un sufijo compuesto
+// (p. ej. CAMBIAR_ESTADO) gane frente a uno simple (ESTADO no existe, pero
+// la regla protege futuras acciones de varias palabras).
+const ACTION_CODES_BY_LENGTH = RBAC_ACTIONS.map((action) => action.code).sort(
+  (a, b) => b.length - a.length
+);
+
+/** Reconstruye la key canónica de un permiso a partir de recurso + acción. */
+export const permissionKey = (resource: string, action: string): string => `${resource}_${action}`;
+
+/** Descompone una key de permiso en su recurso y acción canónicos. */
+export const splitPermissionKey = (key: string): { resource: string; action: string } => {
+  for (const action of ACTION_CODES_BY_LENGTH) {
+    if (key.endsWith(`_${action}`)) {
+      return { resource: key.slice(0, key.length - action.length - 1), action };
+    }
+  }
+  throw new Error(`Permiso sin acción reconocida: ${key}`);
+};
+
+/** Catálogo de permisos enriquecido con su recurso y acción derivados. */
+export const RBAC_PERMISSIONS_ENRICHED = RBAC_PERMISSIONS.map((permission) => ({
+  ...permission,
+  ...splitPermissionKey(permission.code)
+}));
+
+const RESOURCE_DISPLAY_OVERRIDES: Record<string, string> = {
+  CATALOGO: "Catálogos"
+};
+
+const categoryDisplayByCode = new Map<string, string>(
+  RBAC_PERMISSION_CATEGORIES.map((category) => [category.code, category.displayName])
+);
+
+/** Recursos distintos derivados del catálogo, con nombre legible para la UI. */
+export const RBAC_RESOURCES = [
+  ...new Set(RBAC_PERMISSIONS_ENRICHED.map((permission) => permission.resource))
+].map((resource) => ({
+  code: resource,
+  displayName: RESOURCE_DISPLAY_OVERRIDES[resource] ?? categoryDisplayByCode.get(resource) ?? resource
+}));

@@ -18,7 +18,8 @@ export const integrationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "INTEGRACIONES",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -40,7 +41,8 @@ export const integrationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "INTEGRACIONES",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async () => service.listWebhooks()
@@ -52,7 +54,8 @@ export const integrationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "INTEGRACIONES",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -68,7 +71,8 @@ export const integrationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "INTEGRACIONES",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {

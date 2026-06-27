@@ -37,7 +37,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -85,7 +86,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async () => service.getDirectory()
@@ -97,7 +99,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -112,7 +115,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_LEER"
+        requiredResource: "USUARIO",
+        requiredAction: "LEER"
       }
     },
     async (request) => service.listTeamsForUser(request.authUser!.id)
@@ -124,7 +128,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -159,7 +164,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -181,7 +187,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -197,7 +204,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -225,7 +233,8 @@ export const identityRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "IDENTIDAD",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {

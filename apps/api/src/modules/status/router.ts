@@ -38,7 +38,8 @@ export const statusRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {

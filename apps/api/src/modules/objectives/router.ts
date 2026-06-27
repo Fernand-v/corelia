@@ -12,7 +12,8 @@ export const objectivesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "OBJETIVOS",
-        requiredPermission: "OBJETIVO_GESTIONAR"
+        requiredResource: "OBJETIVO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -28,7 +29,8 @@ export const objectivesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "OBJETIVOS",
-        requiredPermission: "OBJETIVO_GESTIONAR"
+        requiredResource: "OBJETIVO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -44,7 +46,8 @@ export const objectivesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "OBJETIVOS",
-        requiredPermission: "OBJETIVO_GESTIONAR"
+        requiredResource: "OBJETIVO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -60,7 +63,8 @@ export const objectivesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "OBJETIVOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request) => {

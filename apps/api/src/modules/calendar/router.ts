@@ -12,7 +12,8 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "CALENDARIO",
-        requiredPermission: "CALENDARIO_LEER"
+        requiredResource: "CALENDARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -32,7 +33,8 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "CALENDARIO",
-        requiredPermission: "CALENDARIO_LEER"
+        requiredResource: "CALENDARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -48,7 +50,8 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "CALENDARIO",
-        requiredPermission: "CALENDARIO_GESTIONAR"
+        requiredResource: "CALENDARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -78,7 +81,8 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "CALENDARIO",
-        requiredPermission: "CALENDARIO_LEER"
+        requiredResource: "CALENDARIO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -94,7 +98,8 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "CALENDARIO",
-        requiredPermission: "CALENDARIO_GESTIONAR"
+        requiredResource: "CALENDARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -109,7 +114,8 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "CALENDARIO",
-        requiredPermission: "CALENDARIO_GESTIONAR"
+        requiredResource: "CALENDARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -128,7 +134,8 @@ export const calendarRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "CALENDARIO",
-        requiredPermission: "CALENDARIO_GESTIONAR"
+        requiredResource: "CALENDARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {

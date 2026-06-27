@@ -2,7 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import {
   RBAC_PROGRAMS,
   RBAC_PERMISSION_CATEGORIES,
-  RBAC_PERMISSIONS,
+  RBAC_PERMISSIONS_ENRICHED,
+  RBAC_RESOURCES,
+  RBAC_ACTIONS,
   RBAC_ROLE_PERMISSION_MATRIX,
   RBAC_SYSTEM_ROLES
 } from "@corelia/types";
@@ -54,6 +56,48 @@ async function main() {
     });
   }
 
+  for (const [index, resource] of RBAC_RESOURCES.entries()) {
+    await prisma.resource.upsert({
+      where: { key: resource.code },
+      update: {
+        key: resource.code,
+        displayName: resource.displayName,
+        sortOrder: index,
+        isSystem: true,
+        isActive: true
+      },
+      create: {
+        key: resource.code,
+        displayName: resource.displayName,
+        sortOrder: index,
+        isSystem: true,
+        isActive: true
+      }
+    });
+  }
+
+  for (const [index, action] of RBAC_ACTIONS.entries()) {
+    await prisma.action.upsert({
+      where: { key: action.code },
+      update: {
+        key: action.code,
+        displayName: action.displayName,
+        kind: action.kind,
+        sortOrder: index,
+        isSystem: true,
+        isActive: true
+      },
+      create: {
+        key: action.code,
+        displayName: action.displayName,
+        kind: action.kind,
+        sortOrder: index,
+        isSystem: true,
+        isActive: true
+      }
+    });
+  }
+
   const categories = await prisma.permissionCategory.findMany({
     select: {
       id: true,
@@ -66,10 +110,14 @@ async function main() {
       key: true
     }
   });
+  const resources = await prisma.resource.findMany({ select: { id: true, key: true } });
+  const actions = await prisma.action.findMany({ select: { id: true, key: true } });
   const categoryIdByKey = new Map(categories.map((category) => [category.key, category.id]));
   const programIdByKey = new Map(programs.map((program) => [program.key, program.id]));
+  const resourceIdByKey = new Map(resources.map((resource) => [resource.key, resource.id]));
+  const actionIdByKey = new Map(actions.map((action) => [action.key, action.id]));
 
-  for (const [index, permission] of RBAC_PERMISSIONS.entries()) {
+  for (const [index, permission] of RBAC_PERMISSIONS_ENRICHED.entries()) {
     const categoryId = categoryIdByKey.get(permission.categoryCode);
     if (!categoryId) {
       throw new Error(`Categoria de permiso no encontrada: ${permission.categoryCode}`);
@@ -77,6 +125,14 @@ async function main() {
     const programId = programIdByKey.get(permission.programCode);
     if (!programId) {
       throw new Error(`Programa no encontrado para permiso: ${permission.programCode}`);
+    }
+    const resourceId = resourceIdByKey.get(permission.resource);
+    if (!resourceId) {
+      throw new Error(`Recurso no encontrado para permiso: ${permission.resource}`);
+    }
+    const actionId = actionIdByKey.get(permission.action);
+    if (!actionId) {
+      throw new Error(`Accion no encontrada para permiso: ${permission.action}`);
     }
 
     await prisma.permission.upsert({
@@ -88,6 +144,8 @@ async function main() {
         description: permission.description,
         categoryId,
         programId,
+        resourceId,
+        actionId,
         isSystem: true,
         isActive: true
       },
@@ -98,6 +156,8 @@ async function main() {
         description: permission.description,
         categoryId,
         programId,
+        resourceId,
+        actionId,
         isSystem: true,
         isActive: true
       }

@@ -3,9 +3,11 @@ import { codeValueSchema, idSchema, paginationSchema, timestampSchema, windowSch
 import { signupRequestStatusSchema } from "./auth.js";
 import { requestStatusSchema } from "./enums.js";
 import {
+  actionCodeSchema,
   permissionCategoryCodeSchema,
   permissionSchema,
   programCodeSchema,
+  resourceCodeSchema,
   roleCodeSchema
 } from "./rbac.js";
 import { serviceHealthSchema } from "./status.js";
@@ -330,9 +332,101 @@ export const adminListProgramsQuerySchema = z.object({
   includeInactive: z.coerce.boolean().optional().default(false)
 });
 
+export const adminResourceSchema = z.object({
+  id: idSchema,
+  code: resourceCodeSchema,
+  numericCode: z.number().int().min(1),
+  displayName: z.string().min(1).max(120),
+  description: z.string().max(500).nullable(),
+  sortOrder: z.number().int().min(0),
+  isSystem: z.boolean(),
+  isActive: z.boolean(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema
+});
+
+export const adminCreateResourceInputSchema = z.object({
+  code: resourceCodeSchema.optional(),
+  displayName: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(500).nullable().optional(),
+  sortOrder: z.number().int().min(0).max(1000).optional(),
+  isActive: z.boolean().optional()
+});
+
+export const adminUpdateResourceInputSchema = z
+  .object({
+    displayName: z.string().trim().min(2).max(120).optional(),
+    description: z.string().trim().max(500).nullable().optional(),
+    sortOrder: z.number().int().min(0).max(1000).optional(),
+    isActive: z.boolean().optional()
+  })
+  .refine(
+    (payload) =>
+      payload.displayName !== undefined ||
+      payload.description !== undefined ||
+      payload.sortOrder !== undefined ||
+      payload.isActive !== undefined,
+    { message: "Debe enviar al menos un campo para actualizar" }
+  );
+
+export const adminListResourcesQuerySchema = z.object({
+  includeInactive: z.coerce.boolean().optional().default(false)
+});
+
+export const actionKindSchema = z.enum(["read", "write"]);
+
+export const adminActionSchema = z.object({
+  id: idSchema,
+  code: actionCodeSchema,
+  numericCode: z.number().int().min(1),
+  displayName: z.string().min(1).max(120),
+  description: z.string().max(500).nullable(),
+  kind: actionKindSchema,
+  sortOrder: z.number().int().min(0),
+  isSystem: z.boolean(),
+  isActive: z.boolean(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema
+});
+
+export const adminCreateActionInputSchema = z.object({
+  code: actionCodeSchema.optional(),
+  displayName: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(500).nullable().optional(),
+  kind: actionKindSchema.optional(),
+  sortOrder: z.number().int().min(0).max(1000).optional(),
+  isActive: z.boolean().optional()
+});
+
+export const adminUpdateActionInputSchema = z
+  .object({
+    displayName: z.string().trim().min(2).max(120).optional(),
+    description: z.string().trim().max(500).nullable().optional(),
+    kind: actionKindSchema.optional(),
+    sortOrder: z.number().int().min(0).max(1000).optional(),
+    isActive: z.boolean().optional()
+  })
+  .refine(
+    (payload) =>
+      payload.displayName !== undefined ||
+      payload.description !== undefined ||
+      payload.kind !== undefined ||
+      payload.sortOrder !== undefined ||
+      payload.isActive !== undefined,
+    { message: "Debe enviar al menos un campo para actualizar" }
+  );
+
+export const adminListActionsQuerySchema = z.object({
+  includeInactive: z.coerce.boolean().optional().default(false)
+});
+
 export const adminPermissionSchema = z.object({
   id: idSchema,
   code: permissionSchema,
+  resource: resourceCodeSchema,
+  resourceDisplayName: z.string().min(1).max(120),
+  action: actionCodeSchema,
+  actionDisplayName: z.string().min(1).max(120),
   displayName: z.string().min(1).max(160),
   description: z.string().max(500).nullable(),
   categoryId: idSchema,
@@ -349,7 +443,8 @@ export const adminPermissionSchema = z.object({
 });
 
 export const adminCreatePermissionInputSchema = z.object({
-  code: permissionSchema.optional(),
+  resource: resourceCodeSchema,
+  action: actionCodeSchema,
   displayName: z.string().trim().min(2).max(160),
   description: z.string().trim().max(500).nullable().optional(),
   categoryCode: permissionCategoryCodeSchema,

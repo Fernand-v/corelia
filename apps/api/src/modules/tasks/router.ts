@@ -12,7 +12,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_LEER"
+        requiredResource: "TAREA",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -27,7 +28,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_LEER"
+        requiredResource: "TAREA",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -43,7 +45,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_CAMBIAR_ESTADO"
+        requiredResource: "TAREA",
+        requiredAction: "CAMBIAR_ESTADO"
       }
     },
     async (request, reply) => {
@@ -79,7 +82,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_GESTIONAR"
+        requiredResource: "TAREA",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -111,7 +115,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_LEER"
+        requiredResource: "TAREA",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -130,7 +135,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_GESTIONAR"
+        requiredResource: "TAREA",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -170,7 +176,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_CAMBIAR_ESTADO"
+        requiredResource: "TAREA",
+        requiredAction: "CAMBIAR_ESTADO"
       }
     },
     async (request, reply) => {
@@ -208,7 +215,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_CAMBIAR_ESTADO"
+        requiredResource: "TAREA",
+        requiredAction: "CAMBIAR_ESTADO"
       }
     },
     async (request, reply) => {
@@ -245,7 +253,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_REASIGNAR"
+        requiredResource: "TAREA",
+        requiredAction: "REASIGNAR"
       }
     },
     async (request, reply) => {
@@ -281,7 +290,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_GESTIONAR"
+        requiredResource: "TAREA",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -297,7 +307,8 @@ export const tasksRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "TAREAS",
-        requiredPermission: "TAREA_LEER"
+        requiredResource: "TAREA",
+        requiredAction: "LEER"
       }
     },
     async (request) => {

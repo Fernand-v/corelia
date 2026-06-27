@@ -1,6 +1,13 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
-import { type Permission, type ProgramCode, type RoleCode } from "@corelia/types";
+import {
+  permissionKey,
+  type ActionCode,
+  type Permission,
+  type ProgramCode,
+  type ResourceCode,
+  type RoleCode
+} from "@corelia/types";
 import { getProjectIdFromRequest } from "../lib/http.js";
 import { isAdminRole } from "../lib/rbac.js";
 
@@ -249,7 +256,13 @@ export const rbacPlugin = fp(async (app) => {
 
   app.addHook("preHandler", async (request, reply) => {
     const config = request.routeOptions.config as
-      | { requiresAuth?: boolean; requiredProgram?: ProgramCode; requiredPermission?: Permission }
+      | {
+          requiresAuth?: boolean;
+          requiredProgram?: ProgramCode;
+          requiredResource?: ResourceCode;
+          requiredAction?: ActionCode;
+          requiredPermission?: Permission;
+        }
       | undefined;
 
     if (config?.requiresAuth === false || !request.authUser) {
@@ -291,7 +304,15 @@ export const rbacPlugin = fp(async (app) => {
       return reply.code(403).send({ message: "Forbidden" });
     }
 
-    if (config?.requiredPermission && !roleContext.permissions.includes(config.requiredPermission)) {
+    // La key canónica de un permiso es `${recurso}_${acción}`, por lo que el
+    // guard la reconstruye sin necesidad de un índice adicional. Se admite el
+    // requiredPermission heredado para rutas aún sin migrar.
+    const requiredPermission =
+      config?.requiredResource && config?.requiredAction
+        ? (permissionKey(config.requiredResource, config.requiredAction) as Permission)
+        : config?.requiredPermission;
+
+    if (requiredPermission && !roleContext.permissions.includes(requiredPermission)) {
       return reply.code(403).send({ message: "Forbidden" });
     }
   });

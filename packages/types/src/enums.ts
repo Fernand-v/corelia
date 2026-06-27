@@ -29,7 +29,10 @@ export const notificationEventSchema = z.enum([
   "ACUERDO_ASIGNADO_TAREA",
   "TAREA_PROXIMA_VENCER",
   "TAREA_BLOQUEADA",
-  "SOLICITUD_RESUELTA"
+  "SOLICITUD_RESUELTA",
+  "TICKET_CREADO",
+  "TICKET_ACTUALIZADO",
+  "TICKET_COMENTARIO"
 ]);
 
 export const notificationPrioritySchema = z.enum(["NORMAL", "URGENTE"]);
@@ -57,6 +60,7 @@ export const entityTypeSchema = z.enum([
   "AUTOMATIZACION",
   "GASTO"
 ]);
+
 
 export const expenseStatusSchema = z.enum(["PENDIENTE", "APROBADO", "RECHAZADO"]);
 

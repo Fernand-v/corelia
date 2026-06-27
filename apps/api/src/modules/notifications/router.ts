@@ -23,7 +23,8 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "NOTIFICACIONES",
-        requiredPermission: "NOTIFICACION_LEER"
+        requiredResource: "NOTIFICACION",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -41,7 +42,8 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "NOTIFICACIONES",
-        requiredPermission: "NOTIFICACION_LEER"
+        requiredResource: "NOTIFICACION",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -55,7 +57,8 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "NOTIFICACIONES",
-        requiredPermission: "NOTIFICACION_LEER"
+        requiredResource: "NOTIFICACION",
+        requiredAction: "LEER"
       }
     },
     async () => {
@@ -69,7 +72,8 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "NOTIFICACIONES",
-        requiredPermission: "NOTIFICACION_LEER"
+        requiredResource: "NOTIFICACION",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -88,7 +92,8 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "NOTIFICACIONES",
-        requiredPermission: "NOTIFICACION_LEER"
+        requiredResource: "NOTIFICACION",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -106,7 +111,8 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "NOTIFICACIONES",
-        requiredPermission: "NOTIFICACION_LEER"
+        requiredResource: "NOTIFICACION",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -121,7 +127,8 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "NOTIFICACIONES",
-        requiredPermission: "NOTIFICACION_LEER"
+        requiredResource: "NOTIFICACION",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -139,7 +146,8 @@ export const notificationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "NOTIFICACIONES",
-        requiredPermission: "NOTIFICACION_LEER"
+        requiredResource: "NOTIFICACION",
+        requiredAction: "LEER"
       }
     },
     async (request) => {

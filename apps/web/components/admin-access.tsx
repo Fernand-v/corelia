@@ -6,7 +6,7 @@ import { Button, Card } from "@corelia/ui";
 import { apiRequest } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
-type ProgramItem = {
+type CatalogItem = {
   id: string;
   code: string;
   numericCode: number;
@@ -17,9 +17,18 @@ type ProgramItem = {
   isActive: boolean;
 };
 
+type ProgramItem = CatalogItem;
+type ResourceItem = CatalogItem;
+type ActionItem = CatalogItem & { kind: "read" | "write" };
+
 type PermissionItem = {
   id: string;
   code: string;
+  resource: string;
+  resourceDisplayName: string;
+  action: string;
+  actionDisplayName: string;
+  actionKind: "read" | "write";
   displayName: string;
   description: string | null;
   categoryCode: string;
@@ -52,7 +61,15 @@ type RoleAccessItem = {
   }>;
 };
 
-type TabKey = "programs" | "permissions" | "roles";
+type TabKey = "programs" | "resources" | "actions" | "permissions" | "roles";
+
+type CatalogEditForm = {
+  id: string;
+  displayName: string;
+  description: string;
+  sortOrder: string;
+  isActive: boolean;
+};
 
 export const AdminAccessView = () => {
   const session = useSession();
@@ -66,16 +83,30 @@ export const AdminAccessView = () => {
     description: "",
     sortOrder: "0"
   });
-  const [programEditForm, setProgramEditForm] = useState<{
-    id: string;
-    displayName: string;
-    description: string;
-    sortOrder: string;
-    isActive: boolean;
-  } | null>(null);
+  const [programEditForm, setProgramEditForm] = useState<CatalogEditForm | null>(null);
+
+  const [resourceCreateForm, setResourceCreateForm] = useState({
+    code: "",
+    displayName: "",
+    description: "",
+    sortOrder: "0"
+  });
+  const [resourceEditForm, setResourceEditForm] = useState<CatalogEditForm | null>(null);
+
+  const [actionCreateForm, setActionCreateForm] = useState({
+    code: "",
+    displayName: "",
+    description: "",
+    kind: "write" as "read" | "write",
+    sortOrder: "0"
+  });
+  const [actionEditForm, setActionEditForm] = useState<(CatalogEditForm & { kind: "read" | "write" }) | null>(
+    null
+  );
 
   const [permissionCreateForm, setPermissionCreateForm] = useState({
-    code: "",
+    resource: "",
+    action: "",
     displayName: "",
     description: "",
     categoryCode: "",
@@ -97,6 +128,16 @@ export const AdminAccessView = () => {
   const programsQuery = useQuery({
     queryKey: ["admin-access-programs"],
     queryFn: () => apiRequest<ProgramItem[]>("/admin/programs?includeInactive=true")
+  });
+
+  const resourcesQuery = useQuery({
+    queryKey: ["admin-access-resources"],
+    queryFn: () => apiRequest<ResourceItem[]>("/admin/resources?includeInactive=true")
+  });
+
+  const actionsQuery = useQuery({
+    queryKey: ["admin-access-actions"],
+    queryFn: () => apiRequest<ActionItem[]>("/admin/actions?includeInactive=true")
   });
 
   const permissionsQuery = useQuery({
@@ -158,10 +199,53 @@ export const AdminAccessView = () => {
     [programsQuery.data]
   );
 
+  const activeResources = useMemo(
+    () => (resourcesQuery.data ?? []).filter((resource) => resource.isActive),
+    [resourcesQuery.data]
+  );
+
+  const activeActions = useMemo(
+    () => (actionsQuery.data ?? []).filter((action) => action.isActive),
+    [actionsQuery.data]
+  );
+
   const activePermissions = useMemo(
     () => (permissionsQuery.data ?? []).filter((permission) => permission.isActive),
     [permissionsQuery.data]
   );
+
+  // Orden y etiquetas de las columnas de acción provienen de la tabla Action (DB).
+  const actionOrder = useMemo(
+    () => new Map((actionsQuery.data ?? []).map((action) => [action.code, action.sortOrder])),
+    [actionsQuery.data]
+  );
+  const actionLabel = useMemo(
+    () => new Map((actionsQuery.data ?? []).map((action) => [action.code, action.displayName])),
+    [actionsQuery.data]
+  );
+
+  const permissionMatrix = useMemo(() => {
+    const byResource = new Map<string, Map<string, PermissionItem>>();
+    const resourceLabel = new Map<string, string>();
+    const actionSet = new Set<string>();
+    for (const permission of activePermissions) {
+      actionSet.add(permission.action);
+      resourceLabel.set(permission.resource, permission.resourceDisplayName);
+      let row = byResource.get(permission.resource);
+      if (!row) {
+        row = new Map<string, PermissionItem>();
+        byResource.set(permission.resource, row);
+      }
+      row.set(permission.action, permission);
+    }
+    const actions = [...actionSet].sort(
+      (a, b) => (actionOrder.get(a) ?? 99) - (actionOrder.get(b) ?? 99) || a.localeCompare(b)
+    );
+    const resources = [...byResource.keys()].sort((a, b) =>
+      (resourceLabel.get(a) ?? a).localeCompare(resourceLabel.get(b) ?? b)
+    );
+    return { actions, resources, byResource, resourceLabel };
+  }, [activePermissions, actionOrder]);
 
   useEffect(() => {
     if (permissionCreateForm.categoryCode) {
@@ -185,9 +269,33 @@ export const AdminAccessView = () => {
     setPermissionCreateForm((prev) => ({ ...prev, programCode: firstProgram.code }));
   }, [activePrograms, permissionCreateForm.programCode]);
 
+  useEffect(() => {
+    if (permissionCreateForm.resource) {
+      return;
+    }
+    const firstResource = activeResources[0];
+    if (!firstResource) {
+      return;
+    }
+    setPermissionCreateForm((prev) => ({ ...prev, resource: firstResource.code }));
+  }, [activeResources, permissionCreateForm.resource]);
+
+  useEffect(() => {
+    if (permissionCreateForm.action) {
+      return;
+    }
+    const firstAction = activeActions[0];
+    if (!firstAction) {
+      return;
+    }
+    setPermissionCreateForm((prev) => ({ ...prev, action: firstAction.code }));
+  }, [activeActions, permissionCreateForm.action]);
+
   const refreshAll = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["admin-access-programs"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-access-resources"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-access-actions"] }),
       queryClient.invalidateQueries({ queryKey: ["admin-access-permissions"] }),
       queryClient.invalidateQueries({ queryKey: ["admin-access-roles"] })
     ]);
@@ -235,12 +343,95 @@ export const AdminAccessView = () => {
     onSuccess: refreshAll
   });
 
+  const createResourceMutation = useMutation({
+    mutationFn: () =>
+      apiRequest<ResourceItem>("/admin/resources", {
+        method: "POST",
+        body: JSON.stringify({
+          ...(resourceCreateForm.code.trim() ? { code: resourceCreateForm.code.trim() } : {}),
+          displayName: resourceCreateForm.displayName.trim(),
+          description: resourceCreateForm.description.trim() || undefined,
+          sortOrder: Number.parseInt(resourceCreateForm.sortOrder || "0", 10)
+        })
+      }),
+    onSuccess: async () => {
+      setResourceCreateForm({ code: "", displayName: "", description: "", sortOrder: "0" });
+      await refreshAll();
+    }
+  });
+
+  const updateResourceMutation = useMutation({
+    mutationFn: (input: NonNullable<typeof resourceEditForm>) =>
+      apiRequest<ResourceItem>(`/admin/resources/${input.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          displayName: input.displayName.trim(),
+          description: input.description.trim() || null,
+          sortOrder: Number.parseInt(input.sortOrder || "0", 10),
+          isActive: input.isActive
+        })
+      }),
+    onSuccess: async () => {
+      setResourceEditForm(null);
+      await refreshAll();
+    }
+  });
+
+  const deactivateResourceMutation = useMutation({
+    mutationFn: (resourceId: string) =>
+      apiRequest(`/admin/resources/${resourceId}`, { method: "DELETE" }),
+    onSuccess: refreshAll
+  });
+
+  const createActionMutation = useMutation({
+    mutationFn: () =>
+      apiRequest<ActionItem>("/admin/actions", {
+        method: "POST",
+        body: JSON.stringify({
+          ...(actionCreateForm.code.trim() ? { code: actionCreateForm.code.trim() } : {}),
+          displayName: actionCreateForm.displayName.trim(),
+          description: actionCreateForm.description.trim() || undefined,
+          kind: actionCreateForm.kind,
+          sortOrder: Number.parseInt(actionCreateForm.sortOrder || "0", 10)
+        })
+      }),
+    onSuccess: async () => {
+      setActionCreateForm({ code: "", displayName: "", description: "", kind: "write", sortOrder: "0" });
+      await refreshAll();
+    }
+  });
+
+  const updateActionMutation = useMutation({
+    mutationFn: (input: NonNullable<typeof actionEditForm>) =>
+      apiRequest<ActionItem>(`/admin/actions/${input.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          displayName: input.displayName.trim(),
+          description: input.description.trim() || null,
+          kind: input.kind,
+          sortOrder: Number.parseInt(input.sortOrder || "0", 10),
+          isActive: input.isActive
+        })
+      }),
+    onSuccess: async () => {
+      setActionEditForm(null);
+      await refreshAll();
+    }
+  });
+
+  const deactivateActionMutation = useMutation({
+    mutationFn: (actionId: string) =>
+      apiRequest(`/admin/actions/${actionId}`, { method: "DELETE" }),
+    onSuccess: refreshAll
+  });
+
   const createPermissionMutation = useMutation({
     mutationFn: () =>
       apiRequest<PermissionItem>("/admin/permissions", {
         method: "POST",
         body: JSON.stringify({
-          ...(permissionCreateForm.code.trim() ? { code: permissionCreateForm.code.trim() } : {}),
+          resource: permissionCreateForm.resource.trim(),
+          action: permissionCreateForm.action.trim(),
           displayName: permissionCreateForm.displayName.trim(),
           description: permissionCreateForm.description.trim() || undefined,
           categoryCode: permissionCreateForm.categoryCode,
@@ -250,7 +441,8 @@ export const AdminAccessView = () => {
     onSuccess: async () => {
       setPermissionCreateForm((prev) => ({
         ...prev,
-        code: "",
+        resource: "",
+        action: "",
         displayName: "",
         description: ""
       }));
@@ -307,6 +499,35 @@ export const AdminAccessView = () => {
     setter((prev) => (prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code]));
   };
 
+  const setManyPermissionCodes = (codes: string[], enabled: boolean) => {
+    setSelectedPermissionCodes((prev) => {
+      const next = new Set(prev);
+      for (const code of codes) {
+        if (enabled) {
+          next.add(code);
+        } else {
+          next.delete(code);
+        }
+      }
+      return [...next];
+    });
+  };
+
+  const toggleActionColumn = (action: string) => {
+    const codes = activePermissions.filter((permission) => permission.action === action).map((permission) => permission.code);
+    const allSelected = codes.every((code) => selectedPermissionCodes.includes(code));
+    setManyPermissionCodes(codes, !allSelected);
+  };
+
+  const readPermissionCodes = useMemo(
+    () => activePermissions.filter((permission) => permission.actionKind === "read").map((permission) => permission.code),
+    [activePermissions]
+  );
+  const writePermissionCodes = useMemo(
+    () => activePermissions.filter((permission) => permission.actionKind !== "read").map((permission) => permission.code),
+    [activePermissions]
+  );
+
   if (session.isLoading || !session.data) {
     return (
       <Card>
@@ -329,7 +550,9 @@ export const AdminAccessView = () => {
       <Card className="space-y-2">
         <p className="text-xs uppercase tracking-wide text-mid">Administración</p>
         <h1 className="text-2xl font-semibold text-ink">Accesos</h1>
-        <p className="text-sm text-mid">Gestiona programas, permisos y su asignación por rol.</p>
+        <p className="text-sm text-mid">
+          Gestiona programas, recursos, acciones, permisos y su asignación por rol.
+        </p>
       </Card>
 
       <Card className="space-y-4">
@@ -340,6 +563,20 @@ export const AdminAccessView = () => {
             onClick={() => setActiveTab("programs")}
           >
             Programas
+          </Button>
+          <Button
+            type="button"
+            {...(activeTab === "resources" ? {} : { variant: "ghost" as const })}
+            onClick={() => setActiveTab("resources")}
+          >
+            Recursos
+          </Button>
+          <Button
+            type="button"
+            {...(activeTab === "actions" ? {} : { variant: "ghost" as const })}
+            onClick={() => setActiveTab("actions")}
+          >
+            Acciones
           </Button>
           <Button
             type="button"
@@ -489,15 +726,319 @@ export const AdminAccessView = () => {
           </div>
         ) : null}
 
-        {activeTab === "permissions" ? (
+        {activeTab === "resources" ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <input
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                placeholder="Código (opcional)"
+                value={resourceCreateForm.code}
+                onChange={(event) => setResourceCreateForm((prev) => ({ ...prev, code: event.target.value }))}
+              />
+              <input
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                placeholder="Nombre"
+                value={resourceCreateForm.displayName}
+                onChange={(event) => setResourceCreateForm((prev) => ({ ...prev, displayName: event.target.value }))}
+              />
+              <input
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                placeholder="Descripción"
+                value={resourceCreateForm.description}
+                onChange={(event) => setResourceCreateForm((prev) => ({ ...prev, description: event.target.value }))}
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
+                  placeholder="Orden"
+                  value={resourceCreateForm.sortOrder}
+                  onChange={(event) => setResourceCreateForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+                />
+                <Button
+                  type="button"
+                  disabled={createResourceMutation.isPending || !resourceCreateForm.displayName.trim()}
+                  onClick={() => createResourceMutation.mutate()}
+                >
+                  Crear
+                </Button>
+              </div>
+            </div>
+
+            {createResourceMutation.error ? (
+              <p className="text-sm text-urgent">{createResourceMutation.error.message}</p>
+            ) : null}
+
+            <div className="space-y-2">
+              {(resourcesQuery.data ?? []).map((resource) => (
+                <div key={resource.id} className="rounded-xl border border-line p-3">
+                  {resourceEditForm?.id === resource.id ? (
+                    <div className="grid gap-2 md:grid-cols-5">
+                      <input
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        value={resourceEditForm.displayName}
+                        onChange={(event) =>
+                          setResourceEditForm((prev) => (prev ? { ...prev, displayName: event.target.value } : prev))
+                        }
+                      />
+                      <input
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        value={resourceEditForm.description}
+                        onChange={(event) =>
+                          setResourceEditForm((prev) => (prev ? { ...prev, description: event.target.value } : prev))
+                        }
+                      />
+                      <input
+                        type="number"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        value={resourceEditForm.sortOrder}
+                        onChange={(event) =>
+                          setResourceEditForm((prev) => (prev ? { ...prev, sortOrder: event.target.value } : prev))
+                        }
+                      />
+                      <label className="flex items-center gap-2 text-sm text-ink">
+                        <input
+                          type="checkbox"
+                          checked={resourceEditForm.isActive}
+                          onChange={(event) =>
+                            setResourceEditForm((prev) => (prev ? { ...prev, isActive: event.target.checked } : prev))
+                          }
+                        />
+                        Activo
+                      </label>
+                      <div className="flex gap-2">
+                        <Button type="button" onClick={() => updateResourceMutation.mutate(resourceEditForm)}>
+                          Guardar
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => setResourceEditForm(null)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">{resource.displayName}</p>
+                        <p className="text-xs text-mid">
+                          {resource.code} · orden {resource.sortOrder} · {resource.isActive ? "activo" : "inactivo"}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() =>
+                            setResourceEditForm({
+                              id: resource.id,
+                              displayName: resource.displayName,
+                              description: resource.description ?? "",
+                              sortOrder: String(resource.sortOrder),
+                              isActive: resource.isActive
+                            })
+                          }
+                        >
+                          Editar
+                        </Button>
+                        {!resource.isSystem ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            disabled={deactivateResourceMutation.isPending || !resource.isActive}
+                            onClick={() => deactivateResourceMutation.mutate(resource.id)}
+                          >
+                            Desactivar
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab === "actions" ? (
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-5">
               <input
                 className="h-10 rounded-xl border border-line px-3 text-sm"
                 placeholder="Código (opcional)"
-                value={permissionCreateForm.code}
-                onChange={(event) => setPermissionCreateForm((prev) => ({ ...prev, code: event.target.value }))}
+                value={actionCreateForm.code}
+                onChange={(event) => setActionCreateForm((prev) => ({ ...prev, code: event.target.value }))}
               />
+              <input
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                placeholder="Nombre"
+                value={actionCreateForm.displayName}
+                onChange={(event) => setActionCreateForm((prev) => ({ ...prev, displayName: event.target.value }))}
+              />
+              <select
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                value={actionCreateForm.kind}
+                onChange={(event) =>
+                  setActionCreateForm((prev) => ({ ...prev, kind: event.target.value as "read" | "write" }))
+                }
+              >
+                <option value="read">Lectura</option>
+                <option value="write">Escritura</option>
+              </select>
+              <input
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                placeholder="Descripción"
+                value={actionCreateForm.description}
+                onChange={(event) => setActionCreateForm((prev) => ({ ...prev, description: event.target.value }))}
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  className="h-10 w-full rounded-xl border border-line px-3 text-sm"
+                  placeholder="Orden"
+                  value={actionCreateForm.sortOrder}
+                  onChange={(event) => setActionCreateForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+                />
+                <Button
+                  type="button"
+                  disabled={createActionMutation.isPending || !actionCreateForm.displayName.trim()}
+                  onClick={() => createActionMutation.mutate()}
+                >
+                  Crear
+                </Button>
+              </div>
+            </div>
+
+            {createActionMutation.error ? (
+              <p className="text-sm text-urgent">{createActionMutation.error.message}</p>
+            ) : null}
+
+            <div className="space-y-2">
+              {(actionsQuery.data ?? []).map((action) => (
+                <div key={action.id} className="rounded-xl border border-line p-3">
+                  {actionEditForm?.id === action.id ? (
+                    <div className="grid gap-2 md:grid-cols-6">
+                      <input
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        value={actionEditForm.displayName}
+                        onChange={(event) =>
+                          setActionEditForm((prev) => (prev ? { ...prev, displayName: event.target.value } : prev))
+                        }
+                      />
+                      <select
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        value={actionEditForm.kind}
+                        onChange={(event) =>
+                          setActionEditForm((prev) =>
+                            prev ? { ...prev, kind: event.target.value as "read" | "write" } : prev
+                          )
+                        }
+                      >
+                        <option value="read">Lectura</option>
+                        <option value="write">Escritura</option>
+                      </select>
+                      <input
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        value={actionEditForm.description}
+                        onChange={(event) =>
+                          setActionEditForm((prev) => (prev ? { ...prev, description: event.target.value } : prev))
+                        }
+                      />
+                      <input
+                        type="number"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        value={actionEditForm.sortOrder}
+                        onChange={(event) =>
+                          setActionEditForm((prev) => (prev ? { ...prev, sortOrder: event.target.value } : prev))
+                        }
+                      />
+                      <label className="flex items-center gap-2 text-sm text-ink">
+                        <input
+                          type="checkbox"
+                          checked={actionEditForm.isActive}
+                          onChange={(event) =>
+                            setActionEditForm((prev) => (prev ? { ...prev, isActive: event.target.checked } : prev))
+                          }
+                        />
+                        Activo
+                      </label>
+                      <div className="flex gap-2">
+                        <Button type="button" onClick={() => updateActionMutation.mutate(actionEditForm)}>
+                          Guardar
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => setActionEditForm(null)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">{action.displayName}</p>
+                        <p className="text-xs text-mid">
+                          {action.code} · {action.kind === "read" ? "lectura" : "escritura"} · orden{" "}
+                          {action.sortOrder} · {action.isActive ? "activo" : "inactivo"}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() =>
+                            setActionEditForm({
+                              id: action.id,
+                              displayName: action.displayName,
+                              description: action.description ?? "",
+                              kind: action.kind,
+                              sortOrder: String(action.sortOrder),
+                              isActive: action.isActive
+                            })
+                          }
+                        >
+                          Editar
+                        </Button>
+                        {!action.isSystem ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            disabled={deactivateActionMutation.isPending || !action.isActive}
+                            onClick={() => deactivateActionMutation.mutate(action.id)}
+                          >
+                            Desactivar
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab === "permissions" ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-6">
+              <select
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                value={permissionCreateForm.resource}
+                onChange={(event) => setPermissionCreateForm((prev) => ({ ...prev, resource: event.target.value }))}
+              >
+                {activeResources.map((resource) => (
+                  <option key={resource.id} value={resource.code}>
+                    {resource.displayName}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                value={permissionCreateForm.action}
+                onChange={(event) => setPermissionCreateForm((prev) => ({ ...prev, action: event.target.value }))}
+              >
+                {activeActions.map((action) => (
+                  <option key={action.id} value={action.code}>
+                    {action.displayName}
+                  </option>
+                ))}
+              </select>
               <input
                 className="h-10 rounded-xl border border-line px-3 text-sm"
                 placeholder="Nombre"
@@ -539,7 +1080,12 @@ export const AdminAccessView = () => {
                 </select>
                 <Button
                   type="button"
-                  disabled={createPermissionMutation.isPending || !permissionCreateForm.displayName.trim()}
+                  disabled={
+                    createPermissionMutation.isPending ||
+                    !permissionCreateForm.displayName.trim() ||
+                    !permissionCreateForm.resource.trim() ||
+                    !permissionCreateForm.action.trim()
+                  }
                   onClick={() => createPermissionMutation.mutate()}
                 >
                   Crear
@@ -682,10 +1228,10 @@ export const AdminAccessView = () => {
               <p className="text-sm text-urgent">{saveRoleAccessMutation.error.message}</p>
             ) : null}
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-4">
               <div className="rounded-xl border border-line p-3">
                 <p className="mb-2 text-sm font-semibold text-ink">Programas</p>
-                <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {activePrograms.map((program) => (
                     <label key={program.id} className="flex items-center gap-2 text-sm text-ink">
                       <input
@@ -701,19 +1247,84 @@ export const AdminAccessView = () => {
               </div>
 
               <div className="rounded-xl border border-line p-3">
-                <p className="mb-2 text-sm font-semibold text-ink">Permisos</p>
-                <div className="max-h-96 space-y-2 overflow-auto pr-1">
-                  {activePermissions.map((permission) => (
-                    <label key={permission.id} className="flex items-center gap-2 text-sm text-ink">
-                      <input
-                        type="checkbox"
-                        checked={selectedPermissionCodes.includes(permission.code)}
-                        onChange={() => toggleCode(permission.code, setSelectedPermissionCodes)}
-                      />
-                      <span>{permission.displayName}</span>
-                      <span className="text-xs text-mid">({permission.code})</span>
-                    </label>
-                  ))}
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-ink">Permisos por recurso y acción</p>
+                  <div className="flex items-center gap-3 text-xs">
+                    <button
+                      type="button"
+                      className="text-mid underline-offset-2 hover:text-ink hover:underline"
+                      onClick={() => setManyPermissionCodes(readPermissionCodes, true)}
+                    >
+                      Marcar lectura
+                    </button>
+                    <button
+                      type="button"
+                      className="text-mid underline-offset-2 hover:text-ink hover:underline"
+                      onClick={() => setManyPermissionCodes(writePermissionCodes, true)}
+                    >
+                      Marcar escritura
+                    </button>
+                    <button
+                      type="button"
+                      className="text-mid underline-offset-2 hover:text-ink hover:underline"
+                      onClick={() => setSelectedPermissionCodes([])}
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-96 overflow-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-line">
+                        <th className="sticky left-0 z-10 bg-white px-2 py-2 text-left text-xs font-semibold text-mid">
+                          Recurso
+                        </th>
+                        {permissionMatrix.actions.map((action) => (
+                          <th key={action} className="px-2 py-2 text-center text-xs font-semibold text-mid">
+                            <button
+                              type="button"
+                              className="hover:text-ink"
+                              onClick={() => toggleActionColumn(action)}
+                            >
+                              {actionLabel.get(action) ?? action}
+                            </button>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {permissionMatrix.resources.map((resource) => {
+                        const row = permissionMatrix.byResource.get(resource);
+                        const resourceLabel = permissionMatrix.resourceLabel.get(resource) ?? resource;
+                        return (
+                          <tr key={resource} className="border-b border-line last:border-0">
+                            <td className="sticky left-0 z-10 bg-white px-2 py-1.5 text-ink">{resourceLabel}</td>
+                            {permissionMatrix.actions.map((action) => {
+                              const permission = row?.get(action);
+                              if (!permission) {
+                                return (
+                                  <td key={action} className="px-2 py-1.5 text-center text-mid">
+                                    —
+                                  </td>
+                                );
+                              }
+                              return (
+                                <td key={action} className="px-2 py-1.5 text-center">
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`${resourceLabel} · ${actionLabel.get(action) ?? action}`}
+                                    checked={selectedPermissionCodes.includes(permission.code)}
+                                    onChange={() => toggleCode(permission.code, setSelectedPermissionCodes)}
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

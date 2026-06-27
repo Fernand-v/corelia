@@ -1,4 +1,4 @@
-import type { RoleCode } from "@corelia/types";
+import { permissionKey, type RoleCode } from "@corelia/types";
 import { AdminCommonService, ROLE_ORDER } from "./common.js";
 
 export class AdminRolesAccessService extends AdminCommonService {
@@ -64,6 +64,60 @@ export class AdminRolesAccessService extends AdminCommonService {
     };
   }
 
+  private mapResource(resource: {
+    id: string;
+    code: number;
+    key: string;
+    displayName: string;
+    description: string | null;
+    sortOrder: number;
+    isSystem: boolean;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    return {
+      id: resource.id,
+      code: resource.key,
+      numericCode: resource.code,
+      displayName: resource.displayName,
+      description: resource.description,
+      sortOrder: resource.sortOrder,
+      isSystem: resource.isSystem,
+      isActive: resource.isActive,
+      createdAt: resource.createdAt.toISOString(),
+      updatedAt: resource.updatedAt.toISOString()
+    };
+  }
+
+  private mapAction(action: {
+    id: string;
+    code: number;
+    key: string;
+    displayName: string;
+    description: string | null;
+    kind: string;
+    sortOrder: number;
+    isSystem: boolean;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    return {
+      id: action.id,
+      code: action.key,
+      numericCode: action.code,
+      displayName: action.displayName,
+      description: action.description,
+      kind: action.kind === "read" ? "read" : "write",
+      sortOrder: action.sortOrder,
+      isSystem: action.isSystem,
+      isActive: action.isActive,
+      createdAt: action.createdAt.toISOString(),
+      updatedAt: action.updatedAt.toISOString()
+    };
+  }
+
   private mapPermission(permission: {
     id: string;
     key: string;
@@ -71,6 +125,8 @@ export class AdminRolesAccessService extends AdminCommonService {
     description: string | null;
     categoryId: string;
     programId: string;
+    resourceId: string;
+    actionId: string;
     isSystem: boolean;
     isActive: boolean;
     createdAt: Date;
@@ -87,10 +143,30 @@ export class AdminRolesAccessService extends AdminCommonService {
       displayName: string;
       sortOrder: number;
     };
+    resource: {
+      id: string;
+      key: string;
+      displayName: string;
+      sortOrder: number;
+    };
+    action: {
+      id: string;
+      key: string;
+      displayName: string;
+      kind: string;
+      sortOrder: number;
+    };
   }) {
     return {
       id: permission.id,
       code: permission.key,
+      resourceId: permission.resourceId,
+      resource: permission.resource.key,
+      resourceDisplayName: permission.resource.displayName,
+      actionId: permission.actionId,
+      action: permission.action.key,
+      actionDisplayName: permission.action.displayName,
+      actionKind: permission.action.kind,
       displayName: permission.displayName,
       description: permission.description,
       categoryId: permission.categoryId,
@@ -150,6 +226,8 @@ export class AdminRolesAccessService extends AdminCommonService {
         description: string | null;
         categoryId: string;
         programId: string;
+        resourceId: string;
+        actionId: string;
         isSystem: boolean;
         isActive: boolean;
         createdAt: Date;
@@ -164,6 +242,19 @@ export class AdminRolesAccessService extends AdminCommonService {
           id: string;
           key: string;
           displayName: string;
+          sortOrder: number;
+        };
+        resource: {
+          id: string;
+          key: string;
+          displayName: string;
+          sortOrder: number;
+        };
+        action: {
+          id: string;
+          key: string;
+          displayName: string;
+          kind: string;
           sortOrder: number;
         };
       };
@@ -268,7 +359,9 @@ export class AdminRolesAccessService extends AdminCommonService {
             permission: {
               include: {
                 category: true,
-                program: true
+                program: true,
+                resource: true,
+                action: true
               }
             }
           }
@@ -306,7 +399,9 @@ export class AdminRolesAccessService extends AdminCommonService {
             permission: {
               include: {
                 category: true,
-                program: true
+                program: true,
+                resource: true,
+                action: true
               }
             }
           }
@@ -738,6 +833,226 @@ export class AdminRolesAccessService extends AdminCommonService {
     return this.mapProgram(updated);
   }
 
+  async listResources(actorId: string, input?: { includeInactive?: boolean }) {
+    await this.assertAdmin(actorId);
+
+    const resources = await this.app.prisma.resource.findMany({
+      ...(input?.includeInactive ? {} : { where: { isActive: true } }),
+      orderBy: [{ sortOrder: "asc" }, { displayName: "asc" }]
+    });
+
+    return resources.map((resource) => this.mapResource(resource));
+  }
+
+  async createResource(
+    actorId: string,
+    input: {
+      code?: string;
+      displayName: string;
+      description?: string | null;
+      sortOrder?: number;
+      isActive?: boolean;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+
+    const code = this.normalizePermissionCode({
+      ...(input.code ? { code: input.code } : {}),
+      displayName: input.displayName
+    });
+
+    const created = await this.app.prisma.resource.create({
+      data: {
+        key: code,
+        displayName: input.displayName,
+        description: input.description ?? null,
+        sortOrder: input.sortOrder ?? 0,
+        isSystem: false,
+        isActive: input.isActive ?? true
+      }
+    });
+
+    return this.mapResource(created);
+  }
+
+  async updateResource(
+    actorId: string,
+    resourceId: string,
+    input: {
+      displayName?: string;
+      description?: string | null;
+      sortOrder?: number;
+      isActive?: boolean;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+
+    const current = await this.app.prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { id: true, isSystem: true }
+    });
+
+    if (!current) {
+      throw new Error("Recurso no encontrado");
+    }
+
+    if (current.isSystem && input.isActive === false) {
+      throw this.forbidden("Los recursos del sistema no se pueden desactivar");
+    }
+
+    const updated = await this.app.prisma.resource.update({
+      where: { id: resourceId },
+      data: {
+        ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {})
+      }
+    });
+
+    await this.invalidateRbacCache();
+
+    return this.mapResource(updated);
+  }
+
+  async deactivateResource(actorId: string, resourceId: string) {
+    await this.assertAdmin(actorId);
+
+    const resource = await this.app.prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { id: true, isSystem: true }
+    });
+
+    if (!resource) {
+      throw new Error("Recurso no encontrado");
+    }
+
+    if (resource.isSystem) {
+      throw this.forbidden("Los recursos del sistema no se pueden eliminar");
+    }
+
+    const updated = await this.app.prisma.resource.update({
+      where: { id: resourceId },
+      data: { isActive: false }
+    });
+
+    await this.invalidateRbacCache();
+
+    return this.mapResource(updated);
+  }
+
+  async listActions(actorId: string, input?: { includeInactive?: boolean }) {
+    await this.assertAdmin(actorId);
+
+    const actions = await this.app.prisma.action.findMany({
+      ...(input?.includeInactive ? {} : { where: { isActive: true } }),
+      orderBy: [{ sortOrder: "asc" }, { displayName: "asc" }]
+    });
+
+    return actions.map((action) => this.mapAction(action));
+  }
+
+  async createAction(
+    actorId: string,
+    input: {
+      code?: string;
+      displayName: string;
+      description?: string | null;
+      kind?: "read" | "write";
+      sortOrder?: number;
+      isActive?: boolean;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+
+    const code = this.normalizePermissionCode({
+      ...(input.code ? { code: input.code } : {}),
+      displayName: input.displayName
+    });
+
+    const created = await this.app.prisma.action.create({
+      data: {
+        key: code,
+        displayName: input.displayName,
+        description: input.description ?? null,
+        kind: input.kind ?? "write",
+        sortOrder: input.sortOrder ?? 0,
+        isSystem: false,
+        isActive: input.isActive ?? true
+      }
+    });
+
+    return this.mapAction(created);
+  }
+
+  async updateAction(
+    actorId: string,
+    actionId: string,
+    input: {
+      displayName?: string;
+      description?: string | null;
+      kind?: "read" | "write";
+      sortOrder?: number;
+      isActive?: boolean;
+    }
+  ) {
+    await this.assertAdmin(actorId);
+
+    const current = await this.app.prisma.action.findUnique({
+      where: { id: actionId },
+      select: { id: true, isSystem: true }
+    });
+
+    if (!current) {
+      throw new Error("Accion no encontrada");
+    }
+
+    if (current.isSystem && input.isActive === false) {
+      throw this.forbidden("Las acciones del sistema no se pueden desactivar");
+    }
+
+    const updated = await this.app.prisma.action.update({
+      where: { id: actionId },
+      data: {
+        ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.kind !== undefined ? { kind: input.kind } : {}),
+        ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {})
+      }
+    });
+
+    await this.invalidateRbacCache();
+
+    return this.mapAction(updated);
+  }
+
+  async deactivateAction(actorId: string, actionId: string) {
+    await this.assertAdmin(actorId);
+
+    const action = await this.app.prisma.action.findUnique({
+      where: { id: actionId },
+      select: { id: true, isSystem: true }
+    });
+
+    if (!action) {
+      throw new Error("Accion no encontrada");
+    }
+
+    if (action.isSystem) {
+      throw this.forbidden("Las acciones del sistema no se pueden eliminar");
+    }
+
+    const updated = await this.app.prisma.action.update({
+      where: { id: actionId },
+      data: { isActive: false }
+    });
+
+    await this.invalidateRbacCache();
+
+    return this.mapAction(updated);
+  }
+
   async listPermissions(actorId: string, input?: { includeInactive?: boolean }) {
     await this.assertAdmin(actorId);
 
@@ -745,7 +1060,9 @@ export class AdminRolesAccessService extends AdminCommonService {
       ...(input?.includeInactive ? {} : { where: { isActive: true } }),
       include: {
         category: true,
-        program: true
+        program: true,
+        resource: true,
+        action: true
       },
       orderBy: [{ program: { sortOrder: "asc" } }, { category: { sortOrder: "asc" } }, { code: "asc" }]
     });
@@ -756,7 +1073,8 @@ export class AdminRolesAccessService extends AdminCommonService {
   async createPermission(
     actorId: string,
     input: {
-      code?: string;
+      resource: string;
+      action: string;
       displayName: string;
       description?: string | null;
       categoryCode: string;
@@ -765,7 +1083,10 @@ export class AdminRolesAccessService extends AdminCommonService {
   ) {
     await this.assertAdmin(actorId);
 
-    const [category, program] = await Promise.all([
+    const resourceKey = this.normalizePermissionCode({ displayName: input.resource });
+    const actionKey = this.normalizePermissionCode({ displayName: input.action });
+
+    const [category, program, resource, action] = await Promise.all([
       this.app.prisma.permissionCategory.findUnique({
         where: {
           key: input.categoryCode
@@ -782,6 +1103,14 @@ export class AdminRolesAccessService extends AdminCommonService {
           id: true,
           isActive: true
         }
+      }),
+      this.app.prisma.resource.findUnique({
+        where: { key: resourceKey },
+        select: { id: true, isActive: true }
+      }),
+      this.app.prisma.action.findUnique({
+        where: { key: actionKey },
+        select: { id: true, isActive: true }
       })
     ]);
 
@@ -793,10 +1122,15 @@ export class AdminRolesAccessService extends AdminCommonService {
       throw new Error("Programa no encontrado o inactivo");
     }
 
-    const code = this.normalizePermissionCode({
-      ...(input.code ? { code: input.code } : {}),
-      displayName: input.displayName
-    });
+    if (!resource || !resource.isActive) {
+      throw new Error("Recurso no encontrado o inactivo");
+    }
+
+    if (!action || !action.isActive) {
+      throw new Error("Accion no encontrada o inactiva");
+    }
+
+    const code = permissionKey(resourceKey, actionKey);
 
     const created = await this.app.prisma.permission.create({
       data: {
@@ -805,12 +1139,16 @@ export class AdminRolesAccessService extends AdminCommonService {
         description: input.description ?? null,
         categoryId: category.id,
         programId: program.id,
+        resourceId: resource.id,
+        actionId: action.id,
         isSystem: false,
         isActive: true
       },
       include: {
         category: true,
-        program: true
+        program: true,
+        resource: true,
+        action: true
       }
     });
 
@@ -901,6 +1239,8 @@ export class AdminRolesAccessService extends AdminCommonService {
       include: {
         category: true,
         program: true,
+        resource: true,
+        action: true,
         rolePermissions: {
           select: {
             roleId: true
@@ -953,7 +1293,9 @@ export class AdminRolesAccessService extends AdminCommonService {
       },
       include: {
         category: true,
-        program: true
+        program: true,
+        resource: true,
+        action: true
       }
     });
 

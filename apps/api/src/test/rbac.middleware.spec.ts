@@ -222,6 +222,51 @@ describe("rbacPlugin — preHandler middleware", () => {
     expect(reply.send).toHaveBeenCalledWith({ message: "Forbidden" });
   });
 
+  it("allows when requiredResource + requiredAction resolve to a granted permission", async () => {
+    const { app, hooks } = buildMockApp();
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({
+      baseRoleId: "role-admin",
+      baseRole: { key: "ADMINISTRADOR" }
+    });
+    app.redis.get = vi.fn().mockResolvedValue(null);
+    await loadPlugin(app);
+
+    // El rol admin tiene ARCHIVO_SUBIR → resource ARCHIVO + action SUBIR.
+    const request = buildRequest({
+      routeOptions: {
+        config: { requiresAuth: true, requiredResource: "ARCHIVO", requiredAction: "SUBIR" }
+      }
+    });
+    const reply = buildReply();
+
+    await hooks["preHandler"]!(request, reply);
+
+    expect(reply.code).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when requiredResource + requiredAction resolve to a missing permission", async () => {
+    const { app, hooks } = buildMockApp();
+    app.prisma.user.findUnique = vi.fn().mockResolvedValue({
+      baseRoleId: "role-admin",
+      baseRole: { key: "ADMINISTRADOR" }
+    });
+    app.redis.get = vi.fn().mockResolvedValue(null);
+    await loadPlugin(app);
+
+    // El rol admin (en este mock) no tiene ARCHIVO_GESTIONAR.
+    const request = buildRequest({
+      routeOptions: {
+        config: { requiresAuth: true, requiredResource: "ARCHIVO", requiredAction: "GESTIONAR" }
+      }
+    });
+    const reply = buildReply();
+
+    await hooks["preHandler"]!(request, reply);
+
+    expect(reply.code).toHaveBeenCalledWith(403);
+    expect(reply.send).toHaveBeenCalledWith({ message: "Forbidden" });
+  });
+
   it("resolves project role from body.projectId (closes header/body mismatch)", async () => {
     const { app, hooks } = buildMockApp();
     app.prisma.user.findUnique = vi.fn().mockResolvedValue({

@@ -23,7 +23,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -44,7 +45,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -63,7 +65,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -81,7 +84,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "ARCHIVO_SUBIR"
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR"
       }
     },
     async (request, reply) => {
@@ -100,7 +104,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "ARCHIVO_SUBIR"
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR"
       }
     },
     async (request, reply) => {
@@ -139,7 +144,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "ARCHIVO_SUBIR"
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR"
       }
     },
     async (request, reply) => {
@@ -158,7 +164,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "ARCHIVO_SUBIR"
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR"
       }
     },
     async (request, reply) => {
@@ -178,7 +185,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -209,7 +217,8 @@ export const filesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ARCHIVOS",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {

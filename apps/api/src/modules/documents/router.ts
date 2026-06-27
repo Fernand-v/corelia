@@ -27,7 +27,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -51,7 +52,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -73,7 +75,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -110,7 +113,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -132,7 +136,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -154,7 +159,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -177,7 +183,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -202,7 +209,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -248,7 +256,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -270,7 +279,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -292,7 +302,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -315,7 +326,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -344,7 +356,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -374,7 +387,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -407,7 +421,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -437,7 +452,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -460,7 +476,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -497,7 +514,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -528,7 +546,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -558,7 +577,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -626,7 +646,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -682,7 +703,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -718,7 +740,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -805,7 +828,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -827,7 +851,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -862,7 +887,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -893,7 +919,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -926,7 +953,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "ARCHIVO_SUBIR",
+        requiredResource: "ARCHIVO",
+        requiredAction: "SUBIR",
       },
     },
     async (request, reply) => {
@@ -961,7 +989,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {
@@ -983,7 +1012,8 @@ export const documentsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "DOCUMENTOS",
-        requiredPermission: "PROYECTO_LEER",
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER",
       },
     },
     async (request, reply) => {

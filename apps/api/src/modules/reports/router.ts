@@ -12,7 +12,8 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "REPORTES",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -32,7 +33,8 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "REPORTES",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -54,7 +56,8 @@ export const reportsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "REPORTES",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {

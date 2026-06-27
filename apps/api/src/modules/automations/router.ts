@@ -12,7 +12,8 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "AUTOMATIZACIONES",
-        requiredPermission: "AUTOMATIZACION_GESTIONAR"
+        requiredResource: "AUTOMATIZACION",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -31,7 +32,8 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "AUTOMATIZACIONES",
-        requiredPermission: "AUTOMATIZACION_GESTIONAR"
+        requiredResource: "AUTOMATIZACION",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request) => {
@@ -46,7 +48,8 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "AUTOMATIZACIONES",
-        requiredPermission: "AUTOMATIZACION_GESTIONAR"
+        requiredResource: "AUTOMATIZACION",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -69,7 +72,8 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "AUTOMATIZACIONES",
-        requiredPermission: "AUTOMATIZACION_GESTIONAR"
+        requiredResource: "AUTOMATIZACION",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -93,7 +97,8 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "AUTOMATIZACIONES",
-        requiredPermission: "AUTOMATIZACION_GESTIONAR"
+        requiredResource: "AUTOMATIZACION",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -116,7 +121,8 @@ export const automationsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "AUTOMATIZACIONES",
-        requiredPermission: "AUTOMATIZACION_GESTIONAR"
+        requiredResource: "AUTOMATIZACION",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {

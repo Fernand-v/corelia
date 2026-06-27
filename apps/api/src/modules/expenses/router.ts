@@ -14,7 +14,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_GESTIONAR"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -43,7 +44,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_LEER"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -59,7 +61,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_GESTIONAR"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -81,7 +84,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_GESTIONAR"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -103,7 +107,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_GESTIONAR"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -136,7 +141,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_LEER"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -160,7 +166,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_GESTIONAR"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -182,7 +189,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_GESTIONAR"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -202,7 +210,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_GESTIONAR"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -237,7 +246,8 @@ export const expensesRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PRESUPUESTO",
-        requiredPermission: "PRESUPUESTO_LEER"
+        requiredResource: "PRESUPUESTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {

@@ -25,7 +25,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -47,7 +48,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -74,7 +76,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -99,7 +102,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -115,7 +119,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -143,7 +148,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -162,7 +168,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -191,7 +198,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -220,7 +228,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -235,7 +244,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -263,7 +273,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -289,7 +300,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -320,7 +332,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -335,7 +348,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -363,7 +377,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -389,7 +404,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -416,7 +432,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -431,7 +448,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -457,7 +475,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -473,7 +492,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -498,7 +518,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -521,7 +542,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -535,7 +557,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -559,7 +582,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -586,7 +610,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -600,7 +625,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -627,7 +653,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -641,7 +668,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -656,7 +684,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -684,7 +713,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -709,7 +739,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -740,7 +771,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -763,7 +795,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -778,7 +811,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -806,7 +840,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -825,7 +860,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -852,7 +888,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -877,7 +914,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -902,12 +940,205 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
   );
 
   app.get(
+    "/resources",
+    {
+      config: {
+        requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      const query = parseWithSchema(adminSchemas.adminListResourcesQuerySchema, request.query ?? {});
+      return reply.send(
+        await service.listResources(request.authUser!.id, {
+          includeInactive: query.includeInactive
+        })
+      );
+    }
+  );
+
+  app.post(
+    "/resources",
+    {
+      config: {
+        requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      const payload = parseWithSchema(adminSchemas.adminCreateResourceInputSchema, request.body);
+      const created = await service.createResource(request.authUser!.id, payload);
+
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: created.id,
+        action: "CREAR",
+        newDataText: { code: created.code, displayName: created.displayName }
+      };
+
+      return reply.code(201).send(created);
+    }
+  );
+
+  app.patch(
+    "/resources/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      const params = parseWithSchema(idParamsSchema, request.params);
+      const payload = parseWithSchema(adminSchemas.adminUpdateResourceInputSchema, request.body);
+      const updated = await service.updateResource(request.authUser!.id, params.id, payload);
+
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: params.id,
+        action: "ACTUALIZAR",
+        newDataText: payload as unknown as Record<string, unknown>
+      };
+
+      return reply.send(updated);
+    }
+  );
+
+  app.delete(
+    "/resources/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      const params = parseWithSchema(idParamsSchema, request.params);
+      const removed = await service.deactivateResource(request.authUser!.id, params.id);
+
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: params.id,
+        action: "ELIMINAR",
+        newDataText: { logicalDelete: true, code: removed.code }
+      };
+
+      return reply.send({ success: true, item: removed });
+    }
+  );
+
+  app.get(
+    "/actions",
+    {
+      config: {
+        requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      const query = parseWithSchema(adminSchemas.adminListActionsQuerySchema, request.query ?? {});
+      return reply.send(
+        await service.listActions(request.authUser!.id, {
+          includeInactive: query.includeInactive
+        })
+      );
+    }
+  );
+
+  app.post(
+    "/actions",
+    {
+      config: {
+        requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      const payload = parseWithSchema(adminSchemas.adminCreateActionInputSchema, request.body);
+      const created = await service.createAction(request.authUser!.id, payload);
+
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: created.id,
+        action: "CREAR",
+        newDataText: { code: created.code, displayName: created.displayName }
+      };
+
+      return reply.code(201).send(created);
+    }
+  );
+
+  app.patch(
+    "/actions/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      const params = parseWithSchema(idParamsSchema, request.params);
+      const payload = parseWithSchema(adminSchemas.adminUpdateActionInputSchema, request.body);
+      const updated = await service.updateAction(request.authUser!.id, params.id, payload);
+
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: params.id,
+        action: "ACTUALIZAR",
+        newDataText: payload as unknown as Record<string, unknown>
+      };
+
+      return reply.send(updated);
+    }
+  );
+
+  app.delete(
+    "/actions/:id",
+    {
+      config: {
+        requiresAuth: true,
+        requiredProgram: "ADMINISTRACION",
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
+      }
+    },
+    async (request, reply) => {
+      const params = parseWithSchema(idParamsSchema, request.params);
+      const removed = await service.deactivateAction(request.authUser!.id, params.id);
+
+      request.auditEvent = {
+        entityType: "USUARIO",
+        entityId: params.id,
+        action: "ELIMINAR",
+        newDataText: { logicalDelete: true, code: removed.code }
+      };
+
+      return reply.send({ success: true, item: removed });
+    }
+  );
+
+  app.get(
     "/permissions",
     {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -926,7 +1157,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -953,7 +1185,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -978,7 +1211,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1008,7 +1242,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1022,7 +1257,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1036,7 +1272,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1051,7 +1288,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1067,7 +1305,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1095,7 +1334,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1128,7 +1368,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1155,7 +1396,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1176,7 +1418,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1208,7 +1451,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1232,7 +1476,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -1263,7 +1508,8 @@ export const adminRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "ADMINISTRACION",
-        requiredPermission: "USUARIO_GESTIONAR"
+        requiredResource: "USUARIO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {

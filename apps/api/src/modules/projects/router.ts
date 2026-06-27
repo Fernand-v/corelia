@@ -12,7 +12,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -43,7 +44,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request) => {
@@ -57,7 +59,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -73,7 +76,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -89,7 +93,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -123,7 +128,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -155,7 +161,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_LEER"
+        requiredResource: "PROYECTO",
+        requiredAction: "LEER"
       }
     },
     async (request, reply) => {
@@ -171,7 +178,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -192,7 +200,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -209,7 +218,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -225,7 +235,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -257,7 +268,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -285,7 +297,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {
@@ -341,7 +354,8 @@ export const projectsRouter: FastifyPluginAsync = async (app) => {
       config: {
         requiresAuth: true,
         requiredProgram: "PROYECTOS",
-        requiredPermission: "PROYECTO_GESTIONAR"
+        requiredResource: "PROYECTO",
+        requiredAction: "GESTIONAR"
       }
     },
     async (request, reply) => {

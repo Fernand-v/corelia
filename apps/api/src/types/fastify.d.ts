@@ -1,4 +1,12 @@
-import type { ActionType, EntityType, Permission, ProgramCode, RoleCode } from "@corelia/types";
+import type {
+  ActionCode,
+  ActionType,
+  EntityType,
+  Permission,
+  ProgramCode,
+  ResourceCode,
+  RoleCode
+} from "@corelia/types";
 import type { PrismaClient } from "@prisma/client";
 import type { Queue } from "bullmq";
 import type { Redis } from "ioredis";
@@ -76,6 +84,14 @@ declare module "fastify" {
   interface FastifyContextConfig {
     requiresAuth?: boolean;
     requiredProgram?: ProgramCode;
+    /**
+     * Permiso requerido por recurso×acción. El guard reconstruye la key
+     * canónica `${requiredResource}_${requiredAction}` y la valida contra los
+     * permisos del rol activo.
+     */
+    requiredResource?: ResourceCode;
+    requiredAction?: ActionCode;
+    /** @deprecated Usar requiredResource + requiredAction. */
     requiredPermission?: Permission;
     skipMaintenance?: boolean;
     rateLimit?: {

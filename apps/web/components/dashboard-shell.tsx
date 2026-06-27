@@ -134,6 +134,18 @@ const NAV_ITEMS: NavItem[] = [
     href: "/search",
     requiredProgram: "BUSQUEDA",
     requiredAnyPermissions: ["PROYECTO_LEER"]
+  },
+  {
+    label: "Tickets IT",
+    href: "/tickets",
+    requiredProgram: "TICKETS",
+    requiredAnyPermissions: ["TICKET_LEER"]
+  },
+  {
+    label: "Registros",
+    href: "/registros",
+    requiredProgram: "PERSONAS",
+    requiredAnyPermissions: ["PERSONA_LEER", "CATALOGO_LEER"]
   }
 ];
 

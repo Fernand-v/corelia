@@ -4,8 +4,13 @@ import {
   RBAC_PROGRAMS,
   RBAC_PERMISSION_CATEGORIES,
   RBAC_PERMISSIONS,
+  RBAC_PERMISSIONS_ENRICHED,
   RBAC_ROLE_PERMISSION_MATRIX,
-  RBAC_SYSTEM_ROLES
+  RBAC_SYSTEM_ROLES,
+  RBAC_ACTIONS,
+  RBAC_RESOURCES,
+  permissionKey,
+  splitPermissionKey
 } from "./rbac-catalog.js";
 
 const categoryCodes = RBAC_PERMISSION_CATEGORIES.map((category) => category.code) as [
@@ -21,6 +26,16 @@ const systemProgramCodes = RBAC_PROGRAMS.map((program) => program.code) as [
 const systemRoleCodes = RBAC_SYSTEM_ROLES.map((role) => role.code) as [
   (typeof RBAC_SYSTEM_ROLES)[number]["code"],
   ...(typeof RBAC_SYSTEM_ROLES)[number]["code"][]
+];
+
+const systemActionCodes = RBAC_ACTIONS.map((action) => action.code) as [
+  (typeof RBAC_ACTIONS)[number]["code"],
+  ...(typeof RBAC_ACTIONS)[number]["code"][]
+];
+
+const systemResourceCodes = RBAC_RESOURCES.map((resource) => resource.code) as [
+  (typeof RBAC_RESOURCES)[number]["code"],
+  ...(typeof RBAC_RESOURCES)[number]["code"][]
 ];
 
 export const permissionSchema = z
@@ -40,6 +55,21 @@ export const programCodeSchema = z
 export const systemRoleCodeSchema = z.enum(systemRoleCodes);
 export const roleCodeSchema = systemRoleCodeSchema.or(z.string().min(3).max(120));
 export const roleScopeSchema = z.enum(["GLOBAL", "PROJECT"]);
+
+export const actionCodeSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(60)
+  .regex(/^[A-Z][A-Z0-9_]*$/, "Formato de acción inválido");
+export const resourceCodeSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(60)
+  .regex(/^[A-Z][A-Z0-9_]*$/, "Formato de recurso inválido");
+export const systemActionCodeSchema = z.enum(systemActionCodes);
+export const systemResourceCodeSchema = z.enum(systemResourceCodes);
 
 export const programSchema = z.object({
   id: idSchema,
@@ -69,6 +99,8 @@ export const permissionItemSchema = z.object({
   description: z.string().max(500).nullable(),
   programId: idSchema,
   categoryId: idSchema,
+  resource: resourceCodeSchema,
+  action: actionCodeSchema,
   isSystem: z.boolean().default(false),
   isActive: z.boolean().default(true),
   program: programSchema.optional(),
@@ -117,11 +149,20 @@ export type SystemRoleCode = z.infer<typeof systemRoleCodeSchema>;
 export type RoleCode = z.infer<typeof roleCodeSchema>;
 export type RoleScope = z.infer<typeof roleScopeSchema>;
 export type ActiveRole = z.infer<typeof activeRoleSchema>;
+export type ActionCode = z.infer<typeof actionCodeSchema>;
+export type ResourceCode = z.infer<typeof resourceCodeSchema>;
+export type SystemActionCode = z.infer<typeof systemActionCodeSchema>;
+export type SystemResourceCode = z.infer<typeof systemResourceCodeSchema>;
 
 export {
   RBAC_PROGRAMS,
   RBAC_PERMISSION_CATEGORIES,
   RBAC_PERMISSIONS,
+  RBAC_PERMISSIONS_ENRICHED,
   RBAC_ROLE_PERMISSION_MATRIX,
-  RBAC_SYSTEM_ROLES
+  RBAC_SYSTEM_ROLES,
+  RBAC_ACTIONS,
+  RBAC_RESOURCES,
+  permissionKey,
+  splitPermissionKey
 };
