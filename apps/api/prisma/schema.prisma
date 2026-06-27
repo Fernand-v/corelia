@@ -312,6 +312,10 @@ model Program {
   displayName String
   description String?
   sortOrder   Int      @default(0)
+  route       String?
+  icon        String?
+  navOrder    Int      @default(0)
+  isNavItem   Boolean  @default(false)
   isSystem    Boolean  @default(false)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -322,6 +326,7 @@ model Program {
 
   @@index([sortOrder])
   @@index([isActive])
+  @@index([isNavItem])
 }
 
 model Resource {

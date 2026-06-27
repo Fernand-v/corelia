@@ -9,6 +9,7 @@ import {
   RBAC_SYSTEM_ROLES,
   RBAC_ACTIONS,
   RBAC_RESOURCES,
+  RBAC_PROGRAM_NAV,
   permissionKey,
   splitPermissionKey
 } from "./rbac-catalog.js";
@@ -163,6 +164,7 @@ export {
   RBAC_SYSTEM_ROLES,
   RBAC_ACTIONS,
   RBAC_RESOURCES,
+  RBAC_PROGRAM_NAV,
   permissionKey,
   splitPermissionKey
 };

@@ -45,6 +45,10 @@ export class AdminRolesAccessService extends AdminCommonService {
     displayName: string;
     description: string | null;
     sortOrder: number;
+    route: string | null;
+    icon: string | null;
+    navOrder: number;
+    isNavItem: boolean;
     isSystem: boolean;
     isActive: boolean;
     createdAt: Date;
@@ -57,6 +61,10 @@ export class AdminRolesAccessService extends AdminCommonService {
       displayName: program.displayName,
       description: program.description,
       sortOrder: program.sortOrder,
+      route: program.route,
+      icon: program.icon,
+      navOrder: program.navOrder,
+      isNavItem: program.isNavItem,
       isSystem: program.isSystem,
       isActive: program.isActive,
       createdAt: program.createdAt.toISOString(),
@@ -212,6 +220,10 @@ export class AdminRolesAccessService extends AdminCommonService {
         displayName: string;
         description: string | null;
         sortOrder: number;
+        route: string | null;
+        icon: string | null;
+        navOrder: number;
+        isNavItem: boolean;
         isSystem: boolean;
         isActive: boolean;
         createdAt: Date;
@@ -728,6 +740,10 @@ export class AdminRolesAccessService extends AdminCommonService {
       displayName: string;
       description?: string | null;
       sortOrder?: number;
+      route?: string | null;
+      icon?: string | null;
+      navOrder?: number;
+      isNavItem?: boolean;
       isActive?: boolean;
     }
   ) {
@@ -744,6 +760,10 @@ export class AdminRolesAccessService extends AdminCommonService {
         displayName: input.displayName,
         description: input.description ?? null,
         sortOrder: input.sortOrder ?? 0,
+        route: input.route ?? null,
+        icon: input.icon ?? null,
+        navOrder: input.navOrder ?? 0,
+        isNavItem: input.isNavItem ?? false,
         isSystem: false,
         isActive: input.isActive ?? true
       }
@@ -762,6 +782,10 @@ export class AdminRolesAccessService extends AdminCommonService {
       displayName?: string;
       description?: string | null;
       sortOrder?: number;
+      route?: string | null;
+      icon?: string | null;
+      navOrder?: number;
+      isNavItem?: boolean;
       isActive?: boolean;
     }
   ) {
@@ -791,6 +815,10 @@ export class AdminRolesAccessService extends AdminCommonService {
         ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+        ...(input.route !== undefined ? { route: input.route } : {}),
+        ...(input.icon !== undefined ? { icon: input.icon } : {}),
+        ...(input.navOrder !== undefined ? { navOrder: input.navOrder } : {}),
+        ...(input.isNavItem !== undefined ? { isNavItem: input.isNavItem } : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {})
       }
     });

@@ -14,7 +14,8 @@ export const RBAC_PERMISSION_CATEGORIES = [
   { code: "AUDITORIA", displayName: "Auditoria", description: null, sortOrder: 12 },
   { code: "PRESUPUESTO", displayName: "Presupuesto", description: null, sortOrder: 13 },
   { code: "TICKET", displayName: "Tickets", description: null, sortOrder: 14 },
-  { code: "PERSONA", displayName: "Personas y catalogos", description: null, sortOrder: 15 }
+  { code: "PERSONA", displayName: "Personas y catalogos", description: null, sortOrder: 15 },
+  { code: "LLAMADA", displayName: "Llamadas", description: null, sortOrder: 16 }
 ] as const;
 
 export const RBAC_PROGRAMS = [
@@ -42,7 +43,8 @@ export const RBAC_PROGRAMS = [
   { code: "DISPONIBILIDAD", displayName: "Disponibilidad", description: null, sortOrder: 21 },
   { code: "TIEMPO", displayName: "Tiempo", description: null, sortOrder: 22 },
   { code: "TICKETS", displayName: "Tickets IT", description: null, sortOrder: 23 },
-  { code: "PERSONAS", displayName: "Personas", description: null, sortOrder: 24 }
+  { code: "PERSONAS", displayName: "Personas", description: null, sortOrder: 24 },
+  { code: "LLAMADAS", displayName: "Llamadas", description: null, sortOrder: 25 }
 ] as const;
 
 export const RBAC_PERMISSIONS = [
@@ -262,6 +264,13 @@ export const RBAC_PERMISSIONS = [
     description: null,
     categoryCode: "PERSONA",
     programCode: "PERSONAS"
+  },
+  {
+    code: "LLAMADA_ACCEDER",
+    displayName: "Acceder a llamadas",
+    description: null,
+    categoryCode: "LLAMADA",
+    programCode: "LLAMADAS"
   }
 ] as const;
 
@@ -389,7 +398,8 @@ export const RBAC_ROLE_PERMISSION_MATRIX: Record<string, readonly string[]> = {
     "PRESUPUESTO_LEER",
     "TICKET_CREAR",
     "TICKET_LEER",
-    "TICKET_COMENTAR"
+    "TICKET_COMENTAR",
+    "LLAMADA_ACCEDER"
   ],
   OBSERVADOR: [
     "USUARIO_LEER",
@@ -425,6 +435,7 @@ export const RBAC_ROLE_PERMISSION_MATRIX: Record<string, readonly string[]> = {
  */
 export const RBAC_ACTIONS = [
   { code: "LEER", displayName: "Leer", kind: "read" },
+  { code: "ACCEDER", displayName: "Acceder", kind: "write" },
   { code: "ESCRIBIR", displayName: "Escribir", kind: "write" },
   { code: "CREAR", displayName: "Crear", kind: "write" },
   { code: "GESTIONAR", displayName: "Gestionar", kind: "write" },
@@ -478,3 +489,13 @@ export const RBAC_RESOURCES = [
   code: resource,
   displayName: RESOURCE_DISPLAY_OVERRIDES[resource] ?? categoryDisplayByCode.get(resource) ?? resource
 }));
+
+/**
+ * Metadata de navegación de los programas que aparecen en el menú lateral de
+ * forma dinámica (sin estar hardcodeados en el frontend). El seed marca estos
+ * programas con isNavItem=true y su route/icon/orden. Un administrador puede
+ * crear nuevos programas de navegación desde el panel sin tocar código.
+ */
+export const RBAC_PROGRAM_NAV: Record<string, { route: string; icon: string | null; navOrder: number }> = {
+  LLAMADAS: { route: "/call", icon: null, navOrder: 100 }
+};

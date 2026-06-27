@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import {
   RBAC_PROGRAMS,
+  RBAC_PROGRAM_NAV,
   RBAC_PERMISSION_CATEGORIES,
   RBAC_PERMISSIONS_ENRICHED,
   RBAC_RESOURCES,
@@ -13,6 +14,13 @@ const prisma = new PrismaClient();
 
 async function main() {
   for (const [index, program] of RBAC_PROGRAMS.entries()) {
+    const nav = RBAC_PROGRAM_NAV[program.code];
+    const navFields = {
+      route: nav?.route ?? null,
+      icon: nav?.icon ?? null,
+      navOrder: nav?.navOrder ?? 0,
+      isNavItem: Boolean(nav)
+    };
     await prisma.program.upsert({
       where: { key: program.code },
       update: {
@@ -21,6 +29,7 @@ async function main() {
         displayName: program.displayName,
         description: program.description,
         sortOrder: program.sortOrder,
+        ...navFields,
         isSystem: true,
         isActive: true
       },
@@ -30,6 +39,7 @@ async function main() {
         displayName: program.displayName,
         description: program.description,
         sortOrder: program.sortOrder,
+        ...navFields,
         isSystem: true,
         isActive: true
       }

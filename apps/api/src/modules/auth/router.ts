@@ -265,14 +265,33 @@ export const authRouter: FastifyPluginAsync = async (app) => {
 
       const baseRoleKey = user.baseRole?.key ?? request.accessContext?.activeRole ?? "INVITADO_EXTERNO";
 
+      // Ítems de navegación dinámicos: programas del rol marcados como menú en
+      // DB (route/icon/orden). Permite añadir entradas al menú sin tocar código.
+      const programCodes = request.accessContext?.programs ?? [];
+      const navPrograms =
+        programCodes.length > 0
+          ? await request.server.prisma.program.findMany({
+              where: { key: { in: programCodes }, isNavItem: true, isActive: true, route: { not: null } },
+              select: { key: true, displayName: true, route: true, icon: true, navOrder: true },
+              orderBy: [{ navOrder: "asc" }, { displayName: "asc" }]
+            })
+          : [];
+
       return reply.send({
         ...user,
         baseRole: baseRoleKey,
         activeRole: request.accessContext?.activeRole,
         roleDisplayName: request.accessContext?.roleDisplayName,
         activeRoleRank: request.accessContext?.rank,
-        programs: request.accessContext?.programs ?? [],
-        permissions: request.accessContext?.permissions ?? []
+        programs: programCodes,
+        permissions: request.accessContext?.permissions ?? [],
+        navItems: navPrograms.map((program) => ({
+          program: program.key,
+          label: program.displayName,
+          href: program.route,
+          icon: program.icon,
+          navOrder: program.navOrder
+        }))
       });
     }
   );

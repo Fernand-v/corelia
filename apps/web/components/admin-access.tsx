@@ -17,7 +17,12 @@ type CatalogItem = {
   isActive: boolean;
 };
 
-type ProgramItem = CatalogItem;
+type ProgramItem = CatalogItem & {
+  route: string | null;
+  icon: string | null;
+  navOrder: number;
+  isNavItem: boolean;
+};
 type ResourceItem = CatalogItem;
 type ActionItem = CatalogItem & { kind: "read" | "write" };
 
@@ -81,9 +86,14 @@ export const AdminAccessView = () => {
     code: "",
     displayName: "",
     description: "",
-    sortOrder: "0"
+    sortOrder: "0",
+    route: "",
+    navOrder: "0",
+    isNavItem: false
   });
-  const [programEditForm, setProgramEditForm] = useState<CatalogEditForm | null>(null);
+  const [programEditForm, setProgramEditForm] = useState<
+    (CatalogEditForm & { route: string; navOrder: string; isNavItem: boolean }) | null
+  >(null);
 
   const [resourceCreateForm, setResourceCreateForm] = useState({
     code: "",
@@ -309,11 +319,22 @@ export const AdminAccessView = () => {
           ...(programCreateForm.code.trim() ? { code: programCreateForm.code.trim() } : {}),
           displayName: programCreateForm.displayName.trim(),
           description: programCreateForm.description.trim() || undefined,
-          sortOrder: Number.parseInt(programCreateForm.sortOrder || "0", 10)
+          sortOrder: Number.parseInt(programCreateForm.sortOrder || "0", 10),
+          route: programCreateForm.route.trim() || null,
+          navOrder: Number.parseInt(programCreateForm.navOrder || "0", 10),
+          isNavItem: programCreateForm.isNavItem
         })
       }),
     onSuccess: async () => {
-      setProgramCreateForm({ code: "", displayName: "", description: "", sortOrder: "0" });
+      setProgramCreateForm({
+        code: "",
+        displayName: "",
+        description: "",
+        sortOrder: "0",
+        route: "",
+        navOrder: "0",
+        isNavItem: false
+      });
       await refreshAll();
     }
   });
@@ -326,6 +347,9 @@ export const AdminAccessView = () => {
           displayName: input.displayName.trim(),
           description: input.description.trim() || null,
           sortOrder: Number.parseInt(input.sortOrder || "0", 10),
+          route: input.route.trim() || null,
+          navOrder: Number.parseInt(input.navOrder || "0", 10),
+          isNavItem: input.isNavItem,
           isActive: input.isActive
         })
       }),
@@ -633,6 +657,30 @@ export const AdminAccessView = () => {
               </div>
             </div>
 
+            <div className="grid items-center gap-3 md:grid-cols-3">
+              <input
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                placeholder="Ruta de menú (ej. /call)"
+                value={programCreateForm.route}
+                onChange={(event) => setProgramCreateForm((prev) => ({ ...prev, route: event.target.value }))}
+              />
+              <input
+                type="number"
+                className="h-10 rounded-xl border border-line px-3 text-sm"
+                placeholder="Orden en menú"
+                value={programCreateForm.navOrder}
+                onChange={(event) => setProgramCreateForm((prev) => ({ ...prev, navOrder: event.target.value }))}
+              />
+              <label className="flex items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={programCreateForm.isNavItem}
+                  onChange={(event) => setProgramCreateForm((prev) => ({ ...prev, isNavItem: event.target.checked }))}
+                />
+                Mostrar en el menú
+              </label>
+            </div>
+
             {createProgramMutation.error ? (
               <p className="text-sm text-urgent">{createProgramMutation.error.message}</p>
             ) : null}
@@ -641,7 +689,7 @@ export const AdminAccessView = () => {
               {(programsQuery.data ?? []).map((program) => (
                 <div key={program.id} className="rounded-xl border border-line p-3">
                   {programEditForm?.id === program.id ? (
-                    <div className="grid gap-2 md:grid-cols-5">
+                    <div className="grid gap-2 md:grid-cols-7">
                       <input
                         className="h-9 rounded-md border border-line px-2 text-sm"
                         value={programEditForm.displayName}
@@ -664,6 +712,33 @@ export const AdminAccessView = () => {
                           setProgramEditForm((prev) => (prev ? { ...prev, sortOrder: event.target.value } : prev))
                         }
                       />
+                      <input
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        placeholder="Ruta menú"
+                        value={programEditForm.route}
+                        onChange={(event) =>
+                          setProgramEditForm((prev) => (prev ? { ...prev, route: event.target.value } : prev))
+                        }
+                      />
+                      <input
+                        type="number"
+                        className="h-9 rounded-md border border-line px-2 text-sm"
+                        placeholder="Orden menú"
+                        value={programEditForm.navOrder}
+                        onChange={(event) =>
+                          setProgramEditForm((prev) => (prev ? { ...prev, navOrder: event.target.value } : prev))
+                        }
+                      />
+                      <label className="flex items-center gap-2 text-sm text-ink">
+                        <input
+                          type="checkbox"
+                          checked={programEditForm.isNavItem}
+                          onChange={(event) =>
+                            setProgramEditForm((prev) => (prev ? { ...prev, isNavItem: event.target.checked } : prev))
+                          }
+                        />
+                        Menú
+                      </label>
                       <label className="flex items-center gap-2 text-sm text-ink">
                         <input
                           type="checkbox"
@@ -701,6 +776,9 @@ export const AdminAccessView = () => {
                               displayName: program.displayName,
                               description: program.description ?? "",
                               sortOrder: String(program.sortOrder),
+                              route: program.route ?? "",
+                              navOrder: String(program.navOrder),
+                              isNavItem: program.isNavItem,
                               isActive: program.isActive
                             })
                           }

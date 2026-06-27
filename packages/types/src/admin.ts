@@ -289,6 +289,8 @@ export const adminUpdateCodeCatalogInputSchema = z.object({
   isActive: z.boolean().optional()
 });
 
+const routeSchema = z.string().trim().max(200);
+
 export const adminProgramSchema = z.object({
   id: idSchema,
   code: programCodeSchema,
@@ -296,6 +298,10 @@ export const adminProgramSchema = z.object({
   displayName: z.string().min(1).max(120),
   description: z.string().max(500).nullable(),
   sortOrder: z.number().int().min(0),
+  route: routeSchema.nullable(),
+  icon: z.string().max(60).nullable(),
+  navOrder: z.number().int().min(0),
+  isNavItem: z.boolean(),
   isSystem: z.boolean(),
   isActive: z.boolean(),
   createdAt: timestampSchema,
@@ -307,6 +313,10 @@ export const adminCreateProgramInputSchema = z.object({
   displayName: z.string().trim().min(2).max(120),
   description: z.string().trim().max(500).nullable().optional(),
   sortOrder: z.number().int().min(0).max(1000).optional(),
+  route: routeSchema.nullable().optional(),
+  icon: z.string().trim().max(60).nullable().optional(),
+  navOrder: z.number().int().min(0).max(1000).optional(),
+  isNavItem: z.boolean().optional(),
   isActive: z.boolean().optional()
 });
 
@@ -315,6 +325,10 @@ export const adminUpdateProgramInputSchema = z
     displayName: z.string().trim().min(2).max(120).optional(),
     description: z.string().trim().max(500).nullable().optional(),
     sortOrder: z.number().int().min(0).max(1000).optional(),
+    route: routeSchema.nullable().optional(),
+    icon: z.string().trim().max(60).nullable().optional(),
+    navOrder: z.number().int().min(0).max(1000).optional(),
+    isNavItem: z.boolean().optional(),
     isActive: z.boolean().optional()
   })
   .refine(
@@ -322,6 +336,10 @@ export const adminUpdateProgramInputSchema = z
       payload.displayName !== undefined ||
       payload.description !== undefined ||
       payload.sortOrder !== undefined ||
+      payload.route !== undefined ||
+      payload.icon !== undefined ||
+      payload.navOrder !== undefined ||
+      payload.isNavItem !== undefined ||
       payload.isActive !== undefined,
     {
       message: "Debe enviar al menos un campo para actualizar"

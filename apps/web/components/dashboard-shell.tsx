@@ -149,6 +149,12 @@ const NAV_ITEMS: NavItem[] = [
   }
 ];
 
+// Programas ya cubiertos por el menú estático: los ítems dinámicos (creados
+// desde el panel de admin) que apunten a estos programas no se duplican.
+const STATIC_NAV_PROGRAMS = new Set(
+  NAV_ITEMS.map((item) => item.requiredProgram).filter((program): program is ProgramCode => Boolean(program))
+);
+
 const ADMIN_ITEMS: NavItem[] = [
   {
     label: "Panel de Admin",
@@ -388,7 +394,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
     const activePrograms = session.data?.programs ?? [];
     const hasProjectContext = Boolean(dashboardContext.projectId);
 
-    return NAV_ITEMS.filter((item) => {
+    const staticVisible = NAV_ITEMS.filter((item) => {
       if (!hasRequiredProgram(item, activePrograms)) {
         return false;
       }
@@ -415,7 +421,21 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
       return true;
     });
-  }, [activeRole, dashboardContext.projectId, session.data?.permissions, session.data?.programs]);
+
+    // Ítems de navegación dinámicos: programas creados desde el panel y marcados
+    // como menú (route + isNavItem). Ya vienen filtrados por el rol desde la API.
+    const dynamicVisible: NavItem[] = (session.data?.navItems ?? [])
+      .filter((nav) => !STATIC_NAV_PROGRAMS.has(nav.program))
+      .map((nav) => ({ label: nav.label, href: nav.href, requiredProgram: nav.program }));
+
+    return [...staticVisible, ...dynamicVisible];
+  }, [
+    activeRole,
+    dashboardContext.projectId,
+    session.data?.permissions,
+    session.data?.programs,
+    session.data?.navItems
+  ]);
 
   const adminItems = useMemo(() => {
     const activePermissions = session.data?.permissions ?? [];

@@ -5,6 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import type { AuthMembershipSummary, Permission, ProgramCode, RoleCode } from "@corelia/types";
 import { apiRequest, useAuthStore } from "@/lib/api";
 
+export interface SessionNavItem {
+  program: ProgramCode;
+  label: string;
+  href: string;
+  icon: string | null;
+  navOrder: number;
+}
+
 export interface SessionUser {
   id: string;
   email: string;
@@ -17,6 +25,7 @@ export interface SessionUser {
   activeRoleRank?: number;
   programs: ProgramCode[];
   permissions: Permission[];
+  navItems: SessionNavItem[];
 }
 
 export interface SessionMembershipSummary extends AuthMembershipSummary {}
@@ -41,6 +50,30 @@ const coerceProgramCodes = (value: unknown): ProgramCode[] => {
     return [];
   }
   return value.filter((item): item is ProgramCode => typeof item === "string");
+};
+
+const coerceNavItems = (value: unknown): SessionNavItem[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") {
+      return [];
+    }
+    const candidate = item as Record<string, unknown>;
+    if (typeof candidate.program !== "string" || typeof candidate.label !== "string" || typeof candidate.href !== "string") {
+      return [];
+    }
+    return [
+      {
+        program: candidate.program as ProgramCode,
+        label: candidate.label,
+        href: candidate.href,
+        icon: typeof candidate.icon === "string" ? candidate.icon : null,
+        navOrder: typeof candidate.navOrder === "number" ? candidate.navOrder : 0
+      }
+    ];
+  });
 };
 
 export const useAuthBootstrap = () => {
@@ -74,12 +107,14 @@ export const useSession = () => {
       const baseRole = coerceRoleCode(payload.baseRole) ?? "INVITADO_EXTERNO";
       const activeRole = coerceRoleCode(payload.activeRole) ?? baseRole;
       const programs = coerceProgramCodes(payload.programs);
+      const navItems = coerceNavItems((payload as { navItems?: unknown }).navItems);
 
       return {
         ...payload,
         baseRole,
         activeRole,
-        programs
+        programs,
+        navItems
       };
     },
     enabled: hydrated && Boolean(accessToken),
